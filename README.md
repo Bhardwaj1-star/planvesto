@@ -1,13 +1,5 @@
-# Planvesto Next.js migration
+# Planvesto
 
-Migrated from the supplied multi-page static HTML files.
+Planvesto — Financial Planning and Decision Platform.
 
-The page markup and Tailwind visual system are preserved. Internal `.html` links are converted to Next.js routes. Existing mobile navigation and Learn-page search behavior are handled in React.
-
-Authentication remains frontend-only, matching the supplied HTML. No backend/authentication system has been added.
-
-Commands:
-npm install
-npm run dev
-npm run build
-npm start
+This repository is configured as a Next.js application for Firebase App Hosting. The existing Planvesto frontend is preserved as `public/index.html` and served through the application shell.
