@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import { useMobileMenuClose } from "../hooks/useMobileMenuClose";
+import { supabase } from "../lib/supabase";
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   useMobileMenuClose(setMenuOpen);
+
+    const handleExplore = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        event.preventDefault();
+        void supabase.auth.getSession().then(({ data }) => {
+            window.location.assign(data.session ? "/investor" : "/login?redirectTo=%2Finvestor");
+        }).catch(() => {
+            window.location.assign("/login?redirectTo=%2Finvestor");
+        });
+    };
 
   return (
     <>
@@ -117,7 +127,7 @@ export default function Home() {
 </div>
 <h1 className="max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-[-0.04em] text-navy-900 sm:text-6xl lg:text-[68px]">
                     Make better
-                    <span className="gradient-text">financial decisions.</span>
+                    <span className="gradient-text"> financial decisions.</span>
 </h1>
 <p className="mt-7 max-w-xl text-lg leading-8 text-slate-600 lg:text-xl">
                     Understand where you stand, define what you want to achieve,
@@ -157,7 +167,7 @@ export default function Home() {
 </div>
 
 <div className="relative">
-<div className="absolute -inset-5 rounded-[32px] bg-teal-100/40 blur-2xl"></div>
+<div className="pointer-events-none absolute -inset-5 rounded-[32px] bg-teal-100/40 blur-2xl"></div>
 <div className="relative rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft sm:p-7">
 <div className="flex items-center justify-between border-b border-slate-100 pb-5">
 <div>
@@ -168,9 +178,9 @@ export default function Home() {
                                 Build ₹1 Crore in 10 years
                             </h2>
 </div>
-<div className="rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-700">
+<a className="rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-700 transition hover:bg-teal-100" href="/login?redirectTo=%2Finvestor" onClick={handleExplore}>
                             Explore
-                        </div>
+                        </a>
 </div>
 <div className="mt-6 space-y-1">
 <div className="decision-line flex gap-4 pb-7">

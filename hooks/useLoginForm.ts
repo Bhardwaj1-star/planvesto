@@ -89,6 +89,9 @@ export function useLoginForm() {
       if (loginMessageTitle) loginMessageTitle.textContent = "Signed in successfully.";
       if (loginMessageText) loginMessageText.textContent = "Welcome back.";
       loginMessage?.classList.remove("hidden");
+
+      const redirectTo = new URLSearchParams(window.location.search).get("redirectTo") || "/investor";
+      window.location.assign(redirectTo);
     };
 
     loginForm.addEventListener("submit", handler);

@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
   font-family: Inter, sans-serif;
@@ -13,10 +9,6 @@ body {
 
 /* Home page styles migrated from home.html */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-html {
-  scroll-behavior: smooth;
-}
 
 body {
   margin: 0;

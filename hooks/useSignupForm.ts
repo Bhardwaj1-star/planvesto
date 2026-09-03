@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
 export function useSignupForm() {
@@ -50,7 +50,9 @@ export function useSignupForm() {
 
     const handler = async (event: Event) => {
       event.preventDefault();
-      const emailValue = email.value.trim();
+      const fullName = document.getElementById("fullName") as HTMLInputElement | null;
+  const fullNameValue = fullName?.value.trim() || "";
+  const emailValue = email.value.trim();
       const passwordValue = password.value;
       const confirmValue = confirmPassword.value;
       let valid = true;
@@ -82,15 +84,20 @@ export function useSignupForm() {
       if (!valid) return;
 
       createButton.disabled = true;
-      createButton.innerHTML = "Creating Account…";
+      createButton.innerHTML = "Creating Accountâ€¦";
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: emailValue,
-        password: passwordValue,
-      });
+    password: passwordValue,
+    options: {
+      data: {
+        full_name: fullNameValue,
+      },
+    },
+  });
 
       createButton.disabled = false;
-      createButton.innerHTML = "Create Account <span>→</span>";
+      createButton.innerHTML = "Create Account <span>â†’</span>";
 
       if (error) {
         alert(error.message);
@@ -99,9 +106,15 @@ export function useSignupForm() {
 
       successMessage?.classList.remove("hidden");
       successMessage?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+      const redirectTo = new URLSearchParams(window.location.search).get("redirectTo");
+      if (redirectTo && data.session) window.location.assign(redirectTo);
     };
 
     signupForm.addEventListener("submit", handler);
     return () => signupForm.removeEventListener("submit", handler);
   }, []);
 }
+
+
+

@@ -330,7 +330,7 @@ export default function LoginPage() {
                 
 
                 <a
-                    href="/signup"
+                    href="/signup?redirectTo=%2Finvestor"
                     className="flex w-full items-center justify-center rounded-xl border border-slate-200 px-6 py-3.5 text-sm font-bold text-navy-900 transition hover:bg-slate-50"
                 >
                     Create an account
