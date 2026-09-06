@@ -1,0 +1,13 @@
+import { formatCurrency, getDebtBreakdown, getTotalMonthlyDebtPayments, getTotalOutstandingDebt } from "../../../lib/onboarding/liabilities/liabilities";
+import type { Liability } from "../../../lib/onboarding/liabilities/types";
+import LiabilityCard from "./LiabilityCard";
+
+type Props = { liabilities: Liability[]; onEdit: (liability: Liability) => void; onRemove: (id: string) => void };
+
+export default function LiabilitySummary({ liabilities, onEdit, onRemove }: Props) {
+  const outstandingDebt = getTotalOutstandingDebt(liabilities);
+  const monthlyPayments = getTotalMonthlyDebtPayments(liabilities);
+  const breakdown = getDebtBreakdown(liabilities);
+  if (liabilities.length === 0) return <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-10 text-center sm:px-8"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-700" aria-hidden="true">$</div><h2 className="mt-4 text-lg font-extrabold text-navy-900">No liabilities added yet</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Add existing debt so Planvesto can understand your financial obligations. You can continue without adding a liability right now.</p></div>;
+  return <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-2xl border border-navy-900 bg-navy-900 p-5 text-white"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Total outstanding debt</p><p className="mt-2 text-2xl font-extrabold">{formatCurrency(outstandingDebt)}</p></div><div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-navy-900"><p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">Total monthly debt payment</p><p className="mt-2 text-2xl font-extrabold">{formatCurrency(monthlyPayments)}</p></div></div><section className="rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="debt-breakdown-heading"><h2 id="debt-breakdown-heading" className="text-sm font-extrabold text-navy-900">Debt-type breakdown</h2><div className="mt-3 grid gap-2 sm:grid-cols-2">{Object.entries(breakdown).map(([type, amount]) => <div key={type} className="flex items-center justify-between gap-4 border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{type}</span><span className="font-bold text-navy-900">{formatCurrency(amount ?? 0)}</span></div>)}</div></section><div className="space-y-3">{liabilities.map((liability) => <LiabilityCard key={liability.id} liability={liability} onEdit={() => onEdit(liability)} onRemove={() => onRemove(liability.id)} />)}</div></div>;
+}

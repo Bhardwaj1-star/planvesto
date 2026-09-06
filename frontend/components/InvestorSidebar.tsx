@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const navigation = [
   {
@@ -9,27 +10,28 @@ const navigation = [
     href: "/investor",
   },
   {
-    label: "Personal Management",
-    href: "/investor/personal-management",
+    label: "Financial State",
+    href: "/investor/financial-state",
   },
   {
-    label: "Investment Planning",
-    href: "/investor/investment-planning",
+    label: "Goal Planner",
+    href: "/investor/goal-planner",
   },
   {
-    label: "Risk Planning",
-    href: "/investor/risk-planning",
+    label: "Onboarding",
+    href: "/investor/onboarding",
   },
 ];
 
 export default function InvestorSidebar() {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:block">
+    <aside className={`${isCollapsed ? "w-16" : "w-64"} shrink-0 border-r border-slate-200 bg-white transition-[width] duration-200`}>
       <div className="sticky top-0 flex h-screen flex-col">
         {/* Logo */}
-        <div className="flex h-20 items-center border-b border-slate-200 px-6">
+        <div className={`flex h-20 items-center border-b border-slate-200 ${isCollapsed ? "justify-center px-2" : "justify-between px-4"}`}>
           <Link
             href="/investor"
             className="flex items-center gap-2.5"
@@ -59,14 +61,23 @@ export default function InvestorSidebar() {
               </svg>
             </div>
 
-            <span className="text-xl font-extrabold tracking-tight text-navy-900">
-              planvesto
-            </span>
+            {!isCollapsed && <span className="text-xl font-extrabold tracking-tight text-navy-900">planvesto</span>}
           </Link>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((current) => !current)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-900"
+            aria-label={isCollapsed ? "Expand investor navigation" : "Collapse investor navigation"}
+            title={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d={isCollapsed ? "M9 6L15 12L9 18" : "M15 6L9 12L15 18"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2 overflow-y-auto p-4">
+        <nav className={`flex-1 space-y-2 overflow-y-auto ${isCollapsed ? "p-2" : "p-4"}`} aria-label="Investor navigation">
           {navigation.map((item) => {
             const isActive =
               item.href === "/investor"
@@ -78,25 +89,29 @@ export default function InvestorSidebar() {
                 key={item.href}
                 href={item.href}
                 className={[
-                  "block rounded-xl px-4 py-3 text-sm font-semibold transition",
+                  "flex items-center rounded-xl py-3 text-sm font-semibold transition",
+                  isCollapsed ? "justify-center px-2" : "px-4",
                   isActive
                     ? "bg-navy-900 text-white"
                     : "text-slate-600 hover:bg-slate-100 hover:text-navy-900",
                 ].join(" ")}
               >
-                {item.label}
+                <span className={isCollapsed ? "sr-only" : undefined}>{item.label}</span>
+                {isCollapsed && <span aria-hidden="true" className="text-base">{item.label.slice(0, 1)}</span>}
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-slate-200 p-4">
+        <div className={`border-t border-slate-200 ${isCollapsed ? "p-2" : "p-4"}`}>
           <Link
             href="/"
-            className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900"
+            className={`flex rounded-xl py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900 ${isCollapsed ? "justify-center px-2" : "px-4"}`}
+            title={isCollapsed ? "Back to Planvesto" : undefined}
           >
-            Back to Planvesto
+            <span className={isCollapsed ? "sr-only" : undefined}>Back to Planvesto</span>
+            {isCollapsed && <span aria-hidden="true">↩</span>}
           </Link>
         </div>
       </div>
