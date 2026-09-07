@@ -2,48 +2,174 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { loadOnboardingData, type OnboardingData } from "../../../lib/onboarding/persistence";
+import { supabase } from "../../../lib/supabase";
 
-function monthlyAmount(amount: string, frequency: string) {
-  const value = Number(amount) || 0;
-  return frequency.toLowerCase() === "annual" ? value / 12 : value;
-}
+type Metric = {
+  value: number | null;
+  available: boolean;
+  reason: string | null;
+};
+
+type BreakdownItem = {
+  type: string;
+  monthly: number;
+  annual: number;
+};
+
+type AssetBreakdownItem = {
+  asset_id: string;
+  name: string;
+  current_value: number;
+  ownership_applied: number;
+  liquidity: string | null;
+};
+
+type LiabilityBreakdownItem = {
+  liability_id: string;
+  name: string;
+  outstanding_amount: number;
+  responsibility_applied: number;
+  classification: string | null;
+};
+
+type CommitmentBreakdownItem = {
+  commitment_id: string;
+  name: string;
+  amount: number | string;
+};
+
+type FinancialStateResponse = {
+  scope: string;
+  planning_unit_id: string;
+  investor_id: string | null;
+  income_monthly: Metric;
+  income_annual: Metric;
+  income_breakdown: BreakdownItem[];
+  expenses_monthly: Metric;
+  expenses_annual: Metric;
+  expense_breakdown: BreakdownItem[];
+  commitments_monthly: Metric;
+  commitments_annual: Metric;
+  commitment_breakdown: CommitmentBreakdownItem[];
+  investable_surplus_monthly: Metric;
+  investable_surplus_annual: Metric;
+  cash_flow_ratio: Metric;
+  savings_investment_rate: Metric;
+  total_assets: Metric;
+  asset_breakdown: AssetBreakdownItem[];
+  total_liabilities: Metric;
+  liability_breakdown: LiabilityBreakdownItem[];
+  emi_burden_monthly: Metric;
+  net_worth: Metric;
+  safety_reserve_months: Metric;
+  safety_reserve_required_amount: Metric;
+};
 
 function formatAmount(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
 
-function sumValues(values: string[]) {
-  return values.reduce((total, value) => total + (Number(value) || 0), 0);
-}
-
 export default function FinancialStatePage() {
-  const [data, setData] = useState<OnboardingData | null>(null);
+  const [data, setData] = useState<FinancialStateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    loadOnboardingData()
-      .then((loaded) => {
-        if (active) setData(loaded);
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : "Unable to load your financial state.");
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+
+    async function fetchFinancialState() {
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        const session = sessionData?.session;
+        if (!session) {
+          throw new Error("Please log in to view your financial state.");
+        }
+
+        const user = session.user;
+        let planningUnitId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
+
+        if (!planningUnitId) {
+          const { data: puData, error: puError } = await supabase
+            .from("planning_units")
+            .select("planning_unit_id")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (puError) throw puError;
+          if (puData?.planning_unit_id) {
+            const resolvedId = String(puData.planning_unit_id);
+            planningUnitId = resolvedId;
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("planvesto-planning-unit-id", resolvedId);
+            }
+          }
+        }
+
+        if (!planningUnitId) {
+          if (active) {
+            setData(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+        const response = await fetch(`${backendUrl}/api/financial-state/build`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            planning_unit_id: planningUnitId,
+            scope: "family",
+          }),
+        });
+
+        const responseBody = await response.json();
+        if (!response.ok) {
+          throw new Error(responseBody.detail || "Unable to load your financial state.");
+        }
+
+        if (active) {
+          setData(responseBody);
+        }
+      } catch (cause: unknown) {
+        if (active) {
+          setError(cause instanceof Error ? cause.message : "Unable to load your financial state.");
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchFinancialState();
+
     return () => {
       active = false;
     };
   }, []);
 
-  const monthlyIncome = data?.incomeSources.reduce((total, item) => total + monthlyAmount(item.amount, item.frequency), 0) || 0;
-  const monthlyExpenses = data?.expenses.reduce((total, item) => total + monthlyAmount(item.amount, item.frequency), 0) || 0;
-  const assets = data ? sumValues(data.assets.map((item) => item.currentValue)) : 0;
-  const liabilities = data ? sumValues(data.liabilities.map((item) => item.outstandingAmount)) : 0;
-  const commitments = data ? sumValues(data.commitments.map((item) => item.amount)) : 0;
+  const monthlyIncome = data?.income_monthly?.value ?? 0;
+  const monthlyExpenses = data?.expenses_monthly?.value ?? 0;
+  const assets = data?.total_assets?.value ?? 0;
+  const liabilities = data?.total_liabilities?.value ?? 0;
+  const commitments = data?.commitments_monthly?.available && data.commitments_monthly.value !== null
+    ? data.commitments_monthly.value
+    : (data?.commitment_breakdown?.reduce((total, item) => total + (Number(item.amount) || 0), 0) ?? 0);
+
+  const hasNoData = !data || (
+    !data.income_breakdown.length &&
+    !data.expense_breakdown.length &&
+    !data.asset_breakdown.length &&
+    !data.liability_breakdown.length &&
+    !data.commitment_breakdown.length
+  );
 
   return (
     <div className="min-h-screen bg-[#f6f8fb] text-slate-900">
@@ -54,8 +180,14 @@ export default function FinancialStatePage() {
           {error && <section className="rounded-3xl border border-red-200 bg-red-50 p-7 text-sm font-semibold text-red-700" role="alert">{error}</section>}
           {!isLoading && !error && data && <>
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><StateMetric label="Monthly Income" value={monthlyIncome} /><StateMetric label="Monthly Expenses" value={monthlyExpenses} /><StateMetric label="Assets" value={assets} /><StateMetric label="Liabilities" value={liabilities} /><StateMetric label="Commitments" value={commitments} /></section>
-            {!data.incomeSources.length && !data.expenses.length && !data.assets.length && !data.liabilities.length && !data.commitments.length && <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm"><h2 className="text-lg font-extrabold text-slate-950">Your financial state is empty</h2><p className="mt-2 text-sm text-slate-500">Complete the onboarding sections to see your current position here.</p><Link href="/investor/onboarding/personal-information" className="mt-5 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Continue onboarding</Link></section>}
-            <section className="grid gap-6 xl:grid-cols-2"><DataList title="Income" empty="No income sources added." items={data.incomeSources.map((item) => ({ label: item.incomeType, value: formatAmount(monthlyAmount(item.amount, item.frequency)) }))} /><DataList title="Expenses" empty="No expenses added." items={data.expenses.map((item) => ({ label: item.category, value: formatAmount(monthlyAmount(item.amount, item.frequency)) }))} /><DataList title="Assets" empty="No assets added." items={data.assets.map((item) => ({ label: item.description ? `${item.assetType} - ${item.description}` : item.assetType, value: formatAmount(Number(item.currentValue) || 0) }))} /><DataList title="Liabilities" empty="No liabilities added." items={data.liabilities.map((item) => ({ label: item.description ? `${item.liabilityType} - ${item.description}` : item.liabilityType, value: formatAmount(Number(item.outstandingAmount) || 0) }))} /><DataList title="Commitments" empty="No commitments added." items={data.commitments.map((item) => ({ label: item.name, value: formatAmount(Number(item.amount) || 0) }))} /></section>
+            {hasNoData && <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm"><h2 className="text-lg font-extrabold text-slate-950">Your financial state is empty</h2><p className="mt-2 text-sm text-slate-500">Complete the onboarding sections to see your current position here.</p><Link href="/investor/onboarding/personal-information" className="mt-5 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Continue onboarding</Link></section>}
+            <section className="grid gap-6 xl:grid-cols-2">
+              <DataList title="Income" empty="No income sources added." items={data.income_breakdown.map((item) => ({ label: item.type, value: formatAmount(item.monthly) }))} />
+              <DataList title="Expenses" empty="No expenses added." items={data.expense_breakdown.map((item) => ({ label: item.type, value: formatAmount(item.monthly) }))} />
+              <DataList title="Assets" empty="No assets added." items={data.asset_breakdown.map((item) => ({ label: item.name, value: formatAmount(item.current_value) }))} />
+              <DataList title="Liabilities" empty="No liabilities added." items={data.liability_breakdown.map((item) => ({ label: item.name, value: formatAmount(item.outstanding_amount) }))} />
+              <DataList title="Commitments" empty="No commitments added." items={data.commitment_breakdown.map((item) => ({ label: item.name, value: formatAmount(Number(item.amount) || 0) }))} />
+            </section>
           </>}
         </div>
       </main></div>

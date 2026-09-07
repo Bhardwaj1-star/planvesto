@@ -1,49 +1,30 @@
-def calculate_future_value(
-    current_corpus: float,
-    monthly_investment: float,
-    annual_return: float,
-    years: int,
-) -> float:
-    months = years * 12
-    monthly_rate = annual_return / 100 / 12
-
-    if monthly_rate == 0:
-        return current_corpus + (monthly_investment * months)
-
-    future_corpus = (
-        current_corpus * ((1 + monthly_rate) ** months)
-        + monthly_investment
-        * (((1 + monthly_rate) ** months - 1) / monthly_rate)
-    )
-
-    return round(future_corpus, 2)
+from __future__ import annotations
 
 
-def calculate_required_monthly_investment(
-    target_amount: float,
-    current_corpus: float,
-    annual_return: float,
-    years: int,
-) -> float:
-    months = years * 12
-    monthly_rate = annual_return / 100 / 12
+def round_money(value: float) -> float:
+    return round(float(value), 2)
 
-    future_current_corpus = (
-        current_corpus * ((1 + monthly_rate) ** months)
-        if monthly_rate != 0
-        else current_corpus
-    )
 
-    remaining_target = max(target_amount - future_current_corpus, 0)
+def monthly_amount(amount: float, frequency: str) -> float | None:
+    """Match the current frontend model: Monthly is monthly; otherwise Annual is expected."""
+    key = frequency.strip().lower()
+    if key == "monthly":
+        return round_money(amount)
+    if key in {"annual", "annually", "yearly"}:
+        return round_money(amount / 12)
+    return None
 
-    if remaining_target == 0:
-        return 0.0
 
-    if monthly_rate == 0:
-        return round(remaining_target / months, 2)
+def annual_amount(amount: float, frequency: str) -> float | None:
+    key = frequency.strip().lower()
+    if key == "monthly":
+        return round_money(amount * 12)
+    if key in {"annual", "annually", "yearly"}:
+        return round_money(amount)
+    return None
 
-    required = remaining_target * monthly_rate / (
-        (1 + monthly_rate) ** months - 1
-    )
 
-    return round(required, 2)
+def percentage(part: float, total: float) -> float | None:
+    if total == 0:
+        return None
+    return round_money(part / total * 100)
