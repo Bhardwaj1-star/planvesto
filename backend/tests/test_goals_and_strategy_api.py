@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
 
@@ -51,3 +53,44 @@ class TestGoalsAndStrategyAPIRoutes:
         assert "/api/strategy/select" in paths
         assert "/api/strategy/runs/{goal_id}/latest" in paths
         assert "/api/strategy/runs/{goal_id}/history" in paths
+
+    @patch("api.strategy.verify_planning_unit_ownership")
+    @patch("api.strategy.authenticate_user")
+    @patch("api.strategy.StrategyService.build_strategy")
+    def test_strategy_build_missing_priorities_returns_400(self, mock_build, mock_auth, mock_pu):
+        mock_auth.return_value = "user-1"
+        mock_pu.return_value = None
+        mock_build.side_effect = HTTPException(
+            status_code=400,
+            detail="Investor priorities must be provided before strategy comparison and ranking.",
+        )
+        r = client.post(
+            "/api/strategy/build",
+            json={"planning_unit_id": "pu-1", "goal_id": "g-1"},
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 400
+        assert "Investor priorities must be provided" in r.json()["detail"]
+
+    @patch("api.strategy.verify_planning_unit_ownership")
+    @patch("api.strategy.authenticate_user")
+    @patch("api.strategy.StrategyService.select_strategy")
+    def test_strategy_select_inconsistent_returns_400(self, mock_select, mock_auth, mock_pu):
+        mock_auth.return_value = "user-1"
+        mock_pu.return_value = None
+        mock_select.side_effect = HTTPException(
+            status_code=400,
+            detail="Selected scenario does not match selected strategy.",
+        )
+        r = client.post(
+            "/api/strategy/select",
+            json={
+                "planning_unit_id": "pu-1",
+                "strategy_run_id": "run-1",
+                "selected_strategy_id": "strat-a",
+                "selected_scenario_id": "scen-b",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 400
+        assert "Selected scenario does not match" in r.json()["detail"]

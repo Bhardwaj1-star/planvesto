@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 import uuid
 from data.supabase import get_supabase
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
@@ -232,6 +232,9 @@ class GoalRepository:
             self.db.table("defined_goal_asset_mappings").insert(map_rows).execute()
 
         return def_id
+
+    def update_defined_goal_metadata(self, defined_goal_id: str, metadata: dict[str, Any]) -> None:
+        self.db.table("defined_goals").update({"version_metadata": metadata}).eq("defined_goal_id", defined_goal_id).execute()
 
     def has_material_change(self, current: DefinedGoal, new_input: GoalInput) -> bool:
         if abs(current.today_cost - new_input.today_cost) > 0.01:

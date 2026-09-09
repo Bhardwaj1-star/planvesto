@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException
+from fastapi import HTTPException
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from engines.strategy.engine import StrategyEngine
@@ -36,20 +36,23 @@ class StrategyService:
                 detail="No DefinedGoal found for this goal. Please complete Goal Planning first.",
             )
 
+        prev_run = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
+
         if priorities is None:
             # Check if previous run had priorities
-            prev_run = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
-            if prev_run:
+            if prev_run and prev_run.investor_priorities:
                 priorities = prev_run.investor_priorities
             else:
-                priorities = InvestorPriorities()
+                raise HTTPException(
+                    status_code=400,
+                    detail="Investor priorities must be provided before strategy comparison and ranking.",
+                )
 
         result = self.engine.execute(
             defined_goal=defined_goal,
             priorities=priorities,
         )
 
-        prev_run = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
         run_version = (prev_run.run_version + 1) if prev_run else 1
 
         run = StrategyRun(
@@ -177,10 +180,37 @@ class StrategyService:
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
 
-        # Validate selection matches an existing scenario
-        matched_scen = next((sc for sc in run.scenarios if sc.scenario_id == request.selected_scenario_id), None)
+        # 1. Strategy exists in the current Strategy Run's applicable strategies
+        matched_strat = next(
+            (s for s in run.applicable_strategies if s.strategy_id == request.selected_strategy_id),
+            None,
+        )
+        if not matched_strat:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Selected strategy '{request.selected_strategy_id}' does not exist in this strategy run's applicable strategies.",
+            )
+
+        # 2. Scenario exists in the current Strategy Run
+        matched_scen = next(
+            (sc for sc in run.scenarios if sc.scenario_id == request.selected_scenario_id),
+            None,
+        )
         if not matched_scen:
-            raise HTTPException(status_code=400, detail="Selected scenario not found in this strategy run")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.",
+            )
+
+        # 3. Scenario belongs to the selected strategy
+        if matched_scen.strategy_id != request.selected_strategy_id:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Selected scenario '{request.selected_scenario_id}' belongs to strategy "
+                    f"'{matched_scen.strategy_id}', which does not match selected strategy '{request.selected_strategy_id}'."
+                ),
+            )
 
         self.strat_repo.update_selection(
             planning_unit_id=request.planning_unit_id,
@@ -228,6 +258,34 @@ class StrategyService:
             custom_scenarios=custom_scens,
         )
 
+        # Revalidate previous selection against new run results
+        sel_strat_id = None
+        sel_scen_id = None
+        sel_params = {}
+        sel_timestamp = None
+
+        if prev_run.selected_strategy_id and prev_run.selected_scenario_id:
+            strat_match = next(
+                (s for s in result.applicable_strategies if s.strategy_id == prev_run.selected_strategy_id),
+                None,
+            )
+            scen_match = next(
+                (sc for sc in result.scenarios if sc.scenario_id == prev_run.selected_scenario_id),
+                None,
+            )
+            if strat_match and scen_match and scen_match.strategy_id == prev_run.selected_strategy_id:
+                # Still valid: preserve
+                sel_strat_id = prev_run.selected_strategy_id
+                sel_scen_id = prev_run.selected_scenario_id
+                sel_params = prev_run.selected_implementation_parameters or {}
+                sel_timestamp = prev_run.selection_timestamp
+            else:
+                # No longer valid: clear selection (do not auto-select recommendation)
+                sel_strat_id = None
+                sel_scen_id = None
+                sel_params = {}
+                sel_timestamp = None
+
         new_run = StrategyRun(
             planning_unit_id=planning_unit_id,
             goal_id=goal_id,
@@ -242,9 +300,10 @@ class StrategyService:
             comparison_matrix=result.comparison_matrix,
             rankings=result.rankings,
             recommendation=result.recommendation,
-            selected_strategy_id=prev_run.selected_strategy_id,
-            selected_scenario_id=prev_run.selected_scenario_id,
-            selected_implementation_parameters=prev_run.selected_implementation_parameters,
+            selected_strategy_id=sel_strat_id,
+            selected_scenario_id=sel_scen_id,
+            selected_implementation_parameters=sel_params,
+            selection_timestamp=sel_timestamp,
             run_metadata={
                 "trigger": "automatic_recalculation",
                 "triggered_by_defined_goal_version": new_defined_goal.version,

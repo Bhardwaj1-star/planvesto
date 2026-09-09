@@ -1,9 +1,12 @@
-﻿from typing import Any
+import logging
+from typing import Any
 from fastapi import HTTPException
 from data.goal_repository import GoalRepository
 from engines.goal.engine import GoalEngine
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
 from schemas.goals import GoalInput, GoalCalculateRequest
+
+logger = logging.getLogger(__name__)
 
 
 class GoalService:
@@ -76,9 +79,19 @@ class GoalService:
                     goal_id=goal_id,
                     new_defined_goal=defined_goal,
                 )
-            except Exception:
-                # Logging / graceful fallback so goal save succeeds
-                pass
+                defined_goal.version_metadata["strategy_recalculation"] = "succeeded"
+                self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
+            except Exception as exc:
+                logger.error(
+                    "Automatic strategy recalculation failed for goal %s (version %d): %s",
+                    goal_id,
+                    new_version,
+                    exc,
+                    exc_info=True,
+                )
+                defined_goal.version_metadata["strategy_recalculation"] = "failed"
+                defined_goal.version_metadata["strategy_recalculation_error"] = str(exc)
+                self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
 
         return defined_goal
 

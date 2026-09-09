@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities
 from engines.strategy.applicability import filter_applicable_strategies
@@ -39,35 +39,40 @@ class TestStrategyApplicability:
         strats = filter_applicable_strategies("")
         assert len(strats) == 0
 
+    def test_engine_raises_error_if_priorities_missing(self):
+        engine = StrategyEngine()
+        goal = _make_goal()
+        with pytest.raises(ValueError, match="Investor priorities must be provided"):
+            engine.execute(goal, priorities=None)
+
     def test_strategy_engine_returns_no_strategy_available(self):
         engine = StrategyEngine()
+        priorities = InvestorPriorities()
         goal = _make_goal(goal_type="CompletelyUnmatchedNonExistentType999")
-        # Ensure our catalog does not catch it
-        result = engine.execute(goal)
-        # If catalog has 'other' fallback, let's test empty type
+        result = engine.execute(goal, priorities=priorities)
         goal_empty = _make_goal(goal_type="")
-        result_empty = engine.execute(goal_empty)
+        result_empty = engine.execute(goal_empty, priorities=priorities)
         assert len(result_empty.applicable_strategies) == 0
         assert "No Strategy Available" in result_empty.recommendation.short_reasons
 
     def test_strategies_generated_for_shortfall(self):
         engine = StrategyEngine()
         goal = _make_goal(funding_gap=600000.0, funding_status="Shortfall")
-        res = engine.execute(goal)
+        res = engine.execute(goal, priorities=InvestorPriorities())
         assert len(res.applicable_strategies) > 0
         assert len(res.rankings) > 0
 
     def test_strategies_generated_for_on_track(self):
         engine = StrategyEngine()
         goal = _make_goal(funding_gap=0.0, funding_status="On Track")
-        res = engine.execute(goal)
+        res = engine.execute(goal, priorities=InvestorPriorities())
         assert len(res.applicable_strategies) > 0
         assert len(res.rankings) > 0
 
     def test_strategies_generated_for_overfunded(self):
         engine = StrategyEngine()
         goal = _make_goal(funding_gap=-200000.0, funding_status="Overfunded")
-        res = engine.execute(goal)
+        res = engine.execute(goal, priorities=InvestorPriorities())
         assert len(res.applicable_strategies) > 0
         assert len(res.rankings) > 0
 
@@ -117,6 +122,6 @@ class TestCustomScenarios:
         )
         assert custom.is_investor_modified is True
 
-        res = engine.execute(goal, custom_scenarios=[custom])
+        res = engine.execute(goal, priorities=InvestorPriorities(), custom_scenarios=[custom])
         scenario_ids = [r.scenario_id for r in res.rankings]
         assert custom.scenario_id in scenario_ids

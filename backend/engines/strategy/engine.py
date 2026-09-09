@@ -39,7 +39,7 @@ class StrategyEngine:
         custom_scenarios: list[Scenario] | None = None,
     ) -> StrategyEngineResult:
         if priorities is None:
-            priorities = InvestorPriorities()
+            raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
         # 1. Applicability (strictly by Goal Type)
         strategies = filter_applicable_strategies(defined_goal.goal_type)
