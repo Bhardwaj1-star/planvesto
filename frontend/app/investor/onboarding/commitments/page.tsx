@@ -1,5 +1,5 @@
-import CommitmentsSection from "../../../../components/onboarding/commitments/CommitmentsSection";
+import { redirect } from "next/navigation";
 
 export default function CommitmentsPage() {
-  return <CommitmentsSection />;
+  redirect("/investor/onboarding/liabilities");
 }

@@ -8,7 +8,7 @@ import { validateExpense } from "../../../lib/onboarding/expenses/validation";
 
 export function useExpenses() {
   const { expenses, setExpenses, saveExpenses } = useOnboardingStore();
-  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(4);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(3);
   const [draft, setDraft] = useState<Expense>({ id: createExpenseId(), ...emptyExpense });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [errors, setErrors] = useState<ExpenseErrors>({});
@@ -95,7 +95,7 @@ export function useExpenses() {
       return;
     }
     setIsComplete(true);
-    completeStep(4);
+    completeStep(3);
     goNext();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }

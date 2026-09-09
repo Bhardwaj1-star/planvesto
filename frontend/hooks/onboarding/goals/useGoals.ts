@@ -9,9 +9,10 @@ import { validateGoal } from "../../../lib/onboarding/goals/validation";
 
 export function useGoals() {
   const { goals, setGoals, saveGoals } = useOnboardingStore();
-  const { completeStep, goPrevious } = useOnboardingNavigation(8);
+  const { completeStep, goPrevious } = useOnboardingNavigation(6);
   const router = useRouter();
   const [draft, setDraft] = useState<Goal>({ id: createGoalId(), ...emptyGoal });
+  const [isAdding, setIsAdding] = useState(goals.length === 0);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [errors, setErrors] = useState<GoalErrors>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -20,6 +21,7 @@ export function useGoals() {
   function startAdding() {
     setDraft({ id: createGoalId(), ...emptyGoal });
     setEditingGoalId(null);
+    setIsAdding(true);
     setErrors({});
     setIsSubmitted(false);
   }
@@ -27,12 +29,17 @@ export function useGoals() {
   function startEditing(goal: Goal) {
     setDraft({ ...goal });
     setEditingGoalId(goal.id);
+    setIsAdding(true);
     setErrors({});
     setIsSubmitted(false);
   }
 
   function cancelEditing() {
-    startAdding();
+    setDraft({ id: createGoalId(), ...emptyGoal });
+    setEditingGoalId(null);
+    setIsAdding(false);
+    setErrors({});
+    setIsSubmitted(false);
   }
 
   function updateDraft(changes: Partial<Goal>) {
@@ -62,7 +69,11 @@ export function useGoals() {
     } catch {
       return false;
     }
-    startAdding();
+    setDraft({ id: createGoalId(), ...emptyGoal });
+    setEditingGoalId(null);
+    setIsAdding(false);
+    setErrors({});
+    setIsSubmitted(false);
     return true;
   }
 
@@ -75,7 +86,7 @@ export function useGoals() {
     } catch {
       return;
     }
-    if (editingGoalId === id) startAdding();
+    if (editingGoalId === id) cancelEditing();
     setIsComplete(false);
   }
 
@@ -86,6 +97,7 @@ export function useGoals() {
     const invalidIndex = goalErrors.findIndex((goalErrorsForItem) => Object.keys(goalErrorsForItem).length > 0);
     if (invalidIndex >= 0) {
       setEditingGoalId(goals[invalidIndex].id);
+      setIsAdding(true);
       setDraft(goals[invalidIndex]);
       setErrors(goalErrors[invalidIndex]);
       return;
@@ -97,7 +109,7 @@ export function useGoals() {
       return;
     }
     setIsComplete(true);
-    completeStep(8);
+    completeStep(6);
     router.push("/investor/financial-state");
   }
 
@@ -105,8 +117,11 @@ export function useGoals() {
     goals,
     draft,
     editingGoalId,
+    isAdding,
+    isFormOpen: isAdding || Boolean(editingGoalId),
     errors,
     isComplete,
+    startAdding,
     startEditing,
     updateDraft,
     saveGoal,

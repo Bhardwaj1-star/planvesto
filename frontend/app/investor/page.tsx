@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import InvestorProfileMenu from "../../components/InvestorProfileMenu";
 
 const sections = [
   {
@@ -16,6 +17,20 @@ const sections = [
     description: "Know where do you want to get to.",
     href: "/investor/goal-planner",
     action: "Open Goal Planner",
+  },
+  {
+    eyebrow: "Financial Memory",
+    title: "Investor Diary",
+    description: "Your financial memory and decision layer. Record life events, thoughts, and track your chronological financial decisions.",
+    href: "/investor/diary",
+    action: "Open Investor Diary",
+  },
+  {
+    eyebrow: "Calibrated Pathways",
+    title: "Strategy Builder",
+    description: "Compare optimized investment strategies calibrated to your real goals and asset allocation.",
+    href: "/investor/strategy-builder",
+    action: "Open Strategy Builder",
   },
 ];
 
@@ -33,12 +48,9 @@ export default function InvestorDashboard() {
                 </h1>
               </div>
 
-              <Link
-                href="/investor/onboarding"
-                className="hidden rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 sm:inline-flex"
-              >
-                Continue financial plan
-              </Link>
+              <div className="flex items-center gap-3">
+                <InvestorProfileMenu />
+              </div>
             </div>
           </header>
 

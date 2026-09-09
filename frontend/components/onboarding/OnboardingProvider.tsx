@@ -25,13 +25,11 @@ import {
 
 export const onboardingSteps = [
   { number: 1, slug: "personal-information", title: "Personal Information" },
-  { number: 2, slug: "family-dependents", title: "Family / Dependents" },
-  { number: 3, slug: "income", title: "Income" },
-  { number: 4, slug: "expenses", title: "Expenses" },
-  { number: 5, slug: "assets", title: "Assets" },
-  { number: 6, slug: "liabilities", title: "Liabilities" },
-  { number: 7, slug: "commitments", title: "Commitments" },
-  { number: 8, slug: "goals", title: "Goals" },
+  { number: 2, slug: "income", title: "Income" },
+  { number: 3, slug: "expenses", title: "Expenses" },
+  { number: 4, slug: "assets", title: "Assets" },
+  { number: 5, slug: "liabilities", title: "Liabilities" },
+  { number: 6, slug: "goals", title: "Goals" },
 ] as const;
 
 type OnboardingState = {
@@ -102,7 +100,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   });
 
   useEffect(() => {
-    if (!pathname.startsWith("/investor/onboarding/")) return;
+    const shouldLoad = pathname.startsWith("/investor/onboarding/") || pathname.startsWith("/investor/profile");
+    if (!shouldLoad) return;
     let active = true;
     setState((current) => ({ ...current, isLoading: true }));
     loadOnboardingData()
@@ -113,13 +112,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           ...data,
           completedSteps: [
             data.personalInformation.fullName ? 1 : 0,
-            data.familyMembers.length ? 2 : 0,
-            data.incomeSources.length ? 3 : 0,
-            data.expenses.length ? 4 : 0,
-            data.assets.length ? 5 : 0,
-            data.liabilities.length ? 6 : 0,
-            data.commitments.length ? 7 : 0,
-            data.goals.length ? 8 : 0,
+            data.incomeSources.length ? 2 : 0,
+            data.expenses.length ? 3 : 0,
+            data.assets.length ? 4 : 0,
+            data.liabilities.length ? 5 : 0,
+            data.goals.length ? 6 : 0,
           ].filter(Boolean),
           isLoading: false,
           persistenceError: null,
@@ -171,7 +168,18 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   };
 
   if (pathname.startsWith("/investor/onboarding/") && state.isLoading) {
-    return <main className="flex min-h-screen items-center justify-center bg-slate-25 text-sm font-semibold text-slate-500">Loading your financial plan...</main>;
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#f8fafc] text-slate-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-900 text-white shadow-md animate-pulse">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M5 17L10 12L13 15L19 8" />
+            <path d="M15 8H19V12" />
+          </svg>
+        </div>
+        <p className="mt-4 text-sm font-semibold text-navy-900">Loading your financial plan...</p>
+        <p className="mt-1 text-xs text-slate-400">Preparing your guided financial workspace</p>
+      </main>
+    );
   }
 
   return (

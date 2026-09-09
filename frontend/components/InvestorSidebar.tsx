@@ -14,18 +14,38 @@ const navigation = [
     href: "/investor/financial-state",
   },
   {
+    label: "Health Score",
+    href: "/investor/health-score",
+  },
+  {
+    label: "Budgeting",
+    href: "/investor/budgeting",
+  },
+  {
     label: "Goal Planner",
     href: "/investor/goal-planner",
   },
   {
-    label: "Onboarding",
-    href: "/investor/onboarding",
+    label: "Strategy Builder",
+    href: "/investor/strategy-builder",
+  },
+  {
+    label: "Investor Diary",
+    href: "/investor/diary",
+  },
+  {
+    label: "Profile",
+    href: "/investor/profile",
   },
 ];
 
 export default function InvestorSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  if (pathname?.startsWith("/investor/onboarding")) {
+    return null;
+  }
 
   return (
     <aside className={`${isCollapsed ? "w-16" : "w-64"} shrink-0 border-r border-slate-200 bg-white transition-[width] duration-200`}>

@@ -1,31 +1,14 @@
 from fastapi import APIRouter, Header, HTTPException
 
-from data.supabase import get_supabase
+from api.auth import authenticate_user, verify_planning_unit_ownership
 from schemas.financial_state import FinancialStateRequest
 from services.financial_state_service import FinancialStateService
 
 router = APIRouter(prefix="/api/financial-state", tags=["Financial State"])
 
-
-def _authenticate(authorization: str | None) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization token required")
-    token = authorization.removeprefix("Bearer ").strip()
-    try:
-        result = get_supabase().auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail="Invalid authorization token") from exc
-    user = getattr(result, "user", None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid authorization token")
-    return user.id
-
-
-def _verify_planning_unit(planning_unit_id: str, user_id: str) -> None:
-    result = (get_supabase().table("planning_units").select("planning_unit_id")
-              .eq("planning_unit_id", planning_unit_id).eq("user_id", user_id).maybe_single().execute())
-    if not result.data:
-        raise HTTPException(status_code=403, detail="Planning unit does not belong to authenticated user")
+# Backwards compatibility aliases
+_authenticate = authenticate_user
+_verify_planning_unit = verify_planning_unit_ownership
 
 
 @router.post("/build")

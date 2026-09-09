@@ -8,7 +8,7 @@ import { validateLiability } from "../../../lib/onboarding/liabilities/validatio
 
 export function useLiabilities() {
   const { liabilities, setLiabilities, saveLiabilities } = useOnboardingStore();
-  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(6);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(5);
   const [draft, setDraft] = useState<Liability>({ id: createLiabilityId(), ...emptyLiability });
   const [editingLiabilityId, setEditingLiabilityId] = useState<string | null>(null);
   const [errors, setErrors] = useState<LiabilityErrors>({});
@@ -95,7 +95,7 @@ export function useLiabilities() {
       return;
     }
     setIsComplete(true);
-    completeStep(6);
+    completeStep(5);
     goNext();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }

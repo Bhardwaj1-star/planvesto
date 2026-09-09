@@ -3,9 +3,77 @@
 import GoalForm from "./GoalForm";
 import GoalSummary from "./GoalSummary";
 import { useGoals } from "../../../hooks/onboarding/goals/useGoals";
+import OnboardingShell from "../OnboardingShell";
 
 export default function GoalsForm() {
   const goals = useGoals();
 
-  return <main className="login-grid min-h-screen bg-slate-25 text-slate-900"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex h-20 max-w-[1200px] items-center justify-between px-5 lg:px-8"><a href="/" className="flex items-center gap-2.5" aria-label="Planvesto Home"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy-900"><svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 17L10 12L13 15L19 8M15 8H19V12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg></div><span className="text-xl font-extrabold tracking-tight text-navy-900">planvesto</span></a><span className="text-sm font-semibold text-slate-500">Your financial plan</span></div></header><div className="mx-auto w-full max-w-[1080px] px-5 py-10 lg:px-8 lg:py-16"><div className="grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-16"><aside className="lg:pt-4"><p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Onboarding</p><div className="mt-5 flex items-center gap-3 lg:block"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-extrabold text-white ring-8 ring-teal-50">8</div><div className="lg:mt-4"><p className="text-sm font-bold text-navy-900">Goals &amp; Life Plans</p><p className="mt-1 text-xs text-slate-500">Step 8 of your plan</p></div></div><div className="mt-6 hidden border-l border-slate-200 pl-5 text-xs leading-5 text-slate-400 lg:block">A clear plan starts with knowing what you want your money to accomplish.</div></aside><section><div className="mb-8 max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Goals &amp; Life Plans — Step 8</p><h1 className="mt-3 text-3xl font-extrabold tracking-tight text-navy-900 sm:text-4xl">What are you planning your money for?</h1><p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">Financial planning starts with understanding what you want your money to accomplish.</p></div><div className="space-y-5"><GoalSummary goals={goals.goals} onEdit={goals.startEditing} onRemove={goals.removeGoal} /><GoalForm goal={goals.draft} errors={goals.errors} isEditing={Boolean(goals.editingGoalId)} onChange={goals.updateDraft} onSave={goals.saveGoal} onCancel={goals.cancelEditing} /><div className="flex flex-col-reverse items-stretch gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between"><a href="/investor/onboarding/liabilities" className="text-center text-sm font-bold text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-navy-900 sm:text-left">&lt;- Back</a><button type="button" onClick={goals.handleContinue} className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy-900 px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800 focus:outline-none focus:ring-4 focus:ring-teal-100 disabled:cursor-not-allowed disabled:opacity-60">Continue <span aria-hidden="true">-&gt;</span></button></div>{goals.isComplete && <p className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700" role="status">Goal information is complete for this session.</p>}</div></section></div></div></main>;
+  return (
+    <OnboardingShell
+      currentStep={6}
+      title="What are you planning your money for?"
+      subtitle="Financial planning connects your balance sheet and cash flow to life milestones, family security, and future aspirations."
+      stepContext="Goals & Life Aspirations"
+      badge={goals.goals.length > 0 ? `${goals.goals.length} goal${goals.goals.length > 1 ? "s" : ""} added` : undefined}
+    >
+      <div className="space-y-6">
+        {(goals.goals.length > 0 || !goals.isFormOpen) && (
+          <GoalSummary
+            goals={goals.goals}
+            onEdit={goals.startEditing}
+            onRemove={goals.removeGoal}
+          />
+        )}
+
+        {goals.isFormOpen ? (
+          <GoalForm
+            goal={goals.draft}
+            errors={goals.errors}
+            isEditing={Boolean(goals.editingGoalId)}
+            onChange={goals.updateDraft}
+            onSave={goals.saveGoal}
+            onCancel={goals.cancelEditing}
+          />
+        ) : (
+          <div className="flex justify-start">
+            <button
+              type="button"
+              onClick={goals.startAdding}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-600 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-50 focus:outline-none focus:ring-4 focus:ring-teal-100"
+            >
+              <span aria-hidden="true" className="text-base font-extrabold">+</span>
+              Add Goal
+            </button>
+          </div>
+        )}
+
+        {/* Consistent Action Bar */}
+        <div className="flex flex-col-reverse items-stretch gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between border-t border-slate-200/80">
+          <button
+            type="button"
+            onClick={goals.goPrevious}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-900"
+          >
+            <span aria-hidden="true">&larr;</span>
+            Back to Liabilities
+          </button>
+
+          <button
+            type="button"
+            onClick={goals.handleContinue}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Complete Onboarding &amp; View Plan
+            <span aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
+
+        {goals.isComplete && (
+          <p className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700" role="status">
+            All onboarding steps complete! Navigating to your financial state...
+          </p>
+        )}
+      </div>
+    </OnboardingShell>
+  );
 }
