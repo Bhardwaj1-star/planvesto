@@ -1,5 +1,5 @@
-﻿from typing import Any, Literal
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+from pydantic import BaseModel, Field, model_validator
 
 
 class StrategyImplementationParamDef(BaseModel):
@@ -8,9 +8,44 @@ class StrategyImplementationParamDef(BaseModel):
     param_type: Literal["currency", "percentage", "integer", "choice"]
     description: str
     default_value: Any
+    editable: bool = True
     min_value: float | None = None
     max_value: float | None = None
     choices: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_definition(self) -> "StrategyImplementationParamDef":
+        if self.min_value is not None and self.max_value is not None and self.min_value > self.max_value:
+            raise ValueError("min_value cannot be greater than max_value")
+
+        if self.param_type == "choice":
+            if not self.choices:
+                raise ValueError("choice parameters must define at least one choice")
+            if self.default_value not in self.choices:
+                raise ValueError("choice default_value must be one of choices")
+        elif self.choices:
+            raise ValueError("choices are only valid for choice parameters")
+
+        if self.param_type != "choice":
+            if not isinstance(self.default_value, (int, float)) or isinstance(self.default_value, bool):
+                raise ValueError("numeric parameters require a numeric default_value")
+            if self.min_value is not None and self.default_value < self.min_value:
+                raise ValueError("default_value cannot be below min_value")
+            if self.max_value is not None and self.default_value > self.max_value:
+                raise ValueError("default_value cannot exceed max_value")
+
+        if self.param_type == "percentage":
+            if self.min_value is not None and not 0 <= self.min_value <= 100:
+                raise ValueError("percentage min_value must be between 0 and 100")
+            if self.max_value is not None and not 0 <= self.max_value <= 100:
+                raise ValueError("percentage max_value must be between 0 and 100")
+
+        if self.param_type == "integer":
+            for value in (self.default_value, self.min_value, self.max_value):
+                if value is not None and float(value) != int(value):
+                    raise ValueError("integer parameters require integer bounds and default")
+
+        return self
 
 
 class StrategyDefinition(BaseModel):
@@ -18,6 +53,9 @@ class StrategyDefinition(BaseModel):
     name: str
     tagline: str
     description: str
+    library_version: str = "1.0"
+    implementation_version: str = "1.0"
+    active: bool = True
     applicable_goal_types: list[str] = Field(default_factory=list)
     implementation_parameters: list[StrategyImplementationParamDef] = Field(default_factory=list)
     good_outcomes: list[str] = Field(default_factory=list)
@@ -27,6 +65,26 @@ class StrategyDefinition(BaseModel):
     baseline_liquidity_score: float = 7.0
     baseline_growth_score: float = 7.0
     baseline_flexibility_score: float = 7.0
+
+    @model_validator(mode="after")
+    def validate_definition(self) -> "StrategyDefinition":
+        if not self.strategy_id.strip():
+            raise ValueError("strategy_id cannot be empty")
+        if not self.library_version.strip():
+            raise ValueError("library_version cannot be empty")
+        if not self.implementation_version.strip():
+            raise ValueError("implementation_version cannot be empty")
+
+        parameter_names = [param.name for param in self.implementation_parameters]
+        if len(parameter_names) != len(set(parameter_names)):
+            raise ValueError("implementation parameter names must be unique")
+
+        for score_name in ("baseline_safety_score", "baseline_liquidity_score", "baseline_growth_score", "baseline_flexibility_score"):
+            score = getattr(self, score_name)
+            if not 0 <= score <= 10:
+                raise ValueError(f"{score_name} must be between 0 and 10")
+
+        return self
 
 
 class Scenario(BaseModel):
