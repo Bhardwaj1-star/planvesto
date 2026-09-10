@@ -1,12 +1,14 @@
 from fastapi import HTTPException
 
 from data.financial_data import FinancialDataRepository
+from data.financial_state_repository import FinancialStateSnapshotRepository
 from engines.financial_state.engine import FinancialStateEngine
 
 
 class FinancialStateService:
     def __init__(self):
         self.repository = FinancialDataRepository()
+        self.snapshot_repository = FinancialStateSnapshotRepository()
         self.engine = FinancialStateEngine()
 
     def build(self, planning_unit_id: str, scope: str = "family", investor_id: str | None = None):
@@ -15,7 +17,7 @@ class FinancialStateService:
         investors = self.repository.get_investors(planning_unit_id)
         if scope == "individual" and not any(r.get("investor_id") == investor_id for r in investors):
             raise HTTPException(status_code=404, detail="Investor not found in planning unit")
-        return self.engine.build(
+        financial_state = self.engine.build(
             planning_unit_id=planning_unit_id,
             investors=investors,
             income_rows=self.repository.get_income(planning_unit_id),
@@ -29,3 +31,10 @@ class FinancialStateService:
             scope=scope,
             investor_id=investor_id,
         )
+        self.snapshot_repository.save_snapshot(
+            planning_unit_id=planning_unit_id,
+            scope=scope,
+            investor_id=investor_id,
+            financial_state=financial_state.model_dump(mode="json"),
+        )
+        return financial_state
