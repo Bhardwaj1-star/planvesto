@@ -1,6 +1,6 @@
 from typing import Any
 
-from backend.models.strategy_version import StrategyVersion
+from models.strategy_version import StrategyVersion
 
 
 class StrategyVersionRepository:
