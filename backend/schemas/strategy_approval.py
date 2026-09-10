@@ -1,8 +1,6 @@
-from typing import Any
-
 from pydantic import BaseModel, Field
 
-from backend.models.strategy_approval import SuitabilityAssessment
+from models.strategy_approval import SuitabilityAssessment
 
 
 class StrategyApprovalRequest(BaseModel):
