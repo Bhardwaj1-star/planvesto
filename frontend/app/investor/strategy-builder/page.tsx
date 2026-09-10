@@ -1,1356 +1,170 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
-import { recordDecision } from "../../../lib/diary/diaryStore";
+import {
+  buildStrategy,
+  getLatestStrategyRun,
+  getStrategyRunHistory,
+  getPlanningUnitId,
+  selectStrategy,
+  updateStrategyPriorities,
+  type InvestorPriorities,
+  type StrategyRun,
+} from "../../../lib/api/strategy";
 
-// ============================================================================
-// DATA CONTRACT: BACKEND STRATEGY ENGINE (Presentation Types Only)
-// ============================================================================
-// NOTE: All calculations, rankings, optimization algorithms, and recommendations
-// belong strictly to the backend Strategy Engine. The frontend is exclusively
-// the presentation layer.
+const DEFAULT_PRIORITIES: InvestorPriorities = { safety: 0.25, liquidity: 0.25, growth: 0.25, flexibility: 0.25 };
 
-export interface GoalAssetAllocation {
-  assetId: string;
-  assetName: string;
-  allocatedPercentage: number;
-  allocatedValue: number;
+function percent(value: number) { return `${Math.round(value * 100)}%`; }
+function displayMetric(value: unknown) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "number") return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value);
+  return String(value);
 }
-
-export interface InvestorGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  targetDate: string; // YYYY-MM
-  timeHorizonYears: number;
-  priority: string;
-  flexibility: string;
-  mappedAssets: GoalAssetAllocation[];
-  totalMappedValue: number;
-  shortfall: number;
-}
-
-export interface StrategyMetrics {
-  safety: {
-    rating: string;
-    description: string;
-    score: number; // out of 10
-  };
-  liquidity: {
-    rating: string;
-    description: string;
-    score: number; // out of 10
-  };
-  returnProfile: {
-    expectedCagr: string;
-    description: string;
-    score: number; // out of 10
-  };
-  goalOutcome: {
-    projectedCorpus: string;
-    probabilityOfSuccess: string;
-    description: string;
-  };
-  requiredContribution: {
-    monthlySip: string;
-    initialReallocation?: string;
-    description: string;
-  };
-}
-
-export interface StrategyReasoning {
-  shortReasons: string[];
-  completeReasoning: string;
-}
-
-export interface StrategyOption {
-  id: string;
-  name: string;
-  tagline: string;
-  isRecommended: boolean;
-  metrics: StrategyMetrics;
-  reasoning: StrategyReasoning;
-  implementationRoadmap: {
-    summary: string;
-    actionList: {
-      whatToDo: string;
-      howMuch: string;
-      expectedOutcome: string;
-    };
-  };
-}
-
-export interface StrategyEngineResponse {
-  goalId: string;
-  evaluatedAt: string;
-  isPlaceholderPreview?: boolean;
-  strategies: [StrategyOption, StrategyOption]; // Exactly 2 calculated best strategies
-}
-
-// ============================================================================
-// STATIC UI PREVIEW PLACEHOLDER (NO FORMULAS / NO CALCULATIONS / NO RANKINGS)
-// ============================================================================
-// This static structure exists solely to showcase the UI shell and render states
-// until the backend Strategy Engine API endpoint is connected.
-
-const PLACEHOLDER_PREVIEW_STRATEGIES: [StrategyOption, StrategyOption] = [
-  {
-    id: "strategy-preview-option-a",
-    name: "[Preview] Capital Preservation Oriented Strategy",
-    tagline: "UI Shell Placeholder: Balanced capital protection with conservative market exposure.",
-    isRecommended: true,
-    metrics: {
-      safety: {
-        rating: "High Safety Profile",
-        description: "Focuses on capital downside insulation with high debt stability (Engine placeholder).",
-        score: 9,
-      },
-      liquidity: {
-        rating: "High Liquidity",
-        description: "Accessible capital buffers without extended lock-in penalties (Engine placeholder).",
-        score: 8,
-      },
-      returnProfile: {
-        expectedCagr: "7.5% - 8.5% p.a. (Sample)",
-        description: "Predictable steady yields intended to pace inflation (Engine placeholder).",
-        score: 6,
-      },
-      goalOutcome: {
-        projectedCorpus: "₹42,50,000 (Sample Projection)",
-        probabilityOfSuccess: "92% Probability (Sample)",
-        description: "Engine target outcome projection based on conservative assumptions.",
-      },
-      requiredContribution: {
-        monthlySip: "₹28,000 / month (Sample)",
-        initialReallocation: "₹1,50,000 upfront (Sample)",
-        description: "Contribution requirement to bridge calculated shortfall.",
-      },
-    },
-    reasoning: {
-      shortReasons: [
-        "[Placeholder] Reason 1: High capital insulation suitable for investor risk preferences.",
-        "[Placeholder] Reason 2: Predictable liquidity buffers as goal maturity approaches.",
-        "[Placeholder] Reason 3: Bridges calculated funding gap with disciplined contributions.",
-      ],
-      completeReasoning:
-        "[Placeholder Reasoning from Backend Strategy Engine]: This text represents the complete synthesis generated by the backend engine. It connects the investor's current financial position, target timeline, and the SLR trade-offs between safety, liquidity, and return to justify this specific pathway.",
-    },
-    implementationRoadmap: {
-      summary: "[Placeholder Implementation Summary]: Engine-generated execution guidelines for this strategy.",
-      actionList: {
-        whatToDo: "[Placeholder Action]: Set up systematic contribution into designated engine portfolio avenues.",
-        howMuch: "[Placeholder Quantum]: Monthly contribution of ₹28,000 over remaining goal tenure.",
-        expectedOutcome: "[Placeholder Outcome]: Targeted corpus achievement with projected safety margins.",
-      },
-    },
-  },
-  {
-    id: "strategy-preview-option-b",
-    name: "[Preview] Growth Oriented Dynamic Strategy",
-    tagline: "UI Shell Placeholder: Calibrated growth orientation to optimize monthly contribution.",
-    isRecommended: false,
-    metrics: {
-      safety: {
-        rating: "Moderate Safety Profile",
-        description: "Permits measured market exposure with risk hedging (Engine placeholder).",
-        score: 7,
-      },
-      liquidity: {
-        rating: "Moderate Liquidity",
-        description: "Standard settlement cycles with selective lock-in thresholds (Engine placeholder).",
-        score: 7,
-      },
-      returnProfile: {
-        expectedCagr: "10.0% - 11.5% p.a. (Sample)",
-        description: "Growth oriented compounding to lower periodic cash outlay (Engine placeholder).",
-        score: 8,
-      },
-      goalOutcome: {
-        projectedCorpus: "₹46,00,000 (Sample Projection)",
-        probabilityOfSuccess: "84% Probability (Sample)",
-        description: "Engine target outcome projection factoring market upside scenarios.",
-      },
-      requiredContribution: {
-        monthlySip: "₹22,500 / month (Sample)",
-        initialReallocation: "₹1,00,000 upfront (Sample)",
-        description: "Lower monthly contribution requirement leveraged by higher return assumption.",
-      },
-    },
-    reasoning: {
-      shortReasons: [
-        "[Placeholder] Reason 1: Reduces required monthly cash outlay to bridge shortfall.",
-        "[Placeholder] Reason 2: Increased equity compounding for longer investment horizons.",
-        "[Placeholder] Reason 3: Maintains secondary liquidity buffer for mid-term adjustments.",
-      ],
-      completeReasoning:
-        "[Placeholder Reasoning from Backend Strategy Engine]: This text represents the alternate strategy rationale from the backend engine. It illustrates how taking calibrated volatility allows the investor to reduce their monthly capital commitment while still meeting the milestone target.",
-    },
-    implementationRoadmap: {
-      summary: "[Placeholder Implementation Summary]: Engine-generated alternate execution guidelines.",
-      actionList: {
-        whatToDo: "[Placeholder Action]: Deploy systematic contributions across growth-oriented portfolio avenues.",
-        howMuch: "[Placeholder Quantum]: Monthly contribution of ₹22,500 over remaining goal tenure.",
-        expectedOutcome: "[Placeholder Outcome]: Potential upside corpus with standard market risk exposure.",
-      },
-    },
-  },
-];
-
-// Fallback goal if database contains no existing goals (Cleanly isolated placeholder)
-const FALLBACK_EXISTING_GOALS: InvestorGoal[] = [
-  {
-    id: "sample-goal-1",
-    name: "Child Higher Education",
-    targetAmount: 5000000,
-    targetDate: "2034-06",
-    timeHorizonYears: 8,
-    priority: "Critical",
-    flexibility: "Fixed",
-    mappedAssets: [
-      {
-        assetId: "sample-ast-1",
-        assetName: "Mutual Funds Portfolio",
-        allocatedPercentage: 40,
-        allocatedValue: 800000,
-      },
-      {
-        assetId: "sample-ast-2",
-        assetName: "Public Provident Fund",
-        allocatedPercentage: 100,
-        allocatedValue: 450000,
-      },
-    ],
-    totalMappedValue: 1250000,
-    shortfall: 3750000,
-  },
-];
-
-// Formatting helper: INR currency
-function formatINR(value: number | string): string {
-  const num = typeof value === "string" ? parseFloat(value) || 0 : value;
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(num);
-}
-
-function formatNumberInIndian(value: number): string {
-  if (value >= 10000000) {
-    return `${(value / 10000000).toFixed(2)} Cr`;
-  }
-  if (value >= 100000) {
-    return `${(value / 100000).toFixed(2)} L`;
-  }
-  return value.toLocaleString("en-IN");
-}
-
-// ============================================================================
-// MAIN COMPONENT: PRESENTATION LAYER ONLY
-// ============================================================================
 
 export default function InvestorStrategyBuilderPage() {
-  // Goal data state (loaded from existing database persistence)
-  const [goals, setGoals] = useState<InvestorGoal[]>([]);
-  const [selectedGoalId, setSelectedGoalId] = useState<string>("");
+  const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState("");
+  const [run, setRun] = useState<StrategyRun | null>(null);
+  const [history, setHistory] = useState<StrategyRun[]>([]);
+  const [priorities, setPriorities] = useState(DEFAULT_PRIORITIES);
+  const [selectedStrategyId, setSelectedStrategyId] = useState("");
+  const [selectedScenarioId, setSelectedScenarioId] = useState("");
+  const [parameters, setParameters] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Strategy Engine response state (UI shell ready for backend integration)
-  const [strategyEngineResponse, setStrategyEngineResponse] = useState<StrategyEngineResponse | null>(null);
-
-  // Strategy selection and confirmation state
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
-  const [isConfirmed, setIsConfirmed] = useState<boolean>(false);
-  const [hasLoggedToDiary, setHasLoggedToDiary] = useState<boolean>(false);
-
-  // Accordion state for reasoning ("Mujhe ye strategy kyon choose karni chahiye?")
-  const [openReasoningMap, setOpenReasoningMap] = useState<Record<string, boolean>>({});
-
-  // UI state indicators
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isError, setIsError] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
-
-  // Load existing investor goals from persistence
   useEffect(() => {
     let active = true;
-
-    async function fetchExistingGoals() {
-      setIsLoading(true);
-      setIsError(false);
-
+    (async () => {
       try {
-        const persistedData = await loadGoalPlannerData().catch(() => null);
-
+        const data = await loadGoalPlannerData();
         if (!active) return;
-
-        if (persistedData && persistedData.goals && persistedData.goals.length > 0) {
-          const parsedGoals: InvestorGoal[] = persistedData.goals.map((g) => {
-            const target = parseFloat(g.targetAmount) || 0;
-            let horizonYears = 5;
-            if (g.targetDate) {
-              const [y, m] = g.targetDate.split("-").map(Number);
-              const now = new Date();
-              const months = Math.max(1, (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1)));
-              horizonYears = Math.max(1, Math.round(months / 12));
-            }
-
-            const mapped: GoalAssetAllocation[] = (g.funding || []).map((f) => {
-              const matchedAsset = persistedData.assets.find((a) => a.id === f.assetId);
-              const totalVal = parseFloat(matchedAsset?.currentValue || "0") || 0;
-              const pct = parseFloat(f.allocationPercentage) || 0;
-              return {
-                assetId: f.assetId,
-                assetName: matchedAsset?.name || "Mapped Asset",
-                allocatedPercentage: pct,
-                allocatedValue: Math.round((totalVal * pct) / 100),
-              };
-            });
-
-            const totalMapped = mapped.reduce((acc, item) => acc + item.allocatedValue, 0);
-            const shortfall = Math.max(0, target - totalMapped);
-
-            return {
-              id: g.id,
-              name: g.name || "Untitled Goal",
-              targetAmount: target,
-              targetDate: g.targetDate || "2030-01",
-              timeHorizonYears: horizonYears,
-              priority: g.priority || "Important",
-              flexibility: g.flexibility || "Flexible",
-              mappedAssets: mapped,
-              totalMappedValue: totalMapped,
-              shortfall: shortfall,
-            };
-          });
-
-          setGoals(parsedGoals);
-          if (parsedGoals.length > 0) {
-            setSelectedGoalId(parsedGoals[0].id);
-          }
-        } else {
-          // If no goals in database yet, provide clean fallback goal for UI shell demonstration
-          setGoals(FALLBACK_EXISTING_GOALS);
-          setSelectedGoalId(FALLBACK_EXISTING_GOALS[0].id);
-        }
-      } catch (err: unknown) {
-        if (active) {
-          setGoals(FALLBACK_EXISTING_GOALS);
-          setSelectedGoalId(FALLBACK_EXISTING_GOALS[0].id);
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchExistingGoals();
-
-    return () => {
-      active = false;
-    };
+        const nextGoals = (data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" }));
+        setGoals(nextGoals);
+        if (nextGoals[0]) setSelectedGoalId(nextGoals[0].id);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Unable to load goals.");
+      } finally { if (active) setLoading(false); }
+    })();
+    return () => { active = false; };
   }, []);
 
-  // Currently selected goal
-  const currentGoal = useMemo(() => {
-    return goals.find((g) => g.id === selectedGoalId) || null;
-  }, [goals, selectedGoalId]);
-
-  // Load Strategy Engine Results for selected goal
-  // NOTE: This effect prepares the UI shell to receive future backend Strategy Engine responses.
-  // Currently uses static placeholder structure clearly tagged as Preview / Placeholder.
   useEffect(() => {
-    if (!currentGoal) {
-      setStrategyEngineResponse(null);
-      return;
-    }
+    if (!selectedGoalId) { setRun(null); setHistory([]); return; }
+    let active = true;
+    (async () => {
+      setWorking(true); setError(null); setRun(null);
+      try {
+        const planningUnitId = getPlanningUnitId();
+        if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+        try {
+          const latest = await getLatestStrategyRun(planningUnitId, selectedGoalId);
+          if (!active) return;
+          setRun(latest);
+          setPriorities(latest.investor_priorities);
+          setSelectedStrategyId(latest.selected_strategy_id ?? latest.recommendation.recommended_strategy_id ?? "");
+          setSelectedScenarioId(latest.selected_scenario_id ?? latest.recommendation.recommended_scenario_id ?? "");
+          setParameters(latest.selected_implementation_parameters ?? {});
+          setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
+        } catch {
+          if (active) { setRun(null); setHistory([]); setPriorities(DEFAULT_PRIORITIES); setSelectedStrategyId(""); setSelectedScenarioId(""); setParameters({}); }
+        }
+      } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Strategy Builder."); }
+      finally { if (active) setWorking(false); }
+    })();
+    return () => { active = false; };
+  }, [selectedGoalId]);
 
-    // Connect to future API here: e.g. await fetch(`/api/strategy/evaluate?goalId=${currentGoal.id}`)
-    // For now, load the UI preview placeholder shell:
-    setStrategyEngineResponse({
-      goalId: currentGoal.id,
-      evaluatedAt: new Date().toISOString(),
-      isPlaceholderPreview: true,
-      strategies: PLACEHOLDER_PREVIEW_STRATEGIES,
-    });
+  const selectedStrategy = useMemo(() => run?.applicable_strategies.find((s) => s.strategy_id === selectedStrategyId) ?? null, [run, selectedStrategyId]);
+  const scenarios = useMemo(() => run?.scenarios.filter((s) => s.strategy_id === selectedStrategyId) ?? [], [run, selectedStrategyId]);
+  const selectedScenario = scenarios.find((s) => s.scenario_id === selectedScenarioId) ?? null;
 
-    // Default select the recommended strategy option from the engine response
-    const rec = PLACEHOLDER_PREVIEW_STRATEGIES.find((s) => s.isRecommended) || PLACEHOLDER_PREVIEW_STRATEGIES[0];
-    setSelectedStrategyId(rec.id);
-    setIsConfirmed(false);
-    setOpenReasoningMap({});
-  }, [currentGoal]);
-
-  // Handle goal change
-  const handleGoalChange = (newGoalId: string) => {
-    setSelectedGoalId(newGoalId);
-    setIsConfirmed(false);
-    setSelectedStrategyId(null);
-    setHasLoggedToDiary(false);
+  const execute = async (operation: () => Promise<StrategyRun>) => {
+    setWorking(true); setError(null);
+    try {
+      const next = await operation();
+      setRun(next);
+      setPriorities(next.investor_priorities);
+      setSelectedStrategyId(next.selected_strategy_id ?? next.recommendation.recommended_strategy_id ?? "");
+      setSelectedScenarioId(next.selected_scenario_id ?? next.recommendation.recommended_scenario_id ?? "");
+      setParameters(next.selected_implementation_parameters ?? {});
+      const planningUnitId = getPlanningUnitId();
+      if (planningUnitId && selectedGoalId) setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
+    } catch (err) { setError(err instanceof Error ? err.message : "Strategy operation failed."); }
+    finally { setWorking(false); }
   };
 
-  // Toggle reasoning accordion
-  const toggleReasoning = (strategyId: string) => {
-    setOpenReasoningMap((prev) => ({
-      ...prev,
-      [strategyId]: !prev[strategyId],
-    }));
+  const handleBuild = () => {
+    const planningUnitId = getPlanningUnitId();
+    if (!planningUnitId || !selectedGoalId) return;
+    void execute(() => buildStrategy(planningUnitId, selectedGoalId, priorities));
   };
 
-  // Confirmation actions
-  const handleConfirmStrategy = () => {
-    if (selectedStrategyId) {
-      setIsConfirmed(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+  const handlePriorities = () => {
+    const planningUnitId = getPlanningUnitId();
+    if (!planningUnitId || !run?.strategy_run_id) return;
+    void execute(() => updateStrategyPriorities(planningUnitId, run.strategy_run_id!, priorities));
   };
 
-  const handleEditSelection = () => {
-    setIsConfirmed(false);
-    setHasLoggedToDiary(false);
+  const handleSelect = () => {
+    const planningUnitId = getPlanningUnitId();
+    if (!planningUnitId || !run?.strategy_run_id || !selectedStrategyId || !selectedScenarioId) return;
+    void execute(() => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters));
   };
 
-  // Record confirmed strategy decision in Investor Diary
-  const handleRecordInDiary = () => {
-    if (!selectedStrategy || !currentGoal) return;
+  if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-6xl space-y-6"><div className="h-9 w-64 animate-pulse rounded-xl bg-slate-200" /><div className="h-24 animate-pulse rounded-3xl bg-white" /><div className="h-96 animate-pulse rounded-3xl bg-white" /></div></main>;
 
-    recordDecision({
-      title: `${currentGoal.name} Strategy Confirmed`,
-      summary: `Selected ${selectedStrategy.name} (${selectedStrategy.tagline}) for ${currentGoal.name}.`,
-      category: "Strategy",
-      source: "Strategy Builder",
-      metrics: {
-        target: formatINR(currentGoal.targetAmount),
-        horizon: `${currentGoal.timeHorizonYears} years`,
-        monthlyInvestment: selectedStrategy.metrics.requiredContribution.monthlySip,
-        expectedReturn: selectedStrategy.metrics.returnProfile.expectedCagr,
-      },
-      notes: `Goal target requirement: ${formatINR(currentGoal.targetAmount)} over ${currentGoal.timeHorizonYears} years with ${selectedStrategy.metrics.requiredContribution.monthlySip}/mo contribution. Shortfall: ${formatINR(currentGoal.shortfall)}.`,
-    });
-    setHasLoggedToDiary(true);
-  };
-
-  // Currently selected strategy object
-  const selectedStrategy = useMemo(() => {
-    if (!strategyEngineResponse || !selectedStrategyId) return null;
-    return strategyEngineResponse.strategies.find((s) => s.id === selectedStrategyId) || null;
-  }, [strategyEngineResponse, selectedStrategyId]);
-
-  // ==========================================================================
-  // RENDER: LOADING STATE
-  // ==========================================================================
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10" aria-busy="true">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div className="h-8 w-64 animate-pulse rounded-lg bg-slate-200" />
-          <div className="h-24 w-full animate-pulse rounded-2xl bg-white p-6 shadow-sm" />
-          <div className="h-64 w-full animate-pulse rounded-3xl bg-white p-8 shadow-sm" />
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="h-96 animate-pulse rounded-3xl bg-white shadow-sm" />
-            <div className="h-96 animate-pulse rounded-3xl bg-white shadow-sm" />
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // ==========================================================================
-  // RENDER: ERROR STATE
-  // ==========================================================================
-  if (isError) {
-    return (
-      <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="mt-4 text-xl font-bold text-slate-900">Strategy Builder Unavailable</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            {errorMessage || "Unable to load strategy information at this time."}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-6 inline-flex items-center rounded-xl bg-navy-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-800"
-          >
-            Retry
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  // ==========================================================================
-  // RENDER: NO GOALS STATE
-  // ==========================================================================
-  if (goals.length === 0) {
-    return (
-      <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h2 className="mt-4 text-2xl font-extrabold text-slate-900">No Goals Found</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Strategy Builder displays calibrated pathways for your goals. Please add a goal in your Goal Planner to begin.
-          </p>
-          <Link
-            href="/investor/goal-planner"
-            className="mt-6 inline-flex items-center rounded-xl bg-teal-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
-          >
-            Go to Goal Planner →
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  if (!goals.length) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm"><h1 className="text-2xl font-extrabold">No goals available</h1><p className="mt-2 text-sm text-slate-500">Strategy Builder needs a defined goal before a Strategy Run can be created.</p><Link href="/investor/goal-planner" className="mt-6 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white">Open Goal Planner</Link></div></main>;
 
   return (
-    <main className="min-h-screen bg-[#f6f8fb] text-slate-900 pb-16">
-      {/* Top Page Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex min-h-[80px] max-w-6xl items-center justify-between gap-6 px-6 lg:px-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-teal-600/20">
-                Decision Engine
-              </span>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-                Planvesto Strategy
-              </p>
-            </div>
-            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-              Strategy Builder
-            </h1>
+    <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
+      <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-10">
+        <header>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-teal-700">Planning</p>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Strategy Builder</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Build and compare strategy pathways for a defined goal. Strategy calculations, rankings and recommendations are generated by the backend.</p>
+        </header>
+
+        {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>}
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <label className="block flex-1"><span className="text-sm font-bold text-slate-700">Goal</span><select value={selectedGoalId} onChange={(e) => setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-600"><option value="">Select goal</option>{goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+            <button onClick={handleBuild} disabled={working || !selectedGoalId} className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{working ? "Working…" : run ? "Rebuild Strategy Run" : "Build Strategy"}</button>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/investor/goal-planner"
-              className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
-            >
-              Goal Planner
-            </Link>
-            <Link
-              href="/investor/financial-state"
-              className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
-            >
-              Financial State
-            </Link>
-            <InvestorProfileMenu />
-          </div>
-        </div>
-      </header>
-
-      {/* Backend Strategy Engine UI Shell Banner */}
-      {strategyEngineResponse?.isPlaceholderPreview && (
-        <div className="border-b border-amber-200 bg-amber-50/80 px-6 py-3 text-xs text-amber-900">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-amber-800 font-bold text-[10px]">
-                ℹ
-              </span>
-              <span>
-                <strong>UI Shell Presentation Mode:</strong> Displaying frontend layout with preview placeholder schema. Strategy calculations, rankings, and recommendations will be supplied by the backend Strategy Engine.
-              </span>
-            </div>
-            <span className="shrink-0 font-bold uppercase tracking-wider text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-              Preview / Placeholder
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="mx-auto max-w-6xl px-6 pt-8 lg:px-8">
-        {/* ================================================================== */}
-        {/* 1. GOAL SELECTION & DETAILS (Existing Data)                        */}
-        {/* ================================================================== */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8" aria-labelledby="goal-selection-title">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-                Step 1 · Goal Selection
-              </span>
-              <h2 id="goal-selection-title" className="mt-1 text-xl font-extrabold text-slate-950 sm:text-2xl">
-                Choose the goal you want to plan for
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Select from your existing financial goals to display mapped assets and shortfall.
-              </p>
-            </div>
-
-            {/* Goal Dropdown */}
-            <div className="w-full lg:w-80">
-              <label htmlFor="goal-select" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                Selected Goal
-              </label>
-              <div className="relative">
-                <select
-                  id="goal-select"
-                  value={selectedGoalId}
-                  onChange={(e) => handleGoalChange(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-10 text-sm font-semibold text-slate-900 shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
-                >
-                  {goals.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name} ({formatNumberInIndian(g.targetAmount)})
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500">
-                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Selected Goal Details + Assets Mapped + Goal Shortfall */}
-          {currentGoal && (
-            <div className="mt-8 border-t border-slate-100 pt-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {/* 1. Target & Timeline */}
-                <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-200/70">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Target Requirement
-                  </p>
-                  <p className="mt-2 text-2xl font-black text-slate-950">
-                    {formatINR(currentGoal.targetAmount)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                    <span className="rounded-md bg-white px-2.5 py-1 text-slate-700 border border-slate-200">
-                      📅 Due {currentGoal.targetDate}
-                    </span>
-                    <span className="rounded-md bg-white px-2.5 py-1 text-slate-700 border border-slate-200">
-                      ⏳ {currentGoal.timeHorizonYears} Years Horizon
-                    </span>
-                    <span className="rounded-md bg-white px-2.5 py-1 text-teal-800 border border-teal-200">
-                      {currentGoal.priority}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 2. Assets Mapped */}
-                <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-200/70">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Assets Mapped To Goal
-                    </p>
-                    <span className="text-xs font-bold text-slate-700">
-                      {currentGoal.mappedAssets.length} Allocated
-                    </span>
-                  </div>
-                  <p className="mt-2 text-2xl font-black text-slate-950">
-                    {formatINR(currentGoal.totalMappedValue)}
-                  </p>
-                  <div className="mt-3 space-y-1.5">
-                    {currentGoal.mappedAssets.length > 0 ? (
-                      currentGoal.mappedAssets.map((asset) => (
-                        <div key={asset.assetId} className="flex items-center justify-between text-xs text-slate-600">
-                          <span className="truncate pr-2 font-medium">{asset.assetName}</span>
-                          <span className="font-semibold text-slate-900 shrink-0">
-                            {formatINR(asset.allocatedValue)} ({asset.allocatedPercentage}%)
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs italic text-slate-400">No existing assets mapped yet.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3. Goal Shortfall */}
-                <div className="rounded-2xl bg-amber-50/70 p-5 border border-amber-200/70">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                      Shortfall (Funding Gap)
-                    </p>
-                    <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
-                      Gap to Fund
-                    </span>
-                  </div>
-                  <p className="mt-2 text-2xl font-black text-amber-950">
-                    {formatINR(currentGoal.shortfall)}
-                  </p>
-                  <p className="mt-3 text-xs leading-relaxed text-amber-800">
-                    {currentGoal.shortfall > 0
-                      ? `Existing mapped assets cover ₹${formatNumberInIndian(currentGoal.totalMappedValue)}. The remaining shortfall of ${formatINR(currentGoal.shortfall)} will be bridged by the strategies below.`
-                      : "Existing mapped assets fully cover this target amount."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span></div>}
         </section>
 
-        {/* ================================================================== */}
-        {/* 2. STRATEGY INTRODUCTION                                           */}
-        {/* ================================================================== */}
-        <div className="my-8 text-center max-w-3xl mx-auto px-4">
-          <span className="inline-block rounded-full bg-teal-100/70 px-3.5 py-1 text-xs font-bold text-teal-800 tracking-wide uppercase">
-            Strategy Engine Interface
-          </span>
-          <h2 className="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-            Aapke paas is goal ko achieve karne ke liye multiple strategies hain.
-          </h2>
-          <p className="mt-3 text-sm sm:text-base leading-relaxed text-slate-600">
-            Har strategy ka ek alag trade-off hota hai. Planvesto compares the 2 best strategies calculated for you so you can decide the right balance between capital safety, immediate liquidity, and returns.
-          </p>
-        </div>
-
-        {/* ================================================================== */}
-        {/* AWAITING ENGINE RESULTS STATE (If no strategies available)         */}
-        {/* ================================================================== */}
-        {!strategyEngineResponse && (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Awaiting Strategy Engine Evaluation</h3>
-            <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-              Select a goal to load the 2 best strategies evaluated by the Planvesto Strategy Engine.
-            </p>
-          </div>
-        )}
-
-        {/* ================================================================== */}
-        {/* POST-CONFIRMATION VIEW: SELECTED STRATEGY                          */}
-        {/* ================================================================== */}
-        {isConfirmed && selectedStrategy && currentGoal && (
-          <section className="mb-12 rounded-3xl border border-teal-200 bg-white p-6 shadow-soft lg:p-10" aria-label="Confirmed Strategy Roadmap">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-6">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center rounded-md bg-teal-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                    Confirmed Strategy
-                  </span>
-                  {selectedStrategy.isRecommended && (
-                    <span className="inline-flex items-center rounded-md bg-navy-900 px-2.5 py-1 text-xs font-bold text-white">
-                      Planvesto Recommended
-                    </span>
-                  )}
-                  {strategyEngineResponse?.isPlaceholderPreview && (
-                    <span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
-                      Preview / Placeholder
-                    </span>
-                  )}
-                </div>
-                <h3 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">
-                  {selectedStrategy.name}
-                </h3>
-                <p className="mt-1 text-sm text-slate-600">
-                  {selectedStrategy.tagline}
-                </p>
+        {!run ? (
+          <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Run yet</h2><p className="mt-2 text-sm text-slate-500">Set the investor priorities below, then build the Strategy Run.</p></section>
+        ) : (
+          <>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-bold">Investor priorities</h2><p className="mt-1 text-sm text-slate-500">These weights tell the engine what matters most to the investor.</p></div><button onClick={handlePriorities} disabled={working} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 disabled:opacity-50">Recalculate</button></div>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {(Object.keys(priorities) as Array<keyof InvestorPriorities>).map((key) => <label key={key} className="rounded-2xl bg-slate-50 p-4"><div className="flex justify-between text-sm font-bold capitalize"><span>{key}</span><span>{percent(priorities[key])}</span></div><input type="range" min="0" max="100" value={Math.round(priorities[key] * 100)} onChange={(e) => setPriorities((p) => ({ ...p, [key]: Number(e.target.value) / 100 }))} className="mt-4 w-full" /><p className="mt-2 text-xs text-slate-500">Weights are normalized by the backend.</p></label>)}
               </div>
+            </section>
 
-              <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-                {hasLoggedToDiary ? (
-                  <Link
-                    href="/investor/diary"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-teal-50 px-4 py-2 text-xs font-bold text-teal-800 shadow-xs hover:bg-teal-100 transition"
-                  >
-                    <span>✓ Recorded in Investor Diary</span>
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleRecordInDiary}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-teal-800 transition"
-                  >
-                    <span>📔 Record in Investor Diary</span>
-                  </button>
-                )}
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-1 text-sm text-slate-500">Backend recommendation for the current Strategy Run.</p></div>
+              <div className="mt-5 rounded-2xl border border-teal-200 bg-teal-50 p-5"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Recommended</p><h3 className="mt-1 text-xl font-extrabold">{run.recommendation.recommended_strategy_id}</h3><p className="mt-1 text-sm text-slate-600">Scenario: {run.recommendation.recommended_scenario_id}</p>{run.recommendation.short_reasons.length > 0 && <ul className="mt-4 space-y-2 text-sm text-slate-700">{run.recommendation.short_reasons.map((reason, i) => <li key={i}>• {reason}</li>)}</ul>} {run.recommendation.complete_reasoning && <details className="mt-4"><summary className="cursor-pointer text-sm font-bold text-teal-800">View complete reasoning</summary><p className="mt-3 text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p></details>}</div>
+            </section>
 
-                <button
-                  type="button"
-                  onClick={handleEditSelection}
-                  className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:bg-slate-50 hover:text-navy-900"
-                >
-                  ← Change Strategy
-                </button>
+            <section>
+              <div className="mb-4"><h2 className="text-lg font-bold">Strategy alternatives</h2><p className="mt-1 text-sm text-slate-500">All applicable strategies returned by the engine. No fixed number is assumed.</p></div>
+              <div className="grid gap-5 lg:grid-cols-2">
+                {run.rankings.map((ranking) => { const strategy = run.applicable_strategies.find((s) => s.strategy_id === ranking.strategy_id); const isSelected = selectedStrategyId === ranking.strategy_id && selectedScenarioId === ranking.scenario_id; return <article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${isSelected ? "border-teal-500 ring-2 ring-teal-100" : "border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Rank #{ranking.rank}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended && <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{strategy?.description ?? "Strategy definition supplied by the engine."}</p><div className="mt-5 grid grid-cols-2 gap-3">{Object.entries(ranking.dimension_scores).map(([k,v]) => <div key={k} className="rounded-xl bg-slate-50 p-3"><p className="text-xs capitalize text-slate-400">{k}</p><p className="mt-1 font-bold">{displayMetric(v)}</p></div>)}<div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Composite</p><p className="mt-1 font-bold">{displayMetric(ranking.composite_score)}</p></div></div><button onClick={() => { setSelectedStrategyId(ranking.strategy_id); setSelectedScenarioId(ranking.scenario_id); const s = run.applicable_strategies.find((x) => x.strategy_id === ranking.strategy_id); const defaults = Object.fromEntries((s?.implementation_parameters ?? []).map((p) => [p.name, p.default_value])); setParameters(defaults); }} className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50">{isSelected ? "Selected" : "Select this pathway"}</button></article>; })}
               </div>
-            </div>
+            </section>
 
-            {/* Selected Strategy Summary */}
-            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Required Monthly SIP</p>
-                <p className="mt-1.5 text-xl font-extrabold text-teal-700">
-                  {selectedStrategy.metrics.requiredContribution.monthlySip}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">Contribution</p>
-              </div>
+            {selectedStrategy && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation parameters</h2><p className="mt-1 text-sm text-slate-500">Only parameters defined as editable by the backend are presented for investor input.</p><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter((p) => p.editable).map((p) => <label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold text-slate-800">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type === "choice" ? <select value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: e.target.value }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{(p.choices ?? []).map((choice) => <option key={choice}>{choice}</option>)}</select> : <input type={p.param_type === "integer" ? "number" : "number"} step={p.param_type === "integer" ? 1 : "any"} min={p.min_value ?? undefined} max={p.max_value ?? undefined} value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: p.param_type === "integer" || p.param_type === "currency" || p.param_type === "percentage" ? Number(e.target.value) : e.target.value }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />}</label>)}</div>{selectedScenario && <div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes || "No additional trade-off notes supplied."}</p></div>}<button onClick={handleSelect} disabled={working || !selectedScenarioId} className="mt-6 rounded-xl bg-navy-900 px-6 py-3 text-sm font-bold text-white disabled:opacity-50">{working ? "Saving…" : run.selected_strategy_version_id ? "Selection saved" : "Confirm selection"}</button>{run.selected_strategy_version_id && <p className="mt-3 text-sm text-teal-700">Strategy Version created: {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "—"}).</p>}</section>}
 
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Expected Return</p>
-                <p className="mt-1.5 text-xl font-extrabold text-slate-950">
-                  {selectedStrategy.metrics.returnProfile.expectedCagr}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">Yield metric</p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Safety Profile</p>
-                <p className="mt-1.5 text-xl font-extrabold text-slate-950">
-                  {selectedStrategy.metrics.safety.rating}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">Risk resilience</p>
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Goal Probability</p>
-                <p className="mt-1.5 text-xl font-extrabold text-teal-700">
-                  {selectedStrategy.metrics.goalOutcome.probabilityOfSuccess}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">Outcome estimate</p>
-              </div>
-            </div>
-
-            {/* Implementation Details */}
-            <div className="mt-8 rounded-2xl bg-teal-50/60 p-6 border border-teal-100">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-900">
-                Implementation Details
-              </h4>
-              <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                {selectedStrategy.implementationRoadmap.summary}
-              </p>
-            </div>
-
-            {/* Simple Action List: What to do, How much, Expected outcome */}
-            <div className="mt-8">
-              <h4 className="text-sm font-extrabold uppercase tracking-wider text-slate-900">
-                Action List
-              </h4>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Simple execution actions for the selected strategy:
-              </p>
-
-              <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-3">
-                {/* 1. What to do */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-white text-xs font-bold">
-                    1
-                  </div>
-                  <h5 className="mt-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    What to do
-                  </h5>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900">
-                    {selectedStrategy.implementationRoadmap.actionList.whatToDo}
-                  </p>
-                </div>
-
-                {/* 2. How much */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-700 text-white text-xs font-bold">
-                    2
-                  </div>
-                  <h5 className="mt-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    How much
-                  </h5>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900">
-                    {selectedStrategy.implementationRoadmap.actionList.howMuch}
-                  </p>
-                </div>
-
-                {/* 3. Expected outcome */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-700 text-white text-xs font-bold">
-                    3
-                  </div>
-                  <h5 className="mt-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Expected outcome
-                  </h5>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900">
-                    {selectedStrategy.implementationRoadmap.actionList.expectedOutcome}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6">
-              <div className="text-xs text-slate-500">
-                Strategy selected for {currentGoal.name}.
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {hasLoggedToDiary ? (
-                  <Link
-                    href="/investor/diary"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-teal-50 px-4 py-2.5 text-xs font-bold text-teal-800 shadow-xs hover:bg-teal-100 transition"
-                  >
-                    <span>✓ Saved in Decision History (View in Diary →)</span>
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleRecordInDiary}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-teal-800"
-                  >
-                    <span>📔 Record in Investor Diary</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleEditSelection}
-                  className="rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-navy-800"
-                >
-                  Compare Alternate Strategy
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ================================================================== */}
-        {/* 3. STRATEGY COMPARISON & SELECTION (When Not Confirmed)            */}
-        {/* ================================================================== */}
-        {!isConfirmed && strategyEngineResponse && currentGoal && (
-          <div className="space-y-8">
-            {/* Strategy Selection Cards Header */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {strategyEngineResponse.strategies.map((strat, idx) => {
-                const isSelected = selectedStrategyId === strat.id;
-
-                return (
-                  <div
-                    key={strat.id}
-                    onClick={() => setSelectedStrategyId(strat.id)}
-                    className={`relative cursor-pointer rounded-3xl border-2 p-6 transition-all duration-200 shadow-sm ${
-                      isSelected
-                        ? "border-teal-600 bg-white ring-4 ring-teal-600/10"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
-                    }`}
-                  >
-                    {/* Badges */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
-                          Strategy {idx + 1}
-                        </span>
-                        {strat.isRecommended && (
-                          <span className="rounded-lg bg-teal-700 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
-                            Recommended by Planvesto
-                          </span>
-                        )}
-                        {strategyEngineResponse.isPlaceholderPreview && (
-                          <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                            Preview / Placeholder
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Radio Selector */}
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="strategy-choice"
-                          id={`radio-${strat.id}`}
-                          checked={isSelected}
-                          onChange={() => setSelectedStrategyId(strat.id)}
-                          className="h-5 w-5 text-teal-600 focus:ring-teal-600 border-slate-300"
-                        />
-                        <label
-                          htmlFor={`radio-${strat.id}`}
-                          className={`text-xs font-bold ${
-                            isSelected ? "text-teal-800" : "text-slate-500"
-                          }`}
-                        >
-                          {isSelected ? "Selected" : "Select"}
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Title & Tagline */}
-                    <h3 className="mt-4 text-xl font-extrabold text-slate-950">
-                      {strat.name}
-                    </h3>
-                    <p className="mt-1.5 text-xs text-slate-600 leading-relaxed min-h-[36px]">
-                      {strat.tagline}
-                    </p>
-
-                    {/* Key Metric Highlights */}
-                    <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                          Required Contribution
-                        </p>
-                        <p className="mt-0.5 text-base font-black text-slate-900 truncate">
-                          {strat.metrics.requiredContribution.monthlySip}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                          Expected Return
-                        </p>
-                        <p className="mt-0.5 text-base font-black text-teal-700 truncate">
-                          {strat.metrics.returnProfile.expectedCagr}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* ============================================================== */}
-            {/* COMPARISON TABLE: Safety, Liquidity, Return, Outcome, Contrib.  */}
-            {/* ============================================================== */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-              <div className="border-b border-slate-100 pb-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-                      Comparison Table
-                    </span>
-                    <h3 className="mt-1 text-xl font-extrabold text-slate-950">
-                      Compare the 2 Best Strategies
-                    </h3>
-                  </div>
-                  {strategyEngineResponse.isPlaceholderPreview && (
-                    <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                      Preview / Placeholder Data
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Side-by-side comparison across Safety, Liquidity, Return (SLR), Goal Outcome, and Required Contribution.
-                </p>
-              </div>
-
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[640px]">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-400">
-                      <th className="py-4 px-4 w-1/4">Evaluation Dimension</th>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <th
-                          key={strat.id}
-                          className={`py-4 px-5 w-3/8 text-sm font-bold ${
-                            selectedStrategyId === strat.id
-                              ? "text-teal-900 bg-teal-50/40 rounded-t-xl"
-                              : "text-slate-900"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span>{strat.name}</span>
-                            {strat.isRecommended && (
-                              <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
-                                Recommended
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
-                    {/* 1. SAFETY */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-5 px-4 font-bold text-slate-900 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-700 text-xs font-bold">
-                            🛡️
-                          </span>
-                          <span>Safety</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 font-normal">Capital protection & volatility profile</p>
-                      </td>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <td
-                          key={strat.id}
-                          className={`py-5 px-5 align-top ${
-                            selectedStrategyId === strat.id ? "bg-teal-50/40 font-medium" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-slate-950">
-                              {strat.metrics.safety.rating}
-                            </span>
-                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                              {strat.metrics.safety.score}/10
-                            </span>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                            {strat.metrics.safety.description}
-                          </p>
-                        </td>
-                      ))}
-                    </tr>
-
-                    {/* 2. LIQUIDITY */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-5 px-4 font-bold text-slate-900 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">
-                            💧
-                          </span>
-                          <span>Liquidity</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 font-normal">Accessibility & exit flexibility</p>
-                      </td>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <td
-                          key={strat.id}
-                          className={`py-5 px-5 align-top ${
-                            selectedStrategyId === strat.id ? "bg-teal-50/40 font-medium" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-slate-950">
-                              {strat.metrics.liquidity.rating}
-                            </span>
-                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                              {strat.metrics.liquidity.score}/10
-                            </span>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                            {strat.metrics.liquidity.description}
-                          </p>
-                        </td>
-                      ))}
-                    </tr>
-
-                    {/* 3. RETURN */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-5 px-4 font-bold text-slate-900 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-50 text-amber-700 text-xs font-bold">
-                            📈
-                          </span>
-                          <span>Return</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 font-normal">Expected annualized yield profile</p>
-                      </td>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <td
-                          key={strat.id}
-                          className={`py-5 px-5 align-top ${
-                            selectedStrategyId === strat.id ? "bg-teal-50/40 font-medium" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-teal-700 text-base">
-                              {strat.metrics.returnProfile.expectedCagr}
-                            </span>
-                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                              {strat.metrics.returnProfile.score}/10
-                            </span>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                            {strat.metrics.returnProfile.description}
-                          </p>
-                        </td>
-                      ))}
-                    </tr>
-
-                    {/* 4. GOAL OUTCOME */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-5 px-4 font-bold text-slate-900 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-purple-50 text-purple-700 text-xs font-bold">
-                            🎯
-                          </span>
-                          <span>Goal Outcome</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 font-normal">Projected corpus & outcome certainty</p>
-                      </td>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <td
-                          key={strat.id}
-                          className={`py-5 px-5 align-top ${
-                            selectedStrategyId === strat.id ? "bg-teal-50/40 font-medium" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-slate-950">
-                              {strat.metrics.goalOutcome.projectedCorpus}
-                            </span>
-                            <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
-                              {strat.metrics.goalOutcome.probabilityOfSuccess}
-                            </span>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                            {strat.metrics.goalOutcome.description}
-                          </p>
-                        </td>
-                      ))}
-                    </tr>
-
-                    {/* 5. REQUIRED CONTRIBUTION */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-5 px-4 font-bold text-slate-900 align-top">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-50 text-rose-700 text-xs font-bold">
-                            💳
-                          </span>
-                          <span>Required Contribution</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1 font-normal">Periodic outflow required to bridge gap</p>
-                      </td>
-                      {strategyEngineResponse.strategies.map((strat) => (
-                        <td
-                          key={strat.id}
-                          className={`py-5 px-5 align-top ${
-                            selectedStrategyId === strat.id ? "bg-teal-50/40 font-medium rounded-b-xl" : ""
-                          }`}
-                        >
-                          <div className="flex items-baseline gap-1">
-                            <span className="font-black text-slate-950 text-lg">
-                              {strat.metrics.requiredContribution.monthlySip}
-                            </span>
-                          </div>
-                          {strat.metrics.requiredContribution.initialReallocation && (
-                            <p className="mt-1 text-xs text-slate-600 font-medium">
-                              + {strat.metrics.requiredContribution.initialReallocation}
-                            </p>
-                          )}
-                          <p className="mt-1 text-xs text-slate-500">
-                            {strat.metrics.requiredContribution.description}
-                          </p>
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* ============================================================== */}
-            {/* 5. STRATEGY REASONING ("Mujhe ye strategy kyon choose karni chahiye?") */}
-            {/* ============================================================== */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-              <div className="border-b border-slate-100 pb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-                  Decision Rationale
-                </span>
-                <h3 className="mt-1 text-xl font-extrabold text-slate-950">
-                  Strategy Reasoning
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Review short and complete reasoning supplied for each strategy.
-                </p>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {strategyEngineResponse.strategies.map((strat) => {
-                  const isOpen = openReasoningMap[strat.id] || false;
-
-                  return (
-                    <div
-                      key={strat.id}
-                      className="rounded-2xl border border-slate-200 overflow-hidden transition-all duration-150"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleReasoning(strat.id)}
-                        className="flex w-full items-center justify-between bg-slate-50/80 px-6 py-4 text-left transition hover:bg-slate-100"
-                        aria-expanded={isOpen}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-slate-900">
-                            {strat.name}
-                          </span>
-                          {strat.isRecommended && (
-                            <span className="rounded bg-teal-700 px-2 py-0.5 text-[10px] font-bold text-white">
-                              Recommended
-                            </span>
-                          )}
-                          <span className="text-xs font-bold text-teal-700 underline decoration-teal-300 underline-offset-4 hidden sm:inline">
-                            &ldquo;Mujhe ye strategy kyon choose karni chahiye?&rdquo;
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-slate-500">
-                            {isOpen ? "Hide reasoning" : "View reasoning"}
-                          </span>
-                          <svg
-                            className={`h-5 w-5 text-slate-500 transition-transform duration-200 ${
-                              isOpen ? "rotate-180" : ""
-                            }`}
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      </button>
-
-                      {isOpen && (
-                        <div className="border-t border-slate-200 bg-white p-6 space-y-6">
-                          {/* Short Reasoning: 2-3 key reasons */}
-                          <div>
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                              Short Reasoning (Key Points)
-                            </h4>
-                            <ul className="mt-3 space-y-2.5">
-                              {strat.reasoning.shortReasons.map((reason, rIdx) => (
-                                <li key={rIdx} className="flex items-start gap-2.5 text-sm text-slate-700">
-                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700 font-bold text-xs">
-                                    ✓
-                                  </span>
-                                  <span>{reason}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {/* Complete Reasoning */}
-                          <div className="border-t border-slate-100 pt-5">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                              Complete Reasoning (Investor Profile + Goal + SLR Trade-offs)
-                            </h4>
-                            <div className="mt-2.5 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
-                              {strat.reasoning.completeReasoning}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ============================================================== */}
-            {/* 6. STRATEGY SELECTION & CONFIRM CTA                            */}
-            {/* ============================================================== */}
-            <div className="sticky bottom-4 z-20 rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-soft backdrop-blur-md">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Your Selection
-                  </p>
-                  <p className="mt-0.5 text-base font-extrabold text-slate-950">
-                    {selectedStrategyId
-                      ? strategyEngineResponse.strategies.find((s) => s.id === selectedStrategyId)?.name
-                      : "No strategy selected yet"}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleConfirmStrategy}
-                    disabled={!selectedStrategyId}
-                    className="w-full sm:w-auto rounded-xl bg-slate-950 px-8 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Confirm Strategy
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Strategy Run history</h2><p className="mt-1 text-sm text-slate-500">Immutable run versions returned by the backend.</p></div><span className="text-xs font-semibold text-slate-400">{history.length} runs</span></div>{history.length > 0 && <div className="mt-5 space-y-2">{history.map((item) => <div key={item.strategy_run_id ?? `${item.created_at}-${item.run_version}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4"><div><span className="font-bold">Run v{item.run_version}</span><span className="ml-3 text-sm text-slate-500">Goal v{item.defined_goal_version}</span></div><span className="text-xs text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleString("en-IN") : "—"}</span></div>)}</div>}</section>
+          </>
         )}
       </div>
     </main>
