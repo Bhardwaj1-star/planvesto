@@ -6,14 +6,19 @@ from models.moneywheel import MoneywheelInput, MoneywheelResult
 
 
 class MoneywheelService:
+    """Coordinates Moneywheel calculation from explicit Financial State data."""
+
     def __init__(self, repository):
         self.repository = repository
         self.engine = MoneywheelEngine()
 
-    def calculate(self, data: MoneywheelInput, financial_state_snapshot: dict[str, Any] | None = None) -> MoneywheelResult:
+    def calculate(
+        self,
+        data: MoneywheelInput,
+        financial_state_snapshot: dict[str, Any] | None = None,
+    ) -> MoneywheelResult:
         result = self.engine.build(data)
-        snapshot = financial_state_snapshot or {}
-        return self.repository.save_snapshot(result, snapshot)
+        return self.repository.save_snapshot(result, financial_state_snapshot or {})
 
     def calculate_from_financial_state(
         self,
@@ -24,10 +29,10 @@ class MoneywheelService:
         short_term_liabilities: float | None = None,
         financial_assets: float | None = None,
     ) -> MoneywheelResult:
-        """Build from the existing FinancialState where semantics are explicit.
+        """Build Moneywheel from the existing FinancialState.
 
-        Classification-dependent fields are supplied separately until the
-        Financial State model stores those classifications natively.
+        The four classification-dependent inputs remain explicit until the
+        Financial State model provides authoritative classifications.
         """
         data = MoneywheelInput(
             planning_unit_id=financial_state.planning_unit_id,
