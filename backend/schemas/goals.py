@@ -28,3 +28,13 @@ class GoalInput(BaseModel):
 
 class GoalCalculateRequest(GoalInput):
     pass
+
+
+class GoalSummary(BaseModel):
+    goal_id: str
+    planning_unit_id: str
+    goal_name: str
+    target_amount: float
+    target_date: str | None = None
+    priority: str | None = None
+    flexibility: str | None = None
