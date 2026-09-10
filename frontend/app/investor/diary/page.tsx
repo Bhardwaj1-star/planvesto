@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getDiaryEntries, getDecisions, type DiaryEntry, type FinancialDecision } from "../../../lib/diary/diaryStore";
 import DiaryBook from "../../../components/diary/DiaryBook";
 import DecisionHistoryView from "../../../components/diary/DecisionHistoryView";
-import WriteEntryModal from "../../../components/diary/WriteEntryModal";
+import BackendWriteEntryModal from "../../../components/diary/BackendWriteEntryModal";
 import InvestorProfileMenu from "../../../components/InvestorProfileMenu";
 
 export default function InvestorDiaryPage() {
@@ -73,7 +73,7 @@ export default function InvestorDiaryPage() {
         )}
       </div>
 
-      <WriteEntryModal isOpen={isWriteModalOpen} onClose={() => setIsWriteModalOpen(false)} onEntrySaved={handleEntrySaved} />
+      <BackendWriteEntryModal isOpen={isWriteModalOpen} onClose={() => setIsWriteModalOpen(false)} onEntrySaved={handleEntrySaved} />
     </main>
   );
 }
