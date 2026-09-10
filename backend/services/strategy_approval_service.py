@@ -5,21 +5,19 @@ from fastapi import HTTPException
 from data.strategy_approval_repository import StrategyApprovalRepository
 from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
+from data.primary_strategy_repository import PrimaryStrategyRepository
 from models.strategy_approval import StrategyApprovalSnapshot, SuitabilityAssessment
+from models.primary_strategy_state import PrimaryStrategyState
 
 
 class StrategyApprovalService:
-    """Approval orchestration with a rules-ready suitability boundary.
-
-    Actual suitability rules are intentionally not implemented yet. The caller
-    must provide the final SuitabilityAssessment; this prevents the approval
-    layer from inventing financial suitability conclusions.
-    """
+    """Approval orchestration with a rules-ready suitability boundary and primary lifecycle."""
 
     def __init__(self):
         self.strategy_repo = StrategyRepository()
         self.version_repo = StrategyVersionRepository(self.strategy_repo.db)
         self.approval_repo = StrategyApprovalRepository(self.strategy_repo.db)
+        self.primary_repo = PrimaryStrategyRepository(self.strategy_repo.db)
 
     def approve_selected_strategy(
         self,
@@ -28,6 +26,8 @@ class StrategyApprovalService:
         suitability: SuitabilityAssessment,
         acknowledgement_text: str | None = None,
         make_primary: bool = False,
+        primary_transition_decision: str | None = None,
+        pending_action_disposition: str | None = None,
     ) -> StrategyApprovalSnapshot:
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run:
@@ -35,9 +35,7 @@ class StrategyApprovalService:
         if not run.selected_strategy_id or not run.selected_strategy_version_id or run.selected_strategy_version is None:
             raise HTTPException(status_code=400, detail="A selected Strategy Version is required before approval")
 
-        version = self.version_repo.get_version(
-            planning_unit_id, run.selected_strategy_id, run.selected_strategy_version
-        )
+        version = self.version_repo.get_version(planning_unit_id, run.selected_strategy_id, run.selected_strategy_version)
         if not version or version.strategy_version_id != run.selected_strategy_version_id:
             raise HTTPException(status_code=409, detail="Selected Strategy Version snapshot is unavailable or inconsistent")
 
@@ -49,9 +47,19 @@ class StrategyApprovalService:
         elif suitability.status == "Unsuitable":
             acknowledgement_type = "unsuitable"
             acknowledged_at = datetime.now(timezone.utc).isoformat()
-
         if suitability.status in {"Needs Attention", "Unsuitable"} and not acknowledgement_text:
             raise HTTPException(status_code=400, detail=f"{suitability.status} requires acknowledgement text")
+
+        current = self.primary_repo.get_current(planning_unit_id)
+        replacing_primary = bool(make_primary and current and current.strategy_version_id != version.strategy_version_id)
+        if replacing_primary and primary_transition_decision is None:
+            raise HTTPException(status_code=409, detail="Existing Primary Strategy requires an explicit transition decision")
+        if replacing_primary and primary_transition_decision not in {"archive_previous", "keep_previous_approved"}:
+            raise HTTPException(status_code=400, detail="Invalid primary transition decision")
+        if replacing_primary and pending_action_disposition is None:
+            raise HTTPException(status_code=409, detail="Pending implementation action disposition is required when replacing a Primary Strategy")
+        if pending_action_disposition not in {None, "retain_for_reassessment", "cancel"}:
+            raise HTTPException(status_code=400, detail="Invalid pending action disposition")
 
         snapshot = StrategyApprovalSnapshot(
             planning_unit_id=planning_unit_id,
@@ -75,4 +83,21 @@ class StrategyApprovalService:
             acknowledged_at=acknowledged_at,
             is_primary=make_primary,
         )
-        return self.approval_repo.save(snapshot)
+        saved = self.approval_repo.save(snapshot)
+
+        if make_primary:
+            transition = PrimaryStrategyState(
+                planning_unit_id=planning_unit_id,
+                strategy_id=version.strategy_id,
+                strategy_version_id=version.strategy_version_id or "",
+                approval_snapshot_id=saved.approval_snapshot_id or "",
+                previous_strategy_id=current.strategy_id if replacing_primary else None,
+                previous_strategy_version_id=current.strategy_version_id if replacing_primary else None,
+                pending_action_disposition=pending_action_disposition,
+                transition_metadata={
+                    "decision": primary_transition_decision,
+                    "previous_primary_transition": "archived" if replacing_primary and primary_transition_decision == "archive_previous" else "retained_as_approved",
+                },
+            )
+            self.primary_repo.set_current(transition)
+        return saved
