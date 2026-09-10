@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
-from typing import Any
 
 from fastapi import HTTPException
 
-from backend.data.strategy_approval_repository import StrategyApprovalRepository
-from backend.data.strategy_repository import StrategyRepository
-from backend.data.strategy_version_repository import StrategyVersionRepository
-from backend.models.strategy_approval import StrategyApprovalSnapshot, SuitabilityAssessment
+from data.strategy_approval_repository import StrategyApprovalRepository
+from data.strategy_repository import StrategyRepository
+from data.strategy_version_repository import StrategyVersionRepository
+from models.strategy_approval import StrategyApprovalSnapshot, SuitabilityAssessment
 
 
 class StrategyApprovalService:
@@ -33,7 +32,7 @@ class StrategyApprovalService:
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
-        if not run.selected_strategy_id or not run.selected_strategy_version_id:
+        if not run.selected_strategy_id or not run.selected_strategy_version_id or run.selected_strategy_version is None:
             raise HTTPException(status_code=400, detail="A selected Strategy Version is required before approval")
 
         version = self.version_repo.get_version(
@@ -51,10 +50,8 @@ class StrategyApprovalService:
             acknowledgement_type = "unsuitable"
             acknowledged_at = datetime.now(timezone.utc).isoformat()
 
-        if suitability.status == "Needs Attention" and not acknowledgement_text:
-            raise HTTPException(status_code=400, detail="Needs Attention requires acknowledgement text")
-        if suitability.status == "Unsuitable" and not acknowledgement_text:
-            raise HTTPException(status_code=400, detail="Unsuitable requires acknowledgement text")
+        if suitability.status in {"Needs Attention", "Unsuitable"} and not acknowledgement_text:
+            raise HTTPException(status_code=400, detail=f"{suitability.status} requires acknowledgement text")
 
         snapshot = StrategyApprovalSnapshot(
             planning_unit_id=planning_unit_id,
@@ -73,7 +70,7 @@ class StrategyApprovalService:
                 "selected_scenario_id": run.selected_scenario_id,
             },
             suitability=suitability,
-            acknowledgement_type=acknowledgement_type,  # type: ignore[arg-type]
+            acknowledgement_type=acknowledgement_type,
             acknowledgement_text=acknowledgement_text,
             acknowledged_at=acknowledged_at,
             is_primary=make_primary,
