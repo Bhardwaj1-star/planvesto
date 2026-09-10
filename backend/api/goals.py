@@ -1,10 +1,20 @@
 ﻿from fastapi import APIRouter, Header, Query
 from api.auth import authenticate_user, verify_planning_unit_ownership
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
-from schemas.goals import GoalCalculateRequest, GoalInput
+from schemas.goals import GoalCalculateRequest, GoalInput, GoalSummary
 from services.goal_service import GoalService
 
 router = APIRouter(prefix="/api/goals", tags=["Goal Planner & DefinedGoal"])
+
+
+@router.get("", response_model=list[GoalSummary])
+def list_goals(
+    planning_unit_id: str = Query(...),
+    authorization: str | None = Header(default=None),
+):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    return GoalService().repository.list_goals(planning_unit_id)
 
 
 @router.post("/calculate", response_model=DefinedGoal)
