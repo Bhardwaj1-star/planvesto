@@ -26,6 +26,16 @@ class ActionPlanRepository:
         rows = response.data or []
         return ActionPlanItem.model_validate(rows[0]) if rows else None
 
+    def list_actions(self, planning_unit_id: str) -> list[ActionPlanItem]:
+        response = (
+            self.client.table(self.action_table)
+            .select("*")
+            .eq("planning_unit_id", planning_unit_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return [ActionPlanItem.model_validate(row) for row in (response.data or [])]
+
     def update_action(self, planning_unit_id: str, action_id: str, updates: dict[str, Any]) -> ActionPlanItem:
         response = (
             self.client.table(self.action_table)
@@ -57,3 +67,15 @@ class ActionPlanRepository:
         if not rows:
             raise RuntimeError("Action decision insert returned no data")
         return ActionDecisionRecord.model_validate(rows[0])
+
+    def list_decision_history(self, planning_unit_id: str, action_id: str | None = None) -> list[ActionDecisionRecord]:
+        query = (
+            self.client.table(self.history_table)
+            .select("*")
+            .eq("planning_unit_id", planning_unit_id)
+            .order("confirmed_at", desc=True)
+        )
+        if action_id:
+            query = query.eq("action_id", action_id)
+        response = query.execute()
+        return [ActionDecisionRecord.model_validate(row) for row in (response.data or [])]
