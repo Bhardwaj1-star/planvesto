@@ -31,7 +31,7 @@ class DiaryService:
         actions = {r["action_id"]: r for r in (client.table("action_plan_items").select("action_id,title,strategy_version_id").eq("planning_unit_id", planning_unit_id).execute().data or [])}
         for row in action_rows:
             action = actions.get(row.get("action_id"), {})
-            timestamp = row.get("confirmed_at") or row.get("created_at") or datetime.now(timezone.utc).isoformat()
+            timestamp = row.get("confirmed_at") or datetime.now(timezone.utc).isoformat()
             decisions.append(FinancialDecision(
                 id=f"action:{row.get('decision_id') or row.get('action_id')}:{timestamp}",
                 planning_unit_id=planning_unit_id,
@@ -63,9 +63,9 @@ class DiaryService:
                 historical=True,
             ))
 
-        transition_rows = client.table("primary_strategy_transitions").select("*").eq("planning_unit_id", planning_unit_id).order("created_at", desc=True).execute().data or []
+        transition_rows = client.table("primary_strategy_transitions").select("*").eq("planning_unit_id", planning_unit_id).order("transitioned_at", desc=True).execute().data or []
         for row in transition_rows:
-            timestamp = row.get("created_at") or datetime.now(timezone.utc).isoformat()
+            timestamp = row.get("transitioned_at") or datetime.now(timezone.utc).isoformat()
             decisions.append(FinancialDecision(
                 id=f"primary:{row.get('transition_id') or timestamp}",
                 planning_unit_id=planning_unit_id,
