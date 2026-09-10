@@ -1,16 +1,18 @@
 from typing import Any
 
 from engines.moneywheel.engine import MoneywheelEngine
+from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 
 
 class MoneywheelService:
-    """Coordinates Moneywheel calculation from explicit Financial State data."""
+    """Coordinates Moneywheel calculation and immutable snapshot persistence."""
 
     def __init__(self, repository):
         self.repository = repository
         self.engine = MoneywheelEngine()
+        self.adapter = MoneywheelFinancialStateAdapter()
 
     def calculate(
         self,
@@ -29,22 +31,16 @@ class MoneywheelService:
         short_term_liabilities: float | None = None,
         financial_assets: float | None = None,
     ) -> MoneywheelResult:
-        """Build Moneywheel from the existing FinancialState.
+        """Build Moneywheel from FinancialState plus explicit classified inputs.
 
-        The four classification-dependent inputs remain explicit until the
-        Financial State model provides authoritative classifications.
+        Classification-dependent fields remain explicit until their future
+        authoritative source systems are implemented.
         """
-        data = MoneywheelInput(
-            planning_unit_id=financial_state.planning_unit_id,
-            gross_monthly_income=financial_state.income_monthly.value,
-            savings=financial_state.investable_surplus_monthly.value,
+        data = self.adapter.build(
+            financial_state,
             essential_monthly_expenses=essential_monthly_expenses,
-            monthly_expenses=financial_state.expenses_monthly.value,
             liquid_assets=liquid_assets,
             short_term_liabilities=short_term_liabilities,
-            monthly_debt_payments=financial_state.emi_burden_monthly.value,
-            total_assets=financial_state.total_assets.value,
-            total_liabilities=financial_state.total_liabilities.value,
             financial_assets=financial_assets,
         )
         return self.calculate(data, financial_state.model_dump(mode="json"))
