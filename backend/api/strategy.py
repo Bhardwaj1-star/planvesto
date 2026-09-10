@@ -2,6 +2,7 @@
 from api.auth import authenticate_user, verify_planning_unit_ownership
 from models.strategy import StrategyRun
 from schemas.strategy import CustomScenarioRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
+from services.strategy_service import StrategyService
 
 router = APIRouter(prefix="/api/strategy", tags=["Strategy Builder"])
 
