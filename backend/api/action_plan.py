@@ -3,7 +3,7 @@ from fastapi import APIRouter, Header
 from api.auth import authenticate_user, verify_planning_unit_ownership
 from data.action_plan_repository import ActionPlanRepository
 from data.strategy_repository import StrategyRepository
-from models.action_plan import ActionImpactPreview
+from models.action_plan import ActionImpactPreview, ActionPlanItem, ActionDecisionRecord
 from schemas.action_plan import ActionCreateRequest, ActionDecisionRequest, ActionDecisionResponse
 from services.action_plan_service import ActionPlanService
 
@@ -12,6 +12,35 @@ router = APIRouter(prefix="/api/action-plan", tags=["Action Plan"])
 
 def _service():
     return ActionPlanService(ActionPlanRepository(StrategyRepository().db))
+
+
+@router.get("/actions", response_model=list[ActionPlanItem])
+def list_actions(planning_unit_id: str, authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    return _service().repository.list_actions(planning_unit_id)
+
+
+@router.get("/actions/{action_id}", response_model=ActionPlanItem)
+def get_action(action_id: str, planning_unit_id: str, authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    action = _service().repository.get_action(planning_unit_id, action_id)
+    if action is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Action not found")
+    return action
+
+
+@router.get("/decisions", response_model=list[ActionDecisionRecord])
+def list_decision_history(
+    planning_unit_id: str,
+    action_id: str | None = None,
+    authorization: str | None = Header(default=None),
+):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    return _service().repository.list_decision_history(planning_unit_id, action_id)
 
 
 @router.post("/actions")
