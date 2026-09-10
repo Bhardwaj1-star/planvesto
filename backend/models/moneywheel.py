@@ -46,7 +46,7 @@ class MoneywheelInput(BaseModel):
 
 class MoneywheelResult(BaseModel):
     planning_unit_id: str
-    status: Literal["excellent", "healthy", "attention", "critical", "incomplete"]
+    overall_status: Literal["excellent", "healthy", "attention", "critical", "incomplete"] | None = None
     ratios: list[MoneywheelRatio] = Field(min_length=9, max_length=9)
     rule_set_version: str
     calculated_at: str
