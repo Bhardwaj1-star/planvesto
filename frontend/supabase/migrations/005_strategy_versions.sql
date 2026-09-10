@@ -1,6 +1,6 @@
 create table if not exists public.strategy_versions (
   strategy_version_id uuid primary key default gen_random_uuid(),
-  planning_unit_id uuid not null,
+  planning_unit_id uuid not null references public.planning_units(planning_unit_id) on delete cascade,
   strategy_id text not null,
   version integer not null check (version >= 1),
   parent_version integer check (parent_version is null or parent_version >= 1),
@@ -22,6 +22,7 @@ create index if not exists idx_strategy_versions_planning_unit
 
 alter table public.strategy_versions enable row level security;
 
+drop policy if exists "strategy_versions_select_own" on public.strategy_versions;
 create policy "strategy_versions_select_own"
   on public.strategy_versions
   for select
@@ -29,11 +30,12 @@ create policy "strategy_versions_select_own"
     exists (
       select 1
       from public.planning_units pu
-      where pu.id = strategy_versions.planning_unit_id
+      where pu.planning_unit_id = strategy_versions.planning_unit_id
         and pu.user_id = auth.uid()
     )
   );
 
+drop policy if exists "strategy_versions_insert_own" on public.strategy_versions;
 create policy "strategy_versions_insert_own"
   on public.strategy_versions
   for insert
@@ -41,7 +43,7 @@ create policy "strategy_versions_insert_own"
     exists (
       select 1
       from public.planning_units pu
-      where pu.id = strategy_versions.planning_unit_id
+      where pu.planning_unit_id = strategy_versions.planning_unit_id
         and pu.user_id = auth.uid()
     )
   );
