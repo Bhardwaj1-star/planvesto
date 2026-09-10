@@ -9,6 +9,16 @@ class GoalRepository:
     def __init__(self):
         self.db = get_supabase()
 
+    def list_goals(self, planning_unit_id: str) -> list[dict[str, Any]]:
+        res = (
+            self.db.table("goals")
+            .select("goal_id, planning_unit_id, goal_name, target_amount, target_date, priority, flexibility")
+            .eq("planning_unit_id", planning_unit_id)
+            .order("created_at")
+            .execute()
+        )
+        return res.data or []
+
     def get_planning_unit_assets(self, planning_unit_id: str) -> list[dict[str, Any]]:
         res = (
             self.db.table("assets")
@@ -172,7 +182,6 @@ class GoalRepository:
         )
 
     def save_defined_goal_snapshot(self, defined_goal: DefinedGoal) -> str:
-        # 1. Clear previous latest flag
         (
             self.db.table("defined_goals")
             .update({"is_latest": False})
@@ -182,7 +191,6 @@ class GoalRepository:
             .execute()
         )
 
-        # 2. Insert new DefinedGoal version
         dg_payload = {
             "goal_id": defined_goal.goal_id,
             "planning_unit_id": defined_goal.planning_unit_id,
@@ -217,7 +225,6 @@ class GoalRepository:
         record = res.data[0] if isinstance(res.data, list) else res.data
         def_id = record["defined_goal_id"]
 
-        # 3. Insert mappings
         if defined_goal.mapped_assets:
             map_rows = []
             for m in defined_goal.mapped_assets:
@@ -247,7 +254,6 @@ class GoalRepository:
         if current.target_month != new_input.target_month or current.target_year != new_input.target_year:
             return True
 
-        # Check mapped assets differences
         curr_map = {m.asset_id: (m.allocation_type, m.allocation_value) for m in current.mapped_assets}
         new_map = {m.asset_id: (m.allocation_type, m.allocation_value) for m in new_input.asset_mappings}
         if curr_map != new_map:
