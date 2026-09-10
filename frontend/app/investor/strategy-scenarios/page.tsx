@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getGoals, getPlanningUnitId, type GoalSummary } from "../../../lib/api/goals";
-import { addCustomScenario, getLatestStrategyRun, type StrategyRun } from "../../../lib/api/strategy";
+import { getGoals, type GoalSummary } from "../../../lib/api/goals";
+import { addCustomScenario, getLatestStrategyRun, getPlanningUnitId, type StrategyRun } from "../../../lib/api/strategy";
 
 export default function StrategyScenariosPage() {
   const [goals, setGoals] = useState<GoalSummary[]>([]);

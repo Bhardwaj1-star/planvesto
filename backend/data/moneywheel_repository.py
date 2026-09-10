@@ -21,10 +21,11 @@ class MoneywheelRepository:
             "calculated_at": result.calculated_at,
             "metadata": result.metadata,
         }
-        response = self.client.table(self.table).insert(payload).select("*").single().execute()
-        row = response.data
-        if not row:
+        response = self.client.table(self.table).insert(payload).select("*").execute()
+        rows = response.data
+        if not rows:
             raise RuntimeError("Moneywheel snapshot insert returned no data")
+        row = rows[0] if isinstance(rows, list) else rows
         result.metadata["snapshot_id"] = row["snapshot_id"]
         return result
 

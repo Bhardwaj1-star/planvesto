@@ -56,3 +56,5 @@ export function getDefinedGoalVersions(planningUnitId: string, goalId: string) {
 export function getDefinedGoalVersion(planningUnitId: string, goalId: string, version: number) {
   return request<Record<string, unknown>>(`/api/goals/${encodeURIComponent(goalId)}/defined/versions/${version}?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
+
+export { getPlanningUnitId } from "./strategy";

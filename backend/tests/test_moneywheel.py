@@ -56,3 +56,64 @@ def test_solvency_is_one_minus_leverage():
     solvency = next(r for r in result.ratios if r.key == "solvency_ratio")
     assert leverage.value == 30.0
     assert solvency.value == 70.0
+
+
+def test_moneywheel_repository_save_snapshot():
+    from unittest.mock import MagicMock
+    from data.moneywheel_repository import MoneywheelRepository
+
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_client.table.return_value = mock_table
+    mock_table.insert.return_value.select.return_value.execute.return_value.data = [
+        {"snapshot_id": "snap-test-123"}
+    ]
+
+    repo = MoneywheelRepository(mock_client)
+    result = MoneywheelEngine().build(_input())
+    saved = repo.save_snapshot(result, {"sample": "state"})
+
+    assert saved.metadata.get("snapshot_id") == "snap-test-123"
+    mock_table.insert.assert_called_once()
+    mock_table.insert.return_value.select.assert_called_once_with("*")
+
+
+def test_post_moneywheel_calculate_success():
+    from unittest.mock import patch, MagicMock
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    fake_row = {"snapshot_id": "snapshot-uuid-999"}
+
+    with patch("api.moneywheel.authenticate_user", return_value="user-123"), \
+         patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \
+         patch("data.moneywheel_repository.get_supabase") as mock_sb:
+        mock_table = MagicMock()
+        mock_sb.return_value.table.return_value = mock_table
+        mock_table.insert.return_value.select.return_value.execute.return_value.data = [fake_row]
+
+        response = client.post(
+            "/api/moneywheel/calculate",
+            headers={"Authorization": "Bearer test-token"},
+            json={
+                "planning_unit_id": "pu-1",
+                "gross_monthly_income": 100000,
+                "savings": 30000,
+                "essential_monthly_expenses": 35000,
+                "monthly_expenses": 50000,
+                "liquid_assets": 500000,
+                "short_term_liabilities": 250000,
+                "monthly_debt_payments": 20000,
+                "total_assets": 2000000,
+                "total_liabilities": 400000,
+                "financial_assets": 1500000,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "result" in data
+        assert len(data["result"]["ratios"]) == 9
+        assert data["result"]["metadata"]["snapshot_id"] == "snapshot-uuid-999"
+
