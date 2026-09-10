@@ -7,6 +7,7 @@ from services.strategy_edit_service import StrategyEditService
 class FakeVersionRepo:
     def __init__(self):
         self.saved = []
+        self.client = None
 
     def get_version(self, planning_unit_id, strategy_id, version):
         if version == 1:

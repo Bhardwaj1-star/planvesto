@@ -252,9 +252,21 @@ class TestStrategyRunLifecycle:
         assert "does not exist in this strategy run" in exc_info.value.detail
         strat_repo_mock.update_selection.assert_not_called()
 
+    @patch("services.strategy_service.StrategyVersionService.create_version")
     @patch("services.strategy_service.StrategyRepository")
-    def test_valid_strategy_and_scenario_selection_succeeds(self, MockStratRepo):
+    def test_valid_strategy_and_scenario_selection_succeeds(self, MockStratRepo, mock_create_version):
         strat_repo_mock = MockStratRepo.return_value
+
+        from models.strategy_version import StrategyVersion
+        mock_create_version.return_value = StrategyVersion(
+            strategy_version_id="sv-mock-1",
+            planning_unit_id="pu-1",
+            strategy_id="strat-cap-preservation",
+            version=1,
+            library_version="1.0",
+            implementation_version="1.0",
+            implementation_parameters={"debt_allocation_pct": 80.0},
+        )
 
         strat_a = StrategyDefinition(
             strategy_id="strat-cap-preservation",

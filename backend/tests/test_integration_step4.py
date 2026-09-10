@@ -475,6 +475,11 @@ class TestAPIResponseStructure:
         except Exception as exc:
             pytest.skip(f"Could not acquire token for E2E: {exc}")
 
+        try:
+            requests.get(HEALTH_URL, timeout=5)
+        except requests.exceptions.ConnectionError:
+            pytest.skip("Backend server is not running at 127.0.0.1:8000")
+
         r = _post({"planning_unit_id": pu_id, "scope": "family"}, token=token)
         assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
         data = r.json()

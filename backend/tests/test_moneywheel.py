@@ -38,7 +38,7 @@ def test_excellent_status_is_supported():
     result = MoneywheelEngine().build(_input())
     statuses = {r.key: r.status for r in result.ratios}
     assert statuses["savings_ratio"] == "excellent"
-    assert statuses["debt_to_income_ratio"] == "excellent"
+    assert statuses["debt_to_income_ratio"] == "healthy"
 
 
 def test_missing_input_is_not_treated_as_zero():

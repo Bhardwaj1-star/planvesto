@@ -1,9 +1,9 @@
 from typing import Any
 
-from backend.library.strategies.registry import get_strategy_by_id
-from backend.models.strategy import StrategyDefinition
-from backend.models.strategy_version import StrategyVersion
-from backend.data.strategy_version_repository import StrategyVersionRepository
+from library.strategies.registry import get_strategy_by_id
+from models.strategy import StrategyDefinition
+from models.strategy_version import StrategyVersion
+from data.strategy_version_repository import StrategyVersionRepository
 
 
 class StrategyVersionService:

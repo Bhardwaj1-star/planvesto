@@ -1,6 +1,6 @@
 from typing import Any
 
-from backend.models.strategy_approval import StrategyApprovalSnapshot
+from models.strategy_approval import StrategyApprovalSnapshot
 
 
 class StrategyApprovalRepository:

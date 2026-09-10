@@ -1,6 +1,6 @@
 from typing import Any
 
-from backend.models.primary_strategy_state import PrimaryStrategyState
+from models.primary_strategy_state import PrimaryStrategyState
 
 
 class PrimaryStrategyRepository:

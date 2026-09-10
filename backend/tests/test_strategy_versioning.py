@@ -1,9 +1,9 @@
 import pytest
 
-from backend.data.strategy_version_repository import StrategyVersionRepository
-from backend.models.strategy import StrategyDefinition, StrategyImplementationParamDef
-from backend.models.strategy_version import StrategyVersion
-from backend.services.strategy_version_service import StrategyVersionService
+from data.strategy_version_repository import StrategyVersionRepository
+from models.strategy import StrategyDefinition, StrategyImplementationParamDef
+from models.strategy_version import StrategyVersion
+from services.strategy_version_service import StrategyVersionService
 
 
 class FakeRepository:
@@ -90,7 +90,11 @@ def test_investor_edit_requires_parent_version():
         )
 
 
-def test_missing_parameters_use_defaults_and_create_next_version():
+def test_missing_parameters_use_defaults_and_create_next_version(monkeypatch):
+    from services import strategy_version_service as _svs
+    _original = _svs.get_strategy_by_id
+    monkeypatch.setattr(_svs, "get_strategy_by_id", lambda sid: make_strategy() if sid == "test-strategy" else _original(sid))
+
     repository = FakeRepository()
     service = StrategyVersionService(repository)
     first = service.create_version("pu-1", "test-strategy")
@@ -116,7 +120,11 @@ def test_unknown_parameter_rejected():
         service.validate_parameters(make_strategy(), {"does_not_exist": 10})
 
 
-def test_non_editable_parameter_rejected_when_changed():
+def test_non_editable_parameter_rejected_when_changed(monkeypatch):
+    from services import strategy_version_service as _svs
+    _original = _svs.get_strategy_by_id
+    monkeypatch.setattr(_svs, "get_strategy_by_id", lambda sid: make_strategy() if sid == "test-strategy" else _original(sid))
+
     repository = FakeRepository()
     service = StrategyVersionService(repository)
     first = service.create_version("pu-1", "test-strategy")
@@ -144,7 +152,11 @@ def test_choice_rejected():
         service.validate_parameters(make_strategy(), {"cadence": "Monthly"})
 
 
-def test_valid_edit_is_accepted():
+def test_valid_edit_is_accepted(monkeypatch):
+    from services import strategy_version_service as _svs
+    _original = _svs.get_strategy_by_id
+    monkeypatch.setattr(_svs, "get_strategy_by_id", lambda sid: make_strategy() if sid == "test-strategy" else _original(sid))
+
     repository = FakeRepository()
     service = StrategyVersionService(repository)
     first = service.create_version("pu-1", "test-strategy")
