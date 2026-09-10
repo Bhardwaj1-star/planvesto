@@ -2,6 +2,7 @@ import {
   createDiaryEntry as apiCreateDiaryEntry,
   getDiaryEntries as apiGetDiaryEntries,
   getFinancialDecisions as apiGetFinancialDecisions,
+  getSystemFinancialDecisions as apiGetSystemFinancialDecisions,
   getPlanningUnitId,
   type DiaryEntry as ApiDiaryEntry,
   type FinancialDecision as ApiFinancialDecision,
@@ -35,7 +36,8 @@ export async function saveDiaryEntry(entry: Omit<DiaryEntry, "id" | "displayDate
 export async function getDecisions(): Promise<FinancialDecision[]> {
   const planningUnitId = getPlanningUnitId();
   if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-  return apiGetFinancialDecisions(planningUnitId);
+  const [manual, system] = await Promise.all([apiGetFinancialDecisions(planningUnitId), apiGetSystemFinancialDecisions(planningUnitId)]);
+  return [...manual, ...system].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export const recordDecision = undefined;
