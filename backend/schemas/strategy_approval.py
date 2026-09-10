@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from models.strategy_approval import SuitabilityAssessment
+from models.primary_strategy import PendingActionDisposition, PrimaryTransitionDecision
 
 
 class StrategyApprovalRequest(BaseModel):
@@ -9,6 +10,8 @@ class StrategyApprovalRequest(BaseModel):
     suitability: SuitabilityAssessment
     acknowledgement_text: str | None = None
     make_primary: bool = False
+    primary_transition_decision: PrimaryTransitionDecision | None = None
+    pending_action_disposition: PendingActionDisposition | None = None
 
 
 class StrategyApprovalResponse(BaseModel):
