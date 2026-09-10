@@ -69,6 +69,12 @@ def list_decisions(planning_unit_id: str, authorization: str | None = Header(def
     return _service().repository.list_decisions(planning_unit_id)
 
 
+@router.get("/decisions/system")
+def list_system_decisions(planning_unit_id: str, authorization: str | None = Header(default=None)):
+    _authenticate(planning_unit_id, authorization)
+    return _service().list_system_decisions(planning_unit_id)
+
+
 @router.post("/decisions")
 def create_decision(request: FinancialDecisionCreateRequest, authorization: str | None = Header(default=None)):
     _authenticate(request.planning_unit_id, authorization)
