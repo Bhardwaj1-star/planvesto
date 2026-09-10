@@ -26,6 +26,19 @@ class ActionPlanRepository:
         rows = response.data or []
         return ActionPlanItem.model_validate(rows[0]) if rows else None
 
+    def update_action(self, planning_unit_id: str, action_id: str, updates: dict[str, Any]) -> ActionPlanItem:
+        response = (
+            self.client.table(self.action_table)
+            .update(updates)
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("action_id", action_id)
+            .execute()
+        )
+        rows = response.data or []
+        if not rows:
+            raise RuntimeError("Action Plan update returned no data")
+        return ActionPlanItem.model_validate(rows[0])
+
     def record_decision(self, record: ActionDecisionRecord) -> ActionDecisionRecord:
         payload = record.model_dump(mode="json", exclude_none=True)
         response = self.client.table(self.history_table).insert(payload).execute()
