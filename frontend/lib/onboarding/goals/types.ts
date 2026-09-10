@@ -54,3 +54,83 @@ export const emptyGoal: Omit<Goal, "id"> = {
   inflationApplicability: "",
   notes: "",
 };
+
+// ============================================================================
+// DefinedGoal ARCHITECTURE (Authoritative Backend Model)
+// ============================================================================
+
+export const goalStatuses = ["Active", "Completed", "Paused", "Cancelled"] as const;
+export type GoalStatus = (typeof goalStatuses)[number];
+
+export type FundingStatus = "Shortfall" | "On Track" | "Overfunded";
+
+export type AssetMappingAllocationType = "currency" | "percentage";
+
+export const returnFrequencies = ["annual", "semi-annual", "quarterly", "monthly"] as const;
+export type ReturnFrequency = (typeof returnFrequencies)[number];
+
+export type AssetMappingInput = {
+  asset_id: string;
+  allocation_type: AssetMappingAllocationType;
+  allocation_value: number;
+  expected_return: number | null;
+  return_frequency: string;
+};
+
+export type GoalInput = {
+  planning_unit_id: string;
+  goal_id?: string | null;
+  investor_id?: string | null;
+  goal_name: string;
+  goal_type: string;
+  today_cost: number;
+  target_month: number;
+  target_year: number;
+  inflation_rate: number | null;
+  priority: string;
+  flexibility: string;
+  status: string;
+  asset_mappings: AssetMappingInput[];
+};
+
+export type DefinedGoalAssetMapping = {
+  mapping_id?: string | null;
+  defined_goal_id?: string | null;
+  asset_id: string;
+  asset_name?: string | null;
+  allocation_type: AssetMappingAllocationType;
+  allocation_value: number;
+  allocated_amount: number;
+  allocated_percentage: number;
+  expected_return: number;
+  return_frequency: string;
+  projected_value: number;
+  created_at?: string | null;
+};
+
+export type DefinedGoal = {
+  defined_goal_id?: string | null;
+  goal_id: string;
+  planning_unit_id: string;
+  investor_id?: string | null;
+  version: number;
+  is_latest: boolean;
+  goal_type: string;
+  goal_name: string;
+  today_cost: number;
+  inflation_rate: number;
+  inflation_source: string;
+  target_month: number;
+  target_year: number;
+  duration_years: number;
+  future_target: number;
+  priority: string;
+  flexibility: string;
+  status: string;
+  mapped_assets: DefinedGoalAssetMapping[];
+  projected_mapped_asset_value: number;
+  funding_gap: number;
+  funding_status: FundingStatus;
+  version_metadata?: Record<string, unknown>;
+  created_at?: string | null;
+};

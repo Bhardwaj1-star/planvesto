@@ -27,7 +27,7 @@ class GoalRepository:
             .maybe_single()
             .execute()
         )
-        return res.data
+        return res.data if res else None
 
     def ensure_goal_record(
         self,
@@ -60,8 +60,11 @@ class GoalRepository:
                 self.db.table("goals").update(payload).eq("goal_id", goal_id).execute()
                 return goal_id
 
-        res = self.db.table("goals").insert(payload).select("goal_id").single().execute()
-        return res.data["goal_id"]
+        res = self.db.table("goals").insert(payload).select("goal_id").execute()
+        if not res.data:
+            raise RuntimeError(f"Failed to insert goal record for planning unit {planning_unit_id}")
+        record = res.data[0] if isinstance(res.data, list) else res.data
+        return record["goal_id"]
 
     def get_latest_defined_goal(
         self,
@@ -77,7 +80,7 @@ class GoalRepository:
             .maybe_single()
             .execute()
         )
-        if not res.data:
+        if not res or not res.data:
             return None
         return self._hydrate_defined_goal(res.data)
 
@@ -96,7 +99,7 @@ class GoalRepository:
             .maybe_single()
             .execute()
         )
-        if not res.data:
+        if not res or not res.data:
             return None
         return self._hydrate_defined_goal(res.data)
 
@@ -207,10 +210,12 @@ class GoalRepository:
             self.db.table("defined_goals")
             .insert(dg_payload)
             .select("defined_goal_id")
-            .single()
             .execute()
         )
-        def_id = res.data["defined_goal_id"]
+        if not res.data:
+            raise RuntimeError("Failed to insert defined goal snapshot")
+        record = res.data[0] if isinstance(res.data, list) else res.data
+        def_id = record["defined_goal_id"]
 
         # 3. Insert mappings
         if defined_goal.mapped_assets:

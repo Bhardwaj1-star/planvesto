@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException
+from fastapi import HTTPException
 from data.supabase import get_supabase
 
 
@@ -26,7 +26,7 @@ def verify_planning_unit_ownership(planning_unit_id: str, user_id: str) -> None:
         .maybe_single()
         .execute()
     )
-    if not result.data:
+    if not result or not result.data:
         raise HTTPException(
             status_code=403,
             detail="Planning unit does not belong to authenticated user",

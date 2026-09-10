@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 from data.supabase import get_supabase
 from models.strategy import (
@@ -25,7 +25,7 @@ class StrategyRepository:
             .maybe_single()
             .execute()
         )
-        if not res.data:
+        if not res or not res.data:
             return None
         return self._hydrate_run(res.data)
 
@@ -38,7 +38,7 @@ class StrategyRepository:
             .maybe_single()
             .execute()
         )
-        if not res.data:
+        if not res or not res.data:
             return None
         return self._hydrate_run(res.data)
 
@@ -85,8 +85,11 @@ class StrategyRepository:
             "run_metadata": run.run_metadata,
         }
 
-        res = self.db.table("strategy_runs").insert(payload).select("strategy_run_id").single().execute()
-        run_id = res.data["strategy_run_id"]
+        res = self.db.table("strategy_runs").insert(payload).select("strategy_run_id").execute()
+        if not res.data:
+            raise RuntimeError("Failed to insert strategy run")
+        record = res.data[0] if isinstance(res.data, list) else res.data
+        run_id = record["strategy_run_id"]
 
         # Persist custom/modified scenarios separately
         custom_rows = [
