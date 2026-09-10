@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Query
 
 from api.auth import authenticate_user, verify_planning_unit_ownership
+from data.primary_strategy_repository import PrimaryStrategyRepository
+from data.strategy_repository import StrategyRepository
 from schemas.strategy_approval import StrategyApprovalRequest, StrategyApprovalResponse
 from services.strategy_approval_service import StrategyApprovalService
 
@@ -33,3 +35,15 @@ def approve_strategy(
         is_primary=snapshot.is_primary,
         approved_at=snapshot.approved_at,
     )
+
+
+@router.get("/primary", response_model=dict | None)
+def get_current_primary_strategy(
+    planning_unit_id: str = Query(...),
+    authorization: str | None = Header(default=None),
+):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    repo = StrategyRepository()
+    state = PrimaryStrategyRepository(repo.db).get_current(planning_unit_id)
+    return state.model_dump(mode="json") if state else None
