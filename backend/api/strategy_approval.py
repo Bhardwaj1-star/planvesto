@@ -21,6 +21,8 @@ def approve_strategy(
         suitability=request.suitability,
         acknowledgement_text=request.acknowledgement_text,
         make_primary=request.make_primary,
+        primary_transition_decision=request.primary_transition_decision,
+        pending_action_disposition=request.pending_action_disposition,
     )
     return StrategyApprovalResponse(
         approval_snapshot_id=snapshot.approval_snapshot_id,
