@@ -12,6 +12,7 @@ const navigation = [
   { label: "Goal Planner", href: "/investor/goal-planner" },
   { label: "Strategy Builder", href: "/investor/strategy-builder" },
   { label: "Strategy Approval", href: "/investor/strategy-approval" },
+  { label: "Action Plan", href: "/investor/action-plan" },
   { label: "Investor Diary", href: "/investor/diary" },
   { label: "Profile", href: "/investor/profile" },
 ];
