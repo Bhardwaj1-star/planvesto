@@ -4,9 +4,9 @@ export type SuitabilityStatus = "Suitable" | "Needs Attention" | "Unsuitable";
 
 export type SuitabilityAssessment = {
   status: SuitabilityStatus;
-  diagnostics: Array<Record<string, unknown>>;
-  rule_set_version: string;
-  evaluated_at: string;
+  diagnostics?: Array<Record<string, unknown>>;
+  rule_set_version?: string;
+  evaluated_at?: string;
 };
 
 export type StrategyApprovalRequest = {
@@ -36,30 +36,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   if (!data.session) throw new Error("Authentication required.");
-
   const response = await fetch(`${backendUrl}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${data.session.access_token}`,
-      ...(init?.headers ?? {}),
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}`, ...(init?.headers ?? {}) },
   });
-
   let body: unknown = null;
   try { body = await response.json(); } catch { /* non-JSON error */ }
   if (!response.ok) {
-    const detail = typeof body === "object" && body !== null && "detail" in body
-      ? String((body as { detail: unknown }).detail)
-      : `Request failed with status ${response.status}.`;
+    const detail = typeof body === "object" && body !== null && "detail" in body ? String((body as { detail: unknown }).detail) : `Request failed with status ${response.status}.`;
     throw new Error(detail);
   }
   return body as T;
 }
 
 export function approveStrategy(requestBody: StrategyApprovalRequest) {
-  return request<StrategyApprovalResponse>("/api/strategy/approve", {
-    method: "POST",
-    body: JSON.stringify(requestBody),
-  });
+  return request<StrategyApprovalResponse>("/api/strategy/approve", { method: "POST", body: JSON.stringify(requestBody) });
 }
