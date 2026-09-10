@@ -7,6 +7,7 @@ from api.strategy_approval import router as strategy_approval_router
 from api.strategy_edit import router as strategy_edit_router
 from api.action_plan import router as action_plan_router
 from api.moneywheel import router as moneywheel_router
+from api.orchestration import router as orchestration_router
 
 app = FastAPI(title="Planvesto Backend", version="2.0.0")
 app.add_middleware(
@@ -23,6 +24,7 @@ app.include_router(strategy_approval_router)
 app.include_router(strategy_edit_router)
 app.include_router(action_plan_router)
 app.include_router(moneywheel_router)
+app.include_router(orchestration_router)
 
 @app.get("/")
 def root():
