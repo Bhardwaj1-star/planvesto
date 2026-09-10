@@ -2,7 +2,7 @@ create table if not exists public.moneywheel_snapshots (
   snapshot_id uuid primary key default gen_random_uuid(),
   planning_unit_id uuid not null references public.planning_units(planning_unit_id) on delete cascade,
   rule_set_version text not null,
-  overall_status text not null check (overall_status in ('excellent', 'healthy', 'attention', 'critical', 'incomplete')),
+  overall_status text check (overall_status is null or overall_status = 'incomplete'),
   ratios jsonb not null,
   financial_state_snapshot jsonb not null default '{}'::jsonb,
   calculated_at timestamptz not null default now(),
