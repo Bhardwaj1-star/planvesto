@@ -15,7 +15,7 @@ class MoneywheelRepository:
         payload = {
             "planning_unit_id": result.planning_unit_id,
             "rule_set_version": result.rule_set_version,
-            "overall_status": result.status,
+            "overall_status": result.overall_status,
             "ratios": [r.model_dump(mode="json") for r in result.ratios],
             "financial_state_snapshot": financial_state_snapshot,
             "calculated_at": result.calculated_at,
