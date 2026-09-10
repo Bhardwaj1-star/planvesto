@@ -16,7 +16,6 @@ create table if not exists public.strategy_versions (
 
 create index if not exists idx_strategy_versions_planning_strategy
   on public.strategy_versions (planning_unit_id, strategy_id, version desc);
-
 create index if not exists idx_strategy_versions_planning_unit
   on public.strategy_versions (planning_unit_id);
 
@@ -24,34 +23,16 @@ alter table public.strategy_versions enable row level security;
 
 drop policy if exists "strategy_versions_select_own" on public.strategy_versions;
 create policy "strategy_versions_select_own"
-  on public.strategy_versions
-  for select
-  using (
-    exists (
-      select 1
-      from public.planning_units pu
-      where pu.planning_unit_id = strategy_versions.planning_unit_id
-        and pu.user_id = auth.uid()
-    )
-  );
+  on public.strategy_versions for select
+  using (exists (select 1 from public.planning_units pu where pu.planning_unit_id = strategy_versions.planning_unit_id and pu.user_id = auth.uid()));
 
 drop policy if exists "strategy_versions_insert_own" on public.strategy_versions;
 create policy "strategy_versions_insert_own"
-  on public.strategy_versions
-  for insert
-  with check (
-    exists (
-      select 1
-      from public.planning_units pu
-      where pu.planning_unit_id = strategy_versions.planning_unit_id
-        and pu.user_id = auth.uid()
-    )
-  );
+  on public.strategy_versions for insert
+  with check (exists (select 1 from public.planning_units pu where pu.planning_unit_id = strategy_versions.planning_unit_id and pu.user_id = auth.uid()));
 
 create or replace function public.prevent_strategy_version_mutation()
-returns trigger
-language plpgsql
-as $$
+returns trigger language plpgsql as $$
 begin
   raise exception 'strategy_versions are immutable';
 end;
@@ -61,3 +42,10 @@ drop trigger if exists strategy_versions_immutable on public.strategy_versions;
 create trigger strategy_versions_immutable
 before update or delete on public.strategy_versions
 for each row execute function public.prevent_strategy_version_mutation();
+
+alter table public.strategy_runs
+  add column if not exists selected_strategy_version_id uuid,
+  add column if not exists selected_strategy_version integer;
+
+create index if not exists idx_strategy_runs_selected_strategy_version
+  on public.strategy_runs (selected_strategy_version_id);
