@@ -6,7 +6,9 @@ from engines.action_plan.impact_engine import ActionImpactEngine
 
 
 class ActionPlanService:
-    """Builds actions, preserves decisions, and compares completed-action impact."""
+    """Builds actions, executes decisions, preserves history, and compares impact."""
+
+    _EDITABLE_FIELDS = {"title", "description", "priority", "deadline", "planned_impact"}
 
     def __init__(self, repository):
         self.repository = repository
@@ -43,12 +45,55 @@ class ActionPlanService:
             raise ValueError("Action must have an action_id before recording a decision")
         if decision not in {"add", "modify", "delete", "complete", "cancel"}:
             raise ValueError(f"Invalid action decision: {decision}")
+
+        if decision == "add":
+            if action.status != "planned":
+                raise ValueError("Only planned actions can be added/confirmed")
+            updated = self.repository.update_action(
+                action.planning_unit_id, action.action_id, {"status": "confirmed"}
+            )
+            resulting_state = updated.model_dump(mode="json")
+
+        elif decision == "modify":
+            if action.status not in {"planned", "confirmed"}:
+                raise ValueError("Only planned or confirmed actions can be modified")
+            requested = after_state or {}
+            updates = {key: requested[key] for key in self._EDITABLE_FIELDS if key in requested}
+            if not updates:
+                raise ValueError("Modify decision contains no editable action fields")
+            updated = self.repository.update_action(
+                action.planning_unit_id, action.action_id, updates
+            )
+            resulting_state = updated.model_dump(mode="json")
+
+        elif decision == "complete":
+            if action.status not in {"planned", "confirmed"}:
+                raise ValueError("Only planned or confirmed actions can be completed")
+            updated = self.repository.update_action(
+                action.planning_unit_id, action.action_id, {"status": "completed"}
+            )
+            resulting_state = updated.model_dump(mode="json")
+
+        elif decision == "cancel":
+            if action.status not in {"planned", "confirmed"}:
+                raise ValueError("Only planned or confirmed actions can be cancelled")
+            updated = self.repository.update_action(
+                action.planning_unit_id, action.action_id, {"status": "cancelled"}
+            )
+            resulting_state = updated.model_dump(mode="json")
+
+        else:  # delete
+            if action.status in {"completed", "cancelled"}:
+                raise ValueError("Completed or cancelled actions cannot be deleted")
+            resulting_state = {"action_id": action.action_id, "deleted": True}
+            self.repository.delete_action(action.planning_unit_id, action.action_id)
+
         return self.repository.record_decision(ActionDecisionRecord(
             planning_unit_id=action.planning_unit_id,
             action_id=action.action_id,
             decision=decision,  # type: ignore[arg-type]
             before_state=action.model_dump(mode="json"),
-            after_state=after_state or action.model_dump(mode="json"),
+            after_state=resulting_state,
             impact_preview=preview,
         ))
 
@@ -59,14 +104,11 @@ class ActionPlanService:
         actual_state: FinancialState,
         completion_preview: ActionImpactPreview,
     ) -> tuple[ActionPlanItem, ActionDecisionRecord, dict[str, Any]]:
-        """Complete an action after the actual Financial State has been confirmed.
-
-        This method does not mutate source financial records. The actual state must
-        already reflect the investor-confirmed data update. It only computes and
-        preserves the Actual-vs-Projected comparison.
-        """
+        """Complete an action after the actual Financial State has been confirmed."""
         if not action.action_id:
             raise ValueError("Action must have an action_id before completion")
+        if action.status not in {"planned", "confirmed"}:
+            raise ValueError("Only planned or confirmed actions can be completed")
 
         comparison = self.impact_engine.compare(projected_state, actual_state)
         actual_impact = {
