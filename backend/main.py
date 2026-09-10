@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.financial_state import router as financial_state_router
 from api.goals import router as goals_router
 from api.strategy import router as strategy_router
+from api.strategy_approval import router as strategy_approval_router
 
 app = FastAPI(title="Planvesto Backend", version="2.0.0")
 app.add_middleware(
@@ -16,6 +17,7 @@ app.add_middleware(
 app.include_router(financial_state_router)
 app.include_router(goals_router)
 app.include_router(strategy_router)
+app.include_router(strategy_approval_router)
 
 @app.get("/")
 def root():
