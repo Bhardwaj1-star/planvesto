@@ -30,14 +30,14 @@ function numberValue(metric: Metric) {
   return metric.value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 
-function MetricCard({ label, metric, period }: { label: string; metric: Metric; period?: Period }) {
+function MetricCard({ label, metric, period }: { label: string; metric?: Metric; period?: Period }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
       <p className="mt-3 text-2xl font-extrabold tracking-tight text-slate-950">
-        {amount(metric, period)}
+        {amount(metric as Metric, period)}
       </p>
-      {!metric.available && metric.reason && (
+      {!metric?.available && metric?.reason && (
         <p className="mt-2 text-xs leading-5 text-slate-500">{metric.reason}</p>
       )}
     </div>
@@ -122,7 +122,7 @@ export default function FinancialStatePage() {
   const surplus = isAnnual ? data?.investable_surplus_annual : data?.investable_surplus_monthly;
 
   const hasBreakdown = useMemo(
-    () => Boolean(data && (data.income_breakdown.length || data.expense_breakdown.length || data.asset_breakdown.length || data.liability_breakdown.length)),
+    () => Boolean(data && (data.income_breakdown?.length || data.expense_breakdown?.length || data.asset_breakdown?.length || data.liability_breakdown?.length)),
     [data],
   );
 
@@ -222,12 +222,12 @@ export default function FinancialStatePage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Cash Flow Ratio</p>
             <p className="mt-3 text-2xl font-extrabold text-slate-950">{numberValue(data.cash_flow_ratio)}</p>
-            {!data.cash_flow_ratio.available && data.cash_flow_ratio.reason && <p className="mt-2 text-xs text-slate-500">{data.cash_flow_ratio.reason}</p>}
+            {!data.cash_flow_ratio?.available && data.cash_flow_ratio?.reason && <p className="mt-2 text-xs text-slate-500">{data.cash_flow_ratio.reason}</p>}
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Savings / Investment Rate</p>
             <p className="mt-3 text-2xl font-extrabold text-slate-950">{numberValue(data.savings_investment_rate)}</p>
-            {!data.savings_investment_rate.available && data.savings_investment_rate.reason && <p className="mt-2 text-xs text-slate-500">{data.savings_investment_rate.reason}</p>}
+            {!data.savings_investment_rate?.available && data.savings_investment_rate?.reason && <p className="mt-2 text-xs text-slate-500">{data.savings_investment_rate.reason}</p>}
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Safety Reserve</p>
@@ -240,7 +240,7 @@ export default function FinancialStatePage() {
           <button type="button" onClick={() => setDetail("assets")} className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-teal-300">
             <div className="flex items-center justify-between"><h3 className="text-lg font-extrabold text-slate-950">Assets</h3><span className="text-xs font-bold text-teal-700">View details →</span></div>
             <p className="mt-2 text-2xl font-extrabold text-slate-950">{amount(data.total_assets)}</p>
-            <p className="mt-2 text-sm text-slate-500">{data.asset_breakdown.length} recorded asset entries</p>
+            <p className="mt-2 text-sm text-slate-500">{(data.asset_breakdown ?? []).length} recorded asset entries</p>
           </button>
           <button type="button" onClick={() => setDetail("liabilities")} className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-teal-300">
             <div className="flex items-center justify-between"><h3 className="text-lg font-extrabold text-slate-950">Liabilities</h3><span className="text-xs font-bold text-teal-700">View details →</span></div>
@@ -253,8 +253,8 @@ export default function FinancialStatePage() {
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
             <div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Cash flow</p><h3 className="mt-1 text-xl font-extrabold text-slate-950">Income & Expenses</h3></div><Link href="/investor/onboarding/income" className="text-xs font-bold text-teal-700">Update inputs →</Link></div>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <div><h4 className="text-sm font-bold text-slate-800">Income breakdown</h4><div className="mt-3 space-y-2">{data.income_breakdown.map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
-              <div><h4 className="text-sm font-bold text-slate-800">Expense breakdown</h4><div className="mt-3 space-y-2">{data.expense_breakdown.map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
+              <div><h4 className="text-sm font-bold text-slate-800">Income breakdown</h4><div className="mt-3 space-y-2">{(data.income_breakdown ?? []).map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
+              <div><h4 className="text-sm font-bold text-slate-800">Expense breakdown</h4><div className="mt-3 space-y-2">{(data.expense_breakdown ?? []).map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
             </div>
           </section>
         )}
@@ -265,8 +265,8 @@ export default function FinancialStatePage() {
           <div className="mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 p-5 sm:p-6"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">Financial State</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">{detail === "history" ? "Snapshot History" : detail === "assets" ? "Asset Details" : "Liability Details"}</h2></div><button type="button" onClick={() => setDetail(null)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">Close</button></div>
             <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-              {detail === "assets" && <div className="space-y-3">{data.asset_breakdown.map((item) => <div key={item.asset_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Liquidity: {item.liquidity ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.ownership_applied)}</p></div></div>)}</div>}
-              {detail === "liabilities" && <div className="space-y-3">{data.liability_breakdown.map((item) => <div key={item.liability_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Classification: {item.classification ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.responsibility_applied)}</p></div></div>)}</div>}
+              {detail === "assets" && <div className="space-y-3">{(data.asset_breakdown ?? []).map((item) => <div key={item.asset_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Liquidity: {item.liquidity ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.ownership_applied)}</p></div></div>)}</div>}
+              {detail === "liabilities" && <div className="space-y-3">{(data.liability_breakdown ?? []).map((item) => <div key={item.liability_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Classification: {item.classification ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.responsibility_applied)}</p></div></div>)}</div>}
               {detail === "history" && <div className="space-y-3">{historyLoading && <p className="text-sm text-slate-500">Loading snapshots…</p>}{historyError && <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">{historyError}</div>}{!historyLoading && !historyError && history.length === 0 && <p className="text-sm text-slate-500">No previous snapshots are available.</p>}{history.map((snapshot) => <SnapshotRow key={snapshot.snapshot_id ?? `${snapshot.created_at}-${snapshot.planning_unit_id}`} snapshot={snapshot} onSelect={() => undefined} />)}</div>}
             </div>
           </div>
