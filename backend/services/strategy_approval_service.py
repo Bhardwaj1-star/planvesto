@@ -28,6 +28,8 @@ class StrategyApprovalService:
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
+        if run.approval_status != "selected":
+            raise HTTPException(status_code=409, detail="Strategy run must have a freshly selected strategy before approval")
         if not run.selected_strategy_id or not run.selected_strategy_version_id or run.selected_strategy_version is None:
             raise HTTPException(status_code=400, detail="A selected Strategy Version is required before approval")
         version = self.version_repo.get_version(planning_unit_id, run.selected_strategy_id, run.selected_strategy_version)
@@ -74,12 +76,10 @@ class StrategyApprovalService:
                 previous_strategy_version_id=current.strategy_version_id if replacing_primary else None,
                 pending_action_disposition=pending_action_disposition,
                 transition_metadata={"decision": decision, "previous_primary_transition":
-                                     "archived" if replacing_primary and decision == "archive_previous" else "retained_as_approved"},
+                                     "superseded" if replacing_primary else "none"},
             )
             self.primary_repo.set_current(transition)
             self.primary_repo.record_transition(transition, decision)
 
-        # Approval is also a Strategy Run lifecycle transition. Keep the run's
-        # selected immutable version intact while moving it from selected -> active.
         self.strategy_repo.update_approval(planning_unit_id, strategy_run_id, "approve")
         return saved
