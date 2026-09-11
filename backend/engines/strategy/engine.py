@@ -1,34 +1,22 @@
 from models.defined_goal import DefinedGoal
-from models.strategy import (
-    InvestorPriorities,
-    Scenario,
-    StrategyDefinition,
-    StrategyRankingItem,
-    StrategyRecommendation,
-)
+from models.strategy import InvestorPriorities, Scenario, StrategyDefinition, StrategyRankingItem, StrategyRecommendation, StrategyArchitecture
 from engines.strategy.applicability import filter_applicable_strategies
 from engines.strategy.comparison import build_comparison_matrix
 from engines.strategy.ranking import rank_scenarios
 from engines.strategy.recommendation import generate_recommendation
 from engines.strategy.scenario import generate_baseline_scenarios
+from engines.strategy.composition import compose_architectures
 
 
 class StrategyEngineResult:
-    def __init__(
-        self,
-        applicable_strategies: list[StrategyDefinition],
-        scenarios: list[Scenario],
-        priorities: InvestorPriorities,
-        comparison_matrix: dict,
-        rankings: list[StrategyRankingItem],
-        recommendation: StrategyRecommendation,
-    ):
+    def __init__(self, applicable_strategies, scenarios, priorities, comparison_matrix, rankings, recommendation, architectures):
         self.applicable_strategies = applicable_strategies
         self.scenarios = scenarios
         self.priorities = priorities
         self.comparison_matrix = comparison_matrix
         self.rankings = rankings
         self.recommendation = recommendation
+        self.architectures = architectures
 
 
 class StrategyEngine:
@@ -37,59 +25,47 @@ class StrategyEngine:
         defined_goal: DefinedGoal,
         priorities: InvestorPriorities | None = None,
         custom_scenarios: list[Scenario] | None = None,
+        financial_context: dict | None = None,
     ) -> StrategyEngineResult:
         if priorities is None:
             raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
-        # 1. Applicability (strictly by Goal Type)
-        strategies = filter_applicable_strategies(defined_goal.goal_type)
+        # Goal type is the library index. Final eligibility uses goal characteristics
+        # and available financial-state facts; risk-profile inputs are intentionally absent.
+        strategies = filter_applicable_strategies(
+            defined_goal=defined_goal,
+            financial_context=financial_context,
+        )
 
         if not strategies:
-            # "No Strategy Available"
             empty_rec = StrategyRecommendation(
                 recommended_strategy_id="",
                 recommended_scenario_id="",
                 short_reasons=["No Strategy Available"],
-                complete_reasoning="No strategies in the library match this goal type.",
+                complete_reasoning="No strategy in the library is eligible for the current goal and available constraints.",
+                feasibility_status="infeasible",
             )
-            return StrategyEngineResult(
-                applicable_strategies=[],
-                scenarios=[],
-                priorities=priorities,
-                comparison_matrix={"dimensions": [], "items": []},
-                rankings=[],
-                recommendation=empty_rec,
-            )
+            return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [])
 
-        # 2. Scenarios: Baseline + Custom
         all_scenarios: list[Scenario] = []
-        for s in strategies:
-            baselines = generate_baseline_scenarios(s, defined_goal)
-            all_scenarios.extend(baselines)
-
+        for strategy in strategies:
+            all_scenarios.extend(generate_baseline_scenarios(strategy, defined_goal))
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
 
-        # 3. Comparison Matrix
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
-
-        # 4. Ranking
         rankings = rank_scenarios(strategies, all_scenarios, priorities)
+        architectures = compose_architectures(strategies, defined_goal, financial_context)
 
-        # 5. Recommendation
         recommendation = generate_recommendation(
             ranked_items=rankings,
             strategies=strategies,
             scenarios=all_scenarios,
             defined_goal=defined_goal,
             priorities=priorities,
+            architectures=architectures,
         )
 
         return StrategyEngineResult(
-            applicable_strategies=strategies,
-            scenarios=all_scenarios,
-            priorities=priorities,
-            comparison_matrix=comp_matrix,
-            rankings=rankings,
-            recommendation=recommendation,
+            strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures
         )
