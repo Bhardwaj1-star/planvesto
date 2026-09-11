@@ -4,8 +4,17 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+StrategyVersionStatus = Literal["draft", "approved", "primary", "archived", "needs_review", "provisional"]
+
+
 class StrategyVersion(BaseModel):
-    """Immutable snapshot of an investor-specific strategy configuration."""
+    """Immutable snapshot of an investor-specific strategy configuration.
+
+    ``status`` is creation-time classification metadata, not a mutable lifecycle
+    state. Approval and Primary status are represented by immutable approval
+    snapshots and the current-primary pointer respectively. A version is never
+    updated in place after insertion.
+    """
 
     strategy_version_id: str | None = None
     planning_unit_id: str
@@ -16,7 +25,7 @@ class StrategyVersion(BaseModel):
     library_version: str
     implementation_version: str
     implementation_parameters: dict[str, Any] = Field(default_factory=dict)
-    status: Literal["draft", "approved", "primary", "archived", "needs_review", "provisional"] = "draft"
+    status: StrategyVersionStatus = "draft"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @model_validator(mode="after")
