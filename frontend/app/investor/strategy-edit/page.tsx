@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getPlanningUnitId, getCurrentPrimaryStrategy, getStrategyVersionHistory, type StrategyVersion } from "../../../lib/api/strategy-version";
+import { getPlanningUnitId } from "../../../lib/api/diary";
+import { getCurrentPrimaryStrategy, getStrategyVersionHistory, type StrategyVersion } from "../../../lib/api/strategy-version";
 import { editStrategy } from "../../../lib/api/strategy-edit";
 
 export default function StrategyEditPage() {
