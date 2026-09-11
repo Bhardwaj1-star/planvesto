@@ -8,7 +8,7 @@ import { validateAsset } from "../../../lib/onboarding/assets/validation";
 
 export function useAssets() {
   const { assets, setAssets, saveAssets } = useOnboardingStore();
-  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(4);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(5);
   const [draft, setDraft] = useState<Asset>({ id: createAssetId(), ...emptyAsset });
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [errors, setErrors] = useState<AssetErrors>({});
@@ -95,7 +95,7 @@ export function useAssets() {
       return;
     }
     setIsComplete(true);
-    completeStep(4);
+    completeStep(5);
     goNext();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
