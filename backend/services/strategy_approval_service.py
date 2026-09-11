@@ -78,4 +78,8 @@ class StrategyApprovalService:
             )
             self.primary_repo.set_current(transition)
             self.primary_repo.record_transition(transition, decision)
+
+        # Approval is also a Strategy Run lifecycle transition. Keep the run's
+        # selected immutable version intact while moving it from selected -> active.
+        self.strategy_repo.update_approval(planning_unit_id, strategy_run_id, "approve")
         return saved
