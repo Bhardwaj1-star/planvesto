@@ -43,15 +43,37 @@ class StrategyImplementationParamDef(BaseModel):
         return self
 
 
+class TechniqueDefinition(BaseModel):
+    technique_id: str
+    name: str
+    description: str
+    active: bool = True
+    applicable_strategy_ids: list[str] = Field(default_factory=list)
+    purpose: str = ""
+    constraints: list[str] = Field(default_factory=list)
+
+
 class StrategyDefinition(BaseModel):
     strategy_id: str
     name: str
     tagline: str
     description: str
+    strategy_family: str = "General"
+    strategic_objective: str = ""
+    core_mechanism: str = ""
+    principles: list[str] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+    required_inputs: list[str] = Field(default_factory=list)
+    applicable_goal_characteristics: list[str] = Field(default_factory=list)
+    applicable_goal_types: list[str] = Field(default_factory=list)
+    technique_ids: list[str] = Field(default_factory=list)
+    strategic_levers: list[str] = Field(default_factory=list)
+    compatible_strategy_ids: list[str] = Field(default_factory=list)
+    conflicting_strategy_ids: list[str] = Field(default_factory=list)
     library_version: str = "1.0"
     implementation_version: str = "1.0"
     active: bool = True
-    applicable_goal_types: list[str] = Field(default_factory=list)
     implementation_parameters: list[StrategyImplementationParamDef] = Field(default_factory=list)
     good_outcomes: list[str] = Field(default_factory=list)
     bad_outcomes: list[str] = Field(default_factory=list)
@@ -77,6 +99,17 @@ class StrategyDefinition(BaseModel):
             if not 0 <= score <= 10:
                 raise ValueError(f"{score_name} must be between 0 and 10")
         return self
+
+
+class StrategyArchitecture(BaseModel):
+    architecture_id: str
+    primary_strategy_id: str
+    supporting_strategy_ids: list[str] = Field(default_factory=list)
+    technique_ids: list[str] = Field(default_factory=list)
+    rationale: list[str] = Field(default_factory=list)
+    trade_offs: list[str] = Field(default_factory=list)
+    feasibility_status: Literal["feasible", "conditional", "infeasible"] = "feasible"
+    constraints: list[str] = Field(default_factory=list)
 
 
 class Scenario(BaseModel):
@@ -125,6 +158,10 @@ class StrategyRecommendation(BaseModel):
     recommended_scenario_id: str
     short_reasons: list[str] = Field(default_factory=list)
     complete_reasoning: str = ""
+    architecture: StrategyArchitecture | None = None
+    alternative_architecture_ids: list[str] = Field(default_factory=list)
+    feasibility_status: Literal["feasible", "conditional", "infeasible"] = "feasible"
+    constraints: list[str] = Field(default_factory=list)
 
 
 class StrategyRun(BaseModel):
@@ -142,11 +179,14 @@ class StrategyRun(BaseModel):
     comparison_matrix: dict[str, Any] = Field(default_factory=dict)
     rankings: list[StrategyRankingItem] = Field(default_factory=list)
     recommendation: StrategyRecommendation
+    architectures: list[StrategyArchitecture] = Field(default_factory=list)
     selected_strategy_id: str | None = None
     selected_scenario_id: str | None = None
     selected_strategy_version_id: str | None = None
     selected_strategy_version: int | None = None
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict)
+    selected_architecture: StrategyArchitecture | None = None
     selection_timestamp: str | None = None
+    approval_status: Literal["not_selected", "selected", "approved", "rejected", "superseded"] = "not_selected"
     run_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
