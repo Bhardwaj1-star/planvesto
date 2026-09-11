@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Header, Query
 from api.auth import authenticate_user, verify_planning_unit_ownership
 from models.strategy import StrategyRun
+from models.strategy_approval import StrategyApprovalSnapshot
 from schemas.strategy import CustomScenarioRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest, StrategyApprovalRequest
 from services.strategy_service import StrategyService
+from services.strategy_approval_service import StrategyApprovalService
 
 router = APIRouter(prefix="/api/strategy", tags=["Strategy Builder"])
 
@@ -35,11 +37,19 @@ def select_strategy(request: StrategySelectRequest, authorization: str | None = 
     return StrategyService().select_strategy(request)
 
 
-@router.post("/approve", response_model=StrategyRun)
+@router.post("/approve", response_model=StrategyApprovalSnapshot)
 def approve_strategy(request: StrategyApprovalRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(request.planning_unit_id, user_id)
-    return StrategyService().approve_strategy(request)
+    return StrategyApprovalService().approve_selected_strategy(
+        planning_unit_id=request.planning_unit_id,
+        strategy_run_id=request.strategy_run_id,
+        suitability=request.suitability,
+        acknowledgement_text=request.acknowledgement_text,
+        make_primary=request.make_primary,
+        primary_transition_decision=request.primary_transition_decision,
+        pending_action_disposition=request.pending_action_disposition,
+    )
 
 
 @router.get("/runs/{goal_id}/latest", response_model=StrategyRun)
