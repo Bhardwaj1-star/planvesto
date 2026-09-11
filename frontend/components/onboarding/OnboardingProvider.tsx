@@ -25,11 +25,12 @@ import {
 
 export const onboardingSteps = [
   { number: 1, slug: "personal-information", title: "Personal Information" },
-  { number: 2, slug: "income", title: "Income" },
-  { number: 3, slug: "expenses", title: "Expenses" },
-  { number: 4, slug: "assets", title: "Assets" },
-  { number: 5, slug: "liabilities", title: "Liabilities" },
-  { number: 6, slug: "goals", title: "Goals" },
+  { number: 2, slug: "family-dependents", title: "Family & Dependents" },
+  { number: 3, slug: "income", title: "Income" },
+  { number: 4, slug: "expenses", title: "Expenses" },
+  { number: 5, slug: "assets", title: "Assets" },
+  { number: 6, slug: "liabilities", title: "Liabilities" },
+  { number: 7, slug: "goals", title: "Goals" },
 ] as const;
 
 type OnboardingState = {
@@ -112,11 +113,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           ...data,
           completedSteps: [
             data.personalInformation.fullName ? 1 : 0,
-            data.incomeSources.length ? 2 : 0,
-            data.expenses.length ? 3 : 0,
-            data.assets.length ? 4 : 0,
-            data.liabilities.length ? 5 : 0,
-            data.goals.length ? 6 : 0,
+            data.familyMembers.length ? 2 : 0,
+            data.incomeSources.length ? 3 : 0,
+            data.expenses.length ? 4 : 0,
+            data.assets.length ? 5 : 0,
+            data.liabilities.length ? 6 : 0,
+            data.goals.length ? 7 : 0,
           ].filter(Boolean),
           isLoading: false,
           persistenceError: null,
