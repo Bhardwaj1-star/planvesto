@@ -24,14 +24,41 @@ export type StrategyDefinition = {
   name: string;
   tagline: string;
   description: string;
+  strategy_family: string;
+  strategic_objective: string;
+  core_mechanism: string;
+  principles: string[];
+  constraints: string[];
+  dependencies: string[];
+  required_inputs: string[];
+  applicable_goal_characteristics: string[];
+  applicable_goal_types: string[];
+  technique_ids: string[];
+  strategic_levers: string[];
+  compatible_strategy_ids: string[];
+  conflicting_strategy_ids: string[];
   library_version: string;
   implementation_version: string;
   active: boolean;
-  applicable_goal_types: string[];
   implementation_parameters: StrategyImplementationParamDef[];
   good_outcomes: string[];
   bad_outcomes: string[];
   trade_offs: string[];
+  baseline_safety_score: number;
+  baseline_liquidity_score: number;
+  baseline_growth_score: number;
+  baseline_flexibility_score: number;
+};
+
+export type StrategyArchitecture = {
+  architecture_id: string;
+  primary_strategy_id: string;
+  supporting_strategy_ids: string[];
+  technique_ids: string[];
+  rationale: string[];
+  trade_offs: string[];
+  feasibility_status: "feasible" | "conditional" | "infeasible";
+  constraints: string[];
 };
 
 export type Scenario = {
@@ -57,6 +84,17 @@ export type StrategyRankingItem = {
   is_recommended: boolean;
 };
 
+export type StrategyRecommendation = {
+  recommended_strategy_id: string;
+  recommended_scenario_id: string;
+  short_reasons: string[];
+  complete_reasoning: string;
+  architecture: StrategyArchitecture | null;
+  alternative_architecture_ids: string[];
+  feasibility_status: "feasible" | "conditional" | "infeasible";
+  constraints: string[];
+};
+
 export type StrategyRun = {
   strategy_run_id: string | null;
   planning_unit_id: string;
@@ -71,18 +109,16 @@ export type StrategyRun = {
   investor_priorities: InvestorPriorities;
   comparison_matrix: Record<string, unknown>;
   rankings: StrategyRankingItem[];
-  recommendation: {
-    recommended_strategy_id: string;
-    recommended_scenario_id: string;
-    short_reasons: string[];
-    complete_reasoning: string;
-  };
+  recommendation: StrategyRecommendation;
+  architectures: StrategyArchitecture[];
   selected_strategy_id: string | null;
   selected_scenario_id: string | null;
   selected_strategy_version_id: string | null;
   selected_strategy_version: number | null;
   selected_implementation_parameters: Record<string, unknown>;
+  selected_architecture: StrategyArchitecture | null;
   selection_timestamp: string | null;
+  approval_status: "not_selected" | "selected" | "approved" | "rejected" | "superseded";
   run_metadata: Record<string, unknown>;
   created_at: string | null;
 };
@@ -147,9 +183,23 @@ export function addCustomScenario(planningUnitId: string, strategyRunId: string,
   });
 }
 
-export function selectStrategy(planningUnitId: string, strategyRunId: string, selectedStrategyId: string, selectedScenarioId: string, selectedImplementationParameters: Record<string, unknown>) {
+export function selectStrategy(
+  planningUnitId: string,
+  strategyRunId: string,
+  selectedStrategyId: string,
+  selectedScenarioId: string,
+  selectedImplementationParameters: Record<string, unknown>,
+  selectedArchitectureId?: string,
+) {
   return request<StrategyRun>("/api/strategy/select", {
     method: "POST",
-    body: JSON.stringify({ planning_unit_id: planningUnitId, strategy_run_id: strategyRunId, selected_strategy_id: selectedStrategyId, selected_scenario_id: selectedScenarioId, selected_implementation_parameters: selectedImplementationParameters }),
+    body: JSON.stringify({
+      planning_unit_id: planningUnitId,
+      strategy_run_id: strategyRunId,
+      selected_strategy_id: selectedStrategyId,
+      selected_scenario_id: selectedScenarioId,
+      selected_architecture_id: selectedArchitectureId ?? null,
+      selected_implementation_parameters: selectedImplementationParameters,
+    }),
   });
 }
