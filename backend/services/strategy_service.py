@@ -20,8 +20,6 @@ class StrategyService:
         self.strategy_version_service = StrategyVersionService(StrategyVersionRepository(self.strat_repo.db))
 
     def _financial_context(self, planning_unit_id: str, defined_goal: DefinedGoal) -> dict:
-        # Prefer the latest family snapshot. Strategy Planning deliberately consumes
-        # financial-state facts, not risk-profile or investment-planning classifications.
         snapshot = self.financial_state_repo.get_latest(planning_unit_id, "family")
         if snapshot and snapshot.get("financial_state"):
             return snapshot["financial_state"]
@@ -36,13 +34,14 @@ class StrategyService:
             priorities = prev_run.investor_priorities if prev_run else None
         if priorities is None:
             raise HTTPException(status_code=400, detail="Investor priorities must be provided before strategy comparison and ranking.")
-        result = self.engine.execute(defined_goal=defined_goal, priorities=priorities, financial_context=self._financial_context(planning_unit_id, defined_goal))
+        financial_context = self._financial_context(planning_unit_id, defined_goal)
+        result = self.engine.execute(defined_goal=defined_goal, priorities=priorities, financial_context=financial_context)
         run = StrategyRun(
             planning_unit_id=planning_unit_id, goal_id=goal_id, defined_goal_id=defined_goal.defined_goal_id or "", defined_goal_version=defined_goal.version,
             run_version=(prev_run.run_version + 1) if prev_run else 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies,
             scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings,
             recommendation=result.recommendation, architectures=result.architectures,
-            run_metadata={"trigger": "manual_build", "financial_state_context_available": bool(self._financial_context(planning_unit_id, defined_goal))},
+            run_metadata={"trigger": "manual_build", "financial_state_context_available": bool(financial_context)},
         )
         run.strategy_run_id = self.strat_repo.save_run(run)
         return run
@@ -113,7 +112,11 @@ class StrategyService:
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        self.strat_repo.update_selection(request.planning_unit_id, request.strategy_run_id, request.selected_strategy_id, request.selected_scenario_id, version.implementation_parameters, architecture, "selected")
+        self.strat_repo.update_selection(
+            request.planning_unit_id, request.strategy_run_id, request.selected_strategy_id,
+            request.selected_scenario_id, version.implementation_parameters, architecture, "selected",
+            version.strategy_version_id, version.version,
+        )
         run.selected_strategy_id = request.selected_strategy_id
         run.selected_scenario_id = request.selected_scenario_id
         run.selected_strategy_version_id = version.strategy_version_id
@@ -124,17 +127,7 @@ class StrategyService:
         return run
 
     def approve_strategy(self, request: StrategyApprovalRequest) -> StrategyRun:
-        run = self.strat_repo.get_run_by_id(request.planning_unit_id, request.strategy_run_id)
-        if not run:
-            raise HTTPException(status_code=404, detail="Strategy run not found")
-        if not run.selected_architecture or not run.selected_strategy_id:
-            raise HTTPException(status_code=400, detail="Select a strategy architecture before approval.")
-        if request.decision not in {"approve", "reject"}:
-            raise HTTPException(status_code=400, detail="Decision must be 'approve' or 'reject'.")
-        self.strat_repo.update_approval(request.planning_unit_id, request.strategy_run_id, request.decision)
-        run.approval_status = "approved" if request.decision == "approve" else "rejected"
-        run.status = "active" if request.decision == "approve" else "completed"
-        return run
+        raise HTTPException(status_code=410, detail="Legacy approval flow retired. Use StrategyApprovalService through /api/strategy/approve.")
 
     def get_latest_run(self, planning_unit_id: str, goal_id: str) -> StrategyRun:
         run = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
