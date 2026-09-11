@@ -8,7 +8,7 @@ import { validateIncomeSource } from "../../../lib/onboarding/income/validation"
 
 export function useIncome() {
   const { incomeSources: sources, setIncomeSources: setSources, saveIncomeSources } = useOnboardingStore();
-  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(2);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(3);
   const [draft, setDraft] = useState<IncomeSource>({ id: createIncomeSourceId(), ...emptyIncomeSource });
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
   const [errors, setErrors] = useState<IncomeSourceErrors>({});
@@ -96,7 +96,7 @@ export function useIncome() {
       return;
     }
     setIsComplete(true);
-    completeStep(2);
+    completeStep(3);
     goNext();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
