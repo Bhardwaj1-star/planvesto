@@ -29,4 +29,11 @@ class StrategySelectRequest(BaseModel):
     strategy_run_id: str
     selected_strategy_id: str
     selected_scenario_id: str
+    selected_architecture_id: str | None = None
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class StrategyApprovalRequest(BaseModel):
+    planning_unit_id: str
+    strategy_run_id: str
+    decision: str = "approve"
