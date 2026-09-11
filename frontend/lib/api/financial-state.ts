@@ -102,6 +102,21 @@ export function getPlanningUnitId(): string | null {
   return window.localStorage.getItem("planvesto-planning-unit-id");
 }
 
+export async function buildFinancialState(
+  planningUnitId: string,
+  scope: "family" | "individual" = "family",
+  investorId?: string | null,
+): Promise<FinancialState> {
+  return request<FinancialState>("/api/financial-state/build", {
+    method: "POST",
+    body: JSON.stringify({
+      planning_unit_id: planningUnitId,
+      scope,
+      investor_id: investorId ?? null,
+    }),
+  });
+}
+
 export async function getLatestFinancialState(
   planningUnitId: string,
 ): Promise<FinancialState> {
