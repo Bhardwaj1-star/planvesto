@@ -66,7 +66,7 @@ class StrategyService:
             architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id,
             selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version,
             selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture,
-            approval_status=run.approval_status, run_metadata={"trigger": "custom_scenario_added"},
+            approval_status="selected" if run.selected_strategy_id else "not_selected", run_metadata={"trigger": "custom_scenario_added", "approval_invalidated": run.approval_status == "approved"},
         )
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
@@ -87,7 +87,7 @@ class StrategyService:
             architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id,
             selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version,
             selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture,
-            approval_status=run.approval_status, run_metadata={"trigger": "priorities_updated"},
+            approval_status="selected" if run.selected_strategy_id else "not_selected", run_metadata={"trigger": "priorities_updated", "approval_invalidated": run.approval_status == "approved"},
         )
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
@@ -98,10 +98,12 @@ class StrategyService:
             raise HTTPException(status_code=404, detail="Strategy run not found")
         matched = next((s for s in run.applicable_strategies if s.strategy_id == request.selected_strategy_id), None)
         if not matched:
-            raise HTTPException(status_code=400, detail=f"Selected strategy '{request.selected_strategy_id}' is not eligible for this strategy run.")
+            raise HTTPException(status_code=400, detail=f"Selected strategy '{request.selected_strategy_id}' does not exist in this strategy run's applicable strategies.")
         scenario = next((s for s in run.scenarios if s.scenario_id == request.selected_scenario_id), None)
-        if not scenario or scenario.strategy_id != request.selected_strategy_id:
-            raise HTTPException(status_code=400, detail="Selected scenario must belong to the selected strategy.")
+        if not scenario:
+            raise HTTPException(status_code=400, detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.")
+        if scenario.strategy_id != request.selected_strategy_id:
+            raise HTTPException(status_code=400, detail="Selected scenario does not match selected strategy.")
         architecture = next((a for a in run.architectures if a.architecture_id == request.selected_architecture_id), None) if request.selected_architecture_id else next((a for a in run.architectures if a.primary_strategy_id == request.selected_strategy_id), None)
         if architecture is None:
             raise HTTPException(status_code=400, detail="A valid strategy architecture is required for selection.")
@@ -146,13 +148,16 @@ class StrategyService:
         selected_arch = None
         if prev.selected_architecture:
             selected_arch = next((a for a in result.architectures if a.architecture_id == prev.selected_architecture.architecture_id), None)
+        elif prev.selected_strategy_id:
+            selected_arch = next((a for a in result.architectures if a.primary_strategy_id == prev.selected_strategy_id), None)
+        selection_valid = selected_arch is not None and next((s for s in result.applicable_strategies if s.strategy_id == prev.selected_strategy_id), None) is not None and next((s for s in result.scenarios if s.scenario_id == prev.selected_scenario_id and s.strategy_id == prev.selected_strategy_id), None) is not None
         new_run = StrategyRun(
             planning_unit_id=planning_unit_id, goal_id=goal_id, defined_goal_id=new_defined_goal.defined_goal_id or "", defined_goal_version=new_defined_goal.version,
             run_version=prev.run_version + 1, is_latest=True, status="recalculated", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios,
             investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation,
-            architectures=result.architectures, selected_strategy_id=prev.selected_strategy_id if selected_arch else None, selected_scenario_id=prev.selected_scenario_id if selected_arch else None,
-            selected_strategy_version_id=prev.selected_strategy_version_id if selected_arch else None, selected_strategy_version=prev.selected_strategy_version if selected_arch else None,
-            selected_implementation_parameters=prev.selected_implementation_parameters if selected_arch else {}, selected_architecture=selected_arch,
-            approval_status="selected" if selected_arch else "not_selected", run_metadata={"trigger": "automatic_recalculation", "triggered_by_defined_goal_version": new_defined_goal.version},
+            architectures=result.architectures, selected_strategy_id=prev.selected_strategy_id if selection_valid else None, selected_scenario_id=prev.selected_scenario_id if selection_valid else None,
+            selected_strategy_version_id=prev.selected_strategy_version_id if selection_valid else None, selected_strategy_version=prev.selected_strategy_version if selection_valid else None,
+            selected_implementation_parameters=prev.selected_implementation_parameters if selection_valid else {}, selected_architecture=selected_arch if selection_valid else None,
+            approval_status="selected" if selection_valid else "not_selected", run_metadata={"trigger": "automatic_recalculation", "triggered_by_defined_goal_version": new_defined_goal.version, "approval_invalidated": prev.approval_status == "approved"},
         )
         self.strat_repo.save_run(new_run)
