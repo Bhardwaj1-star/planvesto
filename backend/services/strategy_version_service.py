@@ -70,6 +70,11 @@ class StrategyVersionService:
         if strategy is None:
             raise ValueError(f"Unknown strategy: {strategy_id}")
 
+        # Version status is immutable creation metadata. Approval/Primary are
+        # separate lifecycle records and must never mutate this snapshot.
+        if status not in {"draft", "provisional"}:
+            raise ValueError("New Strategy Versions must use draft or provisional status; approval and Primary lifecycle are recorded separately")
+
         parent_parameters: dict[str, Any] | None = None
         if parent_version is not None:
             parent = self.repository.get_version(planning_unit_id, strategy_id, parent_version)
