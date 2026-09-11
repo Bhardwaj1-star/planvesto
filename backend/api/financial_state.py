@@ -41,9 +41,10 @@ def get_latest_financial_state_snapshot(
 ):
     user_id = _authenticate(authorization)
     _validate_snapshot_request(planning_unit_id, scope, investor_id, user_id)
-    snapshot = FinancialStateSnapshotRepository().get_latest(planning_unit_id, scope, investor_id)
+    repository = FinancialStateSnapshotRepository()
+    snapshot = repository.get_latest(planning_unit_id, scope, investor_id)
     if snapshot is None:
-        raise HTTPException(status_code=404, detail="Financial State snapshot not found")
+        return FinancialStateService().build(planning_unit_id, scope, investor_id)
     return snapshot
 
 
