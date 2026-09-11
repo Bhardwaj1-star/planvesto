@@ -29,7 +29,7 @@ class StrategyRepository:
             "applicable_strategies": [s.model_dump() for s in run.applicable_strategies], "scenarios": [sc.model_dump() for sc in run.scenarios],
             "comparison_snapshot": run.comparison_matrix, "ranking_snapshot": [r.model_dump() for r in run.rankings], "recommendation": run.recommendation.model_dump(),
             "selected_strategy_id": run.selected_strategy_id, "selected_scenario_id": run.selected_scenario_id,
-            "selected_strategy_version_id": run.run_metadata.get("selected_strategy_version_id"), "selected_strategy_version": run.run_metadata.get("selected_strategy_version"),
+            "selected_strategy_version_id": run.selected_strategy_version_id, "selected_strategy_version": run.selected_strategy_version,
             "selected_implementation_parameters": run.selected_implementation_parameters, "selection_timestamp": run.selection_timestamp,
             "run_metadata": metadata,
         }
@@ -79,6 +79,8 @@ class StrategyRepository:
             defined_goal_version=row["defined_goal_version"], run_version=row["run_version"], is_latest=row["is_latest"], status=row.get("status", "completed"),
             applicable_strategies=applicable, scenarios=scenarios, investor_priorities=priorities, comparison_matrix=row.get("comparison_snapshot") or {},
             rankings=rankings, recommendation=rec, architectures=architectures, selected_strategy_id=row.get("selected_strategy_id"), selected_scenario_id=row.get("selected_scenario_id"),
+            selected_strategy_version_id=row.get("selected_strategy_version_id") or metadata.get("selected_strategy_version_id"),
+            selected_strategy_version=row.get("selected_strategy_version") if row.get("selected_strategy_version") is not None else metadata.get("selected_strategy_version"),
             selected_implementation_parameters=row.get("selected_implementation_parameters") or {}, selected_architecture=StrategyArchitecture(**selected_architecture) if selected_architecture else None,
             approval_status=metadata.get("approval_status", "not_selected"), selection_timestamp=row.get("selection_timestamp"), run_metadata=metadata, created_at=row.get("created_at"),
         )
