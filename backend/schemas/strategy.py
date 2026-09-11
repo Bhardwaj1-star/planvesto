@@ -1,6 +1,7 @@
-﻿from typing import Any
+from typing import Any
 from pydantic import BaseModel, Field
 from models.strategy import InvestorPriorities
+from models.strategy_approval import SuitabilityAssessment
 
 
 class StrategyBuildRequest(BaseModel):
@@ -36,4 +37,8 @@ class StrategySelectRequest(BaseModel):
 class StrategyApprovalRequest(BaseModel):
     planning_unit_id: str
     strategy_run_id: str
-    decision: str = "approve"
+    suitability: SuitabilityAssessment
+    acknowledgement_text: str | None = None
+    make_primary: bool = False
+    primary_transition_decision: str | None = None
+    pending_action_disposition: str | None = None
