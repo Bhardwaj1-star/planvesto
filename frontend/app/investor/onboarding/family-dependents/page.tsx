@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import FamilyDependentsForm from "../../../../components/onboarding/family-dependents/FamilyDependentsForm";
 
 export default function FamilyDependentsPage() {
-  redirect("/investor/onboarding/personal-information");
+  return <FamilyDependentsForm />;
 }
