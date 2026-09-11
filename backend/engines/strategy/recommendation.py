@@ -1,11 +1,5 @@
-﻿from models.defined_goal import DefinedGoal
-from models.strategy import (
-    InvestorPriorities,
-    Scenario,
-    StrategyDefinition,
-    StrategyRankingItem,
-    StrategyRecommendation,
-)
+from models.defined_goal import DefinedGoal
+from models.strategy import Scenario, StrategyDefinition, StrategyRankingItem, StrategyRecommendation, InvestorPriorities, StrategyArchitecture
 
 
 def generate_recommendation(
@@ -14,61 +8,50 @@ def generate_recommendation(
     scenarios: list[Scenario],
     defined_goal: DefinedGoal,
     priorities: InvestorPriorities,
+    architectures: list[StrategyArchitecture] | None = None,
 ) -> StrategyRecommendation:
+    architectures = architectures or []
     if not ranked_items:
         return StrategyRecommendation(
             recommended_strategy_id="",
             recommended_scenario_id="",
-            short_reasons=["No applicable strategy available for this goal type."],
-            complete_reasoning="No strategies in the catalog matched the specified goal type.",
+            short_reasons=["No applicable strategy available for the current goal and constraints."],
+            complete_reasoning="No eligible strategy was found. The goal or its constraints must be changed before a strategy can be recommended.",
+            feasibility_status="infeasible",
         )
 
     top = ranked_items[0]
     strat_lookup = {s.strategy_id: s for s in strategies}
     scen_lookup = {s.scenario_id: s for s in scenarios}
-
     top_strat = strat_lookup.get(top.strategy_id)
     top_scen = scen_lookup.get(top.scenario_id)
+    architecture = next((a for a in architectures if a.primary_strategy_id == top.strategy_id), architectures[0] if architectures else None)
 
-    short_reasons: list[str] = []
-
-    # Priority alignment reason
     norm_p = priorities.normalized()
     dominant_priority = max(
         [("safety", norm_p.safety), ("liquidity", norm_p.liquidity), ("growth", norm_p.growth), ("flexibility", norm_p.flexibility)],
         key=lambda x: x[1],
     )[0]
-
     dominant_score = top.dimension_scores.get(dominant_priority, 7.0)
-    short_reasons.append(
-        f"Strongly aligns with your priority for {dominant_priority.capitalize()} (score: {dominant_score}/10)."
-    )
 
-    # Goal status reason
+    short_reasons = [f"Strongly aligns with your priority for {dominant_priority.capitalize()} (score: {dominant_score}/10)."]
     if defined_goal.funding_status == "Shortfall":
-        short_reasons.append(
-            f"Optimized to bridge the target-date shortfall of ₹{defined_goal.funding_gap:,.2f} over {defined_goal.duration_years} years."
-        )
+        short_reasons.append(f"Addresses the current funding shortfall of ₹{defined_goal.funding_gap:,.2f} over {defined_goal.duration_years} years.")
     elif defined_goal.funding_status == "On Track":
-        short_reasons.append(
-            f"Maintains disciplined corpus growth to secure the fully funded milestone of ₹{defined_goal.future_target:,.2f}."
-        )
+        short_reasons.append(f"Maintains the goal trajectory toward the required ₹{defined_goal.future_target:,.2f} target.")
     else:
-        short_reasons.append(
-            f"Safeguards the surplus corpus of ₹{abs(defined_goal.funding_gap):,.2f} against unexpected market contractions."
-        )
-
-    # Outcome reason
+        short_reasons.append(f"Recognises the current surplus of ₹{abs(defined_goal.funding_gap):,.2f} and avoids blindly treating it as additional required funding.")
+    if architecture and architecture.supporting_strategy_ids:
+        short_reasons.append("Combines a primary strategy with supporting strategies because one isolated strategy is not sufficient for the goal context.")
     if top_strat and top_strat.good_outcomes:
         short_reasons.append(top_strat.good_outcomes[0])
 
     complete_reasoning = (
-        f"Based on your goal '{defined_goal.goal_name}' ({defined_goal.goal_type}) with a target horizon of "
-        f"{defined_goal.target_month:02d}/{defined_goal.target_year} ({defined_goal.duration_years} years), "
-        f"the {top.strategy_name} ({top.scenario_name}) ranks highest with a composite score of {top.composite_score}/10. "
-        f"This pathway directly incorporates your priority weighting ({dominant_priority.capitalize()}: {round(dominant_score, 1)}/10) "
-        f"while addressing the goal's current {defined_goal.funding_status.lower()} position. "
-        f"Trade-off note: {top_scen.trade_off_notes if top_scen else 'Standard market execution applies.'}"
+        f"For '{defined_goal.goal_name}', the {top.strategy_name} scenario ranks highest after evaluating goal fit and investor priorities. "
+        f"The recommendation is a goal-level strategy architecture rather than a product or portfolio selection. "
+        f"The goal is currently {defined_goal.funding_status.lower()} with a {defined_goal.duration_years}-year horizon. "
+        f"The dominant stated priority is {dominant_priority}, with a strategy-fit score of {round(dominant_score, 1)}/10. "
+        f"Trade-off: {top_scen.trade_off_notes if top_scen else 'The selected architecture must be implemented downstream without changing the strategic objective.'}"
     )
 
     return StrategyRecommendation(
@@ -76,4 +59,8 @@ def generate_recommendation(
         recommended_scenario_id=top.scenario_id,
         short_reasons=short_reasons,
         complete_reasoning=complete_reasoning,
+        architecture=architecture,
+        alternative_architecture_ids=[a.architecture_id for a in architectures if not architecture or a.architecture_id != architecture.architecture_id],
+        feasibility_status=architecture.feasibility_status if architecture else "conditional",
+        constraints=architecture.constraints if architecture else ["Financial-state context is incomplete."],
     )
