@@ -9,7 +9,7 @@ import { validateGoal } from "../../../lib/onboarding/goals/validation";
 
 export function useGoals() {
   const { goals, setGoals, saveGoals } = useOnboardingStore();
-  const { completeStep, goPrevious } = useOnboardingNavigation(6);
+  const { completeStep, goPrevious } = useOnboardingNavigation(7);
   const router = useRouter();
   const [draft, setDraft] = useState<Goal>({ id: createGoalId(), ...emptyGoal });
   const [isAdding, setIsAdding] = useState(goals.length === 0);
@@ -109,7 +109,7 @@ export function useGoals() {
       return;
     }
     setIsComplete(true);
-    completeStep(6);
+    completeStep(7);
     router.push("/investor/financial-state");
   }
 
