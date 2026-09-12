@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.financial_state import router as financial_state_router
 from api.goals import router as goals_router
+from api.dashboard import router as dashboard_router
 from api.strategy import router as strategy_router
 from api.strategy_approval import router as strategy_approval_router
 from api.strategy_edit import router as strategy_edit_router
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 app.include_router(financial_state_router)
 app.include_router(goals_router)
+app.include_router(dashboard_router)
 app.include_router(strategy_router)
 app.include_router(strategy_approval_router)
 app.include_router(strategy_edit_router)
