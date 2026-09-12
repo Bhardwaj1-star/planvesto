@@ -48,10 +48,10 @@ export default function DecisionHistoryView({ decisions }: DecisionHistoryViewPr
 
             {decision.metrics && (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-                {decision.metrics.target && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.target)}</p></div>}
-                {decision.metrics.horizon && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Horizon</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.horizon)}</p></div>}
-                {decision.metrics.monthlyInvestment && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monthly SIP</p><p className="mt-0.5 text-sm font-extrabold text-teal-700">{decision.metrics.previousMonthlyInvestment ? <span><span className="line-through text-slate-400 font-normal mr-1">{metricText(decision.metrics.previousMonthlyInvestment)}</span>{metricText(decision.metrics.monthlyInvestment)}</span> : metricText(decision.metrics.monthlyInvestment)}</p></div>}
-                {decision.metrics.expectedReturn && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Return Profile</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.expectedReturn)}</p></div>}
+                {Boolean(decision.metrics.target) && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.target)}</p></div>}
+                {Boolean(decision.metrics.horizon) && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Horizon</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.horizon)}</p></div>}
+                {Boolean(decision.metrics.monthlyInvestment) && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monthly SIP</p><p className="mt-0.5 text-sm font-extrabold text-teal-700">{decision.metrics.previousMonthlyInvestment ? <span><span className="line-through text-slate-400 font-normal mr-1">{metricText(decision.metrics.previousMonthlyInvestment)}</span>{metricText(decision.metrics.monthlyInvestment)}</span> : metricText(decision.metrics.monthlyInvestment)}</p></div>}
+                {Boolean(decision.metrics.expectedReturn) && <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Return Profile</p><p className="mt-0.5 text-sm font-extrabold text-slate-900">{metricText(decision.metrics.expectedReturn)}</p></div>}
               </div>
             )}
 
