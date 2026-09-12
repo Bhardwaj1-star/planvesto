@@ -46,7 +46,9 @@ export default function WriteEntryModal({ isOpen, onClose, onEntrySaved }: Write
         title: title.trim() || undefined,
         content,
         tags,
+        prompts: [],
         followUpNote: followUpNote.trim() || undefined,
+        isImportant: false,
       });
 
       onEntrySaved(saved);
