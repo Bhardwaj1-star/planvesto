@@ -93,21 +93,43 @@ export function useGoals() {
   async function handleContinue(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     setIsSubmitted(true);
-    const goalErrors = goals.map((goal) => validateGoal(goal));
-    const invalidIndex = goalErrors.findIndex((goalErrorsForItem) => Object.keys(goalErrorsForItem).length > 0);
-    if (invalidIndex >= 0) {
-      setEditingGoalId(goals[invalidIndex].id);
-      setIsAdding(true);
-      setDraft(goals[invalidIndex]);
-      setErrors(goalErrors[invalidIndex]);
-      return;
+
+    const hasEnteredDraft = Boolean(
+      draft.name.trim() ||
+      draft.targetAmount ||
+      draft.goalType ||
+      draft.targetDate ||
+      draft.targetAge ||
+      editingGoalId ||
+      goals.length === 0
+    );
+
+    let goalsToSave = goals;
+
+    if (hasEnteredDraft) {
+      const nextErrors = validateGoal(draft);
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
+        document.getElementById(Object.keys(nextErrors)[0])?.focus();
+        return;
+      }
+      goalsToSave = editingGoalId
+        ? goals.map((goal) => (goal.id === editingGoalId ? draft : goal))
+        : [...goals, draft];
     }
+
     try {
-      const data = await saveGoals(goals);
+      const data = await saveGoals(goalsToSave);
       setGoals(data.goals);
     } catch {
       return;
     }
+
+    setDraft({ id: createGoalId(), ...emptyGoal });
+    setEditingGoalId(null);
+    setIsAdding(false);
+    setErrors({});
+    setIsSubmitted(false);
     setIsComplete(true);
     completeStep(7);
     router.push("/investor/financial-state");
