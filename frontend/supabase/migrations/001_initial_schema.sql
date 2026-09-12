@@ -316,68 +316,7 @@ create table liability_responsibilities (
 
 
 -- =========================================================
--- 11. COMMITMENTS
--- =========================================================
-
-create table commitments (
-    commitment_id uuid primary key default gen_random_uuid(),
-
-    planning_unit_id uuid not null,
-
-    commitment_name text not null,
-    amount numeric(15,2) not null,
-
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-
-    constraint commitment_amount_non_negative
-        check (amount >= 0),
-
-    constraint fk_commitment_planning_unit
-        foreign key (planning_unit_id)
-        references planning_units(planning_unit_id)
-        on delete cascade
-);
-
-
--- =========================================================
--- 12. COMMITMENT PARTICIPANTS
--- =========================================================
-
-create table commitment_participants (
-    commitment_participant_id uuid primary key default gen_random_uuid(),
-
-    commitment_id uuid not null,
-    investor_id uuid not null,
-
-    participation_percentage numeric(6,3) not null,
-
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-
-    constraint commitment_participation_range
-        check (
-            participation_percentage >= 0
-            and participation_percentage <= 100
-        ),
-
-    constraint fk_commitment_participant_commitment
-        foreign key (commitment_id)
-        references commitments(commitment_id)
-        on delete cascade,
-
-    constraint fk_commitment_participant_investor
-        foreign key (investor_id)
-        references investors(investor_id)
-        on delete cascade,
-
-    constraint unique_commitment_participant
-        unique (commitment_id, investor_id)
-);
-
-
--- =========================================================
--- 13. GOALS
+-- 11. GOALS
 -- =========================================================
 
 create table goals (
@@ -482,15 +421,6 @@ create index idx_liability_responsibilities_liability
 
 create index idx_liability_responsibilities_investor
     on liability_responsibilities(investor_id);
-
-create index idx_commitments_planning_unit
-    on commitments(planning_unit_id);
-
-create index idx_commitment_participants_commitment
-    on commitment_participants(commitment_id);
-
-create index idx_commitment_participants_investor
-    on commitment_participants(investor_id);
 
 create index idx_goals_planning_unit
     on goals(planning_unit_id);

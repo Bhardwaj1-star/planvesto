@@ -15,9 +15,6 @@ class FakeDataRepository:
     def get_expenses(self, planning_unit_id):
         return []
 
-    def get_commitments(self, planning_unit_id):
-        return []
-
     def get_assets(self, planning_unit_id):
         return []
 

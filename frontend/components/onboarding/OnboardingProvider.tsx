@@ -12,14 +12,12 @@ import type { Goal } from "../../lib/onboarding/goals/types";
 import {
   loadOnboardingData,
   saveAssets,
-  saveCommitments,
   saveExpenses,
   saveFamilyMembers,
   saveGoals,
   saveIncomeSources,
   saveLiabilities,
   savePersonalInformation,
-  type Commitment,
   type OnboardingData,
 } from "../../lib/onboarding/persistence";
 
@@ -42,7 +40,6 @@ type OnboardingState = {
   expenses: Expense[];
   assets: Asset[];
   liabilities: Liability[];
-  commitments: Commitment[];
   goals: Goal[];
   completedSteps: number[];
   isLoading: boolean;
@@ -56,7 +53,6 @@ type OnboardingContextValue = OnboardingState & {
   setExpenses: (value: Expense[] | ((current: Expense[]) => Expense[])) => void;
   setAssets: (value: Asset[] | ((current: Asset[]) => Asset[])) => void;
   setLiabilities: (value: Liability[] | ((current: Liability[]) => Liability[])) => void;
-  setCommitments: (value: Commitment[] | ((current: Commitment[]) => Commitment[])) => void;
   setGoals: (value: Goal[] | ((current: Goal[]) => Goal[])) => void;
   savePersonalInformation: (value: PersonalInformation) => Promise<OnboardingData>;
   saveFamilyMembers: (value: FamilyMember[]) => Promise<OnboardingData>;
@@ -64,7 +60,6 @@ type OnboardingContextValue = OnboardingState & {
   saveExpenses: (value: Expense[]) => Promise<OnboardingData>;
   saveAssets: (value: Asset[]) => Promise<OnboardingData>;
   saveLiabilities: (value: Liability[]) => Promise<OnboardingData>;
-  saveCommitments: (value: Commitment[]) => Promise<OnboardingData>;
   saveGoals: (value: Goal[]) => Promise<OnboardingData>;
   completeStep: (step: number) => void;
 };
@@ -93,7 +88,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     expenses: [],
     assets: [],
     liabilities: [],
-    commitments: [],
     goals: [],
     completedSteps: [],
     isLoading: true,
@@ -156,7 +150,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setExpenses: (expenses) => setState((current) => ({ ...current, expenses: typeof expenses === "function" ? expenses(current.expenses) : expenses })),
     setAssets: (assets) => setState((current) => ({ ...current, assets: typeof assets === "function" ? assets(current.assets) : assets })),
     setLiabilities: (liabilities) => setState((current) => ({ ...current, liabilities: typeof liabilities === "function" ? liabilities(current.liabilities) : liabilities })),
-    setCommitments: (commitments) => setState((current) => ({ ...current, commitments: typeof commitments === "function" ? commitments(current.commitments) : commitments })),
     setGoals: (goals) => setState((current) => ({ ...current, goals: typeof goals === "function" ? goals(current.goals) : goals })),
     savePersonalInformation: (value) => saveSection(() => savePersonalInformation(value)),
     saveFamilyMembers: (value) => saveSection(() => saveFamilyMembers(value)),
@@ -164,7 +157,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     saveExpenses: (value) => saveSection(() => saveExpenses(value)),
     saveAssets: (value) => saveSection(() => saveAssets(value)),
     saveLiabilities: (value) => saveSection(() => saveLiabilities(value)),
-    saveCommitments: (value) => saveSection(() => saveCommitments(value)),
     saveGoals: (value) => saveSection(() => saveGoals(value)),
     completeStep: (step) => setState((current) => current.completedSteps.includes(step) ? current : { ...current, completedSteps: [...current.completedSteps, step] }),
   };

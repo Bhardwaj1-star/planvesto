@@ -195,3 +195,309 @@ body {
 .password-strength-bar {
   transition: width 0.25s ease, background-color 0.25s ease;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Investor Dark Mode — scoped to [data-theme="dark"]
+   Only applies inside the investor layout wrapper.
+   Public pages are never affected.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base transition for smooth toggling ── */
+[data-theme] {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+[data-theme] * {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ── Page-level backgrounds ── */
+[data-theme="dark"] {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] main {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+/* ── Sidebar ── */
+[data-theme="dark"] aside {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] aside .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] aside a.text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] aside a.text-slate-600:hover {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] aside a.text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] aside a.text-slate-500:hover {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] aside button {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] aside button:hover {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] aside .text-navy-900 {
+  color: #e2e8f0 !important;
+}
+
+/* ── Top header bars ── */
+[data-theme="dark"] header {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* ── White cards → dark cards ── */
+[data-theme="dark"] .bg-white {
+  background-color: #1e293b !important;
+}
+
+/* ── Light page background ── */
+[data-theme="dark"] .bg-\[\#f6f8fb\] {
+  background-color: #0f172a !important;
+}
+
+/* ── Slate surface tints ── */
+[data-theme="dark"] .bg-slate-50 {
+  background-color: #1e293b !important;
+}
+
+[data-theme="dark"] .bg-slate-100 {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark"] .bg-slate-200 {
+  background-color: #475569 !important;
+}
+
+[data-theme="dark"] .bg-slate-25 {
+  background-color: #0f172a !important;
+}
+
+/* ── Borders ── */
+[data-theme="dark"] .border-slate-100 {
+  border-color: #1e293b !important;
+}
+
+[data-theme="dark"] .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .border-slate-200\/70 {
+  border-color: rgba(51, 65, 85, 0.7) !important;
+}
+
+[data-theme="dark"] .border-slate-300 {
+  border-color: #475569 !important;
+}
+
+/* ── Primary text ── */
+[data-theme="dark"] .text-slate-950,
+[data-theme="dark"] .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .text-slate-800,
+[data-theme="dark"] .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .text-slate-400 {
+  color: #64748b !important;
+}
+
+[data-theme="dark"] .text-navy-900 {
+  color: #e2e8f0 !important;
+}
+
+/* ── Keep active sidebar items readable ── */
+[data-theme="dark"] .bg-navy-900 {
+  background-color: #0B1F33 !important;
+}
+
+[data-theme="dark"] .bg-navy-900.text-white {
+  color: #ffffff !important;
+}
+
+/* ── Teal accent adjustments ── */
+[data-theme="dark"] .text-teal-700 {
+  color: #2dd4bf !important;
+}
+
+[data-theme="dark"] .text-teal-900 {
+  color: #5eead4 !important;
+}
+
+[data-theme="dark"] .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.1) !important;
+}
+
+[data-theme="dark"] .bg-teal-700 {
+  background-color: #0f766e !important;
+}
+
+/* ── Amber, emerald, red accent adjustments for badges ── */
+[data-theme="dark"] .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+[data-theme="dark"] .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+[data-theme="dark"] .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* ── Inputs & selects ── */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* ── Tables ── */
+[data-theme="dark"] table {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] thead {
+  background-color: #1e293b !important;
+}
+
+[data-theme="dark"] th {
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] td {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] tr:hover {
+  background-color: rgba(51, 65, 85, 0.4) !important;
+}
+
+/* ── Hover states for cards ── */
+[data-theme="dark"] .hover\:bg-slate-50:hover {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark"] .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark"] .hover\:border-slate-300:hover {
+  border-color: #475569 !important;
+}
+
+/* ── Scrollbar styling ── */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── Profile dropdown dark overrides ── */
+[data-theme="dark"] [role="menu"] {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] [role="menu"] .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+[data-theme="dark"] [role="menu"] .border-slate-100 {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] [role="menuitem"]:hover {
+  background-color: #334155 !important;
+}
+
+/* ── Shadow adjustments ── */
+[data-theme="dark"] .shadow-sm {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .shadow-xl {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ── Dashed border empty states ── */
+[data-theme="dark"] .border-dashed {
+  border-color: #475569 !important;
+}
+
+/* ── Loading skeleton adjustments ── */
+[data-theme="dark"] .animate-pulse {
+  opacity: 0.3;
+}
+
+/* ── Details / summary ── */
+[data-theme="dark"] details {
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] summary {
+  color: #e2e8f0 !important;
+}
+
+/* ── Profile trigger button in dark mode ── */
+[data-theme="dark"] button[aria-label="User profile menu"] {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] button[aria-label="User profile menu"]:hover {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+}

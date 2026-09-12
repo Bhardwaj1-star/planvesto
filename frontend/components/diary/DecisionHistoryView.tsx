@@ -22,7 +22,7 @@ export default function DecisionHistoryView({ decisions }: DecisionHistoryViewPr
           <div>
             <div className="flex items-center gap-2"><span className="flex h-2.5 w-2.5 rounded-full bg-teal-600" /><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Planvesto Memory</p></div>
             <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-bold text-slate-950">Chronological Decision History</h2>
-            <p className="mt-1.5 text-sm text-slate-600 max-w-2xl">Every major financial fork in the road—strategy commitments, SIP revisions, debt prepayments, and goal pivots—preserved chronologically as historical context.</p>
+            <p className="mt-1.5 text-sm text-slate-600 max-w-2xl">Every major financial fork in the road—strategy selections, SIP revisions, debt prepayments, and goal pivots—preserved chronologically as historical context.</p>
           </div>
           <Link href="/investor/strategy-builder" className="inline-flex items-center self-start sm:self-center gap-2 rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-navy-800 transition"><span>Open Strategy Builder</span><span aria-hidden="true">→</span></Link>
         </div>

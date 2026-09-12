@@ -33,9 +33,6 @@ class FinancialDataRepository:
     def get_liabilities(self, planning_unit_id: str):
         return self._rows("liabilities", planning_unit_id)
 
-    def get_commitments(self, planning_unit_id: str):
-        return self._rows("commitments", planning_unit_id)
-
     def get_asset_owners(self, planning_unit_id: str):
         assets = self.get_assets(planning_unit_id)
         ids = [row["asset_id"] for row in assets]

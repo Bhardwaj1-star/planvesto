@@ -669,7 +669,7 @@ export default function PlanPage() {
                     </div>
 
                     <h3 className="mt-5 font-bold text-navy-900">
-                        Debt & commitments
+                        Debt & liabilities
                     </h3>
 
                     <p className="mt-2 text-sm leading-6 text-slate-500">

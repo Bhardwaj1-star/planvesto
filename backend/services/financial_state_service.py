@@ -22,7 +22,6 @@ class FinancialStateService:
             investors=investors,
             income_rows=self.repository.get_income(planning_unit_id),
             expense_rows=self.repository.get_expenses(planning_unit_id),
-            commitment_rows=self.repository.get_commitments(planning_unit_id),
             asset_rows=self.repository.get_assets(planning_unit_id),
             liability_rows=self.repository.get_liabilities(planning_unit_id),
             asset_owner_rows=self.repository.get_asset_owners(planning_unit_id),

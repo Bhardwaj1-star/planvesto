@@ -10,23 +10,22 @@ from rules.financial_state import MISSING_INPUT, cash_flow_ratio, required_safet
 
 class FinancialStateEngine:
     def build(self, planning_unit_id: str, investors: list[dict[str, Any]], income_rows: list[dict[str, Any]],
-              expense_rows: list[dict[str, Any]], commitment_rows: list[dict[str, Any]], asset_rows: list[dict[str, Any]],
+              expense_rows: list[dict[str, Any]], asset_rows: list[dict[str, Any]],
               liability_rows: list[dict[str, Any]], asset_owner_rows: list[dict[str, Any]],
               liability_responsibility_rows: list[dict[str, Any]], expense_participant_rows: list[dict[str, Any]],
               scope: str = "family", investor_id: str | None = None) -> FinancialState:
         income = self._income(income_rows, scope, investor_id)
         expenses = self._expenses(expense_rows, scope, investor_id, expense_participant_rows)
-        commitments = self._commitments(commitment_rows)
         assets = self._assets(asset_rows, asset_owner_rows, scope, investor_id)
         liabilities = self._liabilities(liability_rows, liability_responsibility_rows, scope, investor_id)
 
         surplus_m = None
         surplus_a = None
-        if income.available and expenses.available and commitments.available:
-            surplus_m = round_money(income.monthly - expenses.monthly - commitments.monthly)
+        if income.available and expenses.available:
+            surplus_m = round_money(income.monthly - expenses.monthly)
             surplus_a = round_money(surplus_m * 12)
 
-        cfr = cash_flow_ratio(expenses.monthly, commitments.monthly, income.monthly) if surplus_m is not None else None
+        cfr = cash_flow_ratio(expenses.monthly, income.monthly) if surplus_m is not None else None
         savings = savings_investment_rate(surplus_m, income.monthly) if surplus_m is not None else None
         net_worth = round_money(assets.total - liabilities.total) if assets.available and liabilities.available else None
 
@@ -34,7 +33,7 @@ class FinancialStateEngine:
         reserve_amount = None
         if cfr is not None:
             reserve_months = required_safety_reserve_months(cfr)
-            reserve_amount = round_money((expenses.monthly + commitments.monthly) * reserve_months)
+            reserve_amount = round_money(expenses.monthly * reserve_months)
 
         return FinancialState(
             scope=scope, planning_unit_id=planning_unit_id, investor_id=investor_id,
@@ -44,9 +43,6 @@ class FinancialStateEngine:
             expenses_monthly=Metric(value=round_money(expenses.monthly), available=expenses.available, reason=expenses.reason),
             expenses_annual=Metric(value=round_money(expenses.annual), available=expenses.available, reason=expenses.reason),
             expense_breakdown=expenses.breakdown,
-            commitments_monthly=Metric(value=commitments.monthly, available=commitments.available, reason=commitments.reason),
-            commitments_annual=Metric(value=commitments.annual, available=commitments.available, reason=commitments.reason),
-            commitment_breakdown=commitments.breakdown,
             investable_surplus_monthly=self._metric(surplus_m),
             investable_surplus_annual=self._metric(surplus_a),
             cash_flow_ratio=self._metric(cfr),
@@ -101,12 +97,6 @@ class FinancialStateEngine:
             monthly += m; breakdown[str(r.get("expense_type") or "Other")] += m
         return _Component(monthly, monthly * 12, available, None if available else MISSING_INPUT,
                           [{"type": k, "monthly": round_money(v), "annual": round_money(v * 12)} for k, v in breakdown.items()])
-
-    def _commitments(self, rows):
-        # Current DB/frontend model has amount + name but no frequency.
-        # Therefore monthly/annual commitment values cannot be safely inferred yet.
-        breakdown = [{"commitment_id": r.get("commitment_id"), "name": r.get("commitment_name"), "amount": r.get("amount")} for r in rows]
-        return _Component(0.0, 0.0, False, MISSING_INPUT, breakdown)
 
     def _assets(self, rows, owners, scope, investor_id):
         owner_map = defaultdict(list)

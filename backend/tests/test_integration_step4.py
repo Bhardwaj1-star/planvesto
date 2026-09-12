@@ -260,11 +260,6 @@ class TestBackendToSupabaseConnection:
         result = get_supabase().table("liabilities").select("liability_id").limit(1).execute()
         assert isinstance(result.data, list)
 
-    def test_commitments_table_readable(self):
-        from data.supabase import get_supabase
-        result = get_supabase().table("commitments").select("commitment_id").limit(1).execute()
-        assert isinstance(result.data, list)
-
     def test_no_write_operations_performed(self):
         """Safety marker: only SELECT operations exist in this test class."""
         assert True
@@ -307,11 +302,6 @@ class TestFinancialDataRepository:
         result = FinancialDataRepository().get_liabilities(str(uuid.uuid4()))
         assert isinstance(result, list)
 
-    def test_get_commitments_returns_list(self):
-        from data.financial_data import FinancialDataRepository
-        result = FinancialDataRepository().get_commitments(str(uuid.uuid4()))
-        assert isinstance(result, list)
-
     def test_get_asset_owners_returns_list(self):
         from data.financial_data import FinancialDataRepository
         result = FinancialDataRepository().get_asset_owners(str(uuid.uuid4()))
@@ -340,7 +330,7 @@ class TestFinancialDataRepository:
         repo = FinancialDataRepository()
         for method_name in [
             "get_investors", "get_income", "get_expenses",
-            "get_assets", "get_liabilities", "get_commitments",
+            "get_assets", "get_liabilities",
         ]:
             result = getattr(repo, method_name)(real_id)
             assert isinstance(result, list), (
@@ -367,7 +357,6 @@ class TestFinancialStateEngineResponse:
             investors=[],
             income_rows=[],
             expense_rows=[],
-            commitment_rows=[],
             asset_rows=[],
             liability_rows=[],
             asset_owner_rows=[],
@@ -448,7 +437,7 @@ class TestAPIResponseStructure:
         Full request chain: Client POST /api/financial-state/build
         with valid Bearer token and user-owned planning_unit_id
         → Backend checks auth & ownership
-        → Backend reads Supabase tables (investors, income, expenses, assets, liabilities, commitments)
+        → Backend reads Supabase tables (investors, income, expenses, assets, liabilities)
         → Backend calculates FinancialState
         → Backend returns HTTP 200 with full FinancialState JSON
         """

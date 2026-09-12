@@ -16,8 +16,6 @@ alter table public.assets enable row level security;
 alter table public.asset_owners enable row level security;
 alter table public.liabilities enable row level security;
 alter table public.liability_responsibilities enable row level security;
-alter table public.commitments enable row level security;
-alter table public.commitment_participants enable row level security;
 alter table public.goals enable row level security;
 alter table public.goal_funding enable row level security;
 
@@ -62,12 +60,6 @@ create policy "users can access their liabilities"
   on public.liabilities for all
   using (exists (select 1 from public.planning_units where planning_unit_id = liabilities.planning_unit_id and user_id = auth.uid()))
   with check (exists (select 1 from public.planning_units where planning_unit_id = liabilities.planning_unit_id and user_id = auth.uid()));
-
-drop policy if exists "users can access their commitments" on public.commitments;
-create policy "users can access their commitments"
-  on public.commitments for all
-  using (exists (select 1 from public.planning_units where planning_unit_id = commitments.planning_unit_id and user_id = auth.uid()))
-  with check (exists (select 1 from public.planning_units where planning_unit_id = commitments.planning_unit_id and user_id = auth.uid()));
 
 drop policy if exists "users can access their goals" on public.goals;
 create policy "users can access their goals"
@@ -115,20 +107,6 @@ create policy "users can access their liability responsibilities"
     select 1 from public.liabilities
     join public.planning_units using (planning_unit_id)
     where liabilities.liability_id = liability_responsibilities.liability_id and planning_units.user_id = auth.uid()
-  ));
-
-drop policy if exists "users can access their commitment participants" on public.commitment_participants;
-create policy "users can access their commitment participants"
-  on public.commitment_participants for all
-  using (exists (
-    select 1 from public.commitments
-    join public.planning_units using (planning_unit_id)
-    where commitments.commitment_id = commitment_participants.commitment_id and planning_units.user_id = auth.uid()
-  ))
-  with check (exists (
-    select 1 from public.commitments
-    join public.planning_units using (planning_unit_id)
-    where commitments.commitment_id = commitment_participants.commitment_id and planning_units.user_id = auth.uid()
   ));
 
 drop policy if exists "users can access their goal funding" on public.goal_funding;

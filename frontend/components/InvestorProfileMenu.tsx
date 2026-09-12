@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { loadOnboardingData, type OnboardingData } from "../lib/onboarding/persistence";
+import { useTheme } from "./ThemeProvider";
 
 export function InvestorProfileMenu() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function InvestorProfileMenu() {
   const [completionPercentage, setCompletionPercentage] = useState<number>(0);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   // Load authenticated user & profile data
   useEffect(() => {
@@ -219,6 +221,46 @@ export function InvestorProfileMenu() {
                 <p className="text-[10px] text-slate-400">Financial memory &amp; decisions</p>
               </div>
             </Link>
+          </div>
+
+          {/* Theme Toggle */}
+          <div className="border-t border-slate-100 pt-1 mt-1" role="none">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-navy-900 transition"
+              role="menuitem"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                {theme === "light" ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex flex-1 items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{theme === "light" ? "Dark Mode" : "Light Mode"}</p>
+                  <p className="text-[10px] text-slate-400">Switch appearance</p>
+                </div>
+                {/* Pill Toggle */}
+                <div
+                  className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${
+                    theme === "dark" ? "bg-teal-600" : "bg-slate-300"
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                      theme === "dark" ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </div>
+              </div>
+            </button>
           </div>
 
           {/* Sign Out Divider & Button */}

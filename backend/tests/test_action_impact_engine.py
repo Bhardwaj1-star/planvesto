@@ -5,7 +5,6 @@ def _state(**overrides):
     base = {
         "income_monthly": {"value": 100000},
         "expenses_monthly": {"value": 40000},
-        "commitments_monthly": {"value": 10000},
         "investable_surplus_monthly": {"value": 50000},
         "total_assets": {"value": 1000000},
         "total_liabilities": {"value": 300000},

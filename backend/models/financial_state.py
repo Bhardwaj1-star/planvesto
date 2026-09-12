@@ -18,9 +18,6 @@ class FinancialState(BaseModel):
     expenses_monthly: Metric
     expenses_annual: Metric
     expense_breakdown: list[dict[str, Any]] = Field(default_factory=list)
-    commitments_monthly: Metric
-    commitments_annual: Metric
-    commitment_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     investable_surplus_monthly: Metric
     investable_surplus_annual: Metric
     cash_flow_ratio: Metric

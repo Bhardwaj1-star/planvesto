@@ -14,8 +14,6 @@ def make_state():
         income_annual=metric(1200000),
         expenses_monthly=metric(40000),
         expenses_annual=metric(480000),
-        commitments_monthly=metric(10000),
-        commitments_annual=metric(120000),
         investable_surplus_monthly=metric(50000),
         investable_surplus_annual=metric(600000),
         cash_flow_ratio=metric(0.5),

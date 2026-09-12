@@ -33,7 +33,6 @@ from rules.financial_state import (
 def _build(
     income_rows=None,
     expense_rows=None,
-    commitment_rows=None,
     asset_rows=None,
     liability_rows=None,
     asset_owner_rows=None,
@@ -48,7 +47,6 @@ def _build(
         investors=investors or [{"investor_id": "i1"}],
         income_rows=income_rows or [],
         expense_rows=expense_rows or [],
-        commitment_rows=commitment_rows or [],
         asset_rows=asset_rows or [],
         liability_rows=liability_rows or [],
         asset_owner_rows=asset_owner_rows or [],
@@ -323,30 +321,21 @@ class TestFinancialStateEngine:
         assert result.income_monthly.value == 100000.0
         assert result.income_annual.value == 1200000.0
 
-    def test_surplus_available_when_no_commitments(self):
-        """When commitment list is empty, commitments.available resolves correctly."""
+    def test_surplus_available_when_income_and_expenses_available(self):
+        """When income and expenses are valid, investable surplus resolves correctly."""
         result = _build(
             income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
             expense_rows=[{"expense_id": "e1", "expense_type": "Living", "amount": 40000, "frequency": "Monthly"}],
-            commitment_rows=[],  # empty → commitments always unavailable per current design
         )
-        # Commitments always mark unavailable (no frequency field in DB yet)
-        assert result.investable_surplus_monthly.available is False
-
-    def test_surplus_unavailable_with_unresolved_commitment(self):
-        result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
-            expense_rows=[{"expense_id": "e1", "expense_type": "Living", "amount": 40000, "frequency": "Monthly"}],
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "SIP", "amount": 5000}],
-        )
-        assert result.investable_surplus_monthly.available is False
+        assert result.investable_surplus_monthly.available is True
+        assert result.investable_surplus_monthly.value == 60000.0
+        assert result.investable_surplus_annual.value == 720000.0
 
     def test_existing_test_scenario_unchanged(self):
-        """Preserves the original existing test case."""
+        """Preserves the standard baseline financial state test case."""
         result = _build(
             income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
             expense_rows=[{"expense_id": "e1", "expense_type": "Living", "amount": 40000, "frequency": "Monthly"}],
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "Commitment", "amount": 10000}],
             asset_rows=[{"asset_id": "a1", "asset_name": "Bank / Cash", "current_value": 1000000}],
             liability_rows=[{"liability_id": "l1", "liability_name": "Home Loan", "outstanding_amount": 300000, "emi_amount": 10000, "frequency": "Monthly"}],
         )
@@ -355,7 +344,8 @@ class TestFinancialStateEngine:
         assert result.total_assets.value == 1000000
         assert result.total_liabilities.value == 300000
         assert result.net_worth.value == 700000
-        assert result.investable_surplus_monthly.available is False
+        assert result.investable_surplus_monthly.available is True
+        assert result.investable_surplus_monthly.value == 60000
 
     def test_income_breakdown_by_type(self):
         result = _build(
@@ -411,28 +401,26 @@ class TestMissingDataHandling:
 
     def test_cash_flow_ratio_unavailable_when_surplus_missing(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "SIP", "amount": 5000}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
         )
         assert result.cash_flow_ratio.available is False
 
     def test_savings_rate_unavailable_when_surplus_missing(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "SIP", "amount": 5000}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
         )
         assert result.savings_investment_rate.available is False
 
     def test_safety_reserve_unavailable_when_cfr_missing(self):
         result = _build(
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "SIP", "amount": 5000}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
         )
         assert result.safety_reserve_months.available is False
         assert result.safety_reserve_required_amount.available is False
 
     def test_metric_reason_set_on_unavailable(self):
         result = _build(
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "SIP", "amount": 5000}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
         )
         assert result.investable_surplus_monthly.reason is not None
         assert len(result.investable_surplus_monthly.reason) > 0
@@ -443,13 +431,6 @@ class TestMissingDataHandling:
 # ═══════════════════════════════════════════════
 
 class TestNegativeInvesteableSurplus:
-    """
-    Because commitments currently always return available=False,
-    surplus is never directly computable. These tests verify the
-    income/expense math that WOULD feed into surplus if commitments
-    were resolved, and confirm the unavailable guard works correctly.
-    """
-
     def test_expenses_exceed_income_metrics_correct(self):
         result = _build(
             income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 30000, "frequency": "Monthly", "investor_id": "i1"}],
@@ -457,15 +438,13 @@ class TestNegativeInvesteableSurplus:
         )
         assert result.income_monthly.value == 30000.0
         assert result.expenses_monthly.value == 50000.0
-        # Surplus unavailable (no commitment resolution), not guessed
-        assert result.investable_surplus_monthly.available is False
+        assert result.investable_surplus_monthly.available is True
+        assert result.investable_surplus_monthly.value == -20000.0
 
-    def test_surplus_guard_not_guessed_on_missing_commitment(self):
-        """Surplus MUST NOT be fabricated when commitment frequency is unknown."""
+    def test_surplus_unavailable_on_unresolved_frequency(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
             expense_rows=[{"expense_id": "e1", "expense_type": "Living", "amount": 20000, "frequency": "Monthly"}],
-            commitment_rows=[{"commitment_id": "c1", "commitment_name": "Loan", "amount": 15000}],
         )
         assert result.investable_surplus_monthly.available is False
         assert result.investable_surplus_monthly.value is None
@@ -477,11 +456,11 @@ class TestNegativeInvesteableSurplus:
 
 class TestRules:
     def test_cash_flow_ratio_basic(self):
-        # (40000 + 0) / 100000 * 100 = 40%
-        assert cash_flow_ratio(40000, 0, 100000) == 40.0
+        # 40000 / 100000 * 100 = 40%
+        assert cash_flow_ratio(40000, 100000) == 40.0
 
     def test_cash_flow_ratio_zero_income_returns_none(self):
-        assert cash_flow_ratio(30000, 10000, 0) is None
+        assert cash_flow_ratio(30000, 0) is None
 
     def test_savings_rate_basic(self):
         # 60000 / 100000 * 100 = 60%

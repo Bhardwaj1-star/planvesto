@@ -6,7 +6,6 @@ from models.financial_state import FinancialState
 TRACKED_METRICS = (
     "income_monthly",
     "expenses_monthly",
-    "commitments_monthly",
     "investable_surplus_monthly",
     "total_assets",
     "total_liabilities",

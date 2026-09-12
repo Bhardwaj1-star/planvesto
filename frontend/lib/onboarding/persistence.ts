@@ -8,9 +8,7 @@ import type { IncomeSource } from "./income/types";
 import type { Liability } from "./liabilities/types";
 import type { PersonalInformation } from "./personal-information/model";
 
-import type { Commitment } from "./commitments/types";
 
-export type { Commitment };
 
 export type GoalFundingAllocation = {
   assetId: string;
@@ -41,7 +39,6 @@ export type OnboardingData = {
   expenses: Expense[];
   assets: Asset[];
   liabilities: Liability[];
-  commitments: Commitment[];
   goals: Goal[];
 };
 
@@ -110,17 +107,16 @@ async function getPlanningUnitId() {
 }
 
 async function loadRows(planningUnitId: string) {
-  const [investors, dependents, income, expenses, assets, liabilities, commitments, goals] = await Promise.all([
+  const [investors, dependents, income, expenses, assets, liabilities, goals] = await Promise.all([
     supabase.from("investors").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("dependents").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("income").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("expenses").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("assets").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("liabilities").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
-    supabase.from("commitments").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("goals").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
   ]);
-  const result = [investors, dependents, income, expenses, assets, liabilities, commitments, goals].find((item) => item.error);
+  const result = [investors, dependents, income, expenses, assets, liabilities, goals].find((item) => item.error);
   if (result?.error) throw result.error;
 
   const investorRows = investors.data || [];
@@ -189,7 +185,6 @@ async function loadRows(planningUnitId: string) {
         endDate: row.end_date || "",
       };
     }),
-    commitments: (commitments.data || []).map((row) => ({ id: row.commitment_id, name: row.commitment_name, amount: String(row.amount) })),
     goals: (goals.data || []).map((row) => ({
       id: row.goal_id,
       name: row.goal_name,
@@ -381,9 +376,9 @@ export async function saveIncomeSources(values: IncomeSource[]) {
 
 async function saveSimpleList<T extends { id: string }>(
   values: T[],
-  table: "expenses" | "assets" | "liabilities" | "commitments" | "goals",
+  table: "expenses" | "assets" | "liabilities" | "goals",
   toInsert: (value: T, planningUnitId: string) => Tables[typeof table]["Insert"],
-  idColumn: "expense_id" | "asset_id" | "liability_id" | "commitment_id" | "goal_id",
+  idColumn: "expense_id" | "asset_id" | "liability_id" | "goal_id",
 ) {
   const planningUnitId = await getPlanningUnitId();
   const { data: existing, error: existingError } = await supabase.from(table).select(idColumn).eq("planning_unit_id", planningUnitId);
@@ -415,10 +410,6 @@ export function saveAssets(values: Asset[]) {
 
 export function saveLiabilities(values: Liability[]) {
   return saveSimpleList(values, "liabilities", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, liability_name: encodeName(value.liabilityType, value.description), outstanding_amount: numeric(value.outstandingAmount), interest_rate: numeric(value.interestRate, true), emi_amount: numeric(value.regularPayment, true), frequency: nullable(value.frequency), end_date: nullable(value.endDate) }), "liability_id");
-}
-
-export function saveCommitments(values: Commitment[]) {
-  return saveSimpleList(values, "commitments", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, commitment_name: value.name, amount: numeric(value.amount) }), "commitment_id");
 }
 
 export function saveGoals(values: Goal[]) {
