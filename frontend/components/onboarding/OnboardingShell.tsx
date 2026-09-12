@@ -34,9 +34,9 @@ export default function OnboardingShell({
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <Link
-            href="/investor"
+            href="/investor/financial-state"
             className="flex items-center gap-2.5 transition hover:opacity-90"
-            aria-label="Back to Investor Dashboard"
+            aria-label="Back to Dashboard"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-900 text-white shadow-sm">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +101,7 @@ export default function OnboardingShell({
               <span className="text-[11px] text-slate-500">{progressPercent}% complete</span>
             </div>
             <Link
-              href="/investor"
+              href="/investor/financial-state"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-navy-900"
             >
               <span>Save &amp; Exit</span>
