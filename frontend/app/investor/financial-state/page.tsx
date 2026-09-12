@@ -1,277 +1,71 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
-import {
-  FinancialState,
-  getFinancialStateHistory,
-  getLatestFinancialState,
-  getPlanningUnitId,
-  Metric,
-} from "../../../lib/api/financial-state";
+import { DashboardData, DashboardGoal, getDashboard } from "../../../lib/api/dashboard";
 
-type Period = "Monthly" | "Annual";
-type Detail = "assets" | "liabilities" | "liquidity" | "history" | null;
+const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const shortMoney = (value: number | null | undefined) => value == null ? "—" : money.format(value);
 
-const money = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
-
-function amount(metric: Metric, period: Period = "Monthly") {
-  if (!metric?.available || metric.value === null) return "Unavailable";
-  return money.format(metric.value);
+function Donut({ value, total, label, dark = false }: { value: number; total: number; label: string; dark?: boolean }) {
+  const pct = total > 0 ? Math.min(Math.max(value / total, 0), 1) : 0;
+  const deg = pct * 360;
+  const gradient = dark ? `conic-gradient(#334155 ${deg}deg, #e2e8f0 ${deg}deg)` : `conic-gradient(#0f766e ${deg}deg, #e2e8f0 ${deg}deg)`;
+  return <div className="flex items-center gap-5"><div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: gradient }}><div className="absolute inset-3 flex items-center justify-center rounded-full bg-white text-center"><span className="text-sm font-extrabold text-slate-900">{Math.round(pct * 100)}%</span></div></div><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-xl font-extrabold text-slate-950">{shortMoney(value)}</p></div></div>;
 }
 
-function numberValue(metric: Metric) {
-  if (!metric?.available || metric.value === null) return "Unavailable";
-  return metric.value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+function FlowBars({ income, expenses, surplus }: { income: number; expenses: number; surplus: number }) {
+  const max = Math.max(income, expenses, Math.abs(surplus), 1);
+  const rows = [{ label: "Income", value: income }, { label: "Expenses", value: expenses }, { label: "Available Amount for Future", value: surplus }];
+  return <div className="space-y-5">{rows.map(row => <div key={row.label}><div className="mb-2 flex items-center justify-between text-sm"><span className="font-semibold text-slate-700">{row.label}</span><span className="font-extrabold text-slate-950">{shortMoney(row.value)}</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${Math.max(4, Math.min(100, Math.abs(row.value) / max * 100))}%` }}/></div></div>)}</div>;
 }
 
-function MetricCard({ label, metric, period }: { label: string; metric?: Metric; period?: Period }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-3 text-2xl font-extrabold tracking-tight text-slate-950">
-        {amount(metric as Metric, period)}
-      </p>
-      {!metric?.available && metric?.reason && (
-        <p className="mt-2 text-xs leading-5 text-slate-500">{metric.reason}</p>
-      )}
-    </div>
-  );
+function GoalVisual({ goal }: { goal: DashboardGoal }) {
+  const common = "h-44 w-full rounded-2xl";
+  const svg = (children: React.ReactNode, bg: string, label: string) => <div className={`${common} ${bg} flex items-center justify-center overflow-hidden`}><svg viewBox="0 0 300 170" className="h-full w-full" aria-label={label}>{children}</svg></div>;
+  if (goal.image_key === "home") return svg(<><path d="M60 88 150 25l90 63v65H60z" fill="white" stroke="#0f766e" strokeWidth="5"/><path d="M105 153v-42h40v42M178 95h27v23h-27z" fill="#ccfbf1" stroke="#0f766e" strokeWidth="4"/><path d="m45 92 105-76 105 76" fill="none" stroke="#0f766e" strokeWidth="7" strokeLinecap="round"/></>, "bg-sky-50", "Home goal");
+  if (goal.image_key === "education") return svg(<><path d="m150 30 105 42-105 42L45 72z" fill="#fef3c7" stroke="#92400e" strokeWidth="5"/><path d="M82 87v35c38 22 98 22 136 0V87" fill="white" stroke="#92400e" strokeWidth="5"/><path d="M150 114v31M125 145h50" stroke="#92400e" strokeWidth="5" strokeLinecap="round"/></>, "bg-amber-50", "Education goal");
+  if (goal.image_key === "travel") return svg(<><path d="M42 125h216" stroke="#0f766e" strokeWidth="5"/><path d="M150 120 182 48l18 9-17 63M148 120 116 74l12-8 28 38" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round"/><path d="M78 65c14-15 28-15 42 0M200 42c12-12 24-12 36 0" fill="none" stroke="#64748b" strokeWidth="4" strokeLinecap="round"/></>, "bg-cyan-50", "Travel goal");
+  if (goal.image_key === "retirement") return svg(<><circle cx="150" cy="80" r="45" fill="white" stroke="#0f766e" strokeWidth="5"/><path d="M105 80h90M150 35v90M90 130c20-18 100-18 120 0" fill="none" stroke="#0f766e" strokeWidth="5" strokeLinecap="round"/></>, "bg-emerald-50", "Retirement goal");
+  return svg(<><circle cx="150" cy="75" r="42" fill="white" stroke="#475569" strokeWidth="5"/><path d="M150 52v25l18 12" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round"/></>, "bg-slate-100", "Goal");
 }
 
-function SnapshotRow({ snapshot, onSelect }: { snapshot: FinancialState; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-teal-300 hover:bg-slate-50"
-    >
-      <div>
-        <p className="text-sm font-bold text-slate-900">
-          {snapshot.created_at ? new Date(snapshot.created_at).toLocaleString("en-IN") : "Snapshot"}
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
-          {snapshot.scope === "individual" ? "Individual" : "Family"} financial snapshot
-        </p>
-      </div>
-      <span className="text-xs font-bold text-teal-700">View →</span>
-    </button>
-  );
+function GoalCard({ goal, onClick }: { goal: DashboardGoal; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-600"><GoalVisual goal={goal}/><div className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">{goal.goal_type}</p><h3 className="mt-1 text-xl font-extrabold text-slate-950">{goal.goal_name}</h3></div><span className="text-xs font-bold text-slate-400 group-hover:text-teal-700">View →</span></div><div className="mt-5"><div className="flex justify-between text-xs font-bold text-slate-500"><span>Funding coverage</span><span>{goal.coverage_percentage == null ? "—" : `${goal.coverage_percentage}%`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${goal.coverage_percentage ?? 0}%` }}/></div></div><div className="mt-4 flex items-end justify-between gap-3"><div><p className="text-xs text-slate-400">Target</p><p className="mt-1 font-extrabold text-slate-900">{shortMoney(goal.target_amount)}</p></div><div className="text-right"><p className="text-xs text-slate-400">Status</p><p className="mt-1 text-sm font-bold text-slate-700">{goal.funding_status ?? "Defined"}</p></div></div></div></button>;
+}
+
+function GoalTimeline({ goals, onClick }: { goals: DashboardGoal[]; onClick: (goal: DashboardGoal) => void }) {
+  return <div className="relative space-y-4 pl-7 before:absolute before:bottom-2 before:left-2 before:top-2 before:w-px before:bg-slate-200">{goals.map(goal => <button key={goal.goal_id} type="button" onClick={() => onClick(goal)} className="relative block w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-teal-300 hover:shadow-md"><span className="absolute -left-[31px] top-7 h-4 w-4 rounded-full border-4 border-white bg-teal-700 shadow"/><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">{goal.goal_type}</p><h3 className="mt-1 text-lg font-extrabold text-slate-950">{goal.goal_name}</h3><p className="mt-1 text-xs text-slate-500">Target {goal.target_date ? new Date(goal.target_date).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "—"}</p></div><div className="min-w-44"><div className="flex justify-between text-xs font-bold text-slate-500"><span>{goal.funding_status ?? "Defined"}</span><span>{goal.coverage_percentage == null ? "—" : `${goal.coverage_percentage}%`}</span></div><div className="mt-2 h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${goal.coverage_percentage ?? 0}%` }}/></div></div></div></button>)}</div>;
 }
 
 export default function FinancialStatePage() {
-  const [data, setData] = useState<FinancialState | null>(null);
-  const [history, setHistory] = useState<FinancialState[]>([]);
-  const [period, setPeriod] = useState<Period>("Monthly");
-  const [detail, setDetail] = useState<Detail>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<DashboardGoal | null>(null);
+  const [detail, setDetail] = useState<"assets" | "liabilities" | "goal" | null>(null);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const planningUnitId = getPlanningUnitId();
-      if (!planningUnitId) {
-        setData(null);
-        setLoading(false);
-        return;
-      }
-      const latest = await getLatestFinancialState(planningUnitId);
-      setData(latest);
-    } catch (cause) {
-      setData(null);
-      setError(cause instanceof Error ? cause.message : "Unable to load Financial State.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  async function load() { setLoading(true); setError(null); try { setData(await getDashboard()); } catch (e) { setError(e instanceof Error ? e.message : "Unable to load Dashboard."); } finally { setLoading(false); } }
+  useEffect(() => { void load(); }, []);
 
-  async function loadHistory() {
-    const planningUnitId = getPlanningUnitId();
-    if (!planningUnitId) return;
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      setHistory(await getFinancialStateHistory(planningUnitId));
-    } catch (cause) {
-      setHistoryError(cause instanceof Error ? cause.message : "Unable to load Financial State history.");
-    } finally {
-      setHistoryLoading(false);
-    }
-  }
+  const fs = data?.financial_state;
+  const income = fs?.income_monthly.value ?? 0;
+  const expenses = fs?.expenses_monthly.value ?? 0;
+  const surplus = fs?.investable_surplus_monthly.value ?? income - expenses;
+  const maxAsset = Math.max(...(fs?.asset_breakdown ?? []).map(x => x.current_value), 0);
+  const maxLiability = Math.max(...(fs?.liability_breakdown ?? []).map(x => x.outstanding_amount), 0);
+  const goalCount = data?.goals.length ?? 0;
+  const goalSection = useMemo(() => goalCount === 0 ? "empty" : goalCount === 1 ? "single" : goalCount <= 3 ? "cards" : "timeline", [goalCount]);
 
-  useEffect(() => {
-    void load();
-  }, []);
+  if (loading) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-6xl space-y-6"><div className="h-10 w-48 animate-pulse rounded-lg bg-slate-200"/><div className="h-44 animate-pulse rounded-3xl bg-white"/><div className="grid gap-5 lg:grid-cols-2"><div className="h-64 animate-pulse rounded-3xl bg-white"/><div className="h-64 animate-pulse rounded-3xl bg-white"/></div></div></main>;
+  if (error) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm"><h1 className="text-2xl font-extrabold text-slate-950">Unable to load Dashboard</h1><p className="mt-3 text-sm text-slate-500">{error}</p><button type="button" onClick={() => void load()} className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Retry</button></div></main>;
+  if (!data || !fs) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h1 className="text-2xl font-extrabold text-slate-950">Your Dashboard is not ready yet</h1><p className="mt-3 text-sm text-slate-500">Complete your financial information to see your current financial state.</p><Link href="/investor/onboarding" className="mt-6 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Continue onboarding →</Link></div></main>;
 
-  useEffect(() => {
-    if (detail === "history") void loadHistory();
-  }, [detail]);
-
-  const isAnnual = period === "Annual";
-  const income = isAnnual ? data?.income_annual : data?.income_monthly;
-  const expenses = isAnnual ? data?.expenses_annual : data?.expenses_monthly;
-  const surplus = isAnnual ? data?.investable_surplus_annual : data?.investable_surplus_monthly;
-
-  const hasBreakdown = useMemo(
-    () => Boolean(data && (data.income_breakdown?.length || data.expense_breakdown?.length || data.asset_breakdown?.length || data.liability_breakdown?.length)),
-    [data],
-  );
-
-  if (loading) {
-    return (
-      <main className="min-w-0 flex-1 p-5 lg:p-8" aria-busy="true">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div className="h-8 w-72 animate-pulse rounded-lg bg-slate-200" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" />)}
-          </div>
-          <div className="h-56 animate-pulse rounded-3xl bg-white shadow-sm" />
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="min-w-0 flex-1 p-5 lg:p-8">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <h1 className="text-2xl font-extrabold text-slate-950">Unable to load Financial State</h1>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">{error}</p>
-          <div className="mt-6 flex justify-center gap-3">
-            <button type="button" onClick={() => void load()} className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white">Retry</button>
-            <Link href="/investor/onboarding" className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700">Review information</Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!data) {
-    return (
-      <main className="min-w-0 flex-1 p-5 lg:p-8">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Financial State</p>
-          <h1 className="mt-2 text-2xl font-extrabold text-slate-950">Your Financial State is not available yet</h1>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Complete your financial information first. Planvesto will calculate and persist the Financial State through the backend.</p>
-          <Link href="/investor/onboarding" className="mt-6 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Continue onboarding →</Link>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-w-0 flex-1 pb-20">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="flex min-h-[80px] items-center justify-between gap-4 px-5 lg:px-8">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Current Financial State</p>
-            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">Financial State</h1>
-            <p className="mt-1 text-xs text-slate-500">{data.scope === "individual" ? "Individual" : "Family"} · backend snapshot</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-              {(["Monthly", "Annual"] as Period[]).map((item) => (
-                <button key={item} type="button" onClick={() => setPeriod(item)} className={`rounded-lg px-3.5 py-1.5 text-xs font-bold ${period === item ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}>{item}</button>
-              ))}
-            </div>
-            <InvestorProfileMenu />
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-6xl space-y-8 p-5 lg:p-8">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Where you stand today</p>
-              <h2 className="mt-1 text-2xl font-extrabold text-slate-950">Current Financial Position</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">A backend-calculated snapshot of your current financial position. Calculated values are not edited on this screen.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/investor/onboarding/income" className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">Update Income</Link>
-              <Link href="/investor/onboarding/expenses" className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">Update Expenses</Link>
-              <Link href="/investor/onboarding/assets" className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">Update Assets</Link>
-              <Link href="/investor/onboarding/liabilities" className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700">Update Liabilities</Link>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Key Metrics · {period}</h3>
-            <button type="button" onClick={() => { setDetail("history"); }} className="text-xs font-bold text-teal-700">View history →</button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Income" metric={income!} period={period} />
-            <MetricCard label="Expenses" metric={expenses!} period={period} />
-            <MetricCard label="Investable Surplus" metric={surplus!} period={period} />
-            <MetricCard label="Net Worth" metric={data.net_worth} />
-          </div>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Cash Flow Ratio</p>
-            <p className="mt-3 text-2xl font-extrabold text-slate-950">{numberValue(data.cash_flow_ratio)}</p>
-            {!data.cash_flow_ratio?.available && data.cash_flow_ratio?.reason && <p className="mt-2 text-xs text-slate-500">{data.cash_flow_ratio.reason}</p>}
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Savings / Investment Rate</p>
-            <p className="mt-3 text-2xl font-extrabold text-slate-950">{numberValue(data.savings_investment_rate)}</p>
-            {!data.savings_investment_rate?.available && data.savings_investment_rate?.reason && <p className="mt-2 text-xs text-slate-500">{data.savings_investment_rate.reason}</p>}
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Safety Reserve</p>
-            <p className="mt-3 text-2xl font-extrabold text-slate-950">{numberValue(data.safety_reserve_months)} months</p>
-            <p className="mt-2 text-xs text-slate-500">Required amount: {amount(data.safety_reserve_required_amount)}</p>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2">
-          <button type="button" onClick={() => setDetail("assets")} className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-teal-300">
-            <div className="flex items-center justify-between"><h3 className="text-lg font-extrabold text-slate-950">Assets</h3><span className="text-xs font-bold text-teal-700">View details →</span></div>
-            <p className="mt-2 text-2xl font-extrabold text-slate-950">{amount(data.total_assets)}</p>
-            <p className="mt-2 text-sm text-slate-500">{(data.asset_breakdown ?? []).length} recorded asset entries</p>
-          </button>
-          <button type="button" onClick={() => setDetail("liabilities")} className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-teal-300">
-            <div className="flex items-center justify-between"><h3 className="text-lg font-extrabold text-slate-950">Liabilities</h3><span className="text-xs font-bold text-teal-700">View details →</span></div>
-            <p className="mt-2 text-2xl font-extrabold text-slate-950">{amount(data.total_liabilities)}</p>
-            <p className="mt-2 text-sm text-slate-500">EMI burden: {amount(data.emi_burden_monthly)}</p>
-          </button>
-        </section>
-
-        {hasBreakdown && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-            <div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Cash flow</p><h3 className="mt-1 text-xl font-extrabold text-slate-950">Income & Expenses</h3></div><Link href="/investor/onboarding/income" className="text-xs font-bold text-teal-700">Update inputs →</Link></div>
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <div><h4 className="text-sm font-bold text-slate-800">Income breakdown</h4><div className="mt-3 space-y-2">{(data.income_breakdown ?? []).map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
-              <div><h4 className="text-sm font-bold text-slate-800">Expense breakdown</h4><div className="mt-3 space-y-2">{(data.expense_breakdown ?? []).map((item) => <div key={item.type} className="flex justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{item.type}</span><span className="font-semibold text-slate-900">{money.format(isAnnual ? item.annual : item.monthly)}</span></div>)}</div></div>
-            </div>
-          </section>
-        )}
-      </div>
-
-      {detail && (
-        <div className="fixed inset-0 z-50 bg-slate-950/30 p-4 sm:p-8" role="dialog" aria-modal="true">
-          <div className="mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 p-5 sm:p-6"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">Financial State</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">{detail === "history" ? "Snapshot History" : detail === "assets" ? "Asset Details" : "Liability Details"}</h2></div><button type="button" onClick={() => setDetail(null)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">Close</button></div>
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-              {detail === "assets" && <div className="space-y-3">{(data.asset_breakdown ?? []).map((item) => <div key={item.asset_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Liquidity: {item.liquidity ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.ownership_applied)}</p></div></div>)}</div>}
-              {detail === "liabilities" && <div className="space-y-3">{(data.liability_breakdown ?? []).map((item) => <div key={item.liability_id} className="rounded-2xl border border-slate-200 p-4"><div className="flex justify-between gap-4"><div><p className="font-bold text-slate-900">{item.name}</p><p className="mt-1 text-xs text-slate-500">Classification: {item.classification ?? "Unavailable"}</p></div><p className="font-extrabold text-slate-950">{money.format(item.responsibility_applied)}</p></div></div>)}</div>}
-              {detail === "history" && <div className="space-y-3">{historyLoading && <p className="text-sm text-slate-500">Loading snapshots…</p>}{historyError && <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">{historyError}</div>}{!historyLoading && !historyError && history.length === 0 && <p className="text-sm text-slate-500">No previous snapshots are available.</p>}{history.map((snapshot) => <SnapshotRow key={snapshot.snapshot_id ?? `${snapshot.created_at}-${snapshot.planning_unit_id}`} snapshot={snapshot} onSelect={() => undefined} />)}</div>}
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
-  );
+  return <main className="min-w-0 flex-1 bg-slate-50 pb-20"><header className="border-b border-slate-200 bg-white"><div className="flex min-h-[82px] items-center justify-between gap-4 px-5 lg:px-8"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Planvesto</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">Dashboard</h1></div><InvestorProfileMenu/></div></header><div className="mx-auto max-w-6xl space-y-8 p-5 lg:p-8">
+    <section><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Your Financial State</p><div className="mt-3 rounded-3xl bg-slate-950 p-7 text-white shadow-lg lg:p-9"><p className="text-sm font-semibold text-slate-300">Net Worth</p><p className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">{shortMoney(fs.net_worth.value)}</p><div className="mt-6 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3"><div><p className="text-xs text-slate-400">Assets</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_assets.value)}</p></div><div><p className="text-xs text-slate-400">Liabilities</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_liabilities.value)}</p></div><div><p className="text-xs text-slate-400">Available Amount for Future</p><p className="mt-1 text-lg font-bold">{shortMoney(surplus)}</p></div></div></div></section>
+    <section className="grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Assets</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">What you own</h2></div><button type="button" onClick={() => setDetail("assets")} className="text-xs font-bold text-teal-700">View →</button></div><div className="mt-6"><Donut value={fs.total_assets.value ?? 0} total={(fs.total_assets.value ?? 0) + (fs.total_liabilities.value ?? 0)} label="Share of position"/></div><div className="mt-6 space-y-3">{fs.asset_breakdown.map(x => <div key={x.asset_id}><div className="flex justify-between text-sm"><span className="font-semibold text-slate-700">{x.name || "Asset"}</span><span className="font-bold text-slate-900">{shortMoney(x.current_value)}</span></div><div className="mt-1 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${maxAsset ? x.current_value / maxAsset * 100 : 0}%` }}/></div></div>)}</div></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Liabilities</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">What you owe</h2></div><button type="button" onClick={() => setDetail("liabilities")} className="text-xs font-bold text-teal-700">View →</button></div><div className="mt-6"><Donut value={fs.total_liabilities.value ?? 0} total={(fs.total_assets.value ?? 0) + (fs.total_liabilities.value ?? 0)} label="Share of position" dark/></div><div className="mt-6 space-y-3">{fs.liability_breakdown.map(x => <div key={x.liability_id}><div className="flex justify-between text-sm"><span className="font-semibold text-slate-700">{x.name || "Liability"}</span><span className="font-bold text-slate-900">{shortMoney(x.outstanding_amount)}</span></div><div className="mt-1 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-700" style={{ width: `${maxLiability ? x.outstanding_amount / maxLiability * 100 : 0}%` }}/></div></div>)}</div></div></section>
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Cash Flow</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">Income, Expenses & Future Capacity</h2><div className="mt-7"><FlowBars income={income} expenses={expenses} surplus={surplus}/></div></section>
+    <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Your Goals</p><h2 className="mt-1 text-2xl font-extrabold text-slate-950">Goals</h2></div><Link href="/investor/goal-planner" className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">Add Goal +</Link></div>{goalSection === "empty" && <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h3 className="text-xl font-extrabold text-slate-950">No goals yet</h3><p className="mt-2 text-sm text-slate-500">Create your first goal and Planvesto will bring it into your financial picture.</p></div>}{goalSection === "single" && <div className="mx-auto max-w-2xl"><GoalCard goal={data.goals[0]} onClick={() => {setSelectedGoal(data.goals[0]);setDetail("goal");}}/></div>}{goalSection === "cards" && <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data.goals.map(goal => <GoalCard key={goal.goal_id} goal={goal} onClick={() => {setSelectedGoal(goal);setDetail("goal");}}/>)}</div>}{goalSection === "timeline" && <GoalTimeline goals={data.goals} onClick={goal => {setSelectedGoal(goal);setDetail("goal");}}/>}</section>
+  </div>{detail && <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 p-4 sm:items-center" onClick={() => setDetail(null)}><div className="max-h-[85vh] w-full max-w-lg overflow-auto rounded-3xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}><div className="flex items-center justify-between"><h2 className="text-xl font-extrabold text-slate-950">{detail === "goal" ? selectedGoal?.goal_name : detail === "assets" ? "Assets" : "Liabilities"}</h2><button type="button" onClick={() => setDetail(null)} className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">×</button></div>{detail === "goal" && selectedGoal && <div className="mt-5 space-y-4"><GoalVisual goal={selectedGoal}/><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Target</p><p className="mt-1 font-extrabold">{shortMoney(selectedGoal.target_amount)}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Target date</p><p className="mt-1 font-extrabold">{selectedGoal.target_date ? new Date(selectedGoal.target_date).toLocaleDateString("en-IN", {month:"short",year:"numeric"}) : "—"}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Coverage</p><p className="mt-1 font-extrabold">{selectedGoal.coverage_percentage == null ? "—" : `${selectedGoal.coverage_percentage}%`}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">Status</p><p className="mt-1 font-extrabold">{selectedGoal.funding_status ?? "Defined"}</p></div></div></div>}{detail === "assets" && <div className="mt-5 space-y-3">{fs.asset_breakdown.map(x => <div key={x.asset_id} className="flex justify-between rounded-2xl bg-slate-50 p-4"><span className="font-semibold">{x.name || "Asset"}</span><span className="font-extrabold">{shortMoney(x.current_value)}</span></div>)}</div>}{detail === "liabilities" && <div className="mt-5 space-y-3">{fs.liability_breakdown.map(x => <div key={x.liability_id} className="flex justify-between rounded-2xl bg-slate-50 p-4"><span className="font-semibold">{x.name || "Liability"}</span><span className="font-extrabold">{shortMoney(x.outstanding_amount)}</span></div>}</div>}</div></div>}</main>;
 }
