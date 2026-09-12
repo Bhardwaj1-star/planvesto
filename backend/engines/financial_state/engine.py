@@ -5,7 +5,7 @@ from typing import Any
 
 from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
 from models.financial_state import FinancialState, Metric
-from rules.financial_state import MISSING_INPUT, cash_flow_ratio, savings_investment_rate
+from rules.financial_state import MISSING_INPUT, cash_flow_ratio, required_safety_reserve_months, savings_investment_rate
 
 
 class FinancialStateEngine:
@@ -29,6 +29,12 @@ class FinancialStateEngine:
         savings = savings_investment_rate(surplus_m, income.monthly) if surplus_m is not None else None
         net_worth = round_money(assets.total - liabilities.total) if assets.available and liabilities.available else None
 
+        reserve_months = None
+        reserve_amount = None
+        if cfr is not None:
+            reserve_months = required_safety_reserve_months(cfr)
+            reserve_amount = round_money(expenses.monthly * reserve_months)
+
         return FinancialState(
             scope=scope, planning_unit_id=planning_unit_id, investor_id=investor_id,
             income_monthly=Metric(value=round_money(income.monthly), available=income.available, reason=income.reason),
@@ -50,6 +56,8 @@ class FinancialStateEngine:
             liability_allocation=liabilities.allocation,
             emi_burden_monthly=Metric(value=liabilities.emi, available=liabilities.emi_available, reason=None if liabilities.emi_available else MISSING_INPUT),
             net_worth=self._metric(net_worth),
+            safety_reserve_months=Metric(value=reserve_months, available=reserve_months is not None, reason=None if reserve_months is not None else MISSING_INPUT),
+            safety_reserve_required_amount=Metric(value=reserve_amount, available=reserve_amount is not None, reason=None if reserve_amount is not None else MISSING_INPUT),
         )
 
     @staticmethod
