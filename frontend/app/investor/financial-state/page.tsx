@@ -12,7 +12,7 @@ function AllocationDonut({ items, total, label, dark = false }: { items: { name?
   const first = items[0]?.value ?? 0;
   const pct = total > 0 ? Math.min(Math.max(first / total, 0), 1) : 0;
   const deg = pct * 360;
-  const gradient = dark ? `conic-gradient(#334155 ${deg}deg, #e2e8f0 ${deg}deg)` : `conic-gradient(#0f766e ${deg}deg, #e2e8f0 ${deg}deg)`;
+  const gradient = `conic-gradient(var(${dark ? '--pv-chart-active-alt' : '--pv-chart-active'}) ${deg}deg, var(--pv-chart-track) ${deg}deg)`;
   return <div className="flex items-center gap-5"><div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: gradient }}><div className="absolute inset-3 flex items-center justify-center rounded-full bg-white text-center"><span className="text-sm font-extrabold text-slate-900">{Math.round(pct * 100)}%</span></div></div><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-xl font-extrabold text-slate-950">{shortMoney(total)}</p></div></div>;
 }
 

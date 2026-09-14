@@ -247,7 +247,7 @@ export default function MoneywheelPage() {
           <>
             <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
               <div className="grid items-center gap-8 lg:grid-cols-[280px_1fr]">
-                <div className="mx-auto flex h-64 w-64 items-center justify-center rounded-full p-4" style={{ background: "conic-gradient(from -90deg, #0f766e 0deg 51.43deg, #0f172a 51.43deg 102.86deg, #334155 102.86deg 154.29deg, #64748b 154.29deg 205.72deg, #0d9488 205.72deg 257.15deg, #475569 257.15deg 308.58deg, #94a3b8 308.58deg 360deg)" }}>
+                <div className="mx-auto flex h-64 w-64 items-center justify-center rounded-full p-4" style={{ background: "conic-gradient(from -90deg, var(--pv-wheel-1) 0deg 51.43deg, var(--pv-wheel-2) 51.43deg 102.86deg, var(--pv-wheel-3) 102.86deg 154.29deg, var(--pv-wheel-4) 154.29deg 205.72deg, var(--pv-wheel-5) 205.72deg 257.15deg, var(--pv-wheel-6) 257.15deg 308.58deg, var(--pv-wheel-7) 308.58deg 360deg)" }}>
                   <div className="flex h-44 w-44 flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Moneywheel</p>
                     <p className="mt-2 text-2xl font-extrabold text-slate-900">Financial</p>
