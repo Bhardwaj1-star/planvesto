@@ -205,42 +205,59 @@ body {
 
 /* -- Design Tokens: Light -- */
 [data-theme="light"] {
-  --pv-bg-base: #f6f8fb;
-  --pv-bg-surface: #ffffff;
-  --pv-bg-sidebar: #ffffff;
-  --pv-bg-card: #ffffff;
-  --pv-bg-elevated: #f8fafc;
-  --pv-bg-interactive: #f1f5f9;
-  --pv-text-primary: #0f172a;
+  --pv-light-bg-base: #F4F7FA;
+  --pv-light-bg-sidebar: #E8F0F5;
+  --pv-light-bg-header: #FFFFFF;
+  --pv-light-bg-card: #FFFFFF;
+  --pv-light-bg-elevated: #F8FAFC;
+  --pv-light-bg-interactive: #EEF5F7;
+  --pv-light-text-primary: #0B1F33;
+  --pv-light-text-secondary: #475569;
+  --pv-light-text-muted: #64748B;
+  --pv-light-navy: #0B1F33;
+  --pv-light-teal: #0F766E;
+  --pv-light-teal-accent: #14B8A6;
+  --pv-light-border: #D9E2EA;
+  --pv-light-positive: #047857;
+  --pv-light-negative: #DC2626;
+  --pv-light-warning: #B45309;
+
+  --pv-bg-base: #F4F7FA;
+  --pv-bg-surface: #FFFFFF;
+  --pv-bg-sidebar: #E8F0F5;
+  --pv-bg-card: #FFFFFF;
+  --pv-bg-elevated: #F8FAFC;
+  --pv-bg-interactive: #EEF5F7;
+  --pv-text-primary: #0B1F33;
   --pv-text-secondary: #475569;
-  --pv-text-tertiary: #64748b;
-  --pv-text-disabled: #94a3b8;
-  --pv-text-value: #0f172a;
-  --pv-accent: #115E59;
+  --pv-text-tertiary: #64748B;
+  --pv-text-disabled: #94A3B8;
+  --pv-text-value: #0B1F33;
+  --pv-accent: #0F766E;
   --pv-accent-muted: #0F766E;
-  --pv-accent-surface: rgba(20, 184, 166, 0.06);
-  --pv-positive: #059669;
-  --pv-positive-surface: #ecfdf5;
-  --pv-negative: #dc2626;
-  --pv-negative-surface: #fef2f2;
-  --pv-warning: #d97706;
-  --pv-warning-surface: #fffbeb;
-  --pv-border-subtle: #e2e8f0;
-  --pv-border-default: #cbd5e1;
-  --pv-border-strong: #94a3b8;
+  --pv-accent-surface: #F0FDFA;
+  --pv-positive: #047857;
+  --pv-positive-surface: #ECFDF5;
+  --pv-negative: #DC2626;
+  --pv-negative-surface: #FEF2F2;
+  --pv-warning: #B45309;
+  --pv-warning-surface: #FFFBEB;
+  --pv-border-subtle: #D9E2EA;
+  --pv-border-default: #D9E2EA;
+  --pv-border-strong: #CBD5E1;
   --pv-border-focus: rgba(20, 184, 166, 0.40);
-  --pv-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --pv-shadow-elevated: 0 20px 60px rgba(11, 31, 51, 0.08);
-  --pv-chart-active: #0f766e;
-  --pv-chart-track: #e2e8f0;
+  --pv-shadow-card: 0 2px 10px rgba(11, 31, 51, 0.05);
+  --pv-shadow-elevated: 0 12px 32px rgba(11, 31, 51, 0.10);
+  --pv-chart-active: #0F766E;
+  --pv-chart-track: #E2E8F0;
   --pv-chart-active-alt: #334155;
-  --pv-wheel-1: #0f766e;
-  --pv-wheel-2: #0f172a;
-  --pv-wheel-3: #334155;
-  --pv-wheel-4: #64748b;
-  --pv-wheel-5: #0d9488;
-  --pv-wheel-6: #475569;
-  --pv-wheel-7: #94a3b8;
+  --pv-wheel-1: #0F766E;
+  --pv-wheel-2: #0B1F33;
+  --pv-wheel-3: #1E293B;
+  --pv-wheel-4: #475569;
+  --pv-wheel-5: #14B8A6;
+  --pv-wheel-6: #64748B;
+  --pv-wheel-7: #94A3B8;
 }
 
 /* -- Design Tokens: Dark -- */
@@ -298,9 +315,407 @@ body {
               border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* =======================================================
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+   Planvesto Light Design System — Scoped to [data-theme="light"]
+   Only applies inside the investor layout wrapper.
+   Public pages are never affected.
+   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  */
+
+/* ── 1. Page-level Canvas Background (#F4F7FA) ── */
+[data-theme="light"] {
+  background-color: var(--pv-light-bg-base);
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] main {
+  background-color: var(--pv-light-bg-base);
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] .bg-\[\#f6f8fb\],
+[data-theme="light"] main.bg-slate-50 {
+  background-color: var(--pv-light-bg-base);
+}
+
+/* ── 2. Sidebar (#E8F0F5) — Distinct Blue-Grey Surface ── */
+[data-theme="light"] aside,
+[data-theme="light"] aside.bg-white {
+  background-color: var(--pv-light-bg-sidebar);
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] aside .border-slate-200 {
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] aside a.text-slate-600,
+[data-theme="light"] aside a.text-slate-500 {
+  color: var(--pv-light-text-secondary);
+}
+
+[data-theme="light"] aside a.text-slate-600:hover,
+[data-theme="light"] aside a.text-slate-500:hover {
+  background-color: var(--pv-light-bg-interactive);
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] aside button {
+  color: var(--pv-light-text-secondary);
+}
+
+[data-theme="light"] aside button:hover {
+  background-color: var(--pv-light-bg-interactive);
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] aside .text-navy-900 {
+  color: var(--pv-light-text-primary);
+}
+
+/* Active navigation item in sidebar with teal indicator */
+[data-theme="light"] aside a.bg-navy-900 {
+  background-color: var(--pv-light-navy);
+  color: #FFFFFF;
+  box-shadow: inset 3px 0 0 0 var(--pv-light-teal-accent), 0 2px 8px rgba(11, 31, 51, 0.12);
+}
+
+[data-theme="light"] aside a.bg-navy-900.text-white {
+  color: #FFFFFF;
+}
+
+[data-theme="light"] aside ::-webkit-scrollbar-track {
+  background: var(--pv-light-bg-sidebar);
+}
+
+/* ── 3. Header (#FFFFFF) ── */
+[data-theme="light"] header,
+[data-theme="light"] header.bg-white {
+  background-color: var(--pv-light-bg-header);
+  border-bottom: 1px solid var(--pv-light-border);
+}
+
+[data-theme="light"] header h1,
+[data-theme="light"] header .text-slate-950,
+[data-theme="light"] header .text-slate-900 {
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] header .text-teal-700 {
+  color: var(--pv-light-teal);
+}
+
+/* ── 4. Content Cards (#FFFFFF) ── */
+[data-theme="light"] .bg-white {
+  background-color: var(--pv-light-bg-card);
+}
+
+[data-theme="light"] .border-slate-200 {
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] .border-slate-100 {
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] .border-slate-200\/70,
+[data-theme="light"] .border-slate-200\/80 {
+  border-color: rgba(217, 226, 234, 0.8);
+}
+
+[data-theme="light"] .border-slate-300 {
+  border-color: #CBD5E1;
+}
+
+[data-theme="light"] .shadow-sm {
+  box-shadow: 0 2px 10px rgba(11, 31, 51, 0.05);
+}
+
+[data-theme="light"] .hover\:border-teal-300:hover,
+[data-theme="light"] .hover\:border-slate-300:hover {
+  border-color: #99D5D0;
+}
+
+[data-theme="light"] .hover\:shadow-lg:hover,
+[data-theme="light"] .hover\:shadow-md:hover {
+  box-shadow: 0 8px 24px rgba(11, 31, 51, 0.08);
+}
+
+/* ── 5. Inner / Elevated Panels (#F8FAFC) ── */
+[data-theme="light"] .bg-slate-50 {
+  background-color: var(--pv-light-bg-elevated);
+}
+
+[data-theme="light"] .bg-slate-50\/70 {
+  background-color: rgba(248, 250, 252, 0.7);
+}
+
+[data-theme="light"] .bg-slate-100 {
+  background-color: var(--pv-light-bg-interactive);
+}
+
+[data-theme="light"] .hover\:bg-slate-50:hover {
+  background-color: var(--pv-light-bg-elevated);
+}
+
+[data-theme="light"] .hover\:bg-slate-100:hover {
+  background-color: var(--pv-light-bg-interactive);
+}
+
+/* ── 6. Net Worth / Primary Hero Card (Deep Navy Gradient) ── */
+[data-theme="light"] .rounded-3xl.bg-slate-950 {
+  background: linear-gradient(135deg, #0B1F33 0%, #123B55 100%);
+  border: 1px solid rgba(11, 31, 51, 0.12);
+  box-shadow: 0 12px 36px rgba(11, 31, 51, 0.12);
+}
+
+[data-theme="light"] .rounded-3xl.bg-slate-950 .text-slate-300 {
+  color: #94A3B8;
+}
+
+[data-theme="light"] .rounded-3xl.bg-slate-950 .border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="light"] .rounded-3xl.bg-slate-950 .text-slate-400 {
+  color: #94A3B8;
+}
+
+/* Primary buttons with bg-slate-950 stay crisp brand navy */
+[data-theme="light"] button.bg-slate-950,
+[data-theme="light"] a.bg-slate-950,
+[data-theme="light"] .inline-flex.bg-slate-950 {
+  background-color: var(--pv-light-navy);
+}
+
+/* Modal backdrop in light theme */
+[data-theme="light"] .bg-slate-950\/40 {
+  background-color: rgba(11, 31, 51, 0.40);
+}
+
+/* ── 7. Typography & Financial Number Hierarchy ── */
+[data-theme="light"] .text-slate-950 {
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] .text-slate-900 {
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] .text-slate-800 {
+  color: #1E293B;
+}
+
+[data-theme="light"] .text-slate-700 {
+  color: #334155;
+}
+
+[data-theme="light"] .text-slate-600 {
+  color: var(--pv-light-text-secondary);
+}
+
+[data-theme="light"] .text-slate-500 {
+  color: var(--pv-light-text-muted);
+}
+
+[data-theme="light"] .text-slate-400 {
+  color: #94A3B8;
+}
+
+[data-theme="light"] .text-navy-900 {
+  color: var(--pv-light-text-primary);
+}
+
+/* Teal accents */
+[data-theme="light"] .text-teal-700 {
+  color: var(--pv-light-teal);
+}
+
+[data-theme="light"] .text-teal-600 {
+  color: var(--pv-light-teal);
+}
+
+[data-theme="light"] .text-teal-900 {
+  color: var(--pv-light-text-primary);
+}
+
+/* Semantic Status Colors */
+[data-theme="light"] .text-emerald-700 {
+  color: var(--pv-light-positive);
+}
+
+[data-theme="light"] .bg-emerald-50 {
+  background-color: #ECFDF5;
+}
+
+[data-theme="light"] .border-emerald-200 {
+  border-color: #A7F3D0;
+}
+
+[data-theme="light"] .text-amber-700,
+[data-theme="light"] .text-amber-800 {
+  color: var(--pv-light-warning);
+}
+
+[data-theme="light"] .bg-amber-50 {
+  background-color: #FFFBEB;
+}
+
+[data-theme="light"] .border-amber-200 {
+  border-color: #FDE68A;
+}
+
+[data-theme="light"] .text-red-700,
+[data-theme="light"] .text-red-600 {
+  color: var(--pv-light-negative);
+}
+
+[data-theme="light"] .bg-red-50 {
+  background-color: #FEF2F2;
+}
+
+[data-theme="light"] .border-red-200 {
+  border-color: #FECACA;
+}
+
+[data-theme="light"] .bg-teal-50 {
+  background-color: #F0FDFA;
+}
+
+[data-theme="light"] .border-teal-200 {
+  border-color: #99F6E4;
+}
+
+[data-theme="light"] .bg-teal-700 {
+  background-color: var(--pv-light-teal);
+}
+
+/* Progress bar track */
+[data-theme="light"] .rounded-full.bg-slate-100 {
+  background-color: #E2E8F0;
+}
+
+/* ── 8. Tables ── */
+[data-theme="light"] table {
+  background-color: #FFFFFF;
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] thead {
+  background-color: var(--pv-light-bg-elevated);
+}
+
+[data-theme="light"] th {
+  color: var(--pv-light-text-muted);
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] td {
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] tr:hover {
+  background-color: var(--pv-light-bg-interactive);
+}
+
+/* ── 9. Forms & Inputs ── */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: #FFFFFF;
+  color: var(--pv-light-text-primary);
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94A3B8;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  border-color: var(--pv-light-teal-accent);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+  outline: none;
+}
+
+[data-theme="light"] input:disabled,
+[data-theme="light"] select:disabled,
+[data-theme="light"] textarea:disabled {
+  background-color: var(--pv-light-bg-elevated);
+  color: #94A3B8;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+}
+
+/* Focus rings */
+[data-theme="light"] .focus\:ring-teal-100:focus {
+  --tw-ring-color: rgba(20, 184, 166, 0.20);
+}
+
+[data-theme="light"] .focus\:ring-teal-600:focus {
+  --tw-ring-color: rgba(20, 184, 166, 0.40);
+}
+
+/* ── 10. Profile Dropdown Menu ── */
+[data-theme="light"] [role="menu"] {
+  background-color: #FFFFFF;
+  border-color: var(--pv-light-border);
+  box-shadow: 0 12px 32px rgba(11, 31, 51, 0.10);
+}
+
+[data-theme="light"] [role="menu"] .bg-slate-50 {
+  background-color: var(--pv-light-bg-elevated);
+}
+
+[data-theme="light"] [role="menu"] .border-slate-100 {
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] [role="menuitem"]:hover {
+  background-color: var(--pv-light-bg-interactive);
+}
+
+[data-theme="light"] [role="menuitem"] p.text-slate-900,
+[data-theme="light"] [role="menuitem"] p.text-slate-950 {
+  color: var(--pv-light-text-primary);
+}
+
+[data-theme="light"] [role="menuitem"] p.text-slate-400 {
+  color: var(--pv-light-text-muted);
+}
+
+[data-theme="light"] button[aria-label="User profile menu"] {
+  background-color: #FFFFFF;
+  border-color: var(--pv-light-border);
+}
+
+[data-theme="light"] button[aria-label="User profile menu"]:hover {
+  background-color: var(--pv-light-bg-elevated);
+  border-color: #CBD5E1;
+}
+
+/* ── 11. Empty States & Scrollbars ── */
+[data-theme="light"] .border-dashed {
+  border-color: #CBD5E1;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--pv-light-bg-base);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
    Dark Mode Overrides
-   ======================================================= */
+   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  */
 
 /* -- Page-level -- */
 [data-theme="dark"] {
