@@ -95,16 +95,15 @@ export default function OnboardingShell({
           {/* Header Action: Exit & Progress */}
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs font-bold text-navy-900">
-                Step {currentStep} of {totalSteps}
-              </span>
-              <span className="text-[11px] text-slate-500">{progressPercent}% complete</span>
+              <span className="text-xs font-bold text-navy-900">Step {currentStep} of {totalSteps}</span>
+              <span className="text-[11px] text-slate-500">Progress saved as you continue</span>
             </div>
             <Link
               href="/investor/financial-state"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-navy-900"
+              title="Completed steps are saved. Continue to save the current step before exiting."
             >
-              <span>Save &amp; Exit</span>
+              <span>Exit onboarding</span>
             </Link>
           </div>
         </div>
