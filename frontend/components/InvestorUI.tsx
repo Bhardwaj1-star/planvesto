@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export function InvestorCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={"rounded-3xl border border-slate-200 bg-white shadow-sm " + className}>{children}</section>;
@@ -19,7 +19,7 @@ export function InvestorPageHeader({
   );
 }
 
-export function InvestorButton({ children, variant = "primary", className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { className?: string; variant?: "primary" | "secondary" }) {
+export function InvestorButton({ children, variant = "primary", className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { className?: string; variant?: "primary" | "secondary" }) {
   const base = "inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
   const tone = variant === "primary" ? "bg-navy-900 text-white hover:bg-slate-800" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50";
   return <button {...props} className={base + " " + tone + " " + className}>{children}</button>;
