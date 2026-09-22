@@ -27,6 +27,18 @@ class StrategyVersionRepository:
         rows = response.data or []
         return StrategyVersion.model_validate(rows[0]) if rows else None
 
+    def get_by_id(self, planning_unit_id: str, strategy_version_id: str) -> StrategyVersion | None:
+        response = (
+            self.client.table(self.table_name)
+            .select("*")
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("strategy_version_id", strategy_version_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        return StrategyVersion.model_validate(rows[0]) if rows else None
+
     def get_version(self, planning_unit_id: str, strategy_id: str, version: int) -> StrategyVersion | None:
         response = (
             self.client.table(self.table_name)
