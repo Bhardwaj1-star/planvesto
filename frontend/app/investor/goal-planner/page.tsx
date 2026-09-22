@@ -238,7 +238,10 @@ export default function GoalPlannerPage() {
 
             if (resp.ok) {
               const dg: DefinedGoal = await resp.json();
-              definedGoalsList.push(dg);
+              // Cancelled goals remain in history, but must not appear in the active Goal Planner.
+              if (dg.status !== "Cancelled") {
+                definedGoalsList.push(dg);
+              }
             } else if (resp.status === 404) {
               // Legacy goal without DefinedGoal snapshot: initialize it via backend
               const [yearStr, monthStr] = (g.target_date || "").split("-");
@@ -605,6 +608,9 @@ export default function GoalPlannerPage() {
       setGoals((prev) =>
         prev.map((g) => (g.goal_id === updatedGoal.goal_id ? updatedGoal : g))
       );
+      // Cancelled goals stay in history but are removed from the active planner immediately.
+      setGoals((prev) => prev.filter((g) => g.goal_id !== goal.goal_id));
+
       setSuccessMessage(`Goal "${goal.goal_name}" marked as Cancelled (v${updatedGoal.version}).`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unable to cancel goal.");
