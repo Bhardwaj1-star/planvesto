@@ -24,6 +24,12 @@ class ActionPlanItem(BaseModel):
 
     @model_validator(mode="after")
     def validate_required_fields(self) -> "ActionPlanItem":
+        if not self.planning_unit_id.strip():
+            raise ValueError("planning_unit_id cannot be empty")
+        if not self.strategy_version_id.strip():
+            raise ValueError("strategy_version_id cannot be empty")
+        if not self.title.strip():
+            raise ValueError("title cannot be empty")
         return self
 
 
