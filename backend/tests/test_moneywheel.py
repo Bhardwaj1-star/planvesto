@@ -78,6 +78,36 @@ def test_moneywheel_repository_save_snapshot():
     mock_table.insert.return_value.select.assert_called_once_with("*")
 
 
+def test_post_moneywheel_calculate_uses_server_financial_state():
+    from unittest.mock import MagicMock, patch
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    fake_result = MoneywheelEngine().build(_input())
+    fake_service = MagicMock()
+    fake_service.calculate_from_financial_state.return_value = fake_result
+    fake_state = MagicMock()
+
+    with patch("api.moneywheel.authenticate_user", return_value="user-123"), \\
+         patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \\
+         patch("api.moneywheel.FinancialStateService") as mock_state_service, \\
+         patch("api.moneywheel._service", return_value=fake_service):
+        mock_state_service.return_value.build.return_value = fake_state
+        response = client.post(
+            "/api/moneywheel/calculate",
+            headers={"Authorization": "Bearer test-token"},
+            json={
+                "planning_unit_id": "pu-1",
+                "financial_state_snapshot": {"net_worth": {"value": 999999999}},
+            },
+        )
+
+    assert response.status_code == 200
+    mock_state_service.return_value.build.assert_called_once_with("pu-1", "family")
+    fake_service.calculate_from_financial_state.assert_called_once_with(fake_state)
+
+
 def test_post_moneywheel_calculate_success():
     from unittest.mock import patch, MagicMock
     from fastapi.testclient import TestClient
