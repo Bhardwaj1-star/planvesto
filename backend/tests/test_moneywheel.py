@@ -89,9 +89,9 @@ def test_post_moneywheel_calculate_uses_server_financial_state():
     fake_service.calculate_from_financial_state.return_value = fake_result
     fake_state = MagicMock()
 
-    with patch("api.moneywheel.authenticate_user", return_value="user-123"), \\
-         patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \\
-         patch("api.moneywheel.FinancialStateService") as mock_state_service, \\
+    with patch("api.moneywheel.authenticate_user", return_value="user-123"), \
+         patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \
+         patch("api.moneywheel.FinancialStateService") as mock_state_service, \
          patch("api.moneywheel._service", return_value=fake_service):
         mock_state_service.return_value.build.return_value = fake_state
         response = client.post(
