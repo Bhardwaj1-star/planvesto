@@ -40,6 +40,11 @@ class DashboardService:
         for summary in self.goal_repository.list_goals(planning_unit_id):
             goal_id = summary.get("goal_id")
             defined = self.goal_repository.get_latest_defined_goal(planning_unit_id, goal_id) if goal_id else None
+
+            # Cancelled goals remain available through goal history, but they are not
+            # part of the active dashboard journey or goal count.
+            if defined and defined.status == "Cancelled":
+                continue
             if defined:
                 target = float(defined.future_target)
                 projected = float(defined.projected_mapped_asset_value)
