@@ -24,6 +24,8 @@ class ActionPlanService:
         deadline: str | None = None,
         planned_impact: dict[str, Any] | None = None,
     ) -> ActionPlanItem:
+        if not self.repository.is_strategy_version_approved(planning_unit_id, strategy_version_id):
+            raise ValueError("Implementation actions can only be created for an approved Strategy Version")
         return self.repository.save_action(ActionPlanItem(
             planning_unit_id=planning_unit_id,
             strategy_version_id=strategy_version_id,
