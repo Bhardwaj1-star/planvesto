@@ -929,6 +929,7 @@ export default function GoalPlannerPage() {
         )}
 
         {/* 12. GOAL FORM UX (DefinedGoal Compliant) */}
+        {isFormOpen && (
 <section
             aria-labelledby="goal-form-heading"
             className="rounded-[28px] border border-slate-200 bg-white shadow-soft"
