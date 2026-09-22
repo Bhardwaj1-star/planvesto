@@ -20,6 +20,16 @@ def get_strategy_version_history(strategy_id: str, planning_unit_id: str = Query
     return _repository().get_history(planning_unit_id, strategy_id)
 
 
+@router.get("/versions/by-id/{strategy_version_id}", response_model=StrategyVersion)
+def get_strategy_version_by_id(strategy_version_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    result = _repository().get_by_id(planning_unit_id, strategy_version_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Strategy Version not found")
+    return result
+
+
 @router.get("/versions/{strategy_id}/{version}", response_model=StrategyVersion)
 def get_strategy_version(strategy_id: str, version: int, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)

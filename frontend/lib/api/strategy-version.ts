@@ -37,6 +37,12 @@ async function request<T>(path: string): Promise<T> {
   return body as T;
 }
 
+export function getStrategyVersionById(planningUnitId: string, strategyVersionId: string) {
+  return request<StrategyVersion>(
+    `/api/strategy/versions/by-id/${encodeURIComponent(strategyVersionId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`,
+  );
+}
+
 export function getStrategyVersionHistory(planningUnitId: string, strategyId: string) {
   return request<StrategyVersion[]>(`/api/strategy/versions/${encodeURIComponent(strategyId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
