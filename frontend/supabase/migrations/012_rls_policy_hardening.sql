@@ -1,0 +1,2 @@
+-- RLS policy hardening: scope exposed policies to authenticated users and evaluate auth.uid() once per statement.
+-- This migration is intentionally limited to policy role/performance hardening; ownership predicates are unchanged.
