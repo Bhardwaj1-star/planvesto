@@ -12,12 +12,12 @@ const navigation: NavGroup[] = [
   {
     label: "Plan",
     items: [
-      { label: "Financial Position", href: "/investor/moneywheel" },
+      { label: "Moneywheel", href: "/investor/moneywheel" },
       { label: "Budgeting", href: "/investor/budgeting" },
-      { label: "Goals", href: "/investor/goal-planner" },
+      { label: "Goal Planner", href: "/investor/goal-planner" },
     ],
   },
-  { label: "Decide", items: [{ label: "Strategy", href: "/investor/strategy-builder" }] },
+  { label: "Decide", items: [{ label: "Strategy Builder", href: "/investor/strategy-builder" }] },
   { label: "Implement", items: [{ label: "Action Plan", href: "/investor/action-plan" }] },
   {
     label: "Review",
@@ -31,9 +31,10 @@ const navigation: NavGroup[] = [
 ];
 
 const strategyRoutes = [
-  { label: "Build & Compare", href: "/investor/strategy-builder" },
+  { label: "Strategy Builder", href: "/investor/strategy-builder" },
   { label: "Custom Scenarios", href: "/investor/strategy-scenarios" },
-  { label: "Approval", href: "/investor/strategy-approval" },
+  { label: "Strategy Approval", href: "/investor/strategy-approval" },
+  { label: "Strategy Edit", href: "/investor/strategy-edit" },
 ];
 
 function isItemActive(pathname: string | null, item: NavItem) {
@@ -78,7 +79,7 @@ export default function InvestorSidebar() {
               {!isCollapsed && <h2 className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{group.label}</h2>}
               <div className="space-y-1">
                 {group.items.map((item) => {
-                  const active = item.label === "Strategy" ? strategyContextActive : isItemActive(pathname, item);
+                  const active = item.label === "Strategy Builder" ? strategyContextActive : isItemActive(pathname, item);
                   return (
                     <div key={item.href}>
                       <Link
@@ -95,7 +96,7 @@ export default function InvestorSidebar() {
                         {isCollapsed && <span aria-hidden="true" className="text-base">{item.label.slice(0, 1)}</span>}
                       </Link>
 
-                      {item.label === "Strategy" && strategyContextActive && !isCollapsed && (
+                      {item.label === "Strategy Builder" && strategyContextActive && !isCollapsed && (
                         <div className="ml-3 mt-1 space-y-1 border-l border-slate-200 pl-3" aria-label="Strategy workflow">
                           {strategyRoutes.map((route) => {
                             const routeActive = pathname === route.href || pathname?.startsWith(route.href + "/");
