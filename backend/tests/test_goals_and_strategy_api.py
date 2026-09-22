@@ -3,6 +3,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
+from models.orchestration import ModuleAvailability, PlanningContext, PlanningOrchestrationContext
 
 client = TestClient(app)
 
@@ -126,7 +127,14 @@ class TestDashboardAuthorization:
         self, mock_build, mock_auth, mock_pu, mock_investor
     ):
         mock_auth.return_value = "user-1"
-        mock_build.return_value = {}
+        mock_build.return_value = PlanningOrchestrationContext(
+            planning_context=PlanningContext(planning_unit_id="pu-1", scope="individual", investor_id="investor-1", goal_version_ids=["defined-goal-1", "defined-goal-2"], strategy_version_id="strategy-version-1"),
+            financial_state=ModuleAvailability(available=False),
+            goals=ModuleAvailability(available=True),
+            strategy=ModuleAvailability(available=True),
+            moneywheel=ModuleAvailability(available=False),
+            action_plan=ModuleAvailability(available=True),
+        )
         r = client.get(
             "/api/dashboard",
             params={
