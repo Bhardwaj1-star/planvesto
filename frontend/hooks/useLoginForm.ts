@@ -1,17 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-
-function getSafeRedirect(value: string | null): string {
-  if (!value) return "/investor";
-
-  try {
-    const url = new URL(value, window.location.origin);
-    if (url.origin !== window.location.origin) return "/investor";
-    return url.pathname + url.search + url.hash;
-  } catch {
-    return "/investor";
-  }
-}
+import { getSafeRedirect } from "../lib/safe-redirect";
 
 export function useLoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);

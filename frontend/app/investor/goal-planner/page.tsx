@@ -144,7 +144,7 @@ export default function GoalPlannerPage() {
   const [formData, setFormData] = useState<GoalFormData>(createEmptyForm());
   const [previewResult, setPreviewResult] = useState<DefinedGoal | null>(null);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   // 1. Initial Load: Authenticate, resolve planning unit, load assets & DefinedGoals
   useEffect(() => {
@@ -153,6 +153,7 @@ export default function GoalPlannerPage() {
     async function loadData() {
       try {
         setIsLoading(true);
+        if (!backendUrl) throw new Error("Backend URL is not configured.");
         setError(null);
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
