@@ -38,10 +38,22 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
 
         liabilities = _metric(context, "total_liabilities")
         surplus = _metric(context, "investable_surplus_monthly")
-        if strategy.strategy_id == "strat-debt-reduction" and liabilities is not None and liabilities <= 0:
-            continue
-        if strategy.strategy_id == "strat-credit-utilisation" and surplus is not None and surplus <= 0:
-            continue
+        emi = _metric(context, "emi_burden_monthly")
+        if strategy.strategy_id == "strat-debt-reduction":
+            # Debt reduction is only a financially grounded strategy when the
+            # household actually has debt and its servicing burden is known.
+            if liabilities is not None and liabilities <= 0:
+                continue
+            if liabilities is not None and emi is None:
+                continue
+        if strategy.strategy_id == "strat-credit-utilisation":
+            # Credit is only considered when there is positive surplus and the
+            # existing debt-service burden is known. Unknown cash-flow capacity
+            # must not be treated as affordability.
+            if surplus is not None and surplus <= 0:
+                continue
+            if surplus is not None and emi is None:
+                continue
         applicable.append(strategy)
     return applicable
 

@@ -39,6 +39,40 @@ class TestStrategyApplicability:
         strats = filter_applicable_strategies("")
         assert len(strats) == 0
 
+    def test_debt_reduction_requires_known_debt_service_context(self):
+        goal = _make_goal()
+        without_emi = filter_applicable_strategies(
+            defined_goal=goal,
+            financial_context={"total_liabilities": 500000, "investable_surplus_monthly": 30000},
+        )
+        with_emi = filter_applicable_strategies(
+            defined_goal=goal,
+            financial_context={
+                "total_liabilities": 500000,
+                "investable_surplus_monthly": 30000,
+                "emi_burden_monthly": {"value": 12000, "available": True},
+            },
+        )
+        assert "strat-debt-reduction" not in {s.strategy_id for s in without_emi}
+        assert "strat-debt-reduction" in {s.strategy_id for s in with_emi}
+
+    def test_credit_utilisation_requires_known_debt_service_context(self):
+        goal = _make_goal(goal_type="Home Purchase")
+        without_emi = filter_applicable_strategies(
+            defined_goal=goal,
+            financial_context={"investable_surplus_monthly": 30000},
+        )
+        with_emi = filter_applicable_strategies(
+            defined_goal=goal,
+            financial_context={
+                "investable_surplus_monthly": 30000,
+                "emi_burden_monthly": {"value": 12000, "available": True},
+            },
+        )
+        assert "strat-credit-utilisation" not in {s.strategy_id for s in without_emi}
+        assert "strat-credit-utilisation" in {s.strategy_id for s in with_emi}
+
+
     def test_engine_raises_error_if_priorities_missing(self):
         engine = StrategyEngine()
         goal = _make_goal()
