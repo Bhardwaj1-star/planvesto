@@ -35,7 +35,14 @@ def get_latest_financial_state_snapshot(planning_unit_id: str, scope: str = Quer
     snapshot = FinancialStateSnapshotRepository().get_latest(planning_unit_id, scope, investor_id)
     if snapshot is None:
         return FinancialStateService().build(planning_unit_id, scope, investor_id)
-    return snapshot
+    # Keep the latest-snapshot endpoint contract identical to /build: callers receive
+    # the Financial State itself, not the persistence wrapper row.
+    financial_state = dict(snapshot.get("financial_state") or {})
+    if snapshot.get("snapshot_id"):
+        financial_state["snapshot_id"] = snapshot["snapshot_id"]
+    if snapshot.get("calculated_at"):
+        financial_state["created_at"] = snapshot["calculated_at"]
+    return financial_state
 
 
 @router.get("/history/{planning_unit_id}")
