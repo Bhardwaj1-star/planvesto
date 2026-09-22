@@ -203,7 +203,7 @@ export default function StrategyScenariosPage() {
       <h2 className="text-lg font-bold">Your custom scenarios</h2>
       <p className="mt-1 text-sm text-slate-500">See what changed and the recalculated funding impact.</p>
       <div className="mt-4 space-y-4">{customScenarios.map((scenario: Scenario) => <article key={scenario.scenario_id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{scenario.scenario_name}</h3><p className="mt-1 text-xs text-slate-500">{run.applicable_strategies.find((item) => item.strategy_id === scenario.strategy_id)?.name ?? "Strategy scenario"}</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">Custom</span></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{scenario.scenario_name}</h3><p className="mt-1 text-xs text-slate-500">{run?.applicable_strategies.find((item) => item.strategy_id === scenario.strategy_id)?.name ?? "Strategy scenario"}</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">Custom</span></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">Target corpus</p><p className="mt-1 font-bold">{displayMetric(scenario.metrics.target_corpus, true)}</p></div>
           <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">Funding gap</p><p className="mt-1 font-bold">{displayMetric(scenario.metrics.funding_gap, true)}</p></div>
