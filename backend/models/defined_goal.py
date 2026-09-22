@@ -1,4 +1,4 @@
-﻿from typing import Any, Literal
+from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
@@ -40,6 +40,8 @@ class DefinedGoal(BaseModel):
     projected_mapped_asset_value: float = 0.0
     funding_gap: float
     funding_status: Literal["Shortfall", "On Track", "Overfunded"]
+    required_monthly_contribution: float = 0.0
+    funding_return_assumption: float = 0.08
     version_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
 
