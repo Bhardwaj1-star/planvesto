@@ -75,6 +75,14 @@ const PRESET_GOAL_NAMES = [
   "Other",
 ] as const;
 
+function deriveGoalType(goalName: string): GoalType {
+  const normalized = goalName.trim();
+  const aliases: Record<string, GoalType> = { "Dream Home": "Home Purchase" };
+  if (aliases[normalized]) return aliases[normalized];
+  if (goalTypes.includes(normalized as GoalType)) return normalized as GoalType;
+  return "Other";
+}
+
 function createEmptyForm(): GoalFormData {
   const nextYear = new Date().getFullYear() + 5;
   const month = String(new Date().getMonth() + 1).padStart(2, "0");
@@ -321,7 +329,7 @@ export default function GoalPlannerPage() {
       return null;
     }
 
-    const goalType = formData.goal_type || "Other";
+    const goalType = deriveGoalType(goalName);
 
     const costNum = Number(formData.today_cost);
     if (!Number.isFinite(costNum) || costNum <= 0) {
@@ -927,14 +935,14 @@ export default function GoalPlannerPage() {
         {isFormOpen && (
           <section
             aria-labelledby="goal-form-heading"
-            className="rounded-[28px] border border-teal-200 bg-teal-50/50 p-6 shadow-soft sm:p-8"
+            className="max-h-[calc(100vh-220px)] overflow-y-auto rounded-[28px] border border-teal-200 bg-teal-50/50 p-5 shadow-soft sm:p-6"
           >
-            <div className="mb-6 flex items-start justify-between gap-4 border-b border-teal-100 pb-5">
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-teal-100 pb-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
                   {formData.goal_id ? "Edit Defined Goal" : "New Defined Goal"}
                 </p>
-                <h2 id="goal-form-heading" className="mt-1 text-2xl font-extrabold text-navy-900">
+                <h2 id="goal-form-heading" className="mt-1 text-xl font-extrabold text-navy-900">
                   Configure Goal &amp; Asset Mapping
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
@@ -956,13 +964,13 @@ export default function GoalPlannerPage() {
               </div>
             )}
 
-            <div className="space-y-8">
+            <div className="space-y-5">
               {/* SECTION 1: GOAL INFORMATION */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
                   1. Goal Information
                 </h3>
-                <div className="mt-3 grid gap-5 sm:grid-cols-2">
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor="form-preset-name" className="block text-sm font-semibold text-navy-900">Goal Name</label>
                     <select
@@ -976,7 +984,7 @@ export default function GoalPlannerPage() {
                           goal_name: val === "Other" ? prev.custom_name : val,
                         }));
                       }}
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                     >
                       <option value="">Select a common goal</option>
                       {PRESET_GOAL_NAMES.map((opt) => (
@@ -1002,41 +1010,20 @@ export default function GoalPlannerPage() {
                             goal_name: e.target.value,
                           }))
                         }
-                        className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                       />
                     </div>
                   )}
 
-                  <div>
-                    <label htmlFor="form-goal-type" className="block text-sm font-semibold text-navy-900">Goal Type</label>
-                    <select
-                      id="form-goal-type"
-                      value={formData.goal_type}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          goal_type: e.target.value as GoalType,
-                        }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    >
-                      <option value="">Select category</option>
-                      {goalTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
               </div>
 
               {/* SECTION 2: GOAL COST */}
-              <div className="border-t border-teal-100 pt-6">
+              <div className="border-t border-teal-100 pt-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
                   2. Goal Cost &amp; Inflation
                 </h3>
-                <div className="mt-3 grid gap-5 sm:grid-cols-2">
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor="form-today-cost" className="block text-sm font-semibold text-navy-900">
                       Today&apos;s Cost (₹)
@@ -1055,7 +1042,7 @@ export default function GoalPlannerPage() {
                         onChange={(e) =>
                           setFormData((prev) => ({ ...prev, today_cost: e.target.value }))
                         }
-                        className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                        className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                       />
                     </div>
                   </div>
@@ -1089,103 +1076,37 @@ export default function GoalPlannerPage() {
                 </div>
               </div>
 
-              {/* SECTION 3: TIMELINE */}
-              <div className="border-t border-teal-100 pt-6">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                  3. Timeline
-                </h3>
-                <div className="mt-3 max-w-sm">
-                  <label htmlFor="form-target-date" className="block text-sm font-semibold text-navy-900">
-                    Target Month &amp; Year
-                  </label>
-                  <input
-                    id="form-target-date"
-                    type="month"
-                    value={formData.target_date}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, target_date: e.target.value }))
-                    }
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
-                  <p className="mt-1 text-xs text-slate-400">
-                    Converted to target_month and target_year for the backend Goal Engine.
-                  </p>
-                </div>
-              </div>
-
-              {/* SECTION 4: GOAL CHARACTERISTICS */}
-              <div className="border-t border-teal-100 pt-6">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                  4. Goal Characteristics
-                </h3>
-                <div className="mt-3 grid gap-5 sm:grid-cols-3">
+              {/* SECTION 3: TIMING & CHARACTERISTICS */}
+              <div className="border-t border-teal-100 pt-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">3. Timing &amp; Goal Characteristics</h3>
+                <div className="mt-2 grid gap-3 sm:grid-cols-4">
+                  <div>
+                    <label htmlFor="form-target-date" className="block text-sm font-semibold text-navy-900">Target Month &amp; Year</label>
+                    <input id="form-target-date" type="month" value={formData.target_date} onChange={(e) => setFormData((prev) => ({ ...prev, target_date: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+                  </div>
                   <div>
                     <label htmlFor="form-priority" className="block text-sm font-semibold text-navy-900">Priority</label>
-                    <select
-                      id="form-priority"
-                      value={formData.priority}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          priority: e.target.value as GoalPriority,
-                        }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    >
-                      {goalPriorities.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
+                    <select id="form-priority" value={formData.priority} onChange={(e) => setFormData((prev) => ({ ...prev, priority: e.target.value as GoalPriority }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                      {goalPriorities.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
-
                   <div>
                     <label htmlFor="form-flexibility" className="block text-sm font-semibold text-navy-900">Flexibility</label>
-                    <select
-                      id="form-flexibility"
-                      value={formData.flexibility}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          flexibility: e.target.value as GoalFlexibility,
-                        }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    >
-                      {goalFlexibilities.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
+                    <select id="form-flexibility" value={formData.flexibility} onChange={(e) => setFormData((prev) => ({ ...prev, flexibility: e.target.value as GoalFlexibility }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                      {goalFlexibilities.map((f) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </div>
-
                   <div>
                     <label htmlFor="form-status" className="block text-sm font-semibold text-navy-900">Status</label>
-                    <select
-                      id="form-status"
-                      value={formData.status}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          status: e.target.value as GoalStatus,
-                        }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    >
-                      {goalStatuses.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
+                    <select id="form-status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as GoalStatus }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                      {goalStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
                     </select>
                   </div>
                 </div>
               </div>
 
               {/* SECTION 5: ASSET MAPPING */}
-              <div className="border-t border-teal-100 pt-6">
+              <div className="border-t border-teal-100 pt-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
@@ -1238,7 +1159,7 @@ export default function GoalPlannerPage() {
               </div>
 
               {/* 8. PREVIEW / CALCULATION RESULT (Read-only) */}
-              <div className="border-t border-teal-100 pt-6">
+              <div className="border-t border-teal-100 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
@@ -1301,7 +1222,7 @@ export default function GoalPlannerPage() {
               </div>
 
               {/* Form Action Buttons */}
-              <div className="flex flex-col-reverse items-stretch gap-3 border-t border-teal-100 pt-6 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 flex flex-col-reverse items-stretch gap-3 border-t border-teal-100 bg-teal-50/95 pt-3 pb-1 backdrop-blur sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={handleCancelForm}
