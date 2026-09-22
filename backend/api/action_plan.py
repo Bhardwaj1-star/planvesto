@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, HTTPException
 
-from api.auth import authenticate_user, verify_planning_unit_ownership
+from api.auth import authenticate_user, verify_action_ownership, verify_planning_unit_ownership, verify_strategy_version_ownership
 from data.action_plan_repository import ActionPlanRepository
 from data.strategy_repository import StrategyRepository
-from models.action_plan import ActionImpactPreview, ActionPlanItem, ActionDecisionRecord
+from models.action_plan import ActionPlanItem, ActionDecisionRecord
 from schemas.action_plan import ActionCreateRequest, ActionDecisionRequest, ActionDecisionResponse
 from services.action_plan_service import ActionPlanService
 
@@ -24,40 +24,36 @@ def list_actions(planning_unit_id: str, authorization: str | None = Header(defau
 @router.get("/actions/{action_id}", response_model=ActionPlanItem)
 def get_action(action_id: str, planning_unit_id: str, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
-    verify_planning_unit_ownership(planning_unit_id, user_id)
+    verify_action_ownership(planning_unit_id, action_id, user_id)
     action = _service().repository.get_action(planning_unit_id, action_id)
     if action is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Action not found")
     return action
 
 
 @router.get("/decisions", response_model=list[ActionDecisionRecord])
-def list_decision_history(
-    planning_unit_id: str,
-    action_id: str | None = None,
-    authorization: str | None = Header(default=None),
-):
+def list_decision_history(planning_unit_id: str, action_id: str | None = None, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(planning_unit_id, user_id)
+    if action_id:
+        verify_action_ownership(planning_unit_id, action_id, user_id)
     return _service().repository.list_decision_history(planning_unit_id, action_id)
 
 
 @router.post("/actions")
 def create_action(request: ActionCreateRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
-    verify_planning_unit_ownership(request.planning_unit_id, user_id)
+    verify_strategy_version_ownership(request.planning_unit_id, request.strategy_version_id, user_id)
     return _service().build_action(**request.model_dump())
 
 
 @router.post("/decisions", response_model=ActionDecisionResponse)
 def confirm_action_decision(request: ActionDecisionRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
-    verify_planning_unit_ownership(request.planning_unit_id, user_id)
+    verify_action_ownership(request.planning_unit_id, request.action_id, user_id)
     service = _service()
     action = service.repository.get_action(request.planning_unit_id, request.action_id)
     if action is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Action not found")
     record = service.confirm_decision(action, request.decision, request.impact_preview, request.after_state)
     return ActionDecisionResponse(
