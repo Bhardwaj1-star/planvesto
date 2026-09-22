@@ -22,6 +22,17 @@ def list_actions(planning_unit_id: str, authorization: str | None = Header(defau
     return _service().repository.list_actions(planning_unit_id)
 
 
+@router.post("/actions/generate", response_model=list[ActionPlanItem])
+def generate_actions(planning_unit_id: str, strategy_version_id: str, authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_version_ownership(planning_unit_id, strategy_version_id, user_id)
+    from services.strategy_action_generator import StrategyActionGenerator
+    try:
+        return StrategyActionGenerator(_service().repository).generate(planning_unit_id, strategy_version_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.get("/actions/{action_id}", response_model=ActionPlanItem)
 def get_action(action_id: str, planning_unit_id: str, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
