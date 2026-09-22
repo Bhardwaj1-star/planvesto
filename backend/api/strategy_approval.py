@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Header, Query
 
-from api.auth import authenticate_user, verify_planning_unit_ownership
+from api.auth import authenticate_user, verify_planning_unit_ownership, verify_strategy_run_ownership
 from data.primary_strategy_repository import PrimaryStrategyRepository
 from data.strategy_repository import StrategyRepository
 from schemas.strategy_approval import StrategyApprovalRequest, StrategyApprovalResponse
@@ -11,12 +11,9 @@ router = APIRouter(prefix="/api/strategy", tags=["Strategy Approval"])
 
 
 @router.post("/approve", response_model=StrategyApprovalResponse)
-def approve_strategy(
-    request: StrategyApprovalRequest,
-    authorization: str | None = Header(default=None),
-):
+def approve_strategy(request: StrategyApprovalRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
-    verify_planning_unit_ownership(request.planning_unit_id, user_id)
+    verify_strategy_run_ownership(request.planning_unit_id, request.strategy_run_id, user_id)
     snapshot = StrategyApprovalService().approve_selected_strategy(
         planning_unit_id=request.planning_unit_id,
         strategy_run_id=request.strategy_run_id,
@@ -38,10 +35,7 @@ def approve_strategy(
 
 
 @router.get("/primary", response_model=dict | None)
-def get_current_primary_strategy(
-    planning_unit_id: str = Query(...),
-    authorization: str | None = Header(default=None),
-):
+def get_current_primary_strategy(planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(planning_unit_id, user_id)
     repo = StrategyRepository()

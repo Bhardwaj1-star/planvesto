@@ -54,12 +54,12 @@ class TestGoalsAndStrategyAPIRoutes:
         assert "/api/strategy/runs/{goal_id}/latest" in paths
         assert "/api/strategy/runs/{goal_id}/history" in paths
 
-    @patch("api.strategy.verify_planning_unit_ownership")
+    @patch("api.strategy.verify_goal_ownership")
     @patch("api.strategy.authenticate_user")
     @patch("api.strategy.StrategyService.build_strategy")
-    def test_strategy_build_missing_priorities_returns_400(self, mock_build, mock_auth, mock_pu):
+    def test_strategy_build_missing_priorities_returns_400(self, mock_build, mock_auth, mock_goal):
         mock_auth.return_value = "user-1"
-        mock_pu.return_value = None
+        mock_goal.return_value = None
         mock_build.side_effect = HTTPException(
             status_code=400,
             detail="Investor priorities must be provided before strategy comparison and ranking.",
@@ -72,12 +72,12 @@ class TestGoalsAndStrategyAPIRoutes:
         assert r.status_code == 400
         assert "Investor priorities must be provided" in r.json()["detail"]
 
-    @patch("api.strategy.verify_planning_unit_ownership")
+    @patch("api.strategy.verify_strategy_run_ownership")
     @patch("api.strategy.authenticate_user")
     @patch("api.strategy.StrategyService.select_strategy")
-    def test_strategy_select_inconsistent_returns_400(self, mock_select, mock_auth, mock_pu):
+    def test_strategy_select_inconsistent_returns_400(self, mock_select, mock_auth, mock_run):
         mock_auth.return_value = "user-1"
-        mock_pu.return_value = None
+        mock_run.return_value = None
         mock_select.side_effect = HTTPException(
             status_code=400,
             detail="Selected scenario does not match selected strategy.",
@@ -94,3 +94,24 @@ class TestGoalsAndStrategyAPIRoutes:
         )
         assert r.status_code == 400
         assert "Selected scenario does not match" in r.json()["detail"]
+
+
+    @patch("api.strategy.verify_goal_ownership")
+    @patch("api.strategy.authenticate_user")
+    @patch("api.strategy.StrategyService.build_strategy")
+    def test_strategy_build_checks_goal_ownership(self, mock_build, mock_auth, mock_goal):
+        mock_auth.return_value = "user-1"
+        mock_goal.return_value = None
+        mock_build.return_value = {"strategy_run_id": "run-1"}
+        client.post("/api/strategy/build", json={"planning_unit_id": "pu-1", "goal_id": "g-1", "investor_priorities": {}}, headers={"Authorization": "Bearer fake"})
+        mock_goal.assert_called_once_with("pu-1", "g-1", "user-1")
+
+    @patch("api.strategy.verify_strategy_run_ownership")
+    @patch("api.strategy.authenticate_user")
+    @patch("api.strategy.StrategyService.select_strategy")
+    def test_strategy_select_checks_run_ownership(self, mock_select, mock_auth, mock_run):
+        mock_auth.return_value = "user-1"
+        mock_run.return_value = None
+        mock_select.return_value = {"strategy_run_id": "run-1"}
+        client.post("/api/strategy/select", json={"planning_unit_id": "pu-1", "strategy_run_id": "run-1", "selected_strategy_id": "strat-a", "selected_scenario_id": "scen-a"}, headers={"Authorization": "Bearer fake"})
+        mock_run.assert_called_once_with("pu-1", "run-1", "user-1")
