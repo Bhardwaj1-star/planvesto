@@ -63,7 +63,7 @@ export default function LoginPage() {
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <label htmlFor="password" className="block text-sm font-semibold text-navy-900">Password</label>
-                    <Link href="/forgot-password" className="text-xs font-semibold text-teal-700 transition hover:text-navy-900">Forgot password?</Link>
+                    <Link href="/contact" className="text-xs font-semibold text-teal-700 transition hover:text-navy-900">Need help?</Link>
                   </div>
                   <div className="relative">
                     <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={Boolean(message)} className="form-field w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-sm text-navy-900 placeholder:text-slate-400" placeholder="Enter your password" />
