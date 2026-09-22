@@ -155,3 +155,33 @@ class TestDashboardAuthorization:
         )
         assert r.status_code == 400
         assert "only valid for individual scope" in r.json()["detail"]
+
+
+class TestOrchestrationAuthorization:
+    @patch("api.orchestration.verify_defined_goal_ownership")
+    @patch("api.orchestration.verify_strategy_version_ownership")
+    @patch("api.orchestration.verify_investor_ownership")
+    @patch("api.orchestration.verify_planning_unit_ownership")
+    @patch("api.orchestration.authenticate_user")
+    @patch("api.orchestration.PlanningOrchestrationService.build_context")
+    def test_orchestration_checks_all_referenced_resources(
+        self, mock_build, mock_auth, mock_pu, mock_investor, mock_strategy_version, mock_goal_version
+    ):
+        mock_auth.return_value = "user-1"
+        mock_build.return_value = {}
+        r = client.post(
+            "/api/orchestration/context",
+            json={
+                "planning_unit_id": "pu-1",
+                "scope": "individual",
+                "investor_id": "investor-1",
+                "goal_version_ids": ["defined-goal-1", "defined-goal-2"],
+                "strategy_version_id": "strategy-version-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 200
+        mock_pu.assert_called_once_with("pu-1", "user-1")
+        mock_investor.assert_called_once_with("pu-1", "investor-1", "user-1")
+        assert mock_goal_version.call_count == 2
+        mock_strategy_version.assert_called_once_with("pu-1", "strategy-version-1", "user-1")
