@@ -74,6 +74,13 @@ export function getActions(planningUnitId: string) {
   return request<ActionPlanItem[]>(`/api/action-plan/actions?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
+export function generateStrategyActions(planningUnitId: string, strategyVersionId: string) {
+  return request<ActionPlanItem[]>(
+    `/api/action-plan/actions/generate?planning_unit_id=${encodeURIComponent(planningUnitId)}&strategy_version_id=${encodeURIComponent(strategyVersionId)}`,
+    { method: "POST" },
+  );
+}
+
 export function getAction(planningUnitId: string, actionId: string) {
   return request<ActionPlanItem>(`/api/action-plan/actions/${encodeURIComponent(actionId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
