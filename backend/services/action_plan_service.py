@@ -99,6 +99,42 @@ class ActionPlanService:
             impact_preview=preview,
         ))
 
+    def complete_action_with_actual_state(
+        self,
+        action: ActionPlanItem,
+        actual_state: dict[str, Any],
+        completion_preview: ActionImpactPreview,
+    ) -> tuple[ActionPlanItem, ActionDecisionRecord, dict[str, Any]]:
+        """Complete an action by comparing its stored projected state with actual Financial State."""
+        if not action.action_id:
+            raise ValueError("Action must have an action_id before completion")
+        if action.status not in {"planned", "confirmed"}:
+            raise ValueError("Only planned or confirmed actions can be completed")
+        projected_state = action.planned_impact.get("financial_state")
+        if not isinstance(projected_state, dict) or not projected_state:
+            raise ValueError("A projected financial state is required before completing this action")
+        projected = FinancialState.model_validate(projected_state)
+        actual = FinancialState.model_validate(actual_state)
+        comparison = self.impact_engine.compare(projected, actual)
+        actual_impact = {
+            "financial_state": actual.model_dump(mode="json"),
+            "variance_analysis": comparison,
+        }
+        updated = self.repository.update_action(
+            action.planning_unit_id,
+            action.action_id,
+            {"status": "completed", "actual_impact": actual_impact},
+        )
+        record = self.repository.record_decision(ActionDecisionRecord(
+            planning_unit_id=action.planning_unit_id,
+            action_id=action.action_id,
+            decision="complete",
+            before_state=action.model_dump(mode="json"),
+            after_state=updated.model_dump(mode="json"),
+            impact_preview=completion_preview,
+        ))
+        return updated, record, comparison
+
     def complete_action(
         self,
         action: ActionPlanItem,
