@@ -50,10 +50,6 @@ class GoalRepository:
         priority: str,
         flexibility: str,
     ) -> str:
-        """
-        Creates or updates the primary identity in public.goals.
-        Returns the goal_id.
-        """
         target_date_str = f"{target_year:04d}-{target_month:02d}-01"
         payload = {
             "planning_unit_id": planning_unit_id,
@@ -76,11 +72,7 @@ class GoalRepository:
         record = res.data[0] if isinstance(res.data, list) else res.data
         return record["goal_id"]
 
-    def get_latest_defined_goal(
-        self,
-        planning_unit_id: str,
-        goal_id: str,
-    ) -> DefinedGoal | None:
+    def get_latest_defined_goal(self, planning_unit_id: str, goal_id: str) -> DefinedGoal | None:
         res = (
             self.db.table("defined_goals")
             .select("*")
@@ -94,12 +86,7 @@ class GoalRepository:
             return None
         return self._hydrate_defined_goal(res.data)
 
-    def get_defined_goal_by_version(
-        self,
-        planning_unit_id: str,
-        goal_id: str,
-        version: int,
-    ) -> DefinedGoal | None:
+    def get_defined_goal_by_version(self, planning_unit_id: str, goal_id: str, version: int) -> DefinedGoal | None:
         res = (
             self.db.table("defined_goals")
             .select("*")
@@ -113,11 +100,7 @@ class GoalRepository:
             return None
         return self._hydrate_defined_goal(res.data)
 
-    def get_all_defined_goal_versions(
-        self,
-        planning_unit_id: str,
-        goal_id: str,
-    ) -> list[dict[str, Any]]:
+    def get_all_defined_goal_versions(self, planning_unit_id: str, goal_id: str) -> list[dict[str, Any]]:
         res = (
             self.db.table("defined_goals")
             .select("defined_goal_id, goal_id, version, is_latest, today_cost, future_target, projected_mapped_asset_value, funding_gap, funding_status, created_at")
@@ -154,6 +137,7 @@ class GoalRepository:
                 )
             )
 
+        metadata = row.get("version_metadata") or {}
         return DefinedGoal(
             defined_goal_id=row["defined_goal_id"],
             goal_id=row["goal_id"],
@@ -177,7 +161,9 @@ class GoalRepository:
             projected_mapped_asset_value=float(row.get("projected_mapped_asset_value", 0.0)),
             funding_gap=float(row["funding_gap"]),
             funding_status=row["funding_status"],
-            version_metadata=row.get("version_metadata") or {},
+            required_monthly_contribution=float(metadata.get("required_monthly_contribution", 0.0)),
+            funding_return_assumption=float(metadata.get("funding_return_assumption", 0.08)),
+            version_metadata=metadata,
             created_at=row.get("created_at"),
         )
 
