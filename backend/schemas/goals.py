@@ -1,12 +1,15 @@
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
+
+from pydantic import Field, model_validator
+
+from schemas.base import StrictRequestModel
 
 
-class AssetMappingInput(BaseModel):
-    asset_id: str
+class AssetMappingInput(StrictRequestModel):
+    asset_id: str = Field(min_length=1, max_length=100)
     allocation_type: Literal["currency", "percentage"]
-    allocation_value: float = Field(ge=0)
-    expected_return: float | None = Field(default=None, ge=-0.99, le=1.0)
+    allocation_value: float = Field(ge=0, allow_inf_nan=False)
+    expected_return: float | None = Field(default=None, ge=-0.99, le=1.0, allow_inf_nan=False)
     return_frequency: Literal["annual", "semi-annual", "semiannual", "half-yearly", "quarterly", "monthly"] = "annual"
 
     @model_validator(mode="after")
@@ -16,16 +19,16 @@ class AssetMappingInput(BaseModel):
         return self
 
 
-class GoalInput(BaseModel):
-    planning_unit_id: str
-    goal_id: str | None = None
-    investor_id: str | None = None
+class GoalInput(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    goal_id: str | None = Field(default=None, min_length=1, max_length=100)
+    investor_id: str | None = Field(default=None, min_length=1, max_length=100)
     goal_name: str = Field(min_length=1, max_length=200)
     goal_type: str = Field(min_length=1, max_length=100)
-    today_cost: float = Field(gt=0)
+    today_cost: float = Field(gt=0, allow_inf_nan=False)
     target_month: int = Field(ge=1, le=12)
     target_year: int = Field(ge=1900, le=2200)
-    inflation_rate: float | None = Field(default=None, ge=0, le=1)
+    inflation_rate: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     priority: str = Field(default="Important", min_length=1, max_length=50)
     flexibility: str = Field(default="Flexible", min_length=1, max_length=50)
     status: str = Field(default="Active", min_length=1, max_length=30)
@@ -36,11 +39,11 @@ class GoalCalculateRequest(GoalInput):
     pass
 
 
-class GoalSummary(BaseModel):
-    goal_id: str
-    planning_unit_id: str
-    goal_name: str
-    target_amount: float
+class GoalSummary(StrictRequestModel):
+    goal_id: str = Field(min_length=1, max_length=100)
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    goal_name: str = Field(min_length=1, max_length=200)
+    target_amount: float = Field(allow_inf_nan=False)
     target_date: str | None = None
     priority: str | None = None
     flexibility: str | None = None
