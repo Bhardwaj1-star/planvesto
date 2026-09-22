@@ -23,12 +23,32 @@ def verify_planning_unit_ownership(planning_unit_id: str, user_id: str) -> None:
         raise HTTPException(status_code=403, detail="Planning unit does not belong to authenticated user")
 
 
-def verify_investor_ownership(planning_unit_id: str, investor_id: str, user_id: str) -> None:
+def _verify_child_belongs_to_planning_unit(table: str, id_column: str, resource_id: str, planning_unit_id: str, user_id: str, detail: str) -> None:
     verify_planning_unit_ownership(planning_unit_id, user_id)
-    result = (get_supabase().table("investors").select("investor_id")
-        .eq("planning_unit_id", planning_unit_id).eq("investor_id", investor_id).maybe_single().execute())
+    result = (get_supabase().table(table).select(id_column)
+        .eq(id_column, resource_id).eq("planning_unit_id", planning_unit_id).maybe_single().execute())
     if not result or not result.data:
-        raise HTTPException(status_code=403, detail="Investor does not belong to planning unit")
+        raise HTTPException(status_code=403, detail=detail)
+
+
+def verify_investor_ownership(planning_unit_id: str, investor_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("investors", "investor_id", investor_id, planning_unit_id, user_id, "Investor does not belong to planning unit")
+
+
+def verify_goal_ownership(planning_unit_id: str, goal_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("goals", "goal_id", goal_id, planning_unit_id, user_id, "Goal does not belong to planning unit")
+
+
+def verify_strategy_run_ownership(planning_unit_id: str, strategy_run_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("strategy_runs", "strategy_run_id", strategy_run_id, planning_unit_id, user_id, "Strategy run does not belong to planning unit")
+
+
+def verify_strategy_version_ownership(planning_unit_id: str, strategy_version_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("strategy_versions", "strategy_version_id", strategy_version_id, planning_unit_id, user_id, "Strategy version does not belong to planning unit")
+
+
+def verify_action_ownership(planning_unit_id: str, action_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("action_plan_items", "action_id", action_id, planning_unit_id, user_id, "Action does not belong to planning unit")
 
 
 def verify_assets_ownership(planning_unit_id: str, asset_ids: list[str], user_id: str) -> None:
