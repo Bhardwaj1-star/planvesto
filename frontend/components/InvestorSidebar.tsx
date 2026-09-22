@@ -55,7 +55,26 @@ export default function InvestorSidebar() {
     pathname?.startsWith("/investor/strategy-edit");
 
   return (
-    <aside className={`${isCollapsed ? "w-16" : "w-64"} shrink-0 border-r border-slate-200 bg-white transition-[width] duration-200`}>
+    <>
+      <button
+        type="button"
+        onClick={() => setIsMobileOpen(false)}
+        aria-label="Close investor navigation"
+        className={`fixed inset-0 z-40 bg-slate-950/40 md:hidden ${isMobileOpen ? "block" : "hidden"}`}
+      />
+      <button
+        type="button"
+        onClick={() => setIsMobileOpen((current) => !current)}
+        aria-expanded={isMobileOpen}
+        aria-controls="investor-sidebar"
+        aria-label={isMobileOpen ? "Close investor navigation" : "Open investor navigation"}
+        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm md:hidden"
+      >
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d={isMobileOpen ? "M6 6L18 18M18 6L6 18" : "M4 7H20M4 12H20M4 17H20"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+      <aside id="investor-sidebar" className={`fixed inset-y-0 left-0 z-50 w-72 shrink-0 border-r border-slate-200 bg-white transition-transform duration-200 md:static md:z-auto md:h-auto md:translate-x-0 md:${isCollapsed ? "w-16" : "w-64"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} md:transition-[width]`}>
       <div className="sticky top-0 flex h-screen flex-col">
         <div className={`${isCollapsed ? "justify-center px-2" : "justify-between px-4"} flex h-20 items-center border-b border-slate-200`}>
           <Link href="/investor/financial-state" className="flex items-center gap-2.5" aria-label="Planvesto Dashboard">
