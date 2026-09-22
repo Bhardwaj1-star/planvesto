@@ -44,6 +44,7 @@ function isItemActive(pathname: string | null, item: NavItem) {
 export default function InvestorSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   if (pathname?.startsWith("/investor/onboarding")) return null;
 
@@ -66,7 +67,7 @@ export default function InvestorSidebar() {
             </div>
             {!isCollapsed && <span className="text-xl font-extrabold tracking-tight text-navy-900">planvesto</span>}
           </Link>
-          <button type="button" onClick={() => setIsCollapsed((current) => !current)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-900" aria-label={isCollapsed ? "Expand investor navigation" : "Collapse investor navigation"} title={isCollapsed ? "Expand navigation" : "Collapse navigation"}>
+          <button type="button" onClick={() => { setIsCollapsed((current) => !current); setIsMobileOpen(false); }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-900" aria-label={isCollapsed ? "Expand investor navigation" : "Collapse investor navigation"} title={isCollapsed ? "Expand navigation" : "Collapse navigation"}>
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d={isCollapsed ? "M9 6L15 12L9 18" : "M15 6L9 12L15 18"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -125,7 +126,7 @@ export default function InvestorSidebar() {
         </nav>
 
         <div className={`${isCollapsed ? "p-2" : "p-4"} border-t border-slate-200`}>
-          <Link href="/" className={`${isCollapsed ? "justify-center px-2" : "px-3"} flex rounded-xl py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900`} title={isCollapsed ? "Back to Planvesto" : undefined}>
+          <Link href="/" onClick={() => setIsMobileOpen(false)} className={`${isCollapsed ? "justify-center px-2" : "px-3"} flex rounded-xl py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900`} title={isCollapsed ? "Back to Planvesto" : undefined}>
             <span className={isCollapsed ? "sr-only" : undefined}>Back to Planvesto</span>
             {isCollapsed && <span aria-hidden="true">↩</span>}
           </Link>
