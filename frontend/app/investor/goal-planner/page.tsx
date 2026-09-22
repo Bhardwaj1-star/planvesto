@@ -51,7 +51,6 @@ type GoalFormData = {
   goal_name: string;
   preset_name: string;
   custom_name: string;
-  goal_type: GoalType | "";
   today_cost: string;
   inflation_rate: string;
   target_date: string; // YYYY-MM
@@ -91,7 +90,6 @@ function createEmptyForm(): GoalFormData {
     goal_name: "",
     preset_name: "",
     custom_name: "",
-    goal_type: "",
     today_cost: "",
     inflation_rate: DEFAULT_INFLATION_PERCENT,
     target_date: `${nextYear}-${month}`,
@@ -113,7 +111,6 @@ function definedGoalToForm(goal: DefinedGoal): GoalFormData {
     goal_name: goal.goal_name,
     preset_name: isPreset ? goal.goal_name : "Other",
     custom_name: isPreset ? "" : goal.goal_name,
-    goal_type: (goal.goal_type as GoalType) || "",
     today_cost: String(goal.today_cost),
     inflation_rate: (goal.inflation_rate * 100).toFixed(1),
     target_date: targetDateStr,
@@ -932,312 +929,180 @@ export default function GoalPlannerPage() {
         )}
 
         {/* 12. GOAL FORM UX (DefinedGoal Compliant) */}
-        {isFormOpen && (
-          <section
+<section
             aria-labelledby="goal-form-heading"
-            className="max-h-[calc(100vh-220px)] overflow-y-auto rounded-[28px] border border-teal-200 bg-teal-50/50 p-5 shadow-soft sm:p-6"
+            className="rounded-[28px] border border-slate-200 bg-white shadow-soft"
           >
-            <div className="mb-4 flex items-start justify-between gap-4 border-b border-teal-100 pb-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
-                  {formData.goal_id ? "Edit Defined Goal" : "New Defined Goal"}
-                </p>
-                <h2 id="goal-form-heading" className="mt-1 text-xl font-extrabold text-navy-900">
-                  Configure Goal &amp; Asset Mapping
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Values are calculated authoritatively by the Planvesto Goal Engine on save or preview.
-                </p>
+            <div className="border-b border-slate-200 px-5 py-5 sm:px-7">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
+                    {formData.goal_id ? "Edit Goal" : "Create Goal"}
+                  </p>
+                  <h2 id="goal-form-heading" className="mt-1 text-2xl font-extrabold tracking-tight text-navy-900">
+                    Build your goal
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Set the target, timing, priority and existing assets in one place.
+                  </p>
+                </div>
+                <button type="button" onClick={handleCancelForm}
+                  className="self-start rounded-lg px-3 py-2 text-sm font-bold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900 sm:self-center">
+                  Cancel
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleCancelForm}
-                className="text-sm font-bold text-slate-500 hover:text-navy-900"
-              >
-                ✕ Cancel
-              </button>
             </div>
 
             {formError && (
-              <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700" role="alert">
+              <div className="mx-5 mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 sm:mx-7" role="alert">
                 {formError}
               </div>
             )}
 
-            <div className="space-y-5">
-              {/* SECTION 1: GOAL INFORMATION */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                  1. Goal Information
-                </h3>
-                <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="form-preset-name" className="block text-sm font-semibold text-navy-900">Goal Name</label>
-                    <select
-                      id="form-preset-name"
-                      value={formData.preset_name}
+            <div className="space-y-5 p-5 sm:p-7">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                <div className="mb-4">
+                  <h3 className="text-sm font-extrabold text-navy-900">Goal</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">What are you planning for?</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className={formData.preset_name === "Other" ? "" : "sm:col-span-2"}>
+                    <label htmlFor="form-preset-name" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Goal name</label>
+                    <select id="form-preset-name" value={formData.preset_name}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          preset_name: val,
-                          goal_name: val === "Other" ? prev.custom_name : val,
-                        }));
+                        setFormData((prev) => ({ ...prev, preset_name: val, goal_name: val === "Other" ? prev.custom_name : val }));
                       }}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    >
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
                       <option value="">Select a common goal</option>
-                      {PRESET_GOAL_NAMES.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
+                      {PRESET_GOAL_NAMES.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
-
                   {formData.preset_name === "Other" && (
                     <div>
-                      <label htmlFor="form-custom-name" className="block text-sm font-semibold text-navy-900">Custom Goal Name</label>
-                      <input
-                        id="form-custom-name"
-                        type="text"
-                        placeholder="e.g. Master's Degree Abroad"
-                        value={formData.custom_name}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            custom_name: e.target.value,
-                            goal_name: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                      />
+                      <label htmlFor="form-custom-name" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Custom name</label>
+                      <input id="form-custom-name" type="text" placeholder="e.g. Master's Degree Abroad" value={formData.custom_name}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, custom_name: e.target.value, goal_name: e.target.value }))}
+                        className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
                     </div>
                   )}
-
                 </div>
               </div>
 
-              {/* SECTION 2: GOAL COST */}
-              <div className="border-t border-teal-100 pt-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                  2. Goal Cost &amp; Inflation
-                </h3>
-                <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="form-today-cost" className="block text-sm font-semibold text-navy-900">
-                      Today&apos;s Cost (₹)
-                    </label>
-                    <div className="relative mt-1.5">
-                      <span className="pointer-events-none absolute left-4 top-3 text-sm font-bold text-slate-400">
-                        ₹
-                      </span>
-                      <input
-                        id="form-today-cost"
-                        type="number"
-                        min="1"
-                        step="1000"
-                        placeholder="e.g. 2500000"
-                        value={formData.today_cost}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, today_cost: e.target.value }))
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="form-inflation-rate" className="block text-sm font-semibold text-navy-900">
-                      Inflation Rate (%)
-                    </label>
-                    <div className="relative mt-1.5">
-                      <input
-                        id="form-inflation-rate"
-                        type="number"
-                        min="0"
-                        max="30"
-                        step="0.1"
-                        placeholder="6.0"
-                        value={formData.inflation_rate}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, inflation_rate: e.target.value }))
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                      />
-                      <span className="pointer-events-none absolute right-4 top-3 text-sm font-bold text-slate-400">
-                        %
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-xs text-slate-500">
-                      Planvesto uses inflation to estimate what this goal may cost at the target date.
-                    </p>
-                  </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="mb-4">
+                  <h3 className="text-sm font-extrabold text-navy-900">Target</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">These values drive the future requirement calculation.</p>
                 </div>
-              </div>
-
-              {/* SECTION 3: TIMING & CHARACTERISTICS */}
-              <div className="border-t border-teal-100 pt-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">3. Timing &amp; Goal Characteristics</h3>
-                <div className="mt-2 grid gap-3 sm:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
-                    <label htmlFor="form-target-date" className="block text-sm font-semibold text-navy-900">Target Month &amp; Year</label>
-                    <input id="form-target-date" type="month" value={formData.target_date} onChange={(e) => setFormData((prev) => ({ ...prev, target_date: e.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+                    <label htmlFor="form-today-cost" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Today's cost</label>
+                    <div className="relative mt-1.5">
+                      <span className="pointer-events-none absolute left-3.5 top-2.5 text-sm font-bold text-slate-400">₹</span>
+                      <input id="form-today-cost" type="number" min="1" step="1000" placeholder="25,00,000" value={formData.today_cost}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, today_cost: e.target.value }))}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-3.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+                    </div>
                   </div>
                   <div>
-                    <label htmlFor="form-priority" className="block text-sm font-semibold text-navy-900">Priority</label>
-                    <select id="form-priority" value={formData.priority} onChange={(e) => setFormData((prev) => ({ ...prev, priority: e.target.value as GoalPriority }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                    <label htmlFor="form-inflation-rate" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Inflation</label>
+                    <div className="relative mt-1.5">
+                      <input id="form-inflation-rate" type="number" min="0" max="30" step="0.1" placeholder="6.0" value={formData.inflation_rate}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, inflation_rate: e.target.value }))}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 pr-8 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+                      <span className="pointer-events-none absolute right-3.5 top-2.5 text-sm font-bold text-slate-400">%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="form-target-date" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Target month</label>
+                    <input id="form-target-date" type="month" value={formData.target_date}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, target_date: e.target.value }))}
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
+                  </div>
+                  <div>
+                    <label htmlFor="form-priority" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Priority</label>
+                    <select id="form-priority" value={formData.priority}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, priority: e.target.value as GoalPriority }))}
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
                       {goalPriorities.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="form-flexibility" className="block text-sm font-semibold text-navy-900">Flexibility</label>
-                    <select id="form-flexibility" value={formData.flexibility} onChange={(e) => setFormData((prev) => ({ ...prev, flexibility: e.target.value as GoalFlexibility }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
-                      {goalFlexibilities.map((f) => <option key={f} value={f}>{f}</option>)}
+                    <label htmlFor="form-flexibility" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Flexibility</label>
+                    <select id="form-flexibility" value={formData.flexibility}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, flexibility: e.target.value as GoalFlexibility }))}
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                      {goalFlexibilities.map((v) => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="form-status" className="block text-sm font-semibold text-navy-900">Status</label>
-                    <select id="form-status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as GoalStatus }))} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-navy-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
-                      {goalStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                    <label htmlFor="form-status" className="block text-xs font-bold uppercase tracking-wider text-slate-500">Status</label>
+                    <select id="form-status" value={formData.status} onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as GoalStatus }))}
+                      className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-navy-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
+                      {goalStatuses.map((v) => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </div>
                 </div>
+                <p className="mt-3 text-[11px] leading-5 text-slate-400">Target month is stored as month/year. Inflation is used only for the goal projection.</p>
               </div>
 
-              {/* SECTION 5: ASSET MAPPING */}
-              <div className="border-t border-teal-100 pt-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                      5. Asset Mapping
-                    </h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Connect specific assets to back this goal. One asset may be partially mapped across multiple goals.
-                    </p>
+                    <h3 className="text-sm font-extrabold text-navy-900">Funding assets</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">Map existing assets intended to fund this goal.</p>
                   </div>
                   {assets.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleAddMappingRow}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-50"
-                    >
-                      + Map Asset
-                    </button>
+                    <button type="button" onClick={handleAddMappingRow}
+                      className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-2 text-xs font-bold text-teal-700 transition hover:bg-teal-50">+ Map asset</button>
                   )}
                 </div>
-
                 {assets.length === 0 ? (
-                  <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-                    No assets recorded in this planning unit. You can still save this goal without mapped assets.
-                  </p>
+                  <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">No assets are recorded yet. You can save the goal without mapped assets.</p>
                 ) : formData.asset_mappings.length === 0 ? (
-                  <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center">
-                    <p className="text-sm text-slate-500">No assets mapped to this goal yet.</p>
-                    <button
-                      type="button"
-                      onClick={handleAddMappingRow}
-                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900"
-                    >
-                      + Map an asset to fund this goal
-                    </button>
+                  <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3">
+                    <p className="text-sm text-slate-500">No assets mapped to this goal.</p>
+                    <button type="button" onClick={handleAddMappingRow} className="shrink-0 text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900">Map one</button>
                   </div>
                 ) : (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 space-y-2">
                     {formData.asset_mappings.map((mapping, idx) => (
-                      <AssetMappingRow
-                        key={mapping.id}
-                        index={idx}
-                        mapping={mapping}
-                        assets={assets}
+                      <AssetMappingRow key={mapping.id} index={idx} mapping={mapping} assets={assets}
                         onChange={(changes) => handleUpdateMappingRow(mapping.id, changes)}
-                        onRemove={() => handleRemoveMappingRow(mapping.id)}
-                      />
+                        onRemove={() => handleRemoveMappingRow(mapping.id)} />
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* 8. PREVIEW / CALCULATION RESULT (Read-only) */}
-              <div className="border-t border-teal-100 pt-4">
-                <div className="flex items-center justify-between">
+              <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                      6. Calculation Preview (Read-Only)
-                    </h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Evaluated dynamically by POST /api/goals/calculate without persisting to the database.
-                    </p>
+                    <h3 className="text-sm font-extrabold text-navy-900">Calculation preview</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">Check the Goal Engine output before saving.</p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={isPreviewing || isSaving}
-                    onClick={handleCalculatePreview}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-600 bg-teal-50 px-4 py-2 text-xs font-bold text-teal-800 transition hover:bg-teal-100 disabled:opacity-50"
-                  >
-                    {isPreviewing ? "Calculating..." : "⚡ Calculate / Preview"}
+                  <button type="button" disabled={isPreviewing || isSaving} onClick={handleCalculatePreview}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-2 text-xs font-bold text-teal-800 transition hover:bg-teal-100 disabled:opacity-50">
+                    {isPreviewing ? "Calculating..." : "Calculate"}
                   </button>
                 </div>
-
                 {previewResult && (
-                  <div className="mt-4 rounded-2xl border border-teal-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Preview Engine Output
-                      </span>
-                      <FundingStatusBadge status={previewResult.funding_status} />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Duration</p>
-                        <p className="mt-1 text-lg font-extrabold text-navy-900">{previewResult.duration_years} yrs</p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Future Target</p>
-                        <p className="mt-1 text-lg font-extrabold text-navy-900">{formatINR(previewResult.future_target)}</p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Projected Assets</p>
-                        <p className="mt-1 text-lg font-extrabold text-teal-700">
-                          {formatINR(previewResult.projected_mapped_asset_value)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Funding Gap</p>
-                        <p
-                          className={`mt-1 text-lg font-extrabold ${
-                            previewResult.funding_gap > 0 ? "text-rose-700" : "text-teal-700"
-                          }`}
-                        >
-                          {formatINR(previewResult.funding_gap)}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="rounded-xl border border-teal-100 bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Duration</p><p className="mt-1 text-base font-extrabold text-navy-900">{previewResult.duration_years} yrs</p></div>
+                    <div className="rounded-xl border border-teal-100 bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Future target</p><p className="mt-1 text-base font-extrabold text-navy-900">{formatINR(previewResult.future_target)}</p></div>
+                    <div className="rounded-xl border border-teal-100 bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Projected assets</p><p className="mt-1 text-base font-extrabold text-teal-700">{formatINR(previewResult.projected_mapped_asset_value)}</p></div>
+                    <div className="rounded-xl border border-teal-100 bg-white px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Funding gap</p><p className={previewResult.funding_gap > 0 ? "mt-1 text-base font-extrabold text-rose-700" : "mt-1 text-base font-extrabold text-teal-700"}>{formatINR(previewResult.funding_gap)}</p></div>
                   </div>
                 )}
               </div>
 
-              {/* Form Action Buttons */}
-              <div className="sticky bottom-0 flex flex-col-reverse items-stretch gap-3 border-t border-teal-100 bg-teal-50/95 pt-3 pb-1 backdrop-blur sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleCancelForm}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-navy-900 transition hover:border-slate-300"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSaving || isPreviewing}
-                  onClick={handleSaveGoal}
-                  className="rounded-xl bg-teal-700 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSaving ? "Saving to DefinedGoal..." : formData.goal_id ? "Save Changes" : "Save Defined Goal"}
+              <div className="sticky bottom-0 z-10 -mx-5 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:-mx-7 sm:flex-row sm:justify-end sm:px-7">
+                <button type="button" onClick={handleCancelForm} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-navy-900 transition hover:border-slate-300">Cancel</button>
+                <button type="button" disabled={isSaving || isPreviewing} onClick={handleSaveGoal}
+                  className="rounded-xl bg-teal-700 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60">
+                  {isSaving ? "Saving..." : formData.goal_id ? "Save changes" : "Save goal"}
                 </button>
               </div>
             </div>
