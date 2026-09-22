@@ -1,12 +1,13 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 MoneywheelStatus = Literal["excellent", "healthy", "attention", "critical", "unavailable"]
 
 
 class MoneywheelRatio(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     key: str
     name: str
     value: float | None = None
@@ -18,36 +19,29 @@ class MoneywheelRatio(BaseModel):
 
 
 class MoneywheelInput(BaseModel):
-    planning_unit_id: str
-    gross_monthly_income: float | None = None
-    savings: float | None = None
-    essential_monthly_expenses: float | None = None
-    monthly_expenses: float | None = None
-    liquid_assets: float | None = None
-    short_term_liabilities: float | None = None
-    monthly_debt_payments: float | None = None
-    total_assets: float | None = None
-    total_liabilities: float | None = None
-    financial_assets: float | None = None
+    model_config = ConfigDict(extra="forbid")
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    gross_monthly_income: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    savings: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    essential_monthly_expenses: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    monthly_expenses: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    liquid_assets: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    short_term_liabilities: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    monthly_debt_payments: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    total_assets: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    total_liabilities: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    financial_assets: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def validate_non_negative(self) -> "MoneywheelInput":
-        for field in (
-            "gross_monthly_income", "savings", "essential_monthly_expenses",
-            "monthly_expenses", "liquid_assets", "short_term_liabilities",
-            "monthly_debt_payments", "total_assets", "total_liabilities",
-            "financial_assets",
-        ):
-            value = getattr(self, field)
-            if value is not None and value < 0:
-                raise ValueError(f"{field} cannot be negative")
         return self
 
 
 class MoneywheelResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     planning_unit_id: str
     overall_status: Literal["excellent", "healthy", "attention", "critical", "incomplete"] | None = None
     ratios: list[MoneywheelRatio] = Field(min_length=9, max_length=9)
     rule_set_version: str
     calculated_at: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict, max_length=50)
