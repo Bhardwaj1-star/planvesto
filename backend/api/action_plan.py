@@ -16,9 +16,12 @@ def _service():
 
 
 @router.get("/actions", response_model=list[ActionPlanItem])
-def list_actions(planning_unit_id: str, authorization: str | None = Header(default=None)):
+def list_actions(planning_unit_id: str, strategy_version_id: str | None = None, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(planning_unit_id, user_id)
+    if strategy_version_id:
+        verify_strategy_version_ownership(planning_unit_id, strategy_version_id, user_id)
+        return _service().repository.list_actions_for_strategy_version(planning_unit_id, strategy_version_id)
     return _service().repository.list_actions(planning_unit_id)
 
 
