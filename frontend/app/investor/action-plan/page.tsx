@@ -57,7 +57,10 @@ export default function ActionPlanPage() {
   const refresh = async () => {
     const planningUnitId = getPlanningUnitId();
     if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-    const [nextActions, nextHistory] = await Promise.all([getActions(planningUnitId), getDecisionHistory(planningUnitId)]);
+    // The backend uses a shared synchronous Supabase client. Keep these reads sequential
+    // so the Action Plan page does not open competing requests on the same HTTP/2 connection.
+    const nextActions = await getActions(planningUnitId);
+    const nextHistory = await getDecisionHistory(planningUnitId);
     setActions(nextActions);
     setHistory(nextHistory.map((item) => ({ action_id: item.action_id, decision: item.decision, confirmed_at: item.confirmed_at, decision_id: item.decision_id })));
   };
