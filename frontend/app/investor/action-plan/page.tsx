@@ -40,13 +40,13 @@ export default function ActionPlanPage() {
   const [approvedVersion, setApprovedVersion] = useState<StrategyVersion | null>(null);
   const [generating, setGenerating] = useState(false);
 
-  const refresh = async () => {
+  const refresh = async (strategyVersionIdOverride?: string) => {
     const planningUnitId = getPlanningUnitId();
     if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
     // The backend uses a shared synchronous Supabase client. Keep these reads sequential
     // so the Action Plan page does not open competing requests on the same HTTP/2 connection.
     // Keep these reads sequential because the backend uses a shared synchronous Supabase client.
-    const nextActions = await getActions(planningUnitId, strategyVersionId);
+    const nextActions = await getActions(planningUnitId, strategyVersionIdOverride ?? strategyVersionId);
     const nextHistory = await getDecisionHistory(planningUnitId);
     setActions(nextActions);
     setHistory(nextHistory.map((item) => ({ action_id: item.action_id, decision: item.decision, confirmed_at: item.confirmed_at, decision_id: item.decision_id })));
@@ -67,7 +67,7 @@ export default function ActionPlanPage() {
         if (active) setApprovedVersion(version);
         setGenerating(true);
         await generateStrategyActions(planningUnitId, id);
-        await refresh();
+        await refresh(id);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load the strategy-driven Action Plan.");
       } finally {
