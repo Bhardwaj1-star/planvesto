@@ -18,8 +18,11 @@ class PrimaryStrategyRepository:
 
     def set_current(self, state: PrimaryStrategyState) -> PrimaryStrategyState:
         payload = state.model_dump(mode="json")
-        response = self.client.table(self.table_name).upsert(payload, on_conflict="planning_unit_id").select("*").single().execute()
-        return PrimaryStrategyState.model_validate(response.data)
+        response = self.client.table(self.table_name).upsert(payload, on_conflict="planning_unit_id").select("*").execute()
+        rows = response.data or []
+        if not rows:
+            raise RuntimeError("Primary Strategy state upsert returned no data")
+        return PrimaryStrategyState.model_validate(rows[0])
 
     def record_transition(self, state: PrimaryStrategyState, decision: str) -> None:
         self.client.table(self.history_table).insert({
