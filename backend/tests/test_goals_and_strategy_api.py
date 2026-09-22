@@ -115,3 +115,43 @@ class TestGoalsAndStrategyAPIRoutes:
         mock_select.return_value = {"strategy_run_id": "run-1"}
         client.post("/api/strategy/select", json={"planning_unit_id": "pu-1", "strategy_run_id": "run-1", "selected_strategy_id": "strat-a", "selected_scenario_id": "scen-a"}, headers={"Authorization": "Bearer fake"})
         mock_run.assert_called_once_with("pu-1", "run-1", "user-1")
+
+
+class TestDashboardAuthorization:
+    @patch("api.dashboard.verify_investor_ownership")
+    @patch("api.dashboard.verify_planning_unit_ownership")
+    @patch("api.dashboard.authenticate_user")
+    @patch("api.dashboard.DashboardService.build")
+    def test_dashboard_individual_scope_checks_investor_ownership(
+        self, mock_build, mock_auth, mock_pu, mock_investor
+    ):
+        mock_auth.return_value = "user-1"
+        mock_build.return_value = {}
+        r = client.get(
+            "/api/dashboard",
+            params={
+                "planning_unit_id": "pu-1",
+                "scope": "individual",
+                "investor_id": "investor-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 200
+        mock_pu.assert_called_once_with("pu-1", "user-1")
+        mock_investor.assert_called_once_with("pu-1", "investor-1", "user-1")
+
+    @patch("api.dashboard.verify_planning_unit_ownership")
+    @patch("api.dashboard.authenticate_user")
+    def test_dashboard_rejects_investor_id_for_family_scope(self, mock_auth, mock_pu):
+        mock_auth.return_value = "user-1"
+        r = client.get(
+            "/api/dashboard",
+            params={
+                "planning_unit_id": "pu-1",
+                "scope": "family",
+                "investor_id": "investor-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 400
+        assert "only valid for individual scope" in r.json()["detail"]
