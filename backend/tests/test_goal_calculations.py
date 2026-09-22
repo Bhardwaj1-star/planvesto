@@ -110,7 +110,7 @@ class TestFundingGap:
     def test_required_monthly_contribution_with_return(self):
         # End-of-month contributions; 12% nominal annual / 12 monthly rate.
         result = calculate_required_monthly_contribution(120000.0, 0.12, 1.0)
-        assert result == 9435.66
+        assert result == 9461.85
 
     def test_required_monthly_contribution_ignores_surplus(self):
         assert calculate_required_monthly_contribution(-1000.0, 0.12, 5.0) == 0.0
