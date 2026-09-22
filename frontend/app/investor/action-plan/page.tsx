@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   confirmActionDecision,
+  completeAction,
   createAction,
   getActions,
   getDecisionHistory,
@@ -12,8 +13,9 @@ import {
   type ActionPlanItem,
 } from "../../../lib/api/action-plan";
 import { getStrategyVersionById, type StrategyVersion } from "../../../lib/api/strategy-version";
+import { getLatestFinancialState, type FinancialState } from "../../../lib/api/financial-state";
 
-const DECISIONS: ActionDecision[] = ["add", "modify", "complete", "cancel", "delete"];
+const DECISIONS: ActionDecision[] = ["add", "modify", "cancel", "delete"];
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -43,6 +45,14 @@ export default function ActionPlanPage() {
   const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
   const [deadline, setDeadline] = useState("");
   const [creating, setCreating] = useState(false);
+  const [currentFinancialState, setCurrentFinancialState] = useState<FinancialState | null>(null);
+  const [projectedMetrics, setProjectedMetrics] = useState({
+    investable_surplus_monthly: "",
+    total_assets: "",
+    total_liabilities: "",
+    net_worth: "",
+    safety_reserve_months: "",
+  });
 
   const refresh = async () => {
     const planningUnitId = getPlanningUnitId();
@@ -54,6 +64,26 @@ export default function ActionPlanPage() {
 
   useEffect(() => {
     let active = true;
+    const loadFinancialState = async () => {
+      const planningUnitId = getPlanningUnitId();
+      if (!planningUnitId) return;
+      try {
+        const state = await getLatestFinancialState(planningUnitId);
+        if (active) {
+          setCurrentFinancialState(state);
+          setProjectedMetrics({
+            investable_surplus_monthly: String(state.investable_surplus_monthly.value ?? ""),
+            total_assets: String(state.total_assets.value ?? ""),
+            total_liabilities: String(state.total_liabilities.value ?? ""),
+            net_worth: String(state.net_worth.value ?? ""),
+            safety_reserve_months: String(state.safety_reserve_months.value ?? ""),
+          });
+        }
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : "Unable to load current Financial State.");
+      }
+    };
+    void loadFinancialState();
     const loadApprovedVersion = async () => {
       if (typeof window === "undefined") return;
       const id = new URLSearchParams(window.location.search).get("strategyVersionId") ?? "";
@@ -98,11 +128,32 @@ export default function ActionPlanPage() {
     if (!title.trim()) return setError("Action title is required.");
     setCreating(true); setError(null);
     try {
-      await createAction({ planning_unit_id: planningUnitId, strategy_version_id: strategyVersionId.trim(), title: title.trim(), description: description.trim() || null, priority, deadline: deadline || null });
+      if (!currentFinancialState) throw new Error("Current Financial State is not available.");
+      const projectedState: FinancialState = {
+        ...currentFinancialState,
+        investable_surplus_monthly: { ...currentFinancialState.investable_surplus_monthly, value: projectedMetrics.investable_surplus_monthly.trim() ? Number(projectedMetrics.investable_surplus_monthly) : currentFinancialState.investable_surplus_monthly.value },
+        total_assets: { ...currentFinancialState.total_assets, value: projectedMetrics.total_assets.trim() ? Number(projectedMetrics.total_assets) : currentFinancialState.total_assets.value },
+        total_liabilities: { ...currentFinancialState.total_liabilities, value: projectedMetrics.total_liabilities.trim() ? Number(projectedMetrics.total_liabilities) : currentFinancialState.total_liabilities.value },
+        net_worth: { ...currentFinancialState.net_worth, value: projectedMetrics.net_worth.trim() ? Number(projectedMetrics.net_worth) : currentFinancialState.net_worth.value },
+        safety_reserve_months: { ...currentFinancialState.safety_reserve_months, value: projectedMetrics.safety_reserve_months.trim() ? Number(projectedMetrics.safety_reserve_months) : currentFinancialState.safety_reserve_months.value },
+      };
+      await createAction({ planning_unit_id: planningUnitId, strategy_version_id: strategyVersionId.trim(), title: title.trim(), description: description.trim() || null, priority, deadline: deadline || null, planned_impact: { financial_state: projectedState } });
       setTitle(""); setDescription(""); setDeadline("");
       await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to create implementation action."); }
     finally { setCreating(false); }
+  };
+
+  const handleComplete = async (action: ActionPlanItem) => {
+    if (!action.action_id) return;
+    const planningUnitId = getPlanningUnitId();
+    if (!planningUnitId) return setError("Planning unit is not available.");
+    setWorkingId(action.action_id); setError(null);
+    try {
+      await completeAction(planningUnitId, action.action_id);
+      await refresh();
+    } catch (err) { setError(err instanceof Error ? err.message : "Unable to complete action and compare actual impact."); }
+    finally { setWorkingId(null); }
   };
 
   const handleDecision = async (action: ActionPlanItem) => {
