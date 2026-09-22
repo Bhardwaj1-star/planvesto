@@ -153,6 +153,7 @@ export default function InvestorSidebar() {
           </Link>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
