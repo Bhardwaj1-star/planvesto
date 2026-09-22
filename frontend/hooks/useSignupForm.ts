@@ -1,5 +1,6 @@
 ﻿import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { getSafeRedirect } from "../lib/safe-redirect";
 
 export function useSignupForm() {
   useEffect(() => {
@@ -84,7 +85,7 @@ export function useSignupForm() {
       if (!valid) return;
 
       createButton.disabled = true;
-      createButton.innerHTML = "Creating Accountâ€¦";
+      createButton.textContent = "Creating Account…";
 
       const { data, error } = await supabase.auth.signUp({
         email: emailValue,
@@ -97,7 +98,7 @@ export function useSignupForm() {
   });
 
       createButton.disabled = false;
-      createButton.innerHTML = "Create Account <span>â†’</span>";
+      createButton.textContent = "Create Account →";
 
       if (error) {
         alert(error.message);
@@ -107,8 +108,8 @@ export function useSignupForm() {
       successMessage?.classList.remove("hidden");
       successMessage?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-      const redirectTo = new URLSearchParams(window.location.search).get("redirectTo");
-      if (redirectTo && data.session) window.location.assign(redirectTo);
+      const redirectTo = getSafeRedirect(new URLSearchParams(window.location.search).get("redirectTo"));
+      if (data.session) window.location.assign(redirectTo);
     };
 
     signupForm.addEventListener("submit", handler);
