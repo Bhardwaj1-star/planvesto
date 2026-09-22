@@ -117,3 +117,27 @@ export function createAction(input: {
 }) {
   return request<ActionPlanItem>("/api/action-plan/actions", { method: "POST", body: JSON.stringify(input) });
 }
+
+export function completeAction(
+  planningUnitId: string,
+  actionId: string,
+  completionPreview?: Partial<ActionImpactPreview>,
+) {
+  const preview: ActionImpactPreview = {
+    action: { action_id: actionId, decision: "complete" },
+    financial_state_impact: {},
+    goal_impacts: [],
+    strategy_impact: {},
+    financial_health_impact: {},
+    alternatives: [],
+    cause_explanation: null,
+    ...completionPreview,
+  };
+  return request<ActionPlanItem>(
+    "/api/action-plan/actions/" + encodeURIComponent(actionId) + "/complete",
+    {
+      method: "POST",
+      body: JSON.stringify({ planning_unit_id: planningUnitId, action_id: actionId, completion_preview: preview }),
+    },
+  );
+}
