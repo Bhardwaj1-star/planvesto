@@ -16,3 +16,5 @@ alter function public.prevent_financial_decision_mutation() set search_path = pg
 
 -- handle_new_user and rls_auto_enable already pin their search_path in the
 -- current production definition; keep those definitions unchanged.
+
+-- Reviewed against production Supabase security advisor findings on 2026-09-22.
