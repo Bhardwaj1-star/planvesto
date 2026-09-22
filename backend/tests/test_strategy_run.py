@@ -61,7 +61,7 @@ class TestStrategyRunLifecycle:
     @patch("services.strategy_service.GoalRepository")
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_first_strategy_build_with_explicit_priorities_succeeds(self, mock_context, MockStratRepo, MockGoalRepo):
+    def test_first_strategy_build_with_explicit_priorities_succeeds(self, MockGoalRepo, MockStratRepo, mock_context):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -91,7 +91,7 @@ class TestStrategyRunLifecycle:
     @patch("services.strategy_service.GoalRepository")
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_subsequent_strategy_build_reuses_previous_priorities(self, mock_context, MockStratRepo, MockGoalRepo):
+    def test_subsequent_strategy_build_reuses_previous_priorities(self, MockGoalRepo, MockStratRepo, mock_context):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -318,7 +318,7 @@ class TestStrategyRunLifecycle:
     # ── 3. Selection Revalidation during Recalculation ────────────────────────
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_recalculation_preserves_still_valid_selection(self, mock_context, MockStratRepo):
+    def test_recalculation_preserves_still_valid_selection(self, MockStratRepo, mock_context):
         strat_repo_mock = MockStratRepo.return_value
 
         prev_run = StrategyRun(
@@ -362,7 +362,7 @@ class TestStrategyRunLifecycle:
 
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_recalculation_clears_invalid_selection(self, mock_context, MockStratRepo):
+    def test_recalculation_clears_invalid_selection(self, MockStratRepo, mock_context):
         strat_repo_mock = MockStratRepo.return_value
 
         # Selection of a strategy that will not be applicable or a scenario that won't exist
