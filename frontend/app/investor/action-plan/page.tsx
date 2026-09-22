@@ -46,7 +46,7 @@ export default function ActionPlanPage() {
     // The backend uses a shared synchronous Supabase client. Keep these reads sequential
     // so the Action Plan page does not open competing requests on the same HTTP/2 connection.
     // Keep these reads sequential because the backend uses a shared synchronous Supabase client.
-    const nextActions = await getActions(planningUnitId);
+    const nextActions = await getActions(planningUnitId, strategyVersionId);
     const nextHistory = await getDecisionHistory(planningUnitId);
     setActions(nextActions);
     setHistory(nextHistory.map((item) => ({ action_id: item.action_id, decision: item.decision, confirmed_at: item.confirmed_at, decision_id: item.decision_id })));
