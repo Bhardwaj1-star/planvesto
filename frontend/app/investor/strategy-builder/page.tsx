@@ -53,7 +53,16 @@ export default function InvestorStrategyBuilderPage() {
         if (!active) return;
         const nextGoals = (data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" }));
         setGoals(nextGoals);
-        if (nextGoals[0]) setSelectedGoalId(nextGoals[0].id);
+
+        // Preserve the goal selected in the Goal Planner → Strategy handoff.
+        const requestedGoalId =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("goalId")
+            : null;
+        const handoffGoal = requestedGoalId
+          ? nextGoals.find((goal) => goal.id === requestedGoalId)
+          : null;
+        setSelectedGoalId(handoffGoal?.id ?? nextGoals[0]?.id ?? "");
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load goals.");
       } finally { if (active) setLoading(false); }
@@ -145,7 +154,18 @@ export default function InvestorStrategyBuilderPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <label className="block flex-1"><span className="text-sm font-bold text-slate-700">Goal</span><select value={selectedGoalId} onChange={(e) => setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-600"><option value="">Select goal</option>{goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+            <label className="block flex-1">
+              <span className="text-sm font-bold text-slate-700">Goal</span>
+              <select value={selectedGoalId} onChange={(e) => setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-600">
+                <option value="">Select goal</option>
+                {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              {selectedGoalId && (
+                <span className="mt-2 block text-xs font-semibold text-teal-700">
+                  Planning strategy for: {goals.find((g) => g.id === selectedGoalId)?.name ?? "Selected goal"}
+                </span>
+              )}
+            </label>
             <InvestorButton onClick={handleBuild} disabled={working || !selectedGoalId}>{working ? "Working…" : run ? "Rebuild Strategy Run" : "Build Strategy"}</InvestorButton>
           </div>
           {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span></div>}
