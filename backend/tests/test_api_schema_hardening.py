@@ -8,7 +8,7 @@ from schemas.action_plan import ActionCreateRequest
 from schemas.goals import GoalInput
 from schemas.orchestration import PlanningOrchestrationRequest
 from schemas.strategy import CustomScenarioRequest, StrategySelectRequest
-from schemas.strategy_edit import StrategyEditRequest
+from models.strategy_edit import StrategyEditRequest
 
 
 def test_request_schemas_reject_unknown_fields():

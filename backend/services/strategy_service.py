@@ -158,6 +158,7 @@ class StrategyService:
             architectures=result.architectures, selected_strategy_id=prev.selected_strategy_id if selection_valid else None, selected_scenario_id=prev.selected_scenario_id if selection_valid else None,
             selected_strategy_version_id=prev.selected_strategy_version_id if selection_valid else None, selected_strategy_version=prev.selected_strategy_version if selection_valid else None,
             selected_implementation_parameters=prev.selected_implementation_parameters if selection_valid else {}, selected_architecture=selected_arch if selection_valid else None,
+            selection_timestamp=prev.selection_timestamp if selection_valid else None,
             approval_status="selected" if selection_valid else "not_selected", run_metadata={"trigger": "automatic_recalculation", "triggered_by_defined_goal_version": new_defined_goal.version, "approval_invalidated": prev.approval_status == "approved"},
         )
         self.strat_repo.save_run(new_run)
