@@ -28,10 +28,23 @@ class StrategyApprovalService:
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
-        if run.approval_status != "selected":
-            raise HTTPException(status_code=409, detail="Strategy run must have a freshly selected strategy before approval")
-        if not run.selected_strategy_id or not run.selected_strategy_version_id or run.selected_strategy_version is None:
+
+        has_selected_version = bool(
+            run.selected_strategy_id
+            and run.selected_strategy_version_id
+            and run.selected_strategy_version is not None
+        )
+
+        # The selected Strategy Version is the source of truth for whether this
+        # run is ready for approval. approval_status is lifecycle metadata and
+        # may be stale on older runs.
+        if run.approval_status == "approved":
+            raise HTTPException(status_code=409, detail="Strategy Version is already approved")
+        if run.approval_status in {"rejected", "superseded"}:
+            raise HTTPException(status_code=409, detail="Strategy run is no longer eligible for approval")
+        if not has_selected_version:
             raise HTTPException(status_code=400, detail="A selected Strategy Version is required before approval")
+
         version = self.version_repo.get_version(planning_unit_id, run.selected_strategy_id, run.selected_strategy_version)
         if not version or version.strategy_version_id != run.selected_strategy_version_id:
             raise HTTPException(status_code=409, detail="Selected Strategy Version snapshot is unavailable or inconsistent")

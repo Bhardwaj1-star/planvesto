@@ -58,8 +58,31 @@ def test_approved_run_cannot_be_approved_again(
         )
 
     assert exc_info.value.status_code == 409
-    assert "freshly selected strategy" in exc_info.value.detail
+    assert "already approved" in exc_info.value.detail
     MockApprovalRepo.return_value.save.assert_not_called()
+
+
+@patch("services.strategy_approval_service.StrategyRepository")
+@patch("services.strategy_approval_service.StrategyVersionRepository")
+@patch("services.strategy_approval_service.StrategyApprovalRepository")
+@patch("services.strategy_approval_service.PrimaryStrategyRepository")
+def test_selected_version_can_be_approved_when_lifecycle_metadata_is_stale(
+    MockPrimaryRepo, MockApprovalRepo, MockVersionRepo, MockStrategyRepo
+):
+    MockStrategyRepo.return_value.get_run_by_id.return_value = _run("not_selected")
+    MockVersionRepo.return_value.get_version.return_value = _version()
+    MockApprovalRepo.return_value.save.return_value = MagicMock(approval_snapshot_id="approval-1")
+    MockPrimaryRepo.return_value.get_current.return_value = None
+
+    svc = StrategyApprovalService()
+    svc.approve_selected_strategy(
+        "pu-1", "run-1", SuitabilityAssessment(status="Suitable")
+    )
+
+    MockApprovalRepo.return_value.save.assert_called_once()
+    MockStrategyRepo.return_value.update_approval.assert_called_once_with(
+        "pu-1", "run-1", "approve"
+    )
 
 
 @patch("services.strategy_approval_service.StrategyRepository")
