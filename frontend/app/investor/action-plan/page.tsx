@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   confirmActionDecision,
   completeAction,
+  generateStrategyActions,
   getActions,
   getDecisionHistory,
   getPlanningUnitId,
@@ -12,7 +13,6 @@ import {
   type ActionPlanItem,
 } from "../../../lib/api/action-plan";
 import { getStrategyVersionById, type StrategyVersion } from "../../../lib/api/strategy-version";
-import { getLatestFinancialState, type FinancialState } from "../../../lib/api/financial-state";
 
 const DECISIONS: ActionDecision[] = ["add", "modify", "cancel", "delete"];
 
@@ -39,13 +39,13 @@ export default function ActionPlanPage() {
   const [strategyVersionId, setStrategyVersionId] = useState("");
   const [approvedVersion, setApprovedVersion] = useState<StrategyVersion | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [loadingStrategy, setLoadingStrategy] = useState(false);
 
   const refresh = async () => {
     const planningUnitId = getPlanningUnitId();
     if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
     // The backend uses a shared synchronous Supabase client. Keep these reads sequential
     // so the Action Plan page does not open competing requests on the same HTTP/2 connection.
+    // Keep these reads sequential because the backend uses a shared synchronous Supabase client.
     const nextActions = await getActions(planningUnitId);
     const nextHistory = await getDecisionHistory(planningUnitId);
     setActions(nextActions);
@@ -54,26 +54,6 @@ export default function ActionPlanPage() {
 
   useEffect(() => {
     let active = true;
-    const loadFinancialState = async () => {
-      const planningUnitId = getPlanningUnitId();
-      if (!planningUnitId) return;
-      try {
-        const state = await getLatestFinancialState(planningUnitId);
-        if (active) {
-          setCurrentFinancialState(state);
-          setProjectedMetrics({
-            investable_surplus_monthly: String(state.investable_surplus_monthly.value ?? ""),
-            total_assets: String(state.total_assets.value ?? ""),
-            total_liabilities: String(state.total_liabilities.value ?? ""),
-            net_worth: String(state.net_worth.value ?? ""),
-            safety_reserve_months: String(state.safety_reserve_months.value ?? ""),
-          });
-        }
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Unable to load current Financial State.");
-      }
-    };
-    void loadFinancialState();
     const loadApprovedVersion = async () => {
       if (typeof window === "undefined") return;
       const id = new URLSearchParams(window.location.search).get("strategyVersionId") ?? "";
@@ -85,10 +65,13 @@ export default function ActionPlanPage() {
       try {
         const version = await getStrategyVersionById(planningUnitId, id);
         if (active) setApprovedVersion(version);
+        setGenerating(true);
+        await generateStrategyActions(planningUnitId, id);
+        await refresh();
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Unable to load approved Strategy Version.");
+        if (active) setError(err instanceof Error ? err.message : "Unable to load the strategy-driven Action Plan.");
       } finally {
-        if (active) setLoadingStrategy(false);
+        if (active) setGenerating(false);
       }
     };
     void loadApprovedVersion();
