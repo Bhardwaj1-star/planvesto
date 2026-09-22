@@ -44,7 +44,10 @@ def list_decision_history(planning_unit_id: str, action_id: str | None = None, a
 def create_action(request: ActionCreateRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_strategy_version_ownership(request.planning_unit_id, request.strategy_version_id, user_id)
-    return _service().build_action(**request.model_dump())
+    try:
+        return _service().build_action(**request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/decisions", response_model=ActionDecisionResponse)

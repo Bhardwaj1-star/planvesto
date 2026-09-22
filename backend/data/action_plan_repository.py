@@ -11,6 +11,17 @@ class ActionPlanRepository:
         self.action_table = "action_plan_items"
         self.history_table = "action_decision_history"
 
+    def is_strategy_version_approved(self, planning_unit_id: str, strategy_version_id: str) -> bool:
+        response = (
+            self.client.table("strategy_approval_snapshots")
+            .select("approval_snapshot_id")
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("strategy_version_id", strategy_version_id)
+            .limit(1)
+            .execute()
+        )
+        return bool(response.data)
+
     def save_action(self, action: ActionPlanItem) -> ActionPlanItem:
         payload = action.model_dump(mode="json", exclude_none=True)
         response = self.client.table(self.action_table).insert(payload).execute()
