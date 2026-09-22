@@ -11,14 +11,15 @@ from api.action_plan import router as action_plan_router
 from api.moneywheel import router as moneywheel_router
 from api.orchestration import router as orchestration_router
 from api.diary import router as diary_router
+from config.settings import CORS_ALLOWED_ORIGINS
 
 app = FastAPI(title="Planvesto Backend", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://planvesto.com"],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(financial_state_router)
 app.include_router(goals_router)
