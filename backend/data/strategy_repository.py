@@ -16,6 +16,19 @@ class StrategyRepository:
         res = self.db.table("strategy_runs").select("*").eq("planning_unit_id", planning_unit_id).eq("strategy_run_id", strategy_run_id).maybe_single().execute()
         return self._hydrate_run(res.data) if res and res.data else None
 
+    def get_run_by_strategy_version_id(self, planning_unit_id: str, strategy_version_id: str) -> StrategyRun | None:
+        res = (
+            self.db.table("strategy_runs")
+            .select("*")
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("selected_strategy_version_id", strategy_version_id)
+            .order("run_version", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = res.data or []
+        return self._hydrate_run(rows[0]) if rows else None
+
     def get_run_history(self, planning_unit_id: str, goal_id: str) -> list[dict[str, Any]]:
         res = self.db.table("strategy_runs").select("strategy_run_id, goal_id, defined_goal_version, run_version, is_latest, status, selected_strategy_id, selected_scenario_id, selected_strategy_version_id, selected_strategy_version, created_at").eq("planning_unit_id", planning_unit_id).eq("goal_id", goal_id).order("run_version", desc=True).execute()
         return res.data or []

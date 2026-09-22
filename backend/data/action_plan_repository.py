@@ -47,6 +47,17 @@ class ActionPlanRepository:
         )
         return [ActionPlanItem.model_validate(row) for row in (response.data or [])]
 
+    def list_actions_for_strategy_version(self, planning_unit_id: str, strategy_version_id: str) -> list[ActionPlanItem]:
+        response = (
+            self.client.table(self.action_table)
+            .select("*")
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("strategy_version_id", strategy_version_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return [ActionPlanItem.model_validate(row) for row in (response.data or [])]
+
     def update_action(self, planning_unit_id: str, action_id: str, updates: dict[str, Any]) -> ActionPlanItem:
         response = (
             self.client.table(self.action_table)
