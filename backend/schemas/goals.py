@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AssetMappingInput(BaseModel):
@@ -8,6 +8,12 @@ class AssetMappingInput(BaseModel):
     allocation_value: float = Field(ge=0)
     expected_return: float | None = Field(default=None, ge=-0.99, le=1.0)
     return_frequency: Literal["annual", "semi-annual", "semiannual", "half-yearly", "quarterly", "monthly"] = "annual"
+
+    @model_validator(mode="after")
+    def validate_allocation(self):
+        if self.allocation_type == "percentage" and self.allocation_value > 100:
+            raise ValueError("Percentage allocation cannot exceed 100")
+        return self
 
 
 class GoalInput(BaseModel):
@@ -18,7 +24,7 @@ class GoalInput(BaseModel):
     goal_type: str = Field(min_length=1, max_length=100)
     today_cost: float = Field(gt=0)
     target_month: int = Field(ge=1, le=12)
-    target_year: int = Field(ge=2026, le=2200)
+    target_year: int = Field(ge=1900, le=2200)
     inflation_rate: float | None = Field(default=None, ge=0, le=1)
     priority: str = Field(default="Important", min_length=1, max_length=50)
     flexibility: str = Field(default="Flexible", min_length=1, max_length=50)
