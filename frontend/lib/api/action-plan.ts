@@ -70,8 +70,9 @@ export function getPlanningUnitId(): string | null {
   return window.localStorage.getItem("planvesto-planning-unit-id");
 }
 
-export function getActions(planningUnitId: string) {
-  return request<ActionPlanItem[]>(`/api/action-plan/actions?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+export function getActions(planningUnitId: string, strategyVersionId?: string) {
+  const versionQuery = strategyVersionId ? `&strategy_version_id=${encodeURIComponent(strategyVersionId)}` : "";
+  return request<ActionPlanItem[]>(`/api/action-plan/actions?planning_unit_id=${encodeURIComponent(planningUnitId)}${versionQuery}`);
 }
 
 export function generateStrategyActions(planningUnitId: string, strategyVersionId: string) {
