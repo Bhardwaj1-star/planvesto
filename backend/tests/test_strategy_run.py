@@ -59,8 +59,9 @@ class TestStrategyRunLifecycle:
         strat_repo_mock.save_run.assert_not_called()
 
     @patch("services.strategy_service.GoalRepository")
+    @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_first_strategy_build_with_explicit_priorities_succeeds(self, MockStratRepo, MockGoalRepo):
+    def test_first_strategy_build_with_explicit_priorities_succeeds(self, mock_context, MockStratRepo, MockGoalRepo):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -88,8 +89,9 @@ class TestStrategyRunLifecycle:
         strat_repo_mock.save_run.assert_called_once()
 
     @patch("services.strategy_service.GoalRepository")
+    @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_subsequent_strategy_build_reuses_previous_priorities(self, MockStratRepo, MockGoalRepo):
+    def test_subsequent_strategy_build_reuses_previous_priorities(self, mock_context, MockStratRepo, MockGoalRepo):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -291,6 +293,10 @@ class TestStrategyRunLifecycle:
                 recommended_strategy_id="strat-cap-preservation",
                 recommended_scenario_id="scen-test-1",
             ),
+            architectures=[{
+                "architecture_id": "arch-strat-cap-preservation",
+                "primary_strategy_id": "strat-cap-preservation",
+            }],
         )
         strat_repo_mock.get_run_by_id.return_value = existing_run
 
@@ -310,8 +316,9 @@ class TestStrategyRunLifecycle:
         assert updated.selected_implementation_parameters["debt_allocation_pct"] == 80.0
 
     # ── 3. Selection Revalidation during Recalculation ────────────────────────
+    @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_recalculation_preserves_still_valid_selection(self, MockStratRepo):
+    def test_recalculation_preserves_still_valid_selection(self, mock_context, MockStratRepo):
         strat_repo_mock = MockStratRepo.return_value
 
         prev_run = StrategyRun(
@@ -353,8 +360,9 @@ class TestStrategyRunLifecycle:
         assert saved_run.selected_implementation_parameters == {"debt_pct": 80.0}
         assert saved_run.selection_timestamp == "2026-09-09T10:00:00Z"
 
+    @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_recalculation_clears_invalid_selection(self, MockStratRepo):
+    def test_recalculation_clears_invalid_selection(self, mock_context, MockStratRepo):
         strat_repo_mock = MockStratRepo.return_value
 
         # Selection of a strategy that will not be applicable or a scenario that won't exist
