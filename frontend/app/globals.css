@@ -1196,3 +1196,26 @@ body {
 [data-theme="dark"] .before\:bg-slate-200::before {
   background-color: var(--pv-border-default);
 }
+
+
+/* P1 accessibility baseline */
+:focus-visible {
+  outline: 3px solid rgba(20, 184, 166, 0.55);
+  outline-offset: 2px;
+}
+
+button:disabled,
+a[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
