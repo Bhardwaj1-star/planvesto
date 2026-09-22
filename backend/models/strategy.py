@@ -130,6 +130,16 @@ class InvestorPriorities(BaseModel):
     growth: float = 0.25
     flexibility: float = 0.25
 
+    @model_validator(mode="after")
+    def validate_priorities(self) -> "InvestorPriorities":
+        for name in ("safety", "liquidity", "growth", "flexibility"):
+            value = getattr(self, name)
+            if not 0 <= value <= 1:
+                raise ValueError(f"{name} priority must be between 0 and 1")
+        if self.safety + self.liquidity + self.growth + self.flexibility <= 0:
+            raise ValueError("At least one investor priority must be greater than zero")
+        return self
+
     def normalized(self) -> "InvestorPriorities":
         total = self.safety + self.liquidity + self.growth + self.flexibility
         if total <= 0:
