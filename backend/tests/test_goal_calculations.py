@@ -13,6 +13,7 @@ from engines.goal.asset_projection import (
 from engines.goal.funding_gap import calculate_funding_gap
 from engines.goal.engine import GoalEngine
 from schemas.goals import GoalInput, AssetMappingInput
+from pydantic import ValidationError
 
 
 class TestTargetCalculator:
@@ -151,3 +152,21 @@ class TestGoalEngineFull:
         assert defined.projected_mapped_asset_value == 704936.67
         assert defined.funding_gap == 633288.91
         assert defined.funding_status == "Shortfall"
+
+
+class TestFinancialInputValidation:
+    def test_percentage_allocation_over_100_is_rejected(self):
+        with pytest.raises(ValidationError):
+            AssetMappingInput(asset_id="a1", allocation_type="percentage", allocation_value=101)
+
+    def test_expected_return_bounds_are_rejected(self):
+        with pytest.raises(ValidationError):
+            AssetMappingInput(asset_id="a1", allocation_type="percentage", allocation_value=50, expected_return=1.01)
+        with pytest.raises(ValidationError):
+            AssetMappingInput(asset_id="a1", allocation_type="percentage", allocation_value=50, expected_return=-1.0)
+
+    def test_invalid_goal_month_and_inflation_are_rejected(self):
+        with pytest.raises(ValidationError):
+            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="General", today_cost=1000, target_month=13, target_year=2030)
+        with pytest.raises(ValidationError):
+            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="General", today_cost=1000, target_month=1, target_year=2030, inflation_rate=1.01)
