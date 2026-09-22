@@ -1,16 +1,17 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+from schemas.base import StrictRequestModel
 
 
-class StrategyEditRequest(BaseModel):
-    planning_unit_id: str
-    strategy_id: str
+class StrategyEditRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_id: str = Field(min_length=1, max_length=100)
     parent_version: int = Field(ge=1)
-    implementation_parameters: dict[str, Any] = Field(default_factory=dict)
+    implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
 
 
-class StrategyEditResult(BaseModel):
+class StrategyEditResult(StrictRequestModel):
     strategy_id: str
     strategy_version_id: str
     strategy_version: int

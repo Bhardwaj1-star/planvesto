@@ -1,13 +1,14 @@
-from typing import Any
-
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from models.moneywheel import MoneywheelInput, MoneywheelResult
+from schemas.base import StrictRequestModel
 
 
-class MoneywheelCalculateRequest(MoneywheelInput):
-    financial_state_snapshot: dict[str, Any] = Field(default_factory=dict)
+class MoneywheelCalculateRequest(MoneywheelInput, StrictRequestModel):
+    # Retained for backwards compatibility; the API deliberately ignores it and
+    # rebuilds financial state from server-owned data.
+    financial_state_snapshot: dict = Field(default_factory=dict, max_length=50)
 
 
-class MoneywheelResponse(BaseModel):
+class MoneywheelResponse(StrictRequestModel):
     result: MoneywheelResult

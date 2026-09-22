@@ -1,38 +1,38 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
-
+from pydantic import Field
 from models.diary import ContextualPrompt, DiaryCategory
+from schemas.base import StrictRequestModel
 
 
-class DiaryEntryCreateRequest(BaseModel):
-    planning_unit_id: str
-    date: str
-    title: str | None = None
-    content: str
-    tags: list[str] = Field(default_factory=list)
-    prompts: list[ContextualPrompt] = Field(default_factory=list)
-    follow_up_note: str | None = None
+class DiaryEntryCreateRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    date: str = Field(min_length=1, max_length=40)
+    title: str | None = Field(default=None, max_length=200)
+    content: str = Field(min_length=1, max_length=10000)
+    tags: list[str] = Field(default_factory=list, max_length=30)
+    prompts: list[ContextualPrompt] = Field(default_factory=list, max_length=20)
+    follow_up_note: str | None = Field(default=None, max_length=2000)
     is_important: bool = False
 
 
-class DiaryEntryUpdateRequest(BaseModel):
-    date: str | None = None
-    title: str | None = None
-    content: str | None = None
-    tags: list[str] | None = None
-    prompts: list[ContextualPrompt] | None = None
-    follow_up_note: str | None = None
+class DiaryEntryUpdateRequest(StrictRequestModel):
+    date: str | None = Field(default=None, max_length=40)
+    title: str | None = Field(default=None, max_length=200)
+    content: str | None = Field(default=None, min_length=1, max_length=10000)
+    tags: list[str] | None = Field(default=None, max_length=30)
+    prompts: list[ContextualPrompt] | None = Field(default=None, max_length=20)
+    follow_up_note: str | None = Field(default=None, max_length=2000)
     is_important: bool | None = None
 
 
-class FinancialDecisionCreateRequest(BaseModel):
-    planning_unit_id: str
-    date: str
-    title: str
-    summary: str
+class FinancialDecisionCreateRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    date: str = Field(min_length=1, max_length=40)
+    title: str = Field(min_length=1, max_length=200)
+    summary: str = Field(min_length=1, max_length=5000)
     category: DiaryCategory
-    source: str
-    source_id: str | None = None
-    metrics: dict[str, Any] = Field(default_factory=dict)
-    notes: str | None = None
+    source: str = Field(min_length=1, max_length=100)
+    source_id: str | None = Field(default=None, min_length=1, max_length=100)
+    metrics: dict[str, Any] = Field(default_factory=dict, max_length=50)
+    notes: str | None = Field(default=None, max_length=5000)

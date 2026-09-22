@@ -1,44 +1,46 @@
 from typing import Any
-from pydantic import BaseModel, Field
+
+from pydantic import Field
 from models.strategy import InvestorPriorities
 from models.strategy_approval import SuitabilityAssessment
+from schemas.base import StrictRequestModel
 
 
-class StrategyBuildRequest(BaseModel):
-    planning_unit_id: str
-    goal_id: str
+class StrategyBuildRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    goal_id: str = Field(min_length=1, max_length=100)
     investor_priorities: InvestorPriorities | None = None
 
 
-class CustomScenarioRequest(BaseModel):
-    planning_unit_id: str
-    strategy_run_id: str
-    strategy_id: str
-    scenario_name: str
-    assumptions: dict[str, Any] = Field(default_factory=dict)
-    funding_structure: dict[str, Any] = Field(default_factory=dict)
+class CustomScenarioRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
+    strategy_id: str = Field(min_length=1, max_length=100)
+    scenario_name: str = Field(min_length=1, max_length=100)
+    assumptions: dict[str, Any] = Field(default_factory=dict, max_length=50)
+    funding_structure: dict[str, Any] = Field(default_factory=dict, max_length=50)
 
 
-class PriorityWeightsRequest(BaseModel):
-    planning_unit_id: str
-    strategy_run_id: str
+class PriorityWeightsRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
     priorities: InvestorPriorities
 
 
-class StrategySelectRequest(BaseModel):
-    planning_unit_id: str
-    strategy_run_id: str
-    selected_strategy_id: str
-    selected_scenario_id: str
-    selected_architecture_id: str | None = None
-    selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict)
+class StrategySelectRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
+    selected_strategy_id: str = Field(min_length=1, max_length=100)
+    selected_scenario_id: str = Field(min_length=1, max_length=100)
+    selected_architecture_id: str | None = Field(default=None, min_length=1, max_length=100)
+    selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
 
 
-class StrategyApprovalRequest(BaseModel):
-    planning_unit_id: str
-    strategy_run_id: str
+class StrategyApprovalRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
     suitability: SuitabilityAssessment
-    acknowledgement_text: str | None = None
+    acknowledgement_text: str | None = Field(default=None, max_length=2000)
     make_primary: bool = False
-    primary_transition_decision: str | None = None
-    pending_action_disposition: str | None = None
+    primary_transition_decision: str | None = Field(default=None, min_length=1, max_length=50)
+    pending_action_disposition: str | None = Field(default=None, min_length=1, max_length=50)
