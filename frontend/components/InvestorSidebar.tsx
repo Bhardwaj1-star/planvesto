@@ -74,7 +74,7 @@ export default function InvestorSidebar() {
           <path d={isMobileOpen ? "M6 6L18 18M18 6L6 18" : "M4 7H20M4 12H20M4 17H20"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       </button>
-      <aside id="investor-sidebar" className={`fixed inset-y-0 left-0 z-50 w-72 shrink-0 border-r border-slate-200 bg-white transition-transform duration-200 md:static md:z-auto md:h-auto md:translate-x-0 md:${isCollapsed ? "w-16" : "w-64"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} md:transition-[width]`}>
+      <aside id="investor-sidebar" className={`fixed inset-y-0 left-0 z-50 w-72 shrink-0 border-r border-slate-200 bg-white transition-transform duration-200 md:static md:z-auto md:h-auto md:translate-x-0 ${isCollapsed ? "md:w-16" : "md:w-64"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} md:transition-[width]`}>
       <div className="sticky top-0 flex h-screen flex-col">
         <div className={`${isCollapsed ? "justify-center px-2" : "justify-between px-4"} flex h-20 items-center border-b border-slate-200`}>
           <Link href="/investor/financial-state" className="flex items-center gap-2.5" aria-label="Planvesto Dashboard">
@@ -104,6 +104,7 @@ export default function InvestorSidebar() {
                     <div key={item.href}>
                       <Link
                         href={item.href}
+                        onClick={() => setIsMobileOpen(false)}
                         aria-current={active ? "page" : undefined}
                         title={isCollapsed ? item.label : undefined}
                         className={[
@@ -124,6 +125,7 @@ export default function InvestorSidebar() {
                               <Link
                                 key={route.href}
                                 href={route.href}
+                                onClick={() => setIsMobileOpen(false)}
                                 aria-current={routeActive ? "page" : undefined}
                                 className={[
                                   "block rounded-lg px-3 py-2 text-xs font-semibold transition",
