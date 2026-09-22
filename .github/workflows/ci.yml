@@ -32,7 +32,7 @@ jobs:
 
       - name: Run safe unit tests (no credentials required)
         run: |
-          python -m pytest tests/test_financial_calculations.py -v --tb=short
+          python -m pytest tests/ -v --tb=short
 
   frontend-validation:
     name: Frontend Type Check & Build
