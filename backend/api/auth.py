@@ -47,6 +47,14 @@ def verify_strategy_version_ownership(planning_unit_id: str, strategy_version_id
     _verify_child_belongs_to_planning_unit("strategy_versions", "strategy_version_id", strategy_version_id, planning_unit_id, user_id, "Strategy version does not belong to planning unit")
 
 
+def verify_defined_goal_ownership(planning_unit_id: str, defined_goal_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("defined_goals", "defined_goal_id", defined_goal_id, planning_unit_id, user_id, "Defined goal does not belong to planning unit")
+
+
+def verify_financial_snapshot_ownership(planning_unit_id: str, snapshot_id: str, user_id: str) -> None:
+    _verify_child_belongs_to_planning_unit("financial_state_snapshots", "snapshot_id", snapshot_id, planning_unit_id, user_id, "Financial state snapshot does not belong to planning unit")
+
+
 def verify_action_ownership(planning_unit_id: str, action_id: str, user_id: str) -> None:
     _verify_child_belongs_to_planning_unit("action_plan_items", "action_id", action_id, planning_unit_id, user_id, "Action does not belong to planning unit")
 

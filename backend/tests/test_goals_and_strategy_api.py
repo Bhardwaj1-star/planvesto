@@ -3,6 +3,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
+from models.orchestration import ModuleAvailability, PlanningContext, PlanningOrchestrationContext
 
 client = TestClient(app)
 
@@ -115,3 +116,80 @@ class TestGoalsAndStrategyAPIRoutes:
         mock_select.return_value = {"strategy_run_id": "run-1"}
         client.post("/api/strategy/select", json={"planning_unit_id": "pu-1", "strategy_run_id": "run-1", "selected_strategy_id": "strat-a", "selected_scenario_id": "scen-a"}, headers={"Authorization": "Bearer fake"})
         mock_run.assert_called_once_with("pu-1", "run-1", "user-1")
+
+
+class TestDashboardAuthorization:
+    @patch("api.dashboard.verify_investor_ownership")
+    @patch("api.dashboard.verify_planning_unit_ownership")
+    @patch("api.dashboard.authenticate_user")
+    @patch("api.dashboard.DashboardService.build")
+    def test_dashboard_individual_scope_checks_investor_ownership(
+        self, mock_build, mock_auth, mock_pu, mock_investor
+    ):
+        mock_auth.return_value = "user-1"
+        mock_build.return_value = PlanningOrchestrationContext(
+            planning_context=PlanningContext(planning_unit_id="pu-1", scope="individual", investor_id="investor-1", goal_version_ids=["defined-goal-1", "defined-goal-2"], strategy_version_id="strategy-version-1"),
+            financial_state=ModuleAvailability(available=False),
+            goals=ModuleAvailability(available=True),
+            strategy=ModuleAvailability(available=True),
+            moneywheel=ModuleAvailability(available=False),
+            action_plan=ModuleAvailability(available=True),
+        )
+        r = client.get(
+            "/api/dashboard",
+            params={
+                "planning_unit_id": "pu-1",
+                "scope": "individual",
+                "investor_id": "investor-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 200
+        mock_pu.assert_called_once_with("pu-1", "user-1")
+        mock_investor.assert_called_once_with("pu-1", "investor-1", "user-1")
+
+    @patch("api.dashboard.verify_planning_unit_ownership")
+    @patch("api.dashboard.authenticate_user")
+    def test_dashboard_rejects_investor_id_for_family_scope(self, mock_auth, mock_pu):
+        mock_auth.return_value = "user-1"
+        r = client.get(
+            "/api/dashboard",
+            params={
+                "planning_unit_id": "pu-1",
+                "scope": "family",
+                "investor_id": "investor-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 400
+        assert "only valid for individual scope" in r.json()["detail"]
+
+
+class TestOrchestrationAuthorization:
+    @patch("api.orchestration.verify_defined_goal_ownership")
+    @patch("api.orchestration.verify_strategy_version_ownership")
+    @patch("api.orchestration.verify_investor_ownership")
+    @patch("api.orchestration.verify_planning_unit_ownership")
+    @patch("api.orchestration.authenticate_user")
+    @patch("api.orchestration.PlanningOrchestrationService.build_context")
+    def test_orchestration_checks_all_referenced_resources(
+        self, mock_build, mock_auth, mock_pu, mock_investor, mock_strategy_version, mock_goal_version
+    ):
+        mock_auth.return_value = "user-1"
+        mock_build.return_value = {}
+        r = client.post(
+            "/api/orchestration/context",
+            json={
+                "planning_unit_id": "pu-1",
+                "scope": "individual",
+                "investor_id": "investor-1",
+                "goal_version_ids": ["defined-goal-1", "defined-goal-2"],
+                "strategy_version_id": "strategy-version-1",
+            },
+            headers={"Authorization": "Bearer fake"},
+        )
+        assert r.status_code == 200
+        mock_pu.assert_called_once_with("pu-1", "user-1")
+        mock_investor.assert_called_once_with("pu-1", "investor-1", "user-1")
+        assert mock_goal_version.call_count == 2
+        mock_strategy_version.assert_called_once_with("pu-1", "strategy-version-1", "user-1")
