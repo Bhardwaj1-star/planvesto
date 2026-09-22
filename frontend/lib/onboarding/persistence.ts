@@ -216,14 +216,37 @@ export async function loadGoalPlannerData(): Promise<GoalPlannerData> {
   if (goals.error) throw goals.error;
   if (assets.error) throw assets.error;
 
-  const goalIds = (goals.data || []).map((goal) => goal.goal_id);
-  const funding = goalIds.length
-    ? await supabase.from("goal_funding").select("goal_id, asset_id, allocation_percentage").in("goal_id", goalIds)
+  const goalRows = goals.data || [];
+  const goalIds = goalRows.map((goal) => goal.goal_id);
+
+  // Goal rows are retained for history after cancellation. Active planning flows
+  // must use the latest DefinedGoal state as the source of truth.
+  const { data: definedGoalRows, error: definedGoalsError } = goalIds.length
+    ? await supabase
+        .from("defined_goals")
+        .select("goal_id, status")
+        .eq("planning_unit_id", planningUnitId)
+        .eq("is_latest", true)
+        .in("goal_id", goalIds)
+    : { data: [], error: null };
+  if (definedGoalsError) throw definedGoalsError;
+
+  const activeGoalIds = new Set(
+    (definedGoalRows || [])
+      .filter((row) => row.status !== "Cancelled")
+      .map((row) => row.goal_id),
+  );
+
+  const funding = activeGoalIds.size
+    ? await supabase
+        .from("goal_funding")
+        .select("goal_id, asset_id, allocation_percentage")
+        .in("goal_id", Array.from(activeGoalIds))
     : { data: [], error: null };
   if (funding.error) throw funding.error;
 
   return {
-    goals: (goals.data || []).map((goal) => ({
+    goals: goalRows.filter((goal) => activeGoalIds.has(goal.goal_id)).map((goal) => ({
       id: goal.goal_id,
       name: goal.goal_name,
       targetAmount: String(goal.target_amount),

@@ -138,6 +138,7 @@ export default function GoalPlannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [lastSavedGoalId, setLastSavedGoalId] = useState<string | null>(null);
 
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -527,6 +528,7 @@ export default function GoalPlannerPage() {
       }
 
       const savedDefinedGoal: DefinedGoal = responseBody;
+      setLastSavedGoalId(savedDefinedGoal.goal_id);
 
       // Update local state with the returned authoritative DefinedGoal
       setGoals((prev) => {
@@ -696,8 +698,16 @@ export default function GoalPlannerPage() {
           </div>
         )}
         {successMessage && (
-          <div className="mb-6 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700" role="status">
-            {successMessage}
+          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-700 sm:flex-row sm:items-center sm:justify-between" role="status">
+            <span>{successMessage}</span>
+            {lastSavedGoalId && (
+              <Link
+                href={`/investor/strategy-builder?goalId=${encodeURIComponent(lastSavedGoalId)}`}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-navy-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
+              >
+                Continue to Strategy →
+              </Link>
+            )}
           </div>
         )}
 
