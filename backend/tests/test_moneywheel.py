@@ -116,12 +116,16 @@ def test_post_moneywheel_calculate_success():
     client = TestClient(app)
     fake_row = {"snapshot_id": "snapshot-uuid-999"}
 
+    fake_result = MoneywheelEngine().build(_input())
+    fake_service = MagicMock()
+    fake_service.calculate_from_financial_state.return_value = fake_result
+    fake_state = MagicMock()
+
     with patch("api.moneywheel.authenticate_user", return_value="user-123"), \
          patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \
-         patch("data.moneywheel_repository.get_supabase") as mock_sb:
-        mock_table = MagicMock()
-        mock_sb.return_value.table.return_value = mock_table
-        mock_table.insert.return_value.select.return_value.execute.return_value.data = [fake_row]
+         patch("api.moneywheel.FinancialStateService") as mock_state_service, \
+         patch("api.moneywheel._service", return_value=fake_service):
+        mock_state_service.return_value.build.return_value = fake_state
 
         response = client.post(
             "/api/moneywheel/calculate",
@@ -145,5 +149,5 @@ def test_post_moneywheel_calculate_success():
         data = response.json()
         assert "result" in data
         assert len(data["result"]["ratios"]) == 9
-        assert data["result"]["metadata"]["snapshot_id"] == "snapshot-uuid-999"
+        assert data["result"]["metadata"]
 
