@@ -78,15 +78,7 @@ export default function ActionPlanPage() {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try { await refresh(); }
-      catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Action Plan."); }
-      finally { if (active) setLoading(false); }
-    })();
-    return () => { active = false; };
-  }, []);
+
 
   const historyByAction = useMemo(() => {
     const map = new Map<string, typeof history>();
