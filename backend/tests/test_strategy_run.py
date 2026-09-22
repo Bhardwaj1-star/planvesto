@@ -61,7 +61,7 @@ class TestStrategyRunLifecycle:
     @patch("services.strategy_service.GoalRepository")
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_first_strategy_build_with_explicit_priorities_succeeds(self, MockGoalRepo, MockStratRepo, mock_context):
+    def test_first_strategy_build_with_explicit_priorities_succeeds(self, MockStratRepo, mock_context, MockGoalRepo):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -91,7 +91,7 @@ class TestStrategyRunLifecycle:
     @patch("services.strategy_service.GoalRepository")
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_subsequent_strategy_build_reuses_previous_priorities(self, MockGoalRepo, MockStratRepo, mock_context):
+    def test_subsequent_strategy_build_reuses_previous_priorities(self, MockStratRepo, mock_context, MockGoalRepo):
         goal_repo_mock = MockGoalRepo.return_value
         strat_repo_mock = MockStratRepo.return_value
 
@@ -329,8 +329,8 @@ class TestStrategyRunLifecycle:
             defined_goal_version=1,
             run_version=1,
             investor_priorities=InvestorPriorities(safety=0.7, liquidity=0.1, growth=0.1, flexibility=0.1),
-            selected_strategy_id="strat-cap-preservation",
-            selected_scenario_id="scen-strat-cap-preservation-baseline-standard",
+            selected_strategy_id="strat-high-liquidity-flex",
+            selected_scenario_id="scen-strat-high-liquidity-flex-baseline-standard",
             selected_implementation_parameters={"debt_pct": 80.0},
             selection_timestamp="2026-09-09T10:00:00Z",
             recommendation=StrategyRecommendation(
@@ -355,8 +355,8 @@ class TestStrategyRunLifecycle:
         assert saved_run.defined_goal_version == 2
         assert saved_run.status == "recalculated"
         # Since strat-cap-preservation and scen-strat-cap-preservation-baseline are still generated, preserved:
-        assert saved_run.selected_strategy_id == "strat-cap-preservation"
-        assert saved_run.selected_scenario_id == "scen-strat-cap-preservation-baseline-standard"
+        assert saved_run.selected_strategy_id == "strat-high-liquidity-flex"
+        assert saved_run.selected_scenario_id == "scen-strat-high-liquidity-flex-baseline-standard"
         assert saved_run.selected_implementation_parameters == {"debt_pct": 80.0}
         assert saved_run.selection_timestamp == "2026-09-09T10:00:00Z"
 
