@@ -10,7 +10,11 @@ from engines.goal.asset_projection import (
     get_default_expected_return,
     get_compounding_frequency,
 )
-from engines.goal.funding_gap import calculate_funding_gap
+from engines.goal.funding_gap import (
+    calculate_funding_gap,
+    calculate_funding_return_assumption,
+    calculate_required_monthly_contribution,
+)
 from engines.goal.engine import GoalEngine
 from schemas.goals import GoalInput, AssetMappingInput
 from pydantic import ValidationError
@@ -28,7 +32,6 @@ class TestTargetCalculator:
         assert dur == 0.0
 
     def test_future_target_with_inflation(self):
-        # 100,000 at 6% for 5 years = 100000 * 1.06^5 = 133822.56
         future = calculate_future_target(100000.0, 0.06, 5.0)
         assert future == 133822.56
 
@@ -38,8 +41,6 @@ class TestTargetCalculator:
 
 class TestAssetProjection:
     def test_percentage_allocation(self):
-        # Current value 1,000,000; 50% allocated; 12% expected return; 5 years annual compounding
-        # 500,000 * (1.12)^5 = 500,000 * 1.76234168 = 881170.84
         amt, pct, proj = calculate_asset_projection(
             current_asset_value=1000000.0,
             allocation_type="percentage",
@@ -53,8 +54,6 @@ class TestAssetProjection:
         assert proj == 881170.84
 
     def test_currency_allocation(self):
-        # Current value 1,000,000; Rs 200,000 allocated; 10% expected return; 3 years
-        # 200,000 * (1.10)^3 = 200,000 * 1.331 = 266200.0
         amt, pct, proj = calculate_asset_projection(
             current_asset_value=1000000.0,
             allocation_type="currency",
@@ -68,8 +67,6 @@ class TestAssetProjection:
         assert proj == 266200.0
 
     def test_compounding_frequency_monthly(self):
-        # 100,000 at 12% monthly compounding for 1 year
-        # 100,000 * (1 + 0.01)^12 = 112682.50
         amt, pct, proj = calculate_asset_projection(
             current_asset_value=100000.0,
             allocation_type="percentage",
@@ -81,37 +78,51 @@ class TestAssetProjection:
         assert proj == 112682.50
 
     def test_multiple_goals_can_share_asset(self):
-        # Asset total 10L
-        # Goal 1 takes 30% = 3L
         amt1, pct1, _ = calculate_asset_projection(1000000, "percentage", 30.0, 0.1, "annual", 5)
-        # Goal 2 takes 40% = 4L
         amt2, pct2, _ = calculate_asset_projection(1000000, "percentage", 40.0, 0.1, "annual", 5)
         assert amt1 + amt2 == 700000.0
 
     def test_missing_expected_return_uses_default(self):
-        ret_mf = get_default_expected_return("HDFC Equity Mutual Funds")
-        assert ret_mf == 0.12
-        ret_bank = get_default_expected_return("Savings Bank Account")
-        assert ret_bank == 0.04
-        ret_fallback = get_default_expected_return("Unknown Exotic Asset")
-        assert ret_fallback == 0.08
+        assert get_default_expected_return("HDFC Equity Mutual Funds") == 0.12
+        assert get_default_expected_return("Savings Bank Account") == 0.04
+        assert get_default_expected_return("Unknown Exotic Asset") == 0.08
 
 
 class TestFundingGap:
     def test_shortfall(self):
-        gap, status = calculate_funding_gap(future_target=500000.0, projected_mapped_asset_value=300000.0)
+        gap, status = calculate_funding_gap(500000.0, 300000.0)
         assert gap == 200000.0
         assert status == "Shortfall"
 
     def test_on_track(self):
-        gap, status = calculate_funding_gap(future_target=500000.0, projected_mapped_asset_value=500000.0)
+        gap, status = calculate_funding_gap(500000.0, 500000.0)
         assert gap == 0.0
         assert status == "On Track"
 
     def test_overfunded(self):
-        gap, status = calculate_funding_gap(future_target=500000.0, projected_mapped_asset_value=650000.0)
+        gap, status = calculate_funding_gap(500000.0, 650000.0)
         assert gap == -150000.0
         assert status == "Overfunded"
+
+    def test_required_monthly_contribution_zero_return(self):
+        assert calculate_required_monthly_contribution(120000.0, 0.0, 1.0) == 10000.0
+
+    def test_required_monthly_contribution_with_return(self):
+        # End-of-month contributions; 12% nominal annual / 12 monthly rate.
+        result = calculate_required_monthly_contribution(120000.0, 0.12, 1.0)
+        assert result == 9461.85
+
+    def test_required_monthly_contribution_ignores_surplus(self):
+        assert calculate_required_monthly_contribution(-1000.0, 0.12, 5.0) == 0.0
+
+    def test_weighted_funding_return(self):
+        result = calculate_funding_return_assumption(
+            [
+                {"allocated_amount": 300000, "expected_return": 0.10},
+                {"allocated_amount": 100000, "expected_return": 0.20},
+            ]
+        )
+        assert result == 0.125
 
 
 class TestGoalEngineFull:
@@ -138,20 +149,18 @@ class TestGoalEngineFull:
                 )
             ],
         )
-        assets = {
-            "a1": {"asset_name": "Equity Mutual Fund", "current_value": 800000.0}
-        }
+        assets = {"a1": {"asset_name": "Equity Mutual Fund", "current_value": 800000.0}}
         defined = engine.calculate_defined_goal(inp, assets, version=1, reference_date=ref)
 
         assert defined.duration_years == 5.0
         assert defined.future_target == 1338225.58
-        assert len(defined.mapped_assets) == 1
-        # 400,000 * 1.12^5 = 704936.67
         assert defined.mapped_assets[0].allocated_amount == 400000.0
         assert defined.mapped_assets[0].projected_value == 704936.67
         assert defined.projected_mapped_asset_value == 704936.67
         assert defined.funding_gap == 633288.91
         assert defined.funding_status == "Shortfall"
+        assert defined.funding_return_assumption == 0.12
+        assert defined.required_monthly_contribution == 7754.27
 
 
 class TestFinancialInputValidation:

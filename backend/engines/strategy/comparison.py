@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 from models.strategy import Scenario, StrategyDefinition
 
 
@@ -7,12 +7,11 @@ def build_comparison_matrix(
     scenarios: list[Scenario],
 ) -> dict[str, Any]:
     """
-    Constructs a structured side-by-side comparison matrix of applicable strategies
-    and scenarios across key evaluation dimensions and qualitative trade-offs.
-    Does NOT calculate financial-state impact (suitability check belongs to later module).
+    Constructs a structured side-by-side comparison matrix. Statistical
+    probability is only shown when a scenario supplies a real probability
+    model; the current engine explicitly reports it as unavailable.
     """
     strat_lookup = {s.strategy_id: s for s in strategies}
-
     comparison_items: list[dict[str, Any]] = []
 
     for scen in scenarios:
@@ -32,7 +31,11 @@ def build_comparison_matrix(
                     "liquidity": scen.metrics.get("liquidity_score", strat.baseline_liquidity_score),
                     "growth": scen.metrics.get("growth_score", strat.baseline_growth_score),
                     "flexibility": scen.metrics.get("flexibility_score", strat.baseline_flexibility_score),
-                    "probability_of_success": scen.metrics.get("probability_of_success", 85.0),
+                    "probability_of_success": scen.metrics.get("probability_of_success"),
+                    "success_probability_method": scen.metrics.get("success_probability_method", "not_estimated"),
+                    "funding_gap": scen.metrics.get("funding_gap"),
+                    "required_monthly_contribution": scen.metrics.get("required_monthly_contribution"),
+                    "funding_return_assumption": scen.metrics.get("funding_return_assumption"),
                 },
                 "assumptions": scen.assumptions,
                 "funding_structure": scen.funding_structure,
