@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { apiRequest } from "./client";
 
 export type StrategyVersion = {
   strategy_version_id: string | null;
@@ -16,7 +16,7 @@ export type StrategyVersion = {
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-async function request<T>(path: string): Promise<T> {
+async function apiRequest<T>(path: string): Promise<T> {
   if (!backendUrl) throw new Error("Backend URL is not configured.");
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
@@ -38,17 +38,17 @@ async function request<T>(path: string): Promise<T> {
 }
 
 export function getStrategyVersionById(planningUnitId: string, strategyVersionId: string) {
-  return request<StrategyVersion>(
+  return apiRequest<StrategyVersion>(
     `/api/strategy/versions/by-id/${encodeURIComponent(strategyVersionId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`,
   );
 }
 
 export function getStrategyVersionHistory(planningUnitId: string, strategyId: string) {
-  return request<StrategyVersion[]>(`/api/strategy/versions/${encodeURIComponent(strategyId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+  return apiRequest<StrategyVersion[]>(`/api/strategy/versions/${encodeURIComponent(strategyId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
 export function getCurrentPrimaryStrategy(planningUnitId: string) {
-  return request<{
+  return apiRequest<{
     planning_unit_id: string;
     strategy_id: string;
     strategy_version_id: string;
