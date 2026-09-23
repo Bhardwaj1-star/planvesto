@@ -1,5 +1,4 @@
-import { apiRequest } from "./client";
-import { getPlanningUnitId } from "./client";
+import { apiRequest, getPlanningUnitId } from "./client";
 
 export type DashboardMetric = {
   value: number | null;
@@ -52,8 +51,6 @@ export type DashboardData = {
   };
   goals: DashboardGoal[];
 };
-
-import { getPlanningUnitId } from "./client";
 
 export async function getDashboard(): Promise<DashboardData> {
   const planningUnitId = getPlanningUnitId();
