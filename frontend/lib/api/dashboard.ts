@@ -1,5 +1,5 @@
-import { supabase } from "../supabase";
-import { getPlanningUnitId } from "./financial-state";
+import { apiRequest } from "./client";
+import { getPlanningUnitId } from "./client";
 
 export type DashboardMetric = {
   value: number | null;
