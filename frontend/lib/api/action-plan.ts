@@ -27,6 +27,8 @@ export type ActionImpactPreview = {
   cause_explanation: string | null;
 };
 
+export { getPlanningUnitId } from "./client";
+
 export type ActionDecisionRecord = {
   decision_id: string | null;
   planning_unit_id: string;
