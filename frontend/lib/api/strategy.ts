@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { apiRequest } from "./client";
 
 export type InvestorPriorities = {
   safety: number;
@@ -123,61 +123,32 @@ export type StrategyRun = {
   created_at: string | null;
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!backendUrl) throw new Error("Backend URL is not configured.");
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!data.session) throw new Error("Authentication required.");
-  const response = await fetch(`${backendUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${data.session.access_token}`,
-      ...(init?.headers ?? {}),
-    },
-  });
-  let body: unknown = null;
-  try { body = await response.json(); } catch { /* non-JSON error */ }
-  if (!response.ok) {
-    const detail = typeof body === "object" && body !== null && "detail" in body
-      ? String((body as { detail: unknown }).detail)
-      : `Request failed with status ${response.status}.`;
-    throw new Error(detail);
-  }
-  return body as T;
-}
-
-export function getPlanningUnitId(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("planvesto-planning-unit-id");
-}
+export { getPlanningUnitId } from "./client";
 
 export function buildStrategy(planningUnitId: string, goalId: string, investorPriorities?: InvestorPriorities) {
-  return request<StrategyRun>("/api/strategy/build", {
+  return apiRequest<StrategyRun>("/api/strategy/build", {
     method: "POST",
     body: JSON.stringify({ planning_unit_id: planningUnitId, goal_id: goalId, investor_priorities: investorPriorities }),
   });
 }
 
 export function getLatestStrategyRun(planningUnitId: string, goalId: string) {
-  return request<StrategyRun>(`/api/strategy/runs/${encodeURIComponent(goalId)}/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+  return apiRequest<StrategyRun>(`/api/strategy/runs/${encodeURIComponent(goalId)}/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
 export function getStrategyRunHistory(planningUnitId: string, goalId: string) {
-  return request<StrategyRun[]>(`/api/strategy/runs/${encodeURIComponent(goalId)}/history?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+  return apiRequest<StrategyRun[]>(`/api/strategy/runs/${encodeURIComponent(goalId)}/history?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
 export function updateStrategyPriorities(planningUnitId: string, strategyRunId: string, priorities: InvestorPriorities) {
-  return request<StrategyRun>("/api/strategy/priorities", {
+  return apiRequest<StrategyRun>("/api/strategy/priorities", {
     method: "POST",
     body: JSON.stringify({ planning_unit_id: planningUnitId, strategy_run_id: strategyRunId, priorities }),
   });
 }
 
 export function addCustomScenario(planningUnitId: string, strategyRunId: string, strategyId: string, scenarioName: string, assumptions: Record<string, unknown>, fundingStructure: Record<string, unknown>) {
-  return request<StrategyRun>("/api/strategy/scenarios/custom", {
+  return apiRequest<StrategyRun>("/api/strategy/scenarios/custom", {
     method: "POST",
     body: JSON.stringify({ planning_unit_id: planningUnitId, strategy_run_id: strategyRunId, strategy_id: strategyId, scenario_name: scenarioName, assumptions, funding_structure: fundingStructure }),
   });
@@ -191,7 +162,7 @@ export function selectStrategy(
   selectedImplementationParameters: Record<string, unknown>,
   selectedArchitectureId?: string,
 ) {
-  return request<StrategyRun>("/api/strategy/select", {
+  return apiRequest<StrategyRun>("/api/strategy/select", {
     method: "POST",
     body: JSON.stringify({
       planning_unit_id: planningUnitId,
