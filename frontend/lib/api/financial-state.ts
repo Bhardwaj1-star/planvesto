@@ -59,6 +59,8 @@ export type FinancialState = {
 
 export type FinancialStateHistory = FinancialState[];
 
+export { getPlanningUnitId } from "./client";
+
 export async function buildFinancialState(
   planningUnitId: string,
   scope: "family" | "individual" = "family",
