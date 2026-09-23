@@ -41,13 +41,13 @@ export async function apiRequest<T>(
   if (!data.session) throw new Error("Authentication required.");
 
   const timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const controller = timeout > 0 ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeout) : null;
 
   try {
     const response = await fetch(`${BACKEND_URL}${path}`, {
       ...init,
-      signal: init?.signal ?? controller.signal,
+      signal: init?.signal ?? controller?.signal ?? undefined,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${data.session.access_token}`,
@@ -72,7 +72,7 @@ export async function apiRequest<T>(
 
     return body as T;
   } finally {
-    clearTimeout(timer);
+    if (timer !== null) clearTimeout(timer);
   }
 }
 
