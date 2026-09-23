@@ -14,29 +14,6 @@ export type StrategyVersion = {
   created_at: string;
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-async function apiRequest<T>(path: string): Promise<T> {
-  if (!backendUrl) throw new Error("Backend URL is not configured.");
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!data.session) throw new Error("Authentication required.");
-  const response = await fetch(`${backendUrl}${path}`, {
-    headers: {
-      Authorization: `Bearer ${data.session.access_token}`,
-      "Content-Type": "application/json",
-    },
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    const detail = typeof body === "object" && body !== null && "detail" in body
-      ? String((body as { detail: unknown }).detail)
-      : `Request failed with status ${response.status}.`;
-    throw new Error(detail);
-  }
-  return body as T;
-}
-
 export function getStrategyVersionById(planningUnitId: string, strategyVersionId: string) {
   return apiRequest<StrategyVersion>(
     `/api/strategy/versions/by-id/${encodeURIComponent(strategyVersionId)}?planning_unit_id=${encodeURIComponent(planningUnitId)}`,
