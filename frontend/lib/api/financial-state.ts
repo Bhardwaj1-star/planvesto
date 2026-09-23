@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { apiRequest } from "./client";
 
 export type Metric = {
   value: number | null;
@@ -59,55 +59,14 @@ export type FinancialState = {
 
 export type FinancialStateHistory = FinancialState[];
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!backendUrl) {
-    throw new Error("Backend URL is not configured.");
-  }
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!data.session) throw new Error("Authentication required.");
-
-  const response = await fetch(`${backendUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${data.session.access_token}`,
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  let body: unknown = null;
-  try {
-    body = await response.json();
-  } catch {
-    // Keep non-JSON server errors generic.
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof body === "object" && body !== null && "detail" in body
-        ? String((body as { detail: unknown }).detail)
-        : `Request failed with status ${response.status}.`;
-    throw new Error(detail);
-  }
-
-  return body as T;
-}
-
-export function getPlanningUnitId(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("planvesto-planning-unit-id");
-}
+export { getPlanningUnitId } from "./client";
 
 export async function buildFinancialState(
   planningUnitId: string,
   scope: "family" | "individual" = "family",
   investorId?: string | null,
 ): Promise<FinancialState> {
-  return request<FinancialState>("/api/financial-state/build", {
+  return apiRequest<FinancialState>("/api/financial-state/build", {
     method: "POST",
     body: JSON.stringify({
       planning_unit_id: planningUnitId,
@@ -120,7 +79,7 @@ export async function buildFinancialState(
 export async function getLatestFinancialState(
   planningUnitId: string,
 ): Promise<FinancialState> {
-  return request<FinancialState>(
+  return apiRequest<FinancialState>(
     `/api/financial-state/latest/${encodeURIComponent(planningUnitId)}`,
   );
 }
@@ -128,7 +87,7 @@ export async function getLatestFinancialState(
 export async function getFinancialStateHistory(
   planningUnitId: string,
 ): Promise<FinancialStateHistory> {
-  return request<FinancialStateHistory>(
+  return apiRequest<FinancialStateHistory>(
     `/api/financial-state/history/${encodeURIComponent(planningUnitId)}`,
   );
 }

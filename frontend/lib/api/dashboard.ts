@@ -1,5 +1,4 @@
-import { supabase } from "../supabase";
-import { getPlanningUnitId } from "./financial-state";
+import { apiRequest, getPlanningUnitId } from "./client";
 
 export type DashboardMetric = {
   value: number | null;
@@ -53,28 +52,11 @@ export type DashboardData = {
   goals: DashboardGoal[];
 };
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
 export async function getDashboard(): Promise<DashboardData> {
-  if (!backendUrl) throw new Error("Backend URL is not configured.");
   const planningUnitId = getPlanningUnitId();
   if (!planningUnitId) throw new Error("Planning unit is not configured.");
 
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!data.session) throw new Error("Authentication required.");
-
-  const response = await fetch(
-    `${backendUrl}/api/dashboard?planning_unit_id=${encodeURIComponent(planningUnitId)}`,
-    { headers: { Authorization: `Bearer ${data.session.access_token}` } },
+  return apiRequest<DashboardData>(
+    `/api/dashboard?planning_unit_id=${encodeURIComponent(planningUnitId)}`,
   );
-
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    const detail = body && typeof body === "object" && "detail" in body
-      ? String((body as { detail: unknown }).detail)
-      : `Request failed with status ${response.status}.`;
-    throw new Error(detail);
-  }
-  return body as DashboardData;
 }
