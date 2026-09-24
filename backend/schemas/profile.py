@@ -7,19 +7,20 @@ class ProfileBuildRequest(StrictRequestModel):
     planning_unit_id: str = Field(min_length=1, max_length=100)
     investor_id: str = Field(min_length=1, max_length=100)
     financial_snapshot_id: str | None = Field(default=None, min_length=1, max_length=100)
-    risk_tolerance_answers: dict[str, float] = Field(default_factory=dict, max_length=30)
-    behavioral_answers: dict[str, float] = Field(default_factory=dict, max_length=30)
-    identity_answers: dict[str, float] = Field(default_factory=dict, max_length=30)
-    questionnaire_version: str = Field(default="v1", min_length=1, max_length=50)
+    declared_constraints: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    observed_behavior: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    preferences: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    profile_version: str = Field(default="v2", min_length=1, max_length=50)
 
-    @field_validator("risk_tolerance_answers", "behavioral_answers", "identity_answers")
+    @field_validator("declared_constraints", "observed_behavior", "preferences")
     @classmethod
-    def validate_answer_ranges(cls, value: dict[str, float]) -> dict[str, float]:
-        for key, answer in value.items():
-            if not key or len(key) > 100:
-                raise ValueError("Profile answer keys must be 1-100 characters")
-            if answer < 0 or answer > 4:
-                raise ValueError("Profile answers must be between 0 and 4")
+    def validate_items(cls, value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        for item in value:
+            key = item.get("key")
+            if not isinstance(key, str) or not 1 <= len(key) <= 100:
+                raise ValueError("Constraint keys must be 1-100 characters")
+            if "value" not in item:
+                raise ValueError("Every profile constraint item requires a value")
         return value
 
 
