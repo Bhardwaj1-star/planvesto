@@ -57,13 +57,15 @@ class ConstraintRules:
     def validate_priorities(constraints: list[dict[str, Any]], priorities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Validate investor-selected ordering without changing constraint authority."""
         keys = {item["key"] for item in constraints}
-        seen: set[str] = set()
+        seen_keys: set[str] = set()
+        seen_ranks: set[int] = set()
         normalized: list[dict[str, Any]] = []
         for item in sorted(priorities, key=lambda x: x.get("rank", 0)):
             key = item.get("key")
             rank = item.get("rank")
-            if key not in keys or key in seen or not isinstance(rank, int) or rank < 1:
-                raise ValueError("Invalid or duplicate constraint priority")
-            seen.add(key)
+            if key not in keys or key in seen_keys or not isinstance(rank, int) or rank < 1 or rank in seen_ranks:
+                raise ValueError("Invalid, duplicate constraint, or duplicate priority rank")
+            seen_keys.add(key)
+            seen_ranks.add(rank)
             normalized.append({"key": key, "rank": rank})
         return normalized
