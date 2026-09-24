@@ -10,6 +10,7 @@ class ProfileBuildRequest(StrictRequestModel):
     declared_constraints: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
     observed_behavior: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
     preferences: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    constraint_priorities: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
     profile_version: str = Field(default="v2", min_length=1, max_length=50)
 
     @field_validator("declared_constraints", "observed_behavior", "preferences")
@@ -21,6 +22,14 @@ class ProfileBuildRequest(StrictRequestModel):
                 raise ValueError("Constraint keys must be 1-100 characters")
             if "value" not in item:
                 raise ValueError("Every profile constraint item requires a value")
+        return value
+
+    @field_validator("constraint_priorities")
+    @classmethod
+    def validate_priority_items(cls, value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        for item in value:
+            if not isinstance(item.get("key"), str) or not isinstance(item.get("rank"), int) or item["rank"] < 1:
+                raise ValueError("Each constraint priority requires a key and positive rank")
         return value
 
 
