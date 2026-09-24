@@ -4,7 +4,7 @@ from typing import Any
 
 from engines.profile.constraints import ConstraintRules
 
-ENGINE_VERSION = "profile-engine-v3"
+ENGINE_VERSION = "profile-engine-v4"
 
 
 def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
@@ -13,23 +13,17 @@ def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
 
 
 class ProfileEngine:
-    """Resolve planning constraints from evidence; never infer personality labels."""
+    """Resolve planning constraints from evidence; priorities never change authority."""
 
-    def build(
-        self,
-        *,
-        financial_state: dict[str, Any] | None,
-        declared_constraints: list[dict[str, Any]] | None = None,
-        observed_behavior: list[dict[str, Any]] | None = None,
-        preferences: list[dict[str, Any]] | None = None,
-    ) -> dict[str, Any]:
+    def build(self, *, financial_state: dict[str, Any] | None,
+              declared_constraints: list[dict[str, Any]] | None = None,
+              observed_behavior: list[dict[str, Any]] | None = None,
+              preferences: list[dict[str, Any]] | None = None,
+              constraint_priorities: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         constraints: list[dict[str, Any]] = []
-
-        for source, items in (
-            ("declared_constraint", declared_constraints or []),
-            ("observed_behavior", observed_behavior or []),
-            ("preference", preferences or []),
-        ):
+        for source, items in (("declared_constraint", declared_constraints or []),
+                              ("observed_behavior", observed_behavior or []),
+                              ("preference", preferences or [])):
             for item in items:
                 normalized = ConstraintRules.normalize(item, source)  # type: ignore[arg-type]
                 normalized["confidence"] = ConstraintRules.confidence(source, len(normalized["evidence"]))  # type: ignore[arg-type]
@@ -41,36 +35,30 @@ class ProfileEngine:
             surplus, surplus_ok = _metric(financial_state, "investable_surplus_monthly")
             reserve, reserve_ok = _metric(financial_state, "safety_reserve_months")
             emi, emi_ok = _metric(financial_state, "emi_burden_monthly")
-
+            facts = []
             if surplus_ok and surplus is not None:
-                constraints.append(ConstraintRules.normalize({
-                    "key": "monthly_investable_surplus", "value": surplus, "unit": "INR/month",
-                    "kind": "hard", "evidence": [{"field": "investable_surplus_monthly", "value": surplus}],
-                }, "financial_state"))
+                facts.append(("monthly_investable_surplus", surplus, "INR/month", [{"field": "investable_surplus_monthly", "value": surplus}]))
             if reserve_ok and reserve is not None:
-                constraints.append(ConstraintRules.normalize({
-                    "key": "safety_reserve_months", "value": reserve, "unit": "months",
-                    "kind": "hard", "evidence": [{"field": "safety_reserve_months", "value": reserve}],
-                }, "financial_state"))
+                facts.append(("safety_reserve_months", reserve, "months", [{"field": "safety_reserve_months", "value": reserve}]))
             if emi_ok and income_ok and income and income > 0 and emi is not None:
-                constraints.append(ConstraintRules.normalize({
-                    "key": "debt_service_ratio", "value": round(emi / income, 6), "unit": "ratio",
-                    "kind": "hard", "evidence": [{"field": "emi_burden_monthly", "value": emi}, {"field": "income_monthly", "value": income}],
-                }, "financial_state"))
+                facts.append(("debt_service_ratio", round(emi / income, 6), "ratio", [{"field": "emi_burden_monthly", "value": emi}, {"field": "income_monthly", "value": income}]))
             if expenses_ok and income_ok and income and income > 0 and expenses is not None:
-                constraints.append(ConstraintRules.normalize({
-                    "key": "expense_ratio", "value": round(expenses / income, 6), "unit": "ratio",
-                    "kind": "hard", "evidence": [{"field": "expenses_monthly", "value": expenses}, {"field": "income_monthly", "value": income}],
-                }, "financial_state"))
-
-            for item in constraints:
-                if item["source"] == "financial_state":
-                    item["confidence"] = ConstraintRules.confidence("financial_state", len(item["evidence"]))
+                facts.append(("expense_ratio", round(expenses / income, 6), "ratio", [{"field": "expenses_monthly", "value": expenses}, {"field": "income_monthly", "value": income}]))
+            for key, value, unit, evidence in facts:
+                item = ConstraintRules.normalize({"key": key, "value": value, "unit": unit, "kind": "hard", "evidence": evidence}, "financial_state")
+                item["confidence"] = ConstraintRules.confidence("financial_state", len(evidence))
+                constraints.append(item)
 
         conflicts = ConstraintRules.conflicts(constraints)
+        priorities = ConstraintRules.validate_priorities(constraints, constraint_priorities or [])
+        priority_by_key = {item["key"]: item["rank"] for item in priorities}
+        for item in constraints:
+            item["priority_rank"] = priority_by_key.get(item["key"])
+
         return {
             "engine_version": ENGINE_VERSION,
             "constraints": constraints,
+            "priorities": priorities,
             "conflicts": conflicts,
             "unresolved_conflict_count": len(conflicts),
             "has_hard_constraints": any(c["kind"] == "hard" for c in constraints),
