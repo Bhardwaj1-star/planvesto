@@ -30,6 +30,7 @@ class ProfileService:
             declared_constraints=request.declared_constraints,
             observed_behavior=request.observed_behavior,
             preferences=request.preferences,
+            constraint_priorities=request.constraint_priorities,
         )
         version = self.repository.next_version(request.planning_unit_id, request.investor_id)
         payload = {
@@ -44,6 +45,7 @@ class ProfileService:
                 "declared_constraints": request.declared_constraints,
                 "observed_behavior": request.observed_behavior,
                 "preferences": request.preferences,
+                "constraint_priorities": request.constraint_priorities,
                 "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
                 "financial_state": financial_state,
             },
@@ -51,6 +53,7 @@ class ProfileService:
         run = self.repository.create_run(payload)
         self.repository.create_dimensions(run["profile_run_id"], {
             "constraints": {"key": "constraints", "items": result["constraints"]},
+            "priorities": {"key": "priorities", "items": result["priorities"]},
             "conflicts": {"key": "conflicts", "items": result["conflicts"]},
         })
         run["profile_result"] = result
