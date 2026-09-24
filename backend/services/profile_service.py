@@ -38,9 +38,8 @@ class ProfileService:
             "investor_id": request.investor_id,
             "version": version,
             "engine_version": result["engine_version"],
-            "questionnaire_version": request.profile_version,
+            "profile_version": request.profile_version,
             "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
-            "completeness": None,
             "input_snapshot": {
                 "declared_constraints": request.declared_constraints,
                 "observed_behavior": request.observed_behavior,
@@ -49,13 +48,11 @@ class ProfileService:
                 "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
                 "financial_state": financial_state,
             },
+            "profile_result": result,
         }
         run = self.repository.create_run(payload)
-        self.repository.create_dimensions(run["profile_run_id"], {
-            "constraints": {"key": "constraints", "items": result["constraints"]},
-            "priorities": {"key": "priorities", "items": result["priorities"]},
-            "conflicts": {"key": "conflicts", "items": result["conflicts"]},
-        })
+        self.repository.create_constraints(run["profile_run_id"], result["constraints"])
+        self.repository.create_conflicts(run["profile_run_id"], result["conflicts"])
         run["profile_result"] = result
         return run
 
