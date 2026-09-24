@@ -4,8 +4,6 @@ from typing import Any
 
 ENGINE_VERSION = "profile-engine-v1"
 
-# Each questionnaire answer is normalized from 0..4. Weights are deliberately
-# explicit so the result is deterministic and auditable.
 RISK_WEIGHTS = {
     "loss_reaction": 0.30,
     "volatility_comfort": 0.25,
@@ -53,35 +51,44 @@ def _score(answers: dict[str, float], weights: dict[str, float]) -> tuple[float,
     return score, components, explanations, confidence
 
 
+def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
+    raw = state.get(name) or {}
+    return raw.get("value"), bool(raw.get("available", False))
+
+
 def _capacity(financial_state: dict[str, Any] | None) -> tuple[float, dict[str, float], list[str], float]:
     if not financial_state:
         return 0.0, {}, ["Financial state unavailable; capacity cannot be established"], 0.0
 
-    def metric(name: str) -> tuple[float | None, bool]:
-        raw = financial_state.get(name) or {}
-        return raw.get("value"), bool(raw.get("available", False))
-
-    surplus, surplus_ok = metric("investable_surplus_monthly")
-    reserve, reserve_ok = metric("safety_reserve_months")
-    debt, debt_ok = metric("emi_burden_monthly")
-    nw, nw_ok = metric("net_worth")
+    income, income_ok = _metric(financial_state, "income_monthly")
+    savings_rate, savings_ok = _metric(financial_state, "savings_investment_rate")
+    reserve, reserve_ok = _metric(financial_state, "safety_reserve_months")
+    required_reserve, required_ok = _metric(financial_state, "safety_reserve_required_amount")
+    expenses, expenses_ok = _metric(financial_state, "expenses_monthly")
+    emi, emi_ok = _metric(financial_state, "emi_burden_monthly")
 
     parts: dict[str, float] = {}
-    if surplus_ok and surplus is not None:
-        parts["surplus"] = max(0.0, min(100.0, 50.0 + (surplus / 100000.0) * 50.0))
+    if savings_ok and savings_rate is not None:
+        # 0% savings = 0 capacity contribution; 20%+ = full contribution.
+        parts["savings_rate"] = max(0.0, min(100.0, float(savings_rate) * 5.0))
     if reserve_ok and reserve is not None:
-        parts["reserve"] = max(0.0, min(100.0, (reserve / 12.0) * 100.0))
-    if debt_ok and debt is not None and surplus is not None and surplus > 0:
-        debt_ratio = debt / surplus
-        parts["debt_service"] = max(0.0, min(100.0, 100.0 - debt_ratio * 100.0))
-    if nw_ok and nw is not None:
-        parts["net_worth"] = max(0.0, min(100.0, 50.0 + (nw / 10000000.0) * 50.0))
+        # Reserve adequacy is capped at the engine's existing 12-month planning ceiling.
+        parts["reserve"] = max(0.0, min(100.0, float(reserve) / 12.0 * 100.0))
+    if emi_ok and income_ok and emi is not None and income and income > 0:
+        # Lower debt-service burden means greater capacity; 50% is the zero point.
+        parts["debt_service"] = max(0.0, min(100.0, (1.0 - float(emi) / float(income) / 0.50) * 100.0))
+    if expenses_ok and income_ok and expenses is not None and income and income > 0:
+        # Cash-flow headroom independently captures ability to absorb shocks.
+        parts["cash_flow_headroom"] = max(0.0, min(100.0, (1.0 - float(expenses) / float(income)) * 100.0 * 2.0))
+    if required_ok and reserve_ok and required_reserve is not None and reserve is not None and required_reserve > 0:
+        # Preserve the existing financial-state required-reserve rule rather than inventing a new rupee threshold.
+        parts["reserve_adequacy"] = max(0.0, min(100.0, float(reserve) / max(float(required_reserve), 1.0) * 100.0))
 
     if not parts:
         return 0.0, {}, ["Financial capacity inputs are unavailable"], 0.0
     score = round(sum(parts.values()) / len(parts), 4)
     explanations = [f"{k}: {round(v, 2)}/100" for k, v in parts.items()]
-    return score, parts, explanations, round(len(parts) / 4.0, 4)
+    return score, parts, explanations, round(len(parts) / 5.0, 4)
 
 
 class ProfileEngine:
