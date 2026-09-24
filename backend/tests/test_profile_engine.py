@@ -15,14 +15,14 @@ def financial_state(**overrides):
 
 
 def test_resolution_is_deterministic():
-    engine = ProfileEngine()
     kwargs = {
         "financial_state": financial_state(),
         "declared_constraints": [{"key": "max_loss_amount", "value": 100000, "kind": "hard"}],
         "observed_behavior": [{"key": "plan_deviation", "value": "low"}],
         "preferences": [{"key": "liquidity_priority", "value": "high"}],
+        "constraint_priorities": [{"key": "liquidity_priority", "rank": 1}, {"key": "max_loss_amount", "rank": 2}],
     }
-    assert engine.build(**kwargs) == engine.build(**kwargs)
+    assert ProfileEngine().build(**kwargs) == ProfileEngine().build(**kwargs)
 
 
 def test_financial_facts_create_hard_constraints_with_evidence():
@@ -54,3 +54,34 @@ def test_source_priority_confidence():
     assert ConstraintRules.confidence("declared_constraint", 1) == 0.5
     assert ConstraintRules.confidence("preference", 1) == 0.25
     assert ConstraintRules.confidence("observed_behavior", 2) == 0.9
+
+
+def test_investor_priority_is_stored_but_does_not_change_constraint_kind():
+    result = ProfileEngine().build(
+        financial_state=financial_state(),
+        declared_constraints=[{"key": "liquidity_priority", "value": "high", "kind": "soft"}],
+        constraint_priorities=[{"key": "liquidity_priority", "rank": 1}],
+    )
+    item = next(c for c in result["constraints"] if c["key"] == "liquidity_priority")
+    assert item["priority_rank"] == 1
+    assert item["kind"] == "soft"
+
+
+def test_priority_must_reference_existing_constraints():
+    try:
+        ConstraintRules.validate_priorities([], [{"key": "unknown", "rank": 1}])
+        assert False
+    except ValueError:
+        assert True
+
+
+def test_duplicate_priority_key_is_rejected():
+    constraints = [{"key": "liquidity_priority", "value": "high"}]
+    try:
+        ConstraintRules.validate_priorities(constraints, [
+            {"key": "liquidity_priority", "rank": 1},
+            {"key": "liquidity_priority", "rank": 2},
+        ])
+        assert False
+    except ValueError:
+        assert True
