@@ -63,32 +63,24 @@ def _capacity(financial_state: dict[str, Any] | None) -> tuple[float, dict[str, 
     income, income_ok = _metric(financial_state, "income_monthly")
     savings_rate, savings_ok = _metric(financial_state, "savings_investment_rate")
     reserve, reserve_ok = _metric(financial_state, "safety_reserve_months")
-    required_reserve, required_ok = _metric(financial_state, "safety_reserve_required_amount")
     expenses, expenses_ok = _metric(financial_state, "expenses_monthly")
     emi, emi_ok = _metric(financial_state, "emi_burden_monthly")
 
     parts: dict[str, float] = {}
     if savings_ok and savings_rate is not None:
-        # 0% savings = 0 capacity contribution; 20%+ = full contribution.
         parts["savings_rate"] = max(0.0, min(100.0, float(savings_rate) * 5.0))
     if reserve_ok and reserve is not None:
-        # Reserve adequacy is capped at the engine's existing 12-month planning ceiling.
         parts["reserve"] = max(0.0, min(100.0, float(reserve) / 12.0 * 100.0))
     if emi_ok and income_ok and emi is not None and income and income > 0:
-        # Lower debt-service burden means greater capacity; 50% is the zero point.
         parts["debt_service"] = max(0.0, min(100.0, (1.0 - float(emi) / float(income) / 0.50) * 100.0))
     if expenses_ok and income_ok and expenses is not None and income and income > 0:
-        # Cash-flow headroom independently captures ability to absorb shocks.
         parts["cash_flow_headroom"] = max(0.0, min(100.0, (1.0 - float(expenses) / float(income)) * 100.0 * 2.0))
-    if required_ok and reserve_ok and required_reserve is not None and reserve is not None and required_reserve > 0:
-        # Preserve the existing financial-state required-reserve rule rather than inventing a new rupee threshold.
-        parts["reserve_adequacy"] = max(0.0, min(100.0, float(reserve) / max(float(required_reserve), 1.0) * 100.0))
 
     if not parts:
         return 0.0, {}, ["Financial capacity inputs are unavailable"], 0.0
     score = round(sum(parts.values()) / len(parts), 4)
     explanations = [f"{k}: {round(v, 2)}/100" for k, v in parts.items()]
-    return score, parts, explanations, round(len(parts) / 5.0, 4)
+    return score, parts, explanations, round(len(parts) / 4.0, 4)
 
 
 class ProfileEngine:
