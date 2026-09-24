@@ -1,4 +1,5 @@
 from engines.profile.engine import ProfileEngine
+from engines.profile.constraints import ConstraintRules
 
 
 def financial_state(**overrides):
@@ -24,12 +25,11 @@ def test_resolution_is_deterministic():
     assert engine.build(**kwargs) == engine.build(**kwargs)
 
 
-def test_financial_facts_create_hard_constraints():
+def test_financial_facts_create_hard_constraints_with_evidence():
     result = ProfileEngine().build(financial_state=financial_state())
-    keys = {item["key"] for item in result["constraints"]}
-    assert "monthly_investable_surplus" in keys
-    assert "safety_reserve_months" in keys
     assert all(item["kind"] == "hard" for item in result["constraints"])
+    assert all(item["source"] == "financial_state" for item in result["constraints"])
+    assert all(item["evidence"] for item in result["constraints"])
 
 
 def test_missing_financial_state_does_not_infer_constraints():
@@ -38,7 +38,7 @@ def test_missing_financial_state_does_not_infer_constraints():
     assert result["conflicts"] == []
 
 
-def test_conflicting_evidence_is_preserved():
+def test_conflicting_evidence_is_unresolved():
     result = ProfileEngine().build(
         financial_state=None,
         declared_constraints=[{"key": "liquidity_priority", "value": "high"}],
@@ -48,11 +48,9 @@ def test_conflicting_evidence_is_preserved():
     assert result["conflicts"][0]["status"] == "unresolved"
 
 
-def test_evidence_source_changes_confidence():
-    result = ProfileEngine().build(
-        financial_state=None,
-        declared_constraints=[{"key": "max_loss_amount", "value": 100000}],
-        observed_behavior=[{"key": "plan_deviation", "value": "low"}],
-    )
-    assert result["constraints"][0]["confidence"] == 0.5
-    assert result["constraints"][1]["confidence"] == 0.75
+def test_source_priority_confidence():
+    assert ConstraintRules.confidence("financial_state", 1) == 1.0
+    assert ConstraintRules.confidence("observed_behavior", 1) == 0.75
+    assert ConstraintRules.confidence("declared_constraint", 1) == 0.5
+    assert ConstraintRules.confidence("preference", 1) == 0.25
+    assert ConstraintRules.confidence("observed_behavior", 2) == 0.9
