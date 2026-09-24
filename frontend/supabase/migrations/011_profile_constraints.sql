@@ -12,8 +12,7 @@ create table if not exists public.profile_runs (
   unique (planning_unit_id, investor_id, version)
 );
 
-create index if not exists idx_profile_runs_owner_version
-  on public.profile_runs (planning_unit_id, investor_id, version desc);
+create index if not exists idx_profile_runs_owner_version on public.profile_runs (planning_unit_id, investor_id, version desc);
 
 create table if not exists public.profile_constraints (
   profile_constraint_id uuid primary key default gen_random_uuid(),
@@ -62,7 +61,13 @@ create policy "profile_runs_insert_own" on public.profile_runs for insert with c
 create policy "profile_constraints_select_own" on public.profile_constraints for select using (
   exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = auth.uid())
 );
+create policy "profile_constraints_insert_own" on public.profile_constraints for insert with check (
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = auth.uid())
+);
 create policy "profile_conflicts_select_own" on public.profile_conflicts for select using (
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = auth.uid())
+);
+create policy "profile_conflicts_insert_own" on public.profile_conflicts for insert with check (
   exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = auth.uid())
 );
 
