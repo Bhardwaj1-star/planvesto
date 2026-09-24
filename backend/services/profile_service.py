@@ -27,9 +27,9 @@ class ProfileService:
         financial_state = snapshot.get("financial_state") if snapshot else None
         result = self.engine.build(
             financial_state=financial_state,
-            risk_tolerance_answers=request.risk_tolerance_answers,
-            behavioral_answers=request.behavioral_answers,
-            identity_answers=request.identity_answers,
+            declared_constraints=request.declared_constraints,
+            observed_behavior=request.observed_behavior,
+            preferences=request.preferences,
         )
         version = self.repository.next_version(request.planning_unit_id, request.investor_id)
         payload = {
@@ -37,21 +37,23 @@ class ProfileService:
             "investor_id": request.investor_id,
             "version": version,
             "engine_version": result["engine_version"],
-            "questionnaire_version": request.questionnaire_version,
+            "questionnaire_version": request.profile_version,
             "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
-            "completeness": result["completeness"],
+            "completeness": None,
             "input_snapshot": {
-                "risk_tolerance_answers": request.risk_tolerance_answers,
-                "behavioral_answers": request.behavioral_answers,
-                "identity_answers": request.identity_answers,
+                "declared_constraints": request.declared_constraints,
+                "observed_behavior": request.observed_behavior,
+                "preferences": request.preferences,
                 "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
                 "financial_state": financial_state,
             },
         }
         run = self.repository.create_run(payload)
-        dimensions = {k: v for k, v in result.items() if k in {"risk_capacity", "risk_tolerance", "behavioral_profile", "investor_identity"}}
-        self.repository.create_dimensions(run["profile_run_id"], dimensions)
-        run["profile_dimensions"] = [dict(v, dimension_key=k) for k, v in dimensions.items()]
+        self.repository.create_dimensions(run["profile_run_id"], {
+            "constraints": {"key": "constraints", "items": result["constraints"]},
+            "conflicts": {"key": "conflicts", "items": result["conflicts"]},
+        })
+        run["profile_result"] = result
         return run
 
     def latest(self, planning_unit_id: str, investor_id: str):
