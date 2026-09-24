@@ -7,7 +7,6 @@ ConstraintSource = Literal[
     "financial_state", "observed_behavior", "declared_constraint", "preference"
 ]
 
-# Higher priority wins only when the evidence is otherwise comparable.
 SOURCE_PRIORITY: dict[str, int] = {
     "financial_state": 4,
     "observed_behavior": 3,
@@ -17,17 +16,15 @@ SOURCE_PRIORITY: dict[str, int] = {
 
 
 class ConstraintRules:
-    """Business rules for constraint normalization and conflict detection."""
+    """Business rules for constraint normalization, conflicts and investor priorities."""
 
     @staticmethod
     def normalize(item: dict[str, Any], source: ConstraintSource) -> dict[str, Any]:
-        key = item["key"]
-        kind: ConstraintKind = item.get("kind", "soft")
         return {
-            "key": key,
+            "key": item["key"],
             "value": item["value"],
             "unit": item.get("unit"),
-            "kind": kind,
+            "kind": item.get("kind", "soft"),
             "source": source,
             "evidence": item.get("evidence", []),
             "valid_from": item.get("valid_from"),
@@ -39,11 +36,9 @@ class ConstraintRules:
         groups: dict[str, list[dict[str, Any]]] = {}
         for item in items:
             groups.setdefault(item["key"], []).append(item)
-
-        conflicts: list[dict[str, Any]] = []
+        conflicts = []
         for key, group in groups.items():
-            values = {repr(item["value"]) for item in group}
-            if len(values) <= 1:
+            if len({repr(item["value"]) for item in group}) <= 1:
                 continue
             conflicts.append({
                 "key": key,
@@ -56,6 +51,19 @@ class ConstraintRules:
 
     @staticmethod
     def confidence(source: ConstraintSource, evidence_count: int) -> float:
-        base = SOURCE_PRIORITY[source] / 4.0
-        corroboration = 0.15 if evidence_count > 1 else 0.0
-        return round(min(1.0, base + corroboration), 4)
+        return round(min(1.0, SOURCE_PRIORITY[source] / 4.0 + (0.15 if evidence_count > 1 else 0.0)), 4)
+
+    @staticmethod
+    def validate_priorities(constraints: list[dict[str, Any]], priorities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Validate investor-selected ordering without changing constraint authority."""
+        keys = {item["key"] for item in constraints}
+        seen: set[str] = set()
+        normalized: list[dict[str, Any]] = []
+        for item in sorted(priorities, key=lambda x: x.get("rank", 0)):
+            key = item.get("key")
+            rank = item.get("rank")
+            if key not in keys or key in seen or not isinstance(rank, int) or rank < 1:
+                raise ValueError("Invalid or duplicate constraint priority")
+            seen.add(key)
+            normalized.append({"key": key, "rank": rank})
+        return normalized
