@@ -85,3 +85,18 @@ def test_duplicate_priority_key_is_rejected():
         assert False
     except ValueError:
         assert True
+
+
+def test_duplicate_priority_rank_is_rejected():
+    constraints = [
+        {"key": "liquidity_priority", "value": "high"},
+        {"key": "goal_certainty", "value": "high"},
+    ]
+    try:
+        ConstraintRules.validate_priorities(constraints, [
+            {"key": "liquidity_priority", "rank": 1},
+            {"key": "goal_certainty", "rank": 1},
+        ])
+        assert False
+    except ValueError:
+        assert True
