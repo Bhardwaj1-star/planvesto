@@ -2,53 +2,40 @@ from __future__ import annotations
 
 from typing import Any
 
-ENGINE_VERSION = "profile-engine-v1"
+ENGINE_VERSION = "profile-engine-v2"
 
-RISK_WEIGHTS = {
-    "loss_reaction": 0.30,
-    "volatility_comfort": 0.25,
-    "capital_stability": 0.20,
-    "investment_experience": 0.15,
-    "time_horizon_comfort": 0.10,
-}
-BEHAVIOR_WEIGHTS = {
-    "loss_reaction": 0.30,
-    "decision_discipline": 0.25,
-    "recency_resistance": 0.20,
-    "herding_resistance": 0.15,
-    "plan_adherence": 0.10,
-}
-IDENTITY_WEIGHTS = {
-    "goal_orientation": 0.35,
-    "planning_orientation": 0.25,
-    "decision_ownership": 0.20,
-    "investment_experience": 0.20,
+SOURCE_PRIORITY = {
+    "financial_state": 4,
+    "observed_behavior": 3,
+    "declared_constraint": 2,
+    "preference": 1,
 }
 
 
-def _band(score: float) -> str:
-    if score < 25:
-        return "low"
-    if score < 50:
-        return "moderate-low"
-    if score < 75:
-        return "moderate-high"
-    return "high"
+def _confidence(source: str, corroborated: bool = False) -> float:
+    base = SOURCE_PRIORITY.get(source, 0) / 4.0
+    return round(min(1.0, base + (0.15 if corroborated else 0.0)), 4)
 
 
-def _score(answers: dict[str, float], weights: dict[str, float]) -> tuple[float, dict[str, float], list[str], float]:
-    supplied = {k: float(v) for k, v in answers.items() if k in weights}
-    total_weight = sum(weights[k] for k in supplied)
-    if not supplied or total_weight <= 0:
-        return 0.0, {}, ["Insufficient questionnaire data"], 0.0
-    components = {k: round((v / 4.0) * 100.0 * weights[k], 4) for k, v in supplied.items()}
-    score = round(sum(components.values()) / total_weight, 4)
-    confidence = round(total_weight, 4)
-    missing = [k for k in weights if k not in supplied]
-    explanations = [f"{k}: {round(answers[k], 2)}/4" for k in supplied]
-    if missing:
-        explanations.append(f"Missing inputs: {', '.join(missing)}")
-    return score, components, explanations, confidence
+def _constraint(
+    key: str,
+    value: Any,
+    *,
+    source: str,
+    kind: str = "soft",
+    evidence: list[dict[str, Any]] | None = None,
+    valid: bool = True,
+) -> dict[str, Any]:
+    evidence = evidence or []
+    return {
+        "key": key,
+        "value": value,
+        "kind": kind,
+        "source": source,
+        "confidence": _confidence(source, len(evidence) > 1),
+        "evidence": evidence,
+        "valid": valid,
+    }
 
 
 def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
@@ -56,53 +43,84 @@ def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
     return raw.get("value"), bool(raw.get("available", False))
 
 
-def _capacity(financial_state: dict[str, Any] | None) -> tuple[float, dict[str, float], list[str], float]:
-    if not financial_state:
-        return 0.0, {}, ["Financial state unavailable; capacity cannot be established"], 0.0
-
-    income, income_ok = _metric(financial_state, "income_monthly")
-    savings_rate, savings_ok = _metric(financial_state, "savings_investment_rate")
-    reserve, reserve_ok = _metric(financial_state, "safety_reserve_months")
-    expenses, expenses_ok = _metric(financial_state, "expenses_monthly")
-    emi, emi_ok = _metric(financial_state, "emi_burden_monthly")
-
-    parts: dict[str, float] = {}
-    if savings_ok and savings_rate is not None:
-        parts["savings_rate"] = max(0.0, min(100.0, float(savings_rate) * 5.0))
-    if reserve_ok and reserve is not None:
-        parts["reserve"] = max(0.0, min(100.0, float(reserve) / 12.0 * 100.0))
-    if emi_ok and income_ok and emi is not None and income and income > 0:
-        parts["debt_service"] = max(0.0, min(100.0, (1.0 - float(emi) / float(income) / 0.50) * 100.0))
-    if expenses_ok and income_ok and expenses is not None and income and income > 0:
-        parts["cash_flow_headroom"] = max(0.0, min(100.0, (1.0 - float(expenses) / float(income)) * 100.0 * 2.0))
-
-    if not parts:
-        return 0.0, {}, ["Financial capacity inputs are unavailable"], 0.0
-    score = round(sum(parts.values()) / len(parts), 4)
-    explanations = [f"{k}: {round(v, 2)}/100" for k, v in parts.items()]
-    return score, parts, explanations, round(len(parts) / 4.0, 4)
-
-
 class ProfileEngine:
+    """Resolve planning constraints from evidence; never infer personality labels."""
+
     def build(
         self,
         *,
         financial_state: dict[str, Any] | None,
-        risk_tolerance_answers: dict[str, float],
-        behavioral_answers: dict[str, float],
-        identity_answers: dict[str, float],
+        declared_constraints: list[dict[str, Any]] | None = None,
+        observed_behavior: list[dict[str, Any]] | None = None,
+        preferences: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        capacity_score, capacity_components, capacity_explanations, capacity_confidence = _capacity(financial_state)
-        tolerance_score, tolerance_components, tolerance_explanations, tolerance_confidence = _score(risk_tolerance_answers, RISK_WEIGHTS)
-        behavior_score, behavior_components, behavior_explanations, behavior_confidence = _score(behavioral_answers, BEHAVIOR_WEIGHTS)
-        identity_score, identity_components, identity_explanations, identity_confidence = _score(identity_answers, IDENTITY_WEIGHTS)
+        constraints: list[dict[str, Any]] = []
+        conflicts: list[dict[str, Any]] = []
 
-        completeness = round((capacity_confidence + tolerance_confidence + behavior_confidence + identity_confidence) / 4.0, 4)
+        for item in declared_constraints or []:
+            constraints.append(_constraint(
+                item["key"], item.get("value"), source="declared_constraint",
+                kind=item.get("kind", "soft"), evidence=item.get("evidence", []),
+            ))
+
+        for item in observed_behavior or []:
+            constraints.append(_constraint(
+                item["key"], item.get("value"), source="observed_behavior",
+                kind=item.get("kind", "soft"), evidence=item.get("evidence", []),
+            ))
+
+        for item in preferences or []:
+            constraints.append(_constraint(
+                item["key"], item.get("value"), source="preference",
+                kind="soft", evidence=item.get("evidence", []),
+            ))
+
+        if financial_state:
+            income, income_ok = _metric(financial_state, "income_monthly")
+            expenses, expenses_ok = _metric(financial_state, "expenses_monthly")
+            surplus, surplus_ok = _metric(financial_state, "investable_surplus_monthly")
+            reserve, reserve_ok = _metric(financial_state, "safety_reserve_months")
+            emi, emi_ok = _metric(financial_state, "emi_burden_monthly")
+
+            if surplus_ok and surplus is not None:
+                constraints.append(_constraint(
+                    "monthly_investable_surplus", surplus, source="financial_state", kind="hard",
+                    evidence=[{"field": "investable_surplus_monthly", "value": surplus}],
+                ))
+            if reserve_ok and reserve is not None:
+                constraints.append(_constraint(
+                    "safety_reserve_months", reserve, source="financial_state", kind="hard",
+                    evidence=[{"field": "safety_reserve_months", "value": reserve}],
+                ))
+            if emi_ok and income_ok and income and income > 0 and emi is not None:
+                constraints.append(_constraint(
+                    "debt_service_ratio", round(emi / income, 6), source="financial_state", kind="hard",
+                    evidence=[{"field": "emi_burden_monthly", "value": emi}, {"field": "income_monthly", "value": income}],
+                ))
+            if expenses_ok and income_ok and income and income > 0 and expenses is not None:
+                constraints.append(_constraint(
+                    "expense_ratio", round(expenses / income, 6), source="financial_state", kind="hard",
+                    evidence=[{"field": "expenses_monthly", "value": expenses}, {"field": "income_monthly", "value": income}],
+                ))
+
+        # Conflicts are explicit. We never silently choose between competing declarations.
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for item in constraints:
+            grouped.setdefault(item["key"], []).append(item)
+        for key, items in grouped.items():
+            values = {repr(item["value"]) for item in items if item["valid"]}
+            if len(values) > 1:
+                conflicts.append({
+                    "key": key,
+                    "status": "unresolved",
+                    "constraint_ids": [f"{key}:{i}" for i in range(len(items))],
+                    "reason": "Multiple evidence sources provide conflicting values.",
+                })
+
         return {
-            "risk_capacity": {"key": "risk_capacity", "score": capacity_score, "band": _band(capacity_score), "confidence": capacity_confidence, "components": capacity_components, "explanations": capacity_explanations},
-            "risk_tolerance": {"key": "risk_tolerance", "score": tolerance_score, "band": _band(tolerance_score), "confidence": tolerance_confidence, "components": tolerance_components, "explanations": tolerance_explanations},
-            "behavioral_profile": {"key": "behavioral_profile", "score": behavior_score, "band": _band(behavior_score), "confidence": behavior_confidence, "components": behavior_components, "explanations": behavior_explanations},
-            "investor_identity": {"key": "investor_identity", "score": identity_score, "band": _band(identity_score), "confidence": identity_confidence, "components": identity_components, "explanations": identity_explanations},
-            "completeness": completeness,
             "engine_version": ENGINE_VERSION,
+            "constraints": constraints,
+            "conflicts": conflicts,
+            "unresolved_conflict_count": len(conflicts),
+            "has_hard_constraints": any(c["kind"] == "hard" for c in constraints),
         }
