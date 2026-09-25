@@ -1,17 +1,23 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 
+from api.auth import authenticate_user
 from services.pdf_policy_extractor import extract_policy_pdf
 
 router = APIRouter(prefix="/api/insurance", tags=["Insurance"])
 
 
 @router.post("/extract-policy-pdf")
-async def extract_policy_pdf_endpoint(file: UploadFile = File(...)):
-    """Extract policy fields from an optional uploaded PDF.
+async def extract_policy_pdf_endpoint(
+    file: UploadFile = File(...),
+    authorization: str | None = Header(default=None),
+):
+    """Extract policy fields from an authenticated, optional policy PDF.
 
-    This endpoint only parses the document; the user must review/confirm the
-    extracted fields before they are persisted as financial data.
+    Parsing is local and read-only. The client must review/confirm extracted
+    fields before any financial data is persisted.
     """
+    authenticate_user(authorization)
+
     if file.content_type not in {"application/pdf", "application/x-pdf"}:
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
