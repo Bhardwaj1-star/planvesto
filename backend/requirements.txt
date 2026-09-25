@@ -5,4 +5,3 @@ python-dotenv
 supabase
 pymupdf
 python-multipart
-PyMuPDF + python-multipart
