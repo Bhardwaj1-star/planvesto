@@ -18,11 +18,14 @@ class ProfileRepository:
             raise RuntimeError("Failed to persist investor profile")
         return result.data[0]
 
+    @staticmethod
+    def is_version_conflict(exc: Exception) -> bool:
+        code = getattr(exc, "code", None)
+        message = str(exc)
+        return code == "23505" or "profile_runs" in message and "version" in message
+
     def create_constraints(self, profile_run_id: str, constraints: list[dict[str, Any]]) -> None:
-        rows = [
-            {"profile_run_id": profile_run_id, **item}
-            for item in constraints
-        ]
+        rows = [{"profile_run_id": profile_run_id, **item} for item in constraints]
         if rows:
             result = self.db.table("profile_constraints").insert(rows).execute()
             if len(result.data or []) != len(rows):
