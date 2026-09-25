@@ -12,6 +12,7 @@ from api.moneywheel import router as moneywheel_router
 from api.orchestration import router as orchestration_router
 from api.diary import router as diary_router
 from api.profile import router as profile_router
+from api.insurance import router as insurance_router
 from config.settings import CORS_ALLOWED_ORIGINS
 
 app = FastAPI(title="Planvesto Backend", version="2.0.0")
@@ -34,6 +35,7 @@ app.include_router(moneywheel_router)
 app.include_router(orchestration_router)
 app.include_router(diary_router)
 app.include_router(profile_router)
+app.include_router(insurance_router)
 
 @app.get("/")
 def root():
