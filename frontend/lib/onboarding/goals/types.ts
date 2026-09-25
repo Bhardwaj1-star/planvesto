@@ -41,31 +41,15 @@ export type GoalField = keyof Omit<Goal, "id">;
 export type GoalErrors = Partial<Record<GoalField, string>>;
 
 export const emptyGoal: Omit<Goal, "id"> = {
-  name: "",
-  goalType: "",
-  targetAmount: "",
-  targetMode: "",
-  targetDate: "",
-  targetAge: "",
-  currentSavedAmount: "",
-  monthlyContribution: "",
-  priority: "",
-  flexibility: "",
-  inflationApplicability: "",
-  notes: "",
+  name: "", goalType: "", targetAmount: "", targetMode: "", targetDate: "", targetAge: "",
+  currentSavedAmount: "", monthlyContribution: "", priority: "", flexibility: "",
+  inflationApplicability: "", notes: "",
 };
-
-// ============================================================================
-// DefinedGoal ARCHITECTURE (Authoritative Backend Model)
-// ============================================================================
 
 export const goalStatuses = ["Active", "Completed", "Paused", "Cancelled"] as const;
 export type GoalStatus = (typeof goalStatuses)[number];
-
 export type FundingStatus = "Shortfall" | "On Track" | "Overfunded";
-
 export type AssetMappingAllocationType = "currency" | "percentage";
-
 export const returnFrequencies = ["annual", "semi-annual", "quarterly", "monthly"] as const;
 export type ReturnFrequency = (typeof returnFrequencies)[number];
 
@@ -77,19 +61,22 @@ export type AssetMappingInput = {
   return_frequency: string;
 };
 
+export type SpecializedGoalDetails = Record<string, string | number | boolean | null | string[]>;
+
 export type GoalInput = {
   planning_unit_id: string;
   goal_id?: string | null;
   investor_id?: string | null;
   goal_name: string;
   goal_type: string;
-  today_cost: number;
-  target_month: number;
-  target_year: number;
+  today_cost: number | null;
+  target_month: number | null;
+  target_year: number | null;
   inflation_rate: number | null;
   priority: string;
   flexibility: string;
   status: string;
+  goal_details: SpecializedGoalDetails;
   asset_mappings: AssetMappingInput[];
 };
 
@@ -133,4 +120,4 @@ export type DefinedGoal = {
   funding_status: FundingStatus;
   version_metadata?: Record<string, unknown>;
   created_at?: string | null;
-};
+};
