@@ -4,6 +4,7 @@ from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
+from data.financial_data import FinancialDataRepository
 
 LIQUID_ASSET_TYPES = {"Bank / Cash", "Mutual Funds", "Stocks / Equity"}
 FINANCIAL_ASSET_TYPES = {"Bank / Cash", "Fixed Deposits", "Mutual Funds", "Stocks / Equity", "Bonds / Debt", "EPF / PPF", "NPS"}
@@ -12,10 +13,11 @@ ESSENTIAL_EXPENSE_TYPES = {"Housing", "Utilities", "Groceries", "Healthcare", "I
 
 
 class MoneywheelService:
-    """Calculates Moneywheel from the authoritative FinancialState plus source classifications."""
+    """Calculates Moneywheel from authoritative financial state and source classifications."""
 
     def __init__(self, repository):
         self.repository = repository
+        self.data_repository = FinancialDataRepository()
         self.engine = MoneywheelEngine()
         self.adapter = MoneywheelFinancialStateAdapter()
 
@@ -25,9 +27,9 @@ class MoneywheelService:
 
     def calculate_from_financial_state(self, financial_state: FinancialState, *, essential_monthly_expenses: float | None = None, liquid_assets: float | None = None, short_term_liabilities: float | None = None, financial_assets: float | None = None) -> MoneywheelResult:
         planning_unit_id = financial_state.planning_unit_id
-        expenses = self.repository_source("expenses", planning_unit_id)
-        assets = self.repository_source("assets", planning_unit_id)
-        liabilities = self.repository_source("liabilities", planning_unit_id)
+        expenses = self.data_repository.get_expenses(planning_unit_id)
+        assets = self.data_repository.get_assets(planning_unit_id)
+        liabilities = self.data_repository.get_liabilities(planning_unit_id)
 
         if essential_monthly_expenses is None:
             essential_monthly_expenses = self._sum_expenses(expenses)
@@ -46,13 +48,6 @@ class MoneywheelService:
             financial_assets=financial_assets,
         )
         return self.calculate(data, financial_state.model_dump(mode="json"))
-
-    def repository_source(self, kind: str, planning_unit_id: str):
-        if kind == "expenses":
-            return self.repository.data_repository.get_expenses(planning_unit_id)
-        if kind == "assets":
-            return self.repository.data_repository.get_assets(planning_unit_id)
-        return self.repository.data_repository.get_liabilities(planning_unit_id)
 
     @staticmethod
     def _sum_assets(rows, allowed_types):
