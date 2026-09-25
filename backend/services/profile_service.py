@@ -4,6 +4,8 @@ from data.profile_repository import ProfileRepository
 
 
 class ProfileService:
+    MAX_VERSION_RETRIES = 3
+
     def __init__(self):
         self.repository = ProfileRepository()
         self.financial_repository = FinancialStateSnapshotRepository()
@@ -32,11 +34,10 @@ class ProfileService:
             preferences=request.preferences,
             constraint_priorities=request.constraint_priorities,
         )
-        version = self.repository.next_version(request.planning_unit_id, request.investor_id)
-        payload = {
+
+        base_payload = {
             "planning_unit_id": request.planning_unit_id,
             "investor_id": request.investor_id,
-            "version": version,
             "engine_version": result["engine_version"],
             "profile_version": request.profile_version,
             "financial_snapshot_id": snapshot.get("snapshot_id") if snapshot else None,
@@ -50,11 +51,21 @@ class ProfileService:
             },
             "profile_result": result,
         }
-        run = self.repository.create_run(payload)
-        self.repository.create_constraints(run["profile_run_id"], result["constraints"])
-        self.repository.create_conflicts(run["profile_run_id"], result["conflicts"])
-        run["profile_result"] = result
-        return run
+
+        for attempt in range(self.MAX_VERSION_RETRIES):
+            version = self.repository.next_version(request.planning_unit_id, request.investor_id)
+            payload = {**base_payload, "version": version}
+            try:
+                run = self.repository.create_run(payload)
+                self.repository.create_constraints(run["profile_run_id"], result["constraints"])
+                self.repository.create_conflicts(run["profile_run_id"], result["conflicts"])
+                run["profile_result"] = result
+                return run
+            except Exception as exc:
+                if not self.repository.is_version_conflict(exc) or attempt == self.MAX_VERSION_RETRIES - 1:
+                    raise
+
+        raise RuntimeError("Failed to allocate profile version")
 
     def latest(self, planning_unit_id: str, investor_id: str):
         return self.repository.get_latest(planning_unit_id, investor_id)
