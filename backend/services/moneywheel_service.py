@@ -43,7 +43,6 @@ class MoneywheelService:
         if short_term_liabilities is None:
             short_term_liabilities = self._sum_liabilities(liabilities, SHORT_TERM_LIABILITY_TYPES)
 
-        # Map sum assured to protection signals without duplicate counting in assets/net worth
         total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
@@ -55,10 +54,18 @@ class MoneywheelService:
             float(p.get("sum_assured") or 0) for p in policies
             if str(p.get("policy_type") or "").strip().lower() in {"health insurance", "health"}
         )
+
+        # Required cover baseline: 10 years of gross income plus outstanding liabilities.
+        # Existing assets are intentionally not netted off so insurance remains a pure protection signal.
+        annual_income = float(financial_state.income_monthly.value or 0) * 12
+        total_liabilities = float(financial_state.total_liabilities.value or 0)
+        required_insurance_cover = (annual_income * 10) + total_liabilities
+
         protection_metadata = {
             "total_sum_assured": total_sum_assured,
             "life_cover": total_life_cover,
             "health_cover": total_health_cover,
+            "required_insurance_cover": required_insurance_cover,
             "policy_count": len(policies),
         }
 
@@ -68,9 +75,10 @@ class MoneywheelService:
             liquid_assets=liquid_assets,
             short_term_liabilities=short_term_liabilities,
             financial_assets=financial_assets,
+            existing_sum_assured=total_sum_assured,
+            required_insurance_cover=required_insurance_cover,
         )
         return self.calculate(data, financial_state.model_dump(mode="json"), protection_metadata=protection_metadata)
-
 
     @staticmethod
     def _sum_assets(rows, allowed_types):
