@@ -19,6 +19,8 @@ class MoneywheelEngine:
             self._solvency_ratio(data),
             self._ratio(data, "financial_asset_ratio", data.financial_assets, data.total_assets),
             self._ratio(data, "insurance_gap_ratio", data.existing_sum_assured, data.required_insurance_cover),
+            self._ratio(data, "goal_funding_ratio", data.current_goal_funding, data.goal_target_amount),
+            self._ratio(data, "future_funding_ratio", data.projected_goal_funding, data.future_goal_target),
         ]
         return MoneywheelResult(
             planning_unit_id=data.planning_unit_id,
