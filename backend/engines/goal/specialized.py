@@ -14,8 +14,8 @@ def _positive(data: dict[str, Any], key: str) -> float:
 
 def _years_to_age(current_age: float, target_age: float) -> float:
     years = target_age - current_age
-    if years <= 0:
-        raise ValueError("Target age must be greater than current age")
+    if years < 0:
+        raise ValueError("Target age cannot be less than current age")
     return years
 
 
@@ -31,6 +31,8 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
         post_retirement_return = float(data.get("post_retirement_return_rate", 0.08))
         years_to_retirement = _years_to_age(current_age, retirement_age)
         retirement_years = life_expectancy - retirement_age
+        if years_to_retirement <= 0:
+            raise ValueError("Retirement age must be greater than current age")
         if retirement_years <= 0:
             raise ValueError("Life expectancy must be greater than retirement age")
         annual_expense_at_retirement = monthly_expense * 12 * pow(1 + expense_inflation, years_to_retirement)
@@ -46,21 +48,32 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
             "target_age": retirement_age,
             "retirement_years": retirement_years,
             "annual_expense_at_retirement": annual_expense_at_retirement,
+            "current_age": current_age,
+            "retirement_age": retirement_age,
+            "life_expectancy": life_expectancy,
+            "current_monthly_expense": monthly_expense,
+            "post_retirement_return_rate": post_retirement_return,
         }
 
     if kind in {"child education", "education"}:
         current_cost = _positive(data, "current_education_cost")
-        child_age = _positive(data, "child_age")
+        child_age = float(data.get("child_age", 0) or 0)
         education_start_age = _positive(data, "education_start_age")
+        duration = _positive(data, "education_duration_years")
         education_inflation = float(data.get("education_inflation_rate", 0.08))
         years = _years_to_age(child_age, education_start_age)
-        future_cost = current_cost * pow(1 + education_inflation, years)
+        first_year_cost = current_cost * pow(1 + education_inflation, years)
+        total_cost = sum(first_year_cost * pow(1 + education_inflation, year) for year in range(int(duration)))
         return {
             "today_cost": current_cost,
-            "future_target": future_cost,
+            "future_target": total_cost,
             "duration_years": years,
             "education_start_age": education_start_age,
             "child_age": child_age,
+            "education_duration_years": duration,
+            "current_education_cost": current_cost,
+            "education_inflation_rate": education_inflation,
+            "dependent_id": data.get("dependent_id"),
         }
 
     if kind == "travel":
@@ -79,14 +92,21 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
             "travel_total_cost": total,
             "number_of_trips": trips,
             "repeat_every_years": interval,
+            "years_to_first_trip": first_trip_years,
+            "current_trip_cost": trip_cost,
+            "travel_inflation_rate": travel_inflation,
         }
 
-    # Generic specialized one-time goals: use today's cost and the common inflation model.
     current_cost = _positive(data, "current_cost")
-    years = _positive(data, "years_to_goal")
+    years = float(data.get("years_to_goal", 0) or 0)
+    if years <= 0:
+        raise ValueError("years_to_goal must be greater than 0")
     inflation = float(data.get("inflation_rate", 0.06))
     return {
         "today_cost": current_cost,
         "future_target": current_cost * pow(1 + inflation, years),
         "duration_years": years,
+        "current_cost": current_cost,
+        "years_to_goal": years,
+        "inflation_rate": inflation,
     }
