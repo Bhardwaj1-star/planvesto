@@ -547,6 +547,88 @@ export type Database = {
           },
         ]
       }
+      insurance_policies: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          current_value: number | null
+          expense_id: string | null
+          insurer: string | null
+          maturity_date: string | null
+          maturity_value: number | null
+          planning_unit_id: string
+          policy_id: string
+          policy_name: string
+          policy_number: string | null
+          policy_type: string | null
+          premium: number | null
+          premium_frequency: string | null
+          source: string
+          sum_assured: number | null
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          current_value?: number | null
+          expense_id?: string | null
+          insurer?: string | null
+          maturity_date?: string | null
+          maturity_value?: number | null
+          planning_unit_id: string
+          policy_id?: string
+          policy_name: string
+          policy_number?: string | null
+          policy_type?: string | null
+          premium?: number | null
+          premium_frequency?: string | null
+          source?: string
+          sum_assured?: number | null
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          current_value?: number | null
+          expense_id?: string | null
+          insurer?: string | null
+          maturity_date?: string | null
+          maturity_value?: number | null
+          planning_unit_id?: string
+          policy_id?: string
+          policy_name?: string
+          policy_number?: string | null
+          policy_type?: string | null
+          premium?: number | null
+          premium_frequency?: string | null
+          source?: string
+          sum_assured?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_insurance_policy_asset"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "fk_insurance_policy_expense"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["expense_id"]
+          },
+          {
+            foreignKeyName: "fk_insurance_policy_planning_unit"
+            columns: ["planning_unit_id"]
+            isOneToOne: false
+            referencedRelation: "planning_units"
+            referencedColumns: ["planning_unit_id"]
+          },
+        ]
+      }
       planning_units: {
         Row: {
           created_at: string

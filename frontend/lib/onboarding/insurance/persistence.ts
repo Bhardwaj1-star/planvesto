@@ -2,27 +2,80 @@ import { supabase } from "../../supabase";
 import { getPlanningUnitId } from "../../api/client";
 import type { InsurancePolicy, InsurancePolicyDraft } from "./types";
 
-const table = () => (supabase.from("insurance_policies") as any);
+const table = () => supabase.from("insurance_policies");
 
-function numeric(value: string) {
+function numeric(value: string | number | null | undefined): number | null {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const num = Number(trimmed);
+  return isNaN(num) ? null : num;
+}
+
+function nullable(value: string | null | undefined): string | null {
+  if (!value) return null;
   const trimmed = value.trim();
-  return trimmed ? Number(trimmed) : null;
+  return trimmed || null;
 }
 
-function nullable(value: string) {
-  return value.trim() || null;
+async function planningUnitId(): Promise<string> {
+  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+  if (sessionErr) throw sessionErr;
+  if (!sessionData.session) throw new Error("Authentication required.");
+  const userId = sessionData.session.user.id;
+
+  const storedId = getPlanningUnitId();
+  if (storedId) {
+    const { data } = await supabase
+      .from("planning_units")
+      .select("planning_unit_id")
+      .eq("planning_unit_id", storedId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (data?.planning_unit_id) return data.planning_unit_id;
+  }
+
+  const { data: existing } = await supabase
+    .from("planning_units")
+    .select("planning_unit_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.planning_unit_id) {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("planvesto-planning-unit-id", existing.planning_unit_id);
+    }
+    return existing.planning_unit_id;
+  }
+
+  const { data: created, error: createErr } = await supabase
+    .from("planning_units")
+    .insert({ user_id: userId })
+    .select("planning_unit_id")
+    .single();
+  if (createErr) throw createErr;
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("planvesto-planning-unit-id", created.planning_unit_id);
+  }
+  return created.planning_unit_id;
 }
 
-async function planningUnitId() {
-  const id = getPlanningUnitId();
-  if (!id) throw new Error("Financial planning unit is not available. Please reload your profile.");
-  const { data: session, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  if (!session.session) throw new Error("Authentication required.");
-  return id;
-}
-
-function mapRow(row: any): InsurancePolicy {
+function mapRow(row: {
+  policy_id: string;
+  policy_name: string;
+  insurer: string | null;
+  policy_number: string | null;
+  policy_type: string | null;
+  premium: number | null;
+  premium_frequency: string | null;
+  sum_assured: number | null;
+  current_value: number | null;
+  maturity_date: string | null;
+  maturity_value: number | null;
+  source: string;
+}): InsurancePolicy {
   return {
     id: row.policy_id,
     policyName: row.policy_name || "",
@@ -46,7 +99,7 @@ export async function loadInsurancePolicies(): Promise<InsurancePolicy[]> {
   return (data || []).map(mapRow);
 }
 
-async function syncAsset(policy: InsurancePolicyDraft, policyId: string, linkedAssetId: string | null) {
+async function syncAsset(policy: InsurancePolicyDraft, policyId: string, linkedAssetId: string | null): Promise<string | null> {
   const id = await planningUnitId();
   const currentValue = numeric(policy.currentValue);
   const name = `Insurance - ${policy.policyName.trim()}`;
@@ -76,10 +129,9 @@ async function syncAsset(policy: InsurancePolicyDraft, policyId: string, linkedA
   return data.asset_id;
 }
 
-async function syncExpense(policy: InsurancePolicyDraft, linkedExpenseId: string | null) {
+async function syncExpense(policy: InsurancePolicyDraft, linkedExpenseId: string | null): Promise<string | null> {
   const id = await planningUnitId();
   const premium = numeric(policy.premium);
-  const name = `Insurance - ${policy.policyName.trim()}`;
 
   if (!premium || premium <= 0) {
     if (linkedExpenseId) {
@@ -93,7 +145,7 @@ async function syncExpense(policy: InsurancePolicyDraft, linkedExpenseId: string
     planning_unit_id: id,
     expense_type: "Insurance",
     amount: premium,
-    frequency: policy.premiumFrequency,
+    frequency: policy.premiumFrequency || "Monthly",
   };
   if (linkedExpenseId) {
     const { data, error } = await supabase.from("expenses").update(payload).eq("expense_id", linkedExpenseId).eq("planning_unit_id", id).select("expense_id").single();
@@ -112,10 +164,11 @@ export async function saveInsurancePolicy(policy: InsurancePolicyDraft): Promise
   let linkedAssetId: string | null = null;
   let linkedExpenseId: string | null = null;
   if (policy.id) {
-    const { data, error } = await table().select("asset_id, expense_id").eq("policy_id", policy.id).eq("planning_unit_id", id).single();
-    if (error) throw error;
-    linkedAssetId = data.asset_id;
-    linkedExpenseId = data.expense_id;
+    const { data } = await table().select("asset_id, expense_id").eq("policy_id", policy.id).eq("planning_unit_id", id).maybeSingle();
+    if (data) {
+      linkedAssetId = data.asset_id;
+      linkedExpenseId = data.expense_id;
+    }
   }
 
   linkedAssetId = await syncAsset(policy, policy.id || "", linkedAssetId);
@@ -146,15 +199,15 @@ export async function saveInsurancePolicy(policy: InsurancePolicyDraft): Promise
   return loadInsurancePolicies();
 }
 
-export async function removeInsurancePolicy(policyId: string) {
+export async function removeInsurancePolicy(policyId: string): Promise<InsurancePolicy[]> {
   const id = await planningUnitId();
-  const { data, error } = await table().select("asset_id, expense_id").eq("policy_id", policyId).eq("planning_unit_id", id).single();
+  const { data, error } = await table().select("asset_id, expense_id").eq("policy_id", policyId).eq("planning_unit_id", id).maybeSingle();
   if (error) throw error;
-  if (data.asset_id) {
+  if (data?.asset_id) {
     const { error: assetError } = await supabase.from("assets").delete().eq("asset_id", data.asset_id).eq("planning_unit_id", id);
     if (assetError) throw assetError;
   }
-  if (data.expense_id) {
+  if (data?.expense_id) {
     const { error: expenseError } = await supabase.from("expenses").delete().eq("expense_id", data.expense_id).eq("planning_unit_id", id);
     if (expenseError) throw expenseError;
   }

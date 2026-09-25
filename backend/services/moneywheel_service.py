@@ -21,8 +21,10 @@ class MoneywheelService:
         self.engine = MoneywheelEngine()
         self.adapter = MoneywheelFinancialStateAdapter()
 
-    def calculate(self, data: MoneywheelInput, financial_state_snapshot: dict[str, Any] | None = None) -> MoneywheelResult:
+    def calculate(self, data: MoneywheelInput, financial_state_snapshot: dict[str, Any] | None = None, protection_metadata: dict[str, Any] | None = None) -> MoneywheelResult:
         result = self.engine.build(data)
+        if protection_metadata:
+            result.metadata["protection"] = protection_metadata
         return self.repository.save_snapshot(result, financial_state_snapshot or {})
 
     def calculate_from_financial_state(self, financial_state: FinancialState, *, essential_monthly_expenses: float | None = None, liquid_assets: float | None = None, short_term_liabilities: float | None = None, financial_assets: float | None = None) -> MoneywheelResult:
@@ -30,6 +32,7 @@ class MoneywheelService:
         expenses = self.data_repository.get_expenses(planning_unit_id)
         assets = self.data_repository.get_assets(planning_unit_id)
         liabilities = self.data_repository.get_liabilities(planning_unit_id)
+        policies = self.data_repository.get_insurance_policies(planning_unit_id)
 
         if essential_monthly_expenses is None:
             essential_monthly_expenses = self._sum_expenses(expenses)
@@ -40,6 +43,25 @@ class MoneywheelService:
         if short_term_liabilities is None:
             short_term_liabilities = self._sum_liabilities(liabilities, SHORT_TERM_LIABILITY_TYPES)
 
+        # Map sum assured to protection signals without duplicate counting in assets/net worth
+        total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
+        total_life_cover = sum(
+            float(p.get("sum_assured") or 0) for p in policies
+            if str(p.get("policy_type") or "").strip().lower() in {
+                "term insurance", "term", "endowment", "whole life", "ulip", "money back"
+            }
+        )
+        total_health_cover = sum(
+            float(p.get("sum_assured") or 0) for p in policies
+            if str(p.get("policy_type") or "").strip().lower() in {"health insurance", "health"}
+        )
+        protection_metadata = {
+            "total_sum_assured": total_sum_assured,
+            "life_cover": total_life_cover,
+            "health_cover": total_health_cover,
+            "policy_count": len(policies),
+        }
+
         data = self.adapter.build(
             financial_state,
             essential_monthly_expenses=essential_monthly_expenses,
@@ -47,7 +69,8 @@ class MoneywheelService:
             short_term_liabilities=short_term_liabilities,
             financial_assets=financial_assets,
         )
-        return self.calculate(data, financial_state.model_dump(mode="json"))
+        return self.calculate(data, financial_state.model_dump(mode="json"), protection_metadata=protection_metadata)
+
 
     @staticmethod
     def _sum_assets(rows, allowed_types):

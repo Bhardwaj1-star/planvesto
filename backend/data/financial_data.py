@@ -53,3 +53,7 @@ class FinancialDataRepository:
         if not ids:
             return []
         return self.db.table("expense_participants").select("*").in_("expense_id", ids).execute().data or []
+
+    def get_insurance_policies(self, planning_unit_id: str) -> list[dict[str, Any]]:
+        return self._rows("insurance_policies", planning_unit_id)
+
