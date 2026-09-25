@@ -20,9 +20,10 @@ import LiabilitySummary from "../onboarding/liabilities/LiabilitySummary";
 import LiabilityForm from "../onboarding/liabilities/LiabilityForm";
 import GoalSummary from "../onboarding/goals/GoalSummary";
 import GoalForm from "../onboarding/goals/GoalForm";
+import InsuranceSection from "../onboarding/insurance/InsuranceSection";
 import { genderSelectOptions, maritalStatusSelectOptions } from "../../lib/onboarding/personal-information/model";
 
-type FinancialCategory = "personal" | "income" | "expenses" | "assets" | "liabilities" | "goals";
+type FinancialCategory = "personal" | "income" | "expenses" | "assets" | "liabilities" | "goals" | "insurance";
 
 export default function FinancialInformationSection({ initialCategory = "personal" }: { initialCategory?: FinancialCategory }) {
   const [activeCategory, setActiveCategory] = useState<FinancialCategory>(initialCategory);
@@ -41,6 +42,7 @@ export default function FinancialInformationSection({ initialCategory = "persona
     { id: "assets", label: "Assets", count: assets.assets.length ? `${assets.assets.length} assets` : undefined },
     { id: "liabilities", label: "Liabilities", count: liabilities.liabilities.length ? `${liabilities.liabilities.length} loans` : undefined },
     { id: "goals", label: "Goals", count: goals.goals.length ? `${goals.goals.length} goals` : undefined },
+    { id: "insurance", label: "Insurance" },
   ] as const;
   function fieldClasses(hasError = false) { return `form-field w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-navy-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-50 ${hasError ? "border-red-300" : "border-slate-200"}`; }
   return <div className="space-y-4">
@@ -71,11 +73,11 @@ export default function FinancialInformationSection({ initialCategory = "persona
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div><h3 className="text-lg font-extrabold text-navy-900">Family &amp; Dependents</h3><p className="mt-0.5 text-xs text-slate-500">People you support today or plan to support.</p></div><FamilySummary members={family.members} onEdit={family.startEditing} onRemove={family.removeMember} /><FamilyMemberForm member={family.draft} errors={family.errors} isEditing={Boolean(family.editingMemberId)} onChange={family.updateDraft} onSave={family.saveMember} onCancel={family.cancelEditing} /></div>
     </div>}
-
     {activeCategory === "income" && <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div className="border-b border-slate-100 pb-3"><h3 className="text-lg font-extrabold text-navy-900">Income Sources</h3><p className="mt-0.5 text-xs text-slate-500">Manage salaries, business income and predictable inflows.</p></div><IncomeSummary sources={income.sources} onEdit={income.startEditing} onRemove={income.removeSource} /><IncomeSourceForm source={income.draft} errors={income.errors} isEditing={Boolean(income.editingSourceId)} onChange={income.updateDraft} onSave={income.saveSource} onCancel={income.cancelEditing} /></div>}
     {activeCategory === "expenses" && <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div className="border-b border-slate-100 pb-3"><h3 className="text-lg font-extrabold text-navy-900">Expenses &amp; Lifestyle Costs</h3><p className="mt-0.5 text-xs text-slate-500">Manage living costs and discretionary spending.</p></div><ExpenseSummary expenses={expenses.expenses} onEdit={expenses.startEditing} onRemove={expenses.removeExpense} /><ExpenseCategoryForm expense={expenses.draft} errors={expenses.errors} isEditing={Boolean(expenses.editingExpenseId)} onChange={expenses.updateDraft} onSave={expenses.saveExpense} onCancel={expenses.cancelEditing} /></div>}
     {activeCategory === "assets" && <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div className="border-b border-slate-100 pb-3"><h3 className="text-lg font-extrabold text-navy-900">Assets &amp; Investments</h3><p className="mt-0.5 text-xs text-slate-500">Savings, funds, equity, gold, real estate and reserves.</p></div><AssetSummary assets={assets.assets} onEdit={assets.startEditing} onRemove={assets.removeAsset} /><AssetForm asset={assets.draft} errors={assets.errors} isEditing={Boolean(assets.editingAssetId)} onChange={assets.updateDraft} onSave={assets.saveAsset} onCancel={assets.cancelEditing} /></div>}
     {activeCategory === "liabilities" && <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div className="border-b border-slate-100 pb-3"><h3 className="text-lg font-extrabold text-navy-900">Liabilities &amp; Debt</h3><p className="mt-0.5 text-xs text-slate-500">Home loans, car loans, personal debt, credit lines and EMIs.</p></div><LiabilitySummary liabilities={liabilities.liabilities} onEdit={liabilities.startEditing} onRemove={liabilities.removeLiability} /><LiabilityForm liability={liabilities.draft} errors={liabilities.errors} isEditing={Boolean(liabilities.editingLiabilityId)} onChange={liabilities.updateDraft} onSave={liabilities.saveLiability} onCancel={liabilities.cancelEditing} /></div>}
     {activeCategory === "goals" && <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 space-y-4"><div className="border-b border-slate-100 pb-3"><h3 className="text-lg font-extrabold text-navy-900">Goals &amp; Life Milestones</h3><p className="mt-0.5 text-xs text-slate-500">Target amounts, time horizons and planning assumptions.</p></div>{goals.goals.length > 0 && <GoalSummary goals={goals.goals} onEdit={goals.startEditing} onRemove={goals.removeGoal} />}{goals.isFormOpen ? <GoalForm goal={goals.draft} errors={goals.errors} isEditing={Boolean(goals.editingGoalId)} onChange={goals.updateDraft} onSave={goals.saveGoal} onCancel={goals.cancelEditing} /> : <button type="button" onClick={goals.startAdding} className="inline-flex items-center rounded-xl border border-teal-600 bg-white px-5 py-3 text-sm font-bold text-teal-700 hover:bg-teal-50">+ Add new goal</button>}</div>}
+    {activeCategory === "insurance" && <InsuranceSection />}
   </div>;
 }
