@@ -15,14 +15,16 @@ def _input(**overrides):
         total_assets=2000000,
         total_liabilities=400000,
         financial_assets=1500000,
+        existing_sum_assured=8000000,
+        required_insurance_cover=10000000,
     )
     values.update(overrides)
     return MoneywheelInput(**values)
 
 
-def test_all_nine_ratios_are_returned():
+def test_all_ten_ratios_are_returned():
     result = MoneywheelEngine().build(_input())
-    assert len(result.ratios) == 9
+    assert len(result.ratios) == 10
     assert all(r.available for r in result.ratios)
 
 
@@ -56,6 +58,22 @@ def test_solvency_is_one_minus_leverage():
     solvency = next(r for r in result.ratios if r.key == "solvency_ratio")
     assert leverage.value == 30.0
     assert solvency.value == 70.0
+
+
+def test_insurance_coverage_ratio_is_calculated():
+    result = MoneywheelEngine().build(_input(existing_sum_assured=8000000, required_insurance_cover=10000000))
+    ratio = next(r for r in result.ratios if r.key == "insurance_gap_ratio")
+    assert ratio.value == 80.0
+    assert ratio.status == "excellent"
+    assert ratio.available is True
+
+
+def test_insurance_ratio_is_unavailable_without_cover_inputs():
+    result = MoneywheelEngine().build(_input(existing_sum_assured=None, required_insurance_cover=None))
+    ratio = next(r for r in result.ratios if r.key == "insurance_gap_ratio")
+    assert ratio.value is None
+    assert ratio.status == "unavailable"
+    assert ratio.available is False
 
 
 def test_moneywheel_repository_save_snapshot():
@@ -114,8 +132,6 @@ def test_post_moneywheel_calculate_success():
     from main import app
 
     client = TestClient(app)
-    fake_row = {"snapshot_id": "snapshot-uuid-999"}
-
     fake_result = MoneywheelEngine().build(_input())
     fake_service = MagicMock()
     fake_service.calculate_from_financial_state.return_value = fake_result
@@ -142,12 +158,13 @@ def test_post_moneywheel_calculate_success():
                 "total_assets": 2000000,
                 "total_liabilities": 400000,
                 "financial_assets": 1500000,
+                "existing_sum_assured": 8000000,
+                "required_insurance_cover": 10000000,
             },
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "result" in data
-        assert len(data["result"]["ratios"]) == 9
+        assert len(data["result"]["ratios"]) == 10
         assert data["result"]["metadata"]
-
