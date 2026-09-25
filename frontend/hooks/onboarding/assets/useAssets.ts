@@ -29,9 +29,7 @@ export function useAssets() {
     setIsSubmitted(false);
   }
 
-  function cancelEditing() {
-    startAdding();
-  }
+  function cancelEditing() { startAdding(); }
 
   function updateDraft(changes: Partial<Asset>) {
     const nextDraft = { ...draft, ...changes };
@@ -49,17 +47,12 @@ export function useAssets() {
       document.getElementById(Object.keys(nextErrors)[0])?.focus();
       return false;
     }
-
-    const nextAssets = editingAssetId
-      ? assets.map((asset) => asset.id === editingAssetId ? draft : asset)
-      : [...assets, draft];
+    const nextAssets = editingAssetId ? assets.map((asset) => asset.id === editingAssetId ? draft : asset) : [...assets, draft];
     setAssets(nextAssets);
     try {
       const data = await saveAssets(nextAssets);
       setAssets(data.assets);
-    } catch {
-      return false;
-    }
+    } catch { return false; }
     startAdding();
     return true;
   }
@@ -70,9 +63,7 @@ export function useAssets() {
     try {
       const data = await saveAssets(nextAssets);
       setAssets(data.assets);
-    } catch {
-      return;
-    }
+    } catch { return; }
     if (editingAssetId === id) startAdding();
     setIsComplete(false);
   }
@@ -91,9 +82,7 @@ export function useAssets() {
     try {
       const data = await saveAssets(assets);
       setAssets(data.assets);
-    } catch {
-      return;
-    }
+    } catch { return; }
     setIsComplete(true);
     completeStep(5);
     goNext();
@@ -106,6 +95,7 @@ export function useAssets() {
     editingAssetId,
     errors,
     isComplete,
+    startAdding,
     startEditing,
     updateDraft,
     saveAsset,
