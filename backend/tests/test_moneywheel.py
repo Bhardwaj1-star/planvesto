@@ -17,14 +17,18 @@ def _input(**overrides):
         financial_assets=1500000,
         existing_sum_assured=8000000,
         required_insurance_cover=10000000,
+        current_goal_funding=600000,
+        goal_target_amount=1000000,
+        projected_goal_funding=900000,
+        future_goal_target=1000000,
     )
     values.update(overrides)
     return MoneywheelInput(**values)
 
 
-def test_all_ten_ratios_are_returned():
+def test_all_twelve_ratios_are_returned():
     result = MoneywheelEngine().build(_input())
-    assert len(result.ratios) == 10
+    assert len(result.ratios) == 12
     assert all(r.available for r in result.ratios)
 
 
@@ -74,6 +78,31 @@ def test_insurance_ratio_is_unavailable_without_cover_inputs():
     assert ratio.value is None
     assert ratio.status == "unavailable"
     assert ratio.available is False
+
+
+def test_goal_funding_ratio_is_calculated():
+    result = MoneywheelEngine().build(_input(current_goal_funding=600000, goal_target_amount=1000000))
+    ratio = next(r for r in result.ratios if r.key == "goal_funding_ratio")
+    assert ratio.value == 60.0
+    assert ratio.status == "attention"
+    assert ratio.available is True
+
+
+def test_future_funding_ratio_is_calculated():
+    result = MoneywheelEngine().build(_input(projected_goal_funding=900000, future_goal_target=1000000))
+    ratio = next(r for r in result.ratios if r.key == "future_funding_ratio")
+    assert ratio.value == 90.0
+    assert ratio.status == "healthy"
+    assert ratio.available is True
+
+
+def test_goal_ratios_are_unavailable_without_goal_inputs():
+    result = MoneywheelEngine().build(_input(current_goal_funding=None, goal_target_amount=None, projected_goal_funding=None, future_goal_target=None))
+    for key in ("goal_funding_ratio", "future_funding_ratio"):
+        ratio = next(r for r in result.ratios if r.key == key)
+        assert ratio.value is None
+        assert ratio.status == "unavailable"
+        assert ratio.available is False
 
 
 def test_moneywheel_repository_save_snapshot():
@@ -166,5 +195,5 @@ def test_post_moneywheel_calculate_success():
         assert response.status_code == 200
         data = response.json()
         assert "result" in data
-        assert len(data["result"]["ratios"]) == 10
+        assert len(data["result"]["ratios"]) == 12
         assert data["result"]["metadata"]
