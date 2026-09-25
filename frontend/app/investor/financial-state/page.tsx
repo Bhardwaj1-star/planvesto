@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
 import { DashboardData, DashboardGoal, getDashboard } from "../../../lib/api/dashboard";
+import { subscribeToFinancialChanges } from "../../../lib/dashboard/realtime";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const shortMoney = (value: number | null | undefined) => value == null ? "—" : money.format(value);
@@ -15,13 +16,11 @@ function AllocationDonut({ items, total, label, dark = false }: { items: { name?
   const gradient = `conic-gradient(var(${dark ? '--pv-chart-active-alt' : '--pv-chart-active'}) ${deg}deg, var(--pv-chart-track) ${deg}deg)`;
   return <div className="flex items-center gap-5"><div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: gradient }}><div className="absolute inset-3 flex items-center justify-center rounded-full bg-white text-center"><span className="text-sm font-extrabold text-slate-900">{Math.round(pct * 100)}%</span></div></div><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-xl font-extrabold text-slate-950">{shortMoney(total)}</p></div></div>;
 }
-
 function FlowBars({ income, expenses, surplus }: { income: number; expenses: number; surplus: number }) {
   const max = Math.max(income, expenses, Math.abs(surplus), 1);
   const rows = [{ label: "Income", value: income }, { label: "Expenses", value: expenses }, { label: "Available Amount for Future", value: surplus }];
   return <div className="space-y-5">{rows.map(row => <div key={row.label}><div className="mb-2 flex items-center justify-between text-sm"><span className="font-semibold text-slate-700">{row.label}</span><span className="font-extrabold text-slate-950">{shortMoney(row.value)}</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${Math.max(4, Math.min(100, Math.abs(row.value) / max * 100))}%` }} /></div></div>)}</div>;
 }
-
 function GoalVisual({ goal }: { goal: DashboardGoal }) {
   const common = "h-44 w-full rounded-2xl";
   const svg = (children: React.ReactNode, bg: string, label: string) => <div className={`${common} ${bg} flex items-center justify-center overflow-hidden`}><svg viewBox="0 0 300 170" className="h-full w-full" aria-label={label}>{children}</svg></div>;
@@ -31,11 +30,9 @@ function GoalVisual({ goal }: { goal: DashboardGoal }) {
   if (goal.image_key === "retirement") return svg(<><circle cx="150" cy="80" r="45" fill="white" stroke="#0f766e" strokeWidth="5"/><path d="M105 80h90M150 35v90M90 130c20-18 100-18 120 0" fill="none" stroke="#0f766e" strokeWidth="5" strokeLinecap="round"/></>, "bg-emerald-50", "Retirement goal");
   return svg(<><circle cx="150" cy="75" r="42" fill="white" stroke="#475569" strokeWidth="5"/><path d="M150 52v25l18 12" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round"/></>, "bg-slate-100", "Goal");
 }
-
 function GoalCard({ goal, onClick }: { goal: DashboardGoal; onClick: () => void }) {
   return <button type="button" onClick={onClick} className="group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-600"><GoalVisual goal={goal}/><div className="p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">{goal.goal_type}</p><h3 className="mt-1 text-xl font-extrabold text-slate-950">{goal.goal_name}</h3></div><span className="text-xs font-bold text-slate-400 group-hover:text-teal-700">View →</span></div><div className="mt-5"><div className="flex justify-between text-xs font-bold text-slate-500"><span>Funding coverage</span><span>{goal.coverage_percentage == null ? "—" : `${goal.coverage_percentage}%`}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${goal.coverage_percentage ?? 0}%` }} /></div></div><div className="mt-4 flex items-end justify-between gap-3"><div><p className="text-xs text-slate-400">Target</p><p className="mt-1 font-extrabold text-slate-900">{shortMoney(goal.target_amount)}</p></div><div className="text-right"><p className="text-xs text-slate-400">Status</p><p className="mt-1 text-sm font-bold text-slate-700">{goal.funding_status ?? "Defined"}</p></div></div></div></button>;
 }
-
 function GoalTimeline({ goals, onClick }: { goals: DashboardGoal[]; onClick: (goal: DashboardGoal) => void }) {
   return <div className="relative space-y-4 pl-7 before:absolute before:bottom-2 before:left-2 before:top-2 before:w-px before:bg-slate-200">{goals.map(goal => <button key={goal.goal_id} type="button" onClick={() => onClick(goal)} className="relative block w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-teal-300 hover:shadow-md"><span className="absolute -left-[31px] top-7 h-4 w-4 rounded-full border-4 border-white bg-teal-700 shadow"/><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="text-xs font-bold uppercase tracking-wider text-teal-700">{goal.goal_type}</p><h3 className="mt-1 text-lg font-extrabold text-slate-950">{goal.goal_name}</h3><p className="mt-1 text-xs text-slate-500">Target {goal.target_date ? new Date(goal.target_date).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "—"}</p></div><div className="min-w-44"><div className="flex justify-between text-xs font-bold text-slate-500"><span>{goal.funding_status ?? "Defined"}</span><span>{goal.coverage_percentage == null ? "—" : `${goal.coverage_percentage}%`}</span></div><div className="mt-2 h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-700" style={{ width: `${goal.coverage_percentage ?? 0}%` }} /></div></div></div></button>)}</div>;
 }
@@ -46,10 +43,13 @@ export default function FinancialStatePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<DashboardGoal | null>(null);
   const [detail, setDetail] = useState<"assets" | "liabilities" | "goal" | null>(null);
-
   async function load() { setLoading(true); setError(null); try { setData(await getDashboard()); } catch (e) { setError(e instanceof Error ? e.message : "Unable to load Dashboard."); } finally { setLoading(false); } }
-  useEffect(() => { void load(); }, []);
-
+  useEffect(() => {
+    void load();
+    const planningUnitId = window.localStorage.getItem("planvesto_planning_unit_id");
+    if (!planningUnitId) return;
+    return subscribeToFinancialChanges(planningUnitId, () => { void load(); });
+  }, []);
   const fs = data?.financial_state;
   const income = fs?.income_monthly.value ?? 0;
   const expenses = fs?.expenses_monthly.value ?? 0;
@@ -58,39 +58,11 @@ export default function FinancialStatePage() {
   const liabilityItems = (fs?.liability_breakdown ?? []).map(x => ({ name: x.name, value: x.outstanding_amount }));
   const goalCount = data?.goals.length ?? 0;
   const goalSection = useMemo(() => goalCount === 0 ? "empty" : goalCount === 1 ? "single" : goalCount <= 3 ? "cards" : "timeline", [goalCount]);
-
   if (loading) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-6xl space-y-6"><div className="h-10 w-48 animate-pulse rounded-lg bg-slate-200"/><div className="h-44 animate-pulse rounded-3xl bg-white"/><div className="grid gap-5 lg:grid-cols-2"><div className="h-64 animate-pulse rounded-3xl bg-white"/><div className="h-64 animate-pulse rounded-3xl bg-white"/></div></div></main>;
   if (error) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm"><h1 className="text-2xl font-extrabold text-slate-950">Unable to load Dashboard</h1><p className="mt-3 text-sm text-slate-500">{error}</p><button type="button" onClick={() => void load()} className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Retry</button></div></main>;
   if (!data || !fs) return <main className="min-w-0 flex-1 p-5 lg:p-8"><div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h1 className="text-2xl font-extrabold text-slate-950">Your Dashboard is not ready yet</h1><p className="mt-3 text-sm text-slate-500">Complete your financial information to see your current financial state.</p><Link href="/investor/onboarding" className="mt-6 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Continue onboarding →</Link></div></main>;
-
   return <main className="min-w-0 flex-1 bg-slate-50 pb-20"><header className="border-b border-slate-200 bg-white"><div className="flex min-h-[82px] items-center justify-between gap-4 px-5 lg:px-8"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Planvesto</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-950">Dashboard</h1></div><InvestorProfileMenu /></div></header><div className="mx-auto max-w-6xl space-y-8 p-5 lg:p-8">
-    <section>
-      <div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Your Financial State</p>
-          <div className="mt-3 rounded-3xl bg-slate-950 p-7 text-white shadow-lg lg:p-9">
-            <p className="text-sm font-semibold text-slate-300">Net Worth</p>
-            <p className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">{shortMoney(fs.net_worth.value)}</p>
-            <div className="mt-6 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3">
-              <div><p className="text-xs text-slate-400">Assets</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_assets.value)}</p></div>
-              <div><p className="text-xs text-slate-400">Liabilities</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_liabilities.value)}</p></div>
-              <div><p className="text-xs text-slate-400">Available Amount for Future</p><p className="mt-1 text-lg font-bold">{shortMoney(surplus)}</p></div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-3xl border border-teal-200 bg-teal-50 p-6 lg:p-7">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Your next step</p>
-          <h2 className="mt-2 text-xl font-extrabold text-slate-950">{goalCount === 0 ? "Define your first goal" : "Turn your goal into a strategy"}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{goalCount === 0 ? "Start with what you want your money to accomplish. Planvesto will use that goal to shape the rest of your plan." : "You have a defined goal. Compare strategy pathways and their trade-offs before deciding how to implement it."}</p>
-          <Link href={goalCount === 0 ? "/investor/goal-planner" : "/investor/strategy-builder"} className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">{goalCount === 0 ? "Define a goal →" : "Build a strategy →"}</Link>
-          <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px] font-bold">
-            <div className="rounded-xl bg-white px-2 py-3 text-teal-800">1. Financial picture</div>
-            <div className={`rounded-xl px-2 py-3 ${goalCount > 0 ? "bg-white text-teal-800" : "bg-teal-100 text-teal-700"}`}>2. Goals</div>
-            <div className={`rounded-xl px-2 py-3 ${goalCount > 0 ? "bg-white text-teal-800" : "bg-teal-100 text-teal-700"}`}>3. Strategy</div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <section><div className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Your Financial State</p><div className="mt-3 rounded-3xl bg-slate-950 p-7 text-white shadow-lg lg:p-9"><p className="text-sm font-semibold text-slate-300">Net Worth</p><p className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">{shortMoney(fs.net_worth.value)}</p><div className="mt-6 grid gap-4 border-t border-white/10 pt-6 sm:grid-cols-3"><div><p className="text-xs text-slate-400">Assets</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_assets.value)}</p></div><div><p className="text-xs text-slate-400">Liabilities</p><p className="mt-1 text-lg font-bold">{shortMoney(fs.total_liabilities.value)}</p></div><div><p className="text-xs text-slate-400">Available Amount for Future</p><p className="mt-1 text-lg font-bold">{shortMoney(surplus)}</p></div></div></div></div><div className="rounded-3xl border border-teal-200 bg-teal-50 p-6 lg:p-7"><p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Your next step</p><h2 className="mt-2 text-xl font-extrabold text-slate-950">{goalCount === 0 ? "Define your first goal" : "Turn your goal into a strategy"}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{goalCount === 0 ? "Start with what you want your money to accomplish. Planvesto will use that goal to shape the rest of your plan." : "You have a defined goal. Compare strategy pathways and their trade-offs before deciding how to implement it."}</p><Link href={goalCount === 0 ? "/investor/goal-planner" : "/investor/strategy-builder"} className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">{goalCount === 0 ? "Define a goal →" : "Build a strategy →"}</Link><div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px] font-bold"><div className="rounded-xl bg-white px-2 py-3 text-teal-800">1. Financial picture</div><div className={`rounded-xl px-2 py-3 ${goalCount > 0 ? "bg-white text-teal-800" : "bg-teal-100 text-teal-700"}`}>2. Goals</div><div className={`rounded-xl px-2 py-3 ${goalCount > 0 ? "bg-white text-teal-800" : "bg-teal-100 text-teal-700"}`}>3. Strategy</div></div></div></div></section>
     <section className="grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Assets</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">What you own</h2></div><button type="button" onClick={() => setDetail("assets")} className="text-xs font-bold text-teal-700">View →</button></div><div className="mt-6"><AllocationDonut items={assetItems} total={fs.total_assets.value ?? 0} label="Allocation" /></div></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Liabilities</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">What you owe</h2></div><button type="button" onClick={() => setDetail("liabilities")} className="text-xs font-bold text-teal-700">View →</button></div><div className="mt-6"><AllocationDonut items={liabilityItems} total={fs.total_liabilities.value ?? 0} label="Allocation" dark /></div></div></section>
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Cash Flow</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">Income, Expenses & Future Capacity</h2><div className="mt-7"><FlowBars income={income} expenses={expenses} surplus={surplus} /></div></section>
     <section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Your Goals</p><h2 className="mt-1 text-2xl font-extrabold text-slate-950">Goals</h2></div><Link href="/investor/goal-planner" className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">Add Goal +</Link></div>{goalSection === "empty" && <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h3 className="text-xl font-extrabold text-slate-950">No goals yet</h3><p className="mt-2 text-sm text-slate-500">Create your first goal and Planvesto will bring it into your financial picture.</p></div>}{goalSection === "single" && <div className="mx-auto max-w-2xl"><GoalCard goal={data.goals[0]} onClick={() => { setSelectedGoal(data.goals[0]); setDetail("goal"); }} /></div>}{goalSection === "cards" && <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data.goals.map(goal => <GoalCard key={goal.goal_id} goal={goal} onClick={() => { setSelectedGoal(goal); setDetail("goal"); }} />)}</div>}{goalSection === "timeline" && <GoalTimeline goals={data.goals} onClick={goal => { setSelectedGoal(goal); setDetail("goal"); }} />}</section>
