@@ -1,6 +1,8 @@
 import logging
+from datetime import date
 from typing import Any
 from fastapi import HTTPException
+from data.goal_context_repository import GoalContextRepository
 from data.goal_repository import GoalRepository
 from engines.goal.engine import GoalEngine
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
@@ -12,62 +14,73 @@ logger = logging.getLogger(__name__)
 class GoalService:
     def __init__(self):
         self.repository = GoalRepository()
+        self.context_repository = GoalContextRepository()
         self.engine = GoalEngine()
 
     def _get_assets_lookup(self, planning_unit_id: str) -> dict[str, dict[str, Any]]:
         rows = self.repository.get_planning_unit_assets(planning_unit_id)
         return {r["asset_id"]: r for r in rows}
 
+    def _enrich_specialized_context(self, request: GoalInput) -> GoalInput:
+        details = dict(request.goal_details)
+
+        if request.goal_type == "Child Education":
+            dependent_id = details.get("dependent_id")
+            if not dependent_id:
+                raise ValueError("Child Education requires dependent_id")
+            dependent = self.context_repository.get_dependent(request.planning_unit_id, str(dependent_id))
+            if not dependent or not dependent.get("date_of_birth"):
+                raise ValueError("Selected dependent does not have a date of birth")
+            details["dependent_date_of_birth"] = dependent["date_of_birth"]
+            details["dependent_name"] = dependent.get("name")
+
+        if request.goal_type == "Retirement":
+            if details.get("current_age") is None:
+                investor = self.context_repository.get_primary_investor(request.planning_unit_id)
+                if investor and investor.get("date_of_birth"):
+                    dob = date.fromisoformat(str(investor["date_of_birth"]))
+                    details["current_age"] = max(0.0, (date.today() - dob).days / 365.2425)
+            if details.get("current_monthly_expense") is None:
+                details["current_monthly_expense"] = self.context_repository.get_monthly_expenses(request.planning_unit_id)
+
+        request.goal_details = details
+        return request
+
     def calculate_preview(self, request: GoalCalculateRequest) -> DefinedGoal:
+        request = self._enrich_specialized_context(request)
         assets_lookup = self._get_assets_lookup(request.planning_unit_id)
         return self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
 
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
+        request = self._enrich_specialized_context(request)
         assets_lookup = self._get_assets_lookup(request.planning_unit_id)
         preview = self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
 
         goal_id = self.repository.ensure_goal_record(
-            planning_unit_id=request.planning_unit_id,
-            goal_id=request.goal_id,
-            goal_name=request.goal_name,
-            today_cost=preview.today_cost,
-            target_month=preview.target_month,
-            target_year=preview.target_year,
-            priority=request.priority,
-            flexibility=request.flexibility,
-            goal_type=request.goal_type,
+            planning_unit_id=request.planning_unit_id, goal_id=request.goal_id, goal_name=request.goal_name,
+            today_cost=preview.today_cost, target_month=preview.target_month, target_year=preview.target_year,
+            priority=request.priority, flexibility=request.flexibility, goal_type=request.goal_type,
             goal_details=request.goal_details,
         )
         request.goal_id = goal_id
 
         current_latest = self.repository.get_latest_defined_goal(request.planning_unit_id, goal_id)
         if current_latest is None:
-            new_version = 1
-            is_material = True
+            new_version, is_material = 1, True
         else:
             is_material = self.repository.has_material_change(current_latest, request)
             if not is_material and current_latest.status == request.status and current_latest.priority == request.priority and current_latest.flexibility == request.flexibility:
                 return current_latest
             new_version = current_latest.version + 1
 
-        defined_goal = self.engine.calculate_defined_goal(
-            goal_input=request,
-            assets_lookup=assets_lookup,
-            version=new_version,
-            is_latest=True,
-        )
-
+        defined_goal = self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=new_version, is_latest=True)
         def_id = self.repository.save_defined_goal_snapshot(defined_goal)
         defined_goal.defined_goal_id = def_id
 
         if is_material and new_version > 1:
             try:
                 from services.strategy_service import StrategyService
-                StrategyService().on_defined_goal_updated(
-                    planning_unit_id=request.planning_unit_id,
-                    goal_id=goal_id,
-                    new_defined_goal=defined_goal,
-                )
+                StrategyService().on_defined_goal_updated(planning_unit_id=request.planning_unit_id, goal_id=goal_id, new_defined_goal=defined_goal)
                 defined_goal.version_metadata["strategy_recalculation"] = "succeeded"
                 self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
             except Exception as exc:
@@ -75,7 +88,6 @@ class GoalService:
                 defined_goal.version_metadata["strategy_recalculation"] = "failed"
                 defined_goal.version_metadata["strategy_recalculation_error"] = str(exc)
                 self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
-
         return defined_goal
 
     def get_latest_defined_goal(self, planning_unit_id: str, goal_id: str) -> DefinedGoal:
