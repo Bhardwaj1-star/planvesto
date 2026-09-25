@@ -5,7 +5,7 @@ from rules.moneywheel import RULE_SET_VERSION, RULES, classify
 
 
 class MoneywheelEngine:
-    """Calculates the nine Moneywheel ratios without inventing missing data."""
+    """Calculates Moneywheel ratios without inventing missing data."""
 
     def build(self, data: MoneywheelInput) -> MoneywheelResult:
         ratios = [
@@ -18,6 +18,7 @@ class MoneywheelEngine:
             self._ratio(data, "liquid_asset_to_total_asset", data.liquid_assets, data.total_assets),
             self._solvency_ratio(data),
             self._ratio(data, "financial_asset_ratio", data.financial_assets, data.total_assets),
+            self._ratio(data, "insurance_gap_ratio", data.existing_sum_assured, data.required_insurance_cover),
         ]
         return MoneywheelResult(
             planning_unit_id=data.planning_unit_id,
