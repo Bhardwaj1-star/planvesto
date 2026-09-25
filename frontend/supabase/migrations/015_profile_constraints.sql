@@ -51,28 +51,31 @@ alter table public.profile_conflicts enable row level security;
 
 drop policy if exists "profile_runs_select_own" on public.profile_runs;
 create policy "profile_runs_select_own" on public.profile_runs for select using (
-  exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = auth.uid())
+  exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = (select auth.uid()))
 );
 drop policy if exists "profile_runs_insert_own" on public.profile_runs;
 create policy "profile_runs_insert_own" on public.profile_runs for insert with check (
-  exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = auth.uid())
+  exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = (select auth.uid()))
 );
 
 create policy "profile_constraints_select_own" on public.profile_constraints for select using (
-  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = auth.uid())
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = (select auth.uid()))
 );
 create policy "profile_constraints_insert_own" on public.profile_constraints for insert with check (
-  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = auth.uid())
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = (select auth.uid()))
 );
 create policy "profile_conflicts_select_own" on public.profile_conflicts for select using (
-  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = auth.uid())
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = (select auth.uid()))
 );
 create policy "profile_conflicts_insert_own" on public.profile_conflicts for insert with check (
-  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = auth.uid())
+  exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_conflicts.profile_run_id and pu.user_id = (select auth.uid()))
 );
 
 create or replace function public.prevent_profile_mutation()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $$
 begin
   raise exception 'profile snapshots are immutable';
 end;
