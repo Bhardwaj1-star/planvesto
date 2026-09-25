@@ -56,6 +56,44 @@ export type Database = {
           },
         ]
       }
+      budget_limits: {
+        Row: {
+          budget_limit_id: string
+          planning_unit_id: string
+          category: string
+          classification: string
+          budget_monthly: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          budget_limit_id?: string
+          planning_unit_id: string
+          category: string
+          classification?: string
+          budget_monthly?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_limit_id?: string
+          planning_unit_id?: string
+          category?: string
+          classification?: string
+          budget_monthly?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_limits_planning_unit_id_fkey"
+            columns: ["planning_unit_id"]
+            isOneToOne: false
+            referencedRelation: "planning_units"
+            referencedColumns: ["planning_unit_id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           asset_id: string

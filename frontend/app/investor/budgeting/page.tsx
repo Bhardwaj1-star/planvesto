@@ -1,173 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
+import {
+  loadBudgetData,
+  saveBudgetLimits,
+  subscribeToBudgetChanges,
+  type BudgetItem,
+  type BudgetData,
+  type NeedWantClassification,
+} from "../../../lib/api/budgeting";
 
 // ============================================================================
-// DATA CONTRACT: BUDGETING PRESENTATION LAYER (Types Only - No Calculations)
+// HELPER
 // ============================================================================
-
-export type NeedWantClassification = "Need" | "Want";
-
-export interface BudgetItem {
-  id: string;
-  category: string;
-  classification: NeedWantClassification;
-  budgetMonthly: number;
-  actualMonthly: number;
-  varianceMonthly: number; // Stored pre-calculated from backend or placeholder
-  status: "Under Budget" | "On Track" | "Over Budget";
-  icon: string;
-  percentageOfBudget: number;
-}
-
-export interface BudgetOverview {
-  totalIncomeMonthly: number;
-  totalExpensesMonthly: number;
-  surplusMonthly: number;
-  savingsTargetMonthly: number;
-  savingsTargetPercentage: number;
-  needsTotalMonthly: number;
-  wantsTotalMonthly: number;
-}
-
-export interface BudgetRecommendation {
-  id: string;
-  title: string;
-  action: string;
-  impactText: string;
-  category: string;
-}
-
-// ============================================================================
-// STATIC UI PREVIEW PLACEHOLDER (NO FORMULAS / NO BACKEND ENGINES)
-// ============================================================================
-
-const PLACEHOLDER_OVERVIEW: BudgetOverview = {
-  totalIncomeMonthly: 185000,
-  totalExpensesMonthly: 118000,
-  surplusMonthly: 67000,
-  savingsTargetMonthly: 55000,
-  savingsTargetPercentage: 30,
-  needsTotalMonthly: 78000,
-  wantsTotalMonthly: 40000,
-};
-
-const PLACEHOLDER_EXPENSES: BudgetItem[] = [
-  {
-    id: "b-housing",
-    category: "Housing",
-    classification: "Need",
-    budgetMonthly: 42000,
-    actualMonthly: 42000,
-    varianceMonthly: 0,
-    status: "On Track",
-    icon: "🏠",
-    percentageOfBudget: 35,
-  },
-  {
-    id: "b-food",
-    category: "Food & Groceries",
-    classification: "Need",
-    budgetMonthly: 18000,
-    actualMonthly: 16500,
-    varianceMonthly: -1500,
-    status: "Under Budget",
-    icon: "🛒",
-    percentageOfBudget: 15,
-  },
-  {
-    id: "b-transportation",
-    category: "Transportation",
-    classification: "Need",
-    budgetMonthly: 9000,
-    actualMonthly: 10500,
-    varianceMonthly: 1500,
-    status: "Over Budget",
-    icon: "🚗",
-    percentageOfBudget: 8,
-  },
-  {
-    id: "b-utilities",
-    category: "Utilities & Bills",
-    classification: "Need",
-    budgetMonthly: 5000,
-    actualMonthly: 4800,
-    varianceMonthly: -200,
-    status: "On Track",
-    icon: "⚡",
-    percentageOfBudget: 4,
-  },
-  {
-    id: "b-healthcare",
-    category: "Healthcare",
-    classification: "Need",
-    budgetMonthly: 4000,
-    actualMonthly: 4200,
-    varianceMonthly: 200,
-    status: "On Track",
-    icon: "🩺",
-    percentageOfBudget: 3,
-  },
-  {
-    id: "b-education",
-    category: "Education & Skills",
-    classification: "Need",
-    budgetMonthly: 8000,
-    actualMonthly: 8000,
-    varianceMonthly: 0,
-    status: "On Track",
-    icon: "📚",
-    percentageOfBudget: 7,
-  },
-  {
-    id: "b-lifestyle",
-    category: "Lifestyle & Dining",
-    classification: "Want",
-    budgetMonthly: 22000,
-    actualMonthly: 26000,
-    varianceMonthly: 4000,
-    status: "Over Budget",
-    icon: "☕",
-    percentageOfBudget: 19,
-  },
-  {
-    id: "b-other",
-    category: "Other Discretionary",
-    classification: "Want",
-    budgetMonthly: 10000,
-    actualMonthly: 6000,
-    varianceMonthly: -4000,
-    status: "Under Budget",
-    icon: "📦",
-    percentageOfBudget: 9,
-  },
-];
-
-const PLACEHOLDER_RECOMMENDATIONS: BudgetRecommendation[] = [
-  {
-    id: "rec-1",
-    title: "Trim Discretionary Lifestyle Outflows",
-    action: "Review recurring subscriptions, dining, and impulse leisure purchases.",
-    impactText: "Potential monthly impact: ₹4,000 to ₹6,000",
-    category: "Lifestyle & Dining",
-  },
-  {
-    id: "rec-2",
-    title: "Optimize Fuel & Commute Expenses",
-    action: "Consider carpooling or hybrid work commute schedules to re-align with transportation budget.",
-    impactText: "Potential monthly impact: ₹1,500",
-    category: "Transportation",
-  },
-  {
-    id: "rec-3",
-    title: "Redirect Food Surplus Towards Target Corpus",
-    action: "Re-channel the ₹1,500 grocery surplus into your critical education goal SIP.",
-    impactText: "Expected outcome: Strengthens monthly savings target buffer",
-    category: "Food & Groceries",
-  },
-];
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -188,26 +35,74 @@ export default function InvestorBudgetingPage() {
   // Multiplier for display toggle (presentation only)
   const multiplier = period === "Annual" ? 12 : 1;
 
-  // UI state switcher for demonstrating all required states
-  const [uiState, setUiState] = useState<"normal" | "empty" | "loading" | "error">("normal");
+  // Data loading states
+  const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Local Budget Editing State
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [expensesList, setExpensesList] = useState<BudgetItem[]>(PLACEHOLDER_EXPENSES);
+  const [editDraftItems, setEditDraftItems] = useState<BudgetItem[]>([]);
   const [editSuccessNotice, setEditSuccessNotice] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Budget Targets Controls (UI state only - no formulas)
+  // Budget Targets Controls (UI state only)
   const [targetType, setTargetType] = useState<"percentage" | "amount">("percentage");
   const [savingsTargetInput, setSavingsTargetInput] = useState("30");
   const [desiredSurplusInput, setDesiredSurplusInput] = useState("65000");
 
-  // Local draft changes for category editing
+  // ========================================================================
+  // DATA FETCHING
+  // ========================================================================
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoadError(null);
+      const data = await loadBudgetData();
+      if (data) {
+        setBudgetData(data);
+      } else {
+        setBudgetData(null);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load budget data";
+      setLoadError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!budgetData?.planningUnitId) return;
+    const cleanup = subscribeToBudgetChanges(budgetData.planningUnitId, () => {
+      fetchData();
+    });
+    return cleanup;
+  }, [budgetData?.planningUnitId, fetchData]);
+
+  // ========================================================================
+  // EDITING HANDLERS
+  // ========================================================================
+
+  const expensesList = budgetData?.items ?? [];
+
+  const handleStartEditing = () => {
+    setEditDraftItems([...expensesList]);
+    setIsEditingBudget(true);
+  };
+
   const handleEditCategoryChange = (
     id: string,
     field: "budgetMonthly" | "classification",
     value: string | NeedWantClassification
   ) => {
-    setExpensesList((prev) =>
+    setEditDraftItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
         if (field === "budgetMonthly") {
@@ -221,58 +116,60 @@ export default function InvestorBudgetingPage() {
     );
   };
 
-  const handleSaveBudgetEdits = () => {
-    setIsEditingBudget(false);
-    setEditSuccessNotice(true);
-    setTimeout(() => setEditSuccessNotice(false), 4000);
+  const handleSaveBudgetEdits = async () => {
+    if (!budgetData?.planningUnitId) return;
+    setIsSaving(true);
+    try {
+      await saveBudgetLimits(
+        budgetData.planningUnitId,
+        editDraftItems.map((item) => ({
+          category: item.category,
+          classification: item.classification,
+          budgetMonthly: item.budgetMonthly,
+        }))
+      );
+      setIsEditingBudget(false);
+      setEditSuccessNotice(true);
+      setTimeout(() => setEditSuccessNotice(false), 4000);
+      // Refresh data after save
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to save budget limits:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleResetPlaceholderBudget = () => {
-    setExpensesList(PLACEHOLDER_EXPENSES);
+  const handleResetBudget = () => {
+    setEditDraftItems([...expensesList]);
     setIsEditingBudget(false);
   };
 
-  // Need vs Want calculations based on local items
-  const { needsTotal, wantsTotal } = useMemo(() => {
+  // Need vs Want calculations based on real items
+  const { needsTotal, wantsTotal, needsPercent, wantsPercent } = useMemo(() => {
+    const items = isEditingBudget ? editDraftItems : expensesList;
     let n = 0;
     let w = 0;
-    expensesList.forEach((item) => {
+    items.forEach((item) => {
       if (item.classification === "Need") n += item.actualMonthly;
       else w += item.actualMonthly;
     });
-    return { needsTotal: n * multiplier, wantsTotal: w * multiplier };
-  }, [expensesList, multiplier]);
+    const total = n + w;
+    return {
+      needsTotal: n * multiplier,
+      wantsTotal: w * multiplier,
+      needsPercent: total > 0 ? Math.round((n / total) * 100) : 0,
+      wantsPercent: total > 0 ? Math.round((w / total) * 100) : 0,
+    };
+  }, [expensesList, editDraftItems, isEditingBudget, multiplier]);
 
   // ==========================================================================
   // RENDER: LOADING STATE
   // ==========================================================================
-  if (uiState === "loading") {
+  if (isLoading) {
     return (
       <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10" aria-busy="true">
         <div className="mx-auto max-w-6xl space-y-6">
-          {/* Controls Bar */}
-          <div className="flex justify-end gap-2 pb-2">
-            <span className="text-xs font-semibold text-slate-400 self-center">UI State Preview:</span>
-            <button
-              onClick={() => setUiState("normal")}
-              className="rounded-lg bg-white px-3 py-1 text-xs font-bold text-slate-700 border border-slate-200"
-            >
-              Normal
-            </button>
-            <button
-              onClick={() => setUiState("empty")}
-              className="rounded-lg bg-white px-3 py-1 text-xs font-bold text-slate-700 border border-slate-200"
-            >
-              Empty
-            </button>
-            <button
-              onClick={() => setUiState("error")}
-              className="rounded-lg bg-white px-3 py-1 text-xs font-bold text-slate-700 border border-slate-200"
-            >
-              Error
-            </button>
-          </div>
-
           <div className="h-8 w-64 animate-pulse rounded-lg bg-slate-200" />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="h-28 animate-pulse rounded-2xl bg-white shadow-sm" />
@@ -290,19 +187,10 @@ export default function InvestorBudgetingPage() {
   // ==========================================================================
   // RENDER: ERROR STATE
   // ==========================================================================
-  if (uiState === "error") {
+  if (loadError) {
     return (
       <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10">
         <div className="mx-auto max-w-2xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-          <div className="flex justify-end gap-2 pb-4">
-            <span className="text-xs font-semibold text-slate-400 self-center">UI State Preview:</span>
-            <button
-              onClick={() => setUiState("normal")}
-              className="rounded-lg bg-navy-900 px-3 py-1 text-xs font-bold text-white"
-            >
-              Back to Normal
-            </button>
-          </div>
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
             <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -313,7 +201,7 @@ export default function InvestorBudgetingPage() {
             We encountered a temporary issue while fetching your cash flow and expense metrics. Please try again.
           </p>
           <button
-            onClick={() => setUiState("normal")}
+            onClick={() => { setIsLoading(true); fetchData(); }}
             className="mt-6 inline-flex items-center rounded-xl bg-navy-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-800"
           >
             Retry Loading Budget
@@ -324,21 +212,12 @@ export default function InvestorBudgetingPage() {
   }
 
   // ==========================================================================
-  // RENDER: EMPTY STATE
+  // RENDER: EMPTY STATE (no income, no expenses, no data)
   // ==========================================================================
-  if (uiState === "empty") {
+  if (!budgetData || (budgetData.items.length === 0 && budgetData.overview.totalIncomeMonthly === 0)) {
     return (
       <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10">
         <div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <div className="flex justify-end gap-2 pb-4">
-            <span className="text-xs font-semibold text-slate-400 self-center">UI State Preview:</span>
-            <button
-              onClick={() => setUiState("normal")}
-              className="rounded-lg bg-navy-900 px-3 py-1 text-xs font-bold text-white"
-            >
-              Show Populated State
-            </button>
-          </div>
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -349,15 +228,12 @@ export default function InvestorBudgetingPage() {
             Set up your expense limits and target cash flows to track where your money goes, prevent lifestyle creep, and protect your investments.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button
-              onClick={() => {
-                setUiState("normal");
-                setIsEditingBudget(true);
-              }}
+            <Link
+              href="/investor/onboarding/expenses"
               className="inline-flex items-center rounded-xl bg-teal-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
             >
-              Create Monthly Budget →
-            </button>
+              Add Expenses & Income →
+            </Link>
             <Link
               href="/investor/financial-state"
               className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -373,10 +249,13 @@ export default function InvestorBudgetingPage() {
   // ==========================================================================
   // RENDER: NORMAL POPULATED STATE
   // ==========================================================================
-  const totalIncome = PLACEHOLDER_OVERVIEW.totalIncomeMonthly * multiplier;
-  const totalExpenses = PLACEHOLDER_OVERVIEW.totalExpensesMonthly * multiplier;
-  const surplus = PLACEHOLDER_OVERVIEW.surplusMonthly * multiplier;
-  const savingsTarget = PLACEHOLDER_OVERVIEW.savingsTargetMonthly * multiplier;
+  const overview = budgetData.overview;
+  const totalIncome = overview.totalIncomeMonthly * multiplier;
+  const totalExpenses = overview.totalExpensesMonthly * multiplier;
+  const surplus = overview.surplusMonthly * multiplier;
+  const savingsTarget = overview.savingsTargetMonthly * multiplier;
+  const expensePercent = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
+  const displayItems = isEditingBudget ? editDraftItems : expensesList;
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-900 pb-20">
@@ -397,7 +276,7 @@ export default function InvestorBudgetingPage() {
             </h1>
           </div>
 
-          {/* Period Selector & State Switcher */}
+          {/* Period Selector */}
           <div className="flex items-center gap-3">
             {/* Period Selector: Monthly / Annual */}
             <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
@@ -425,27 +304,12 @@ export default function InvestorBudgetingPage() {
               </button>
             </div>
 
-            {/* Quick Demo State Selector */}
-            <div className="hidden sm:flex items-center border-l border-slate-200 pl-3">
-              <select
-                aria-label="UI Preview State Switcher"
-                value={uiState}
-                onChange={(e) => setUiState(e.target.value as typeof uiState)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-600 outline-none hover:bg-slate-50"
-              >
-                <option value="normal">UI: Populated</option>
-                <option value="empty">UI: Empty</option>
-                <option value="loading">UI: Loading</option>
-                <option value="error">UI: Error</option>
-              </select>
-            </div>
-
             <InvestorProfileMenu />
           </div>
         </div>
       </header>
 
-      {/* Supporting Banner / Placeholder Notice */}
+      {/* Supporting Banner */}
       <div className="border-b border-teal-200 bg-teal-50/60 px-6 py-2.5 text-xs text-teal-900">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <p className="flex items-center gap-2">
@@ -457,7 +321,7 @@ export default function InvestorBudgetingPage() {
             </span>
           </p>
           <span className="shrink-0 font-bold uppercase tracking-wider text-[10px] text-teal-800 bg-teal-100 px-2 py-0.5 rounded">
-            Preview / Placeholder Data
+            Live Data
           </span>
         </div>
       </div>
@@ -466,7 +330,7 @@ export default function InvestorBudgetingPage() {
         {/* Success Notice after editing */}
         {editSuccessNotice && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800 flex items-center justify-between">
-            <span>✓ Budget targets updated locally for this preview session.</span>
+            <span>✓ Budget targets saved successfully.</span>
             <button onClick={() => setEditSuccessNotice(false)} className="text-emerald-900 font-bold">✕</button>
           </div>
         )}
@@ -496,7 +360,7 @@ export default function InvestorBudgetingPage() {
                 {formatCurrency(totalIncome)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Regular salary & business income
+                Regular salary &amp; business income
               </p>
             </div>
 
@@ -510,7 +374,7 @@ export default function InvestorBudgetingPage() {
                 {formatCurrency(totalExpenses)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Needs & wants combined
+                Needs &amp; wants combined
               </p>
             </div>
 
@@ -520,7 +384,7 @@ export default function InvestorBudgetingPage() {
                 <span>Surplus / Deficit</span>
                 <span className="rounded-md bg-teal-50 px-2 py-0.5 text-teal-700 text-[10px]">Net Flow</span>
               </div>
-              <p className="mt-3 text-2xl sm:text-3xl font-black text-teal-700">
+              <p className={`mt-3 text-2xl sm:text-3xl font-black ${surplus >= 0 ? "text-teal-700" : "text-rose-700"}`}>
                 {formatCurrency(surplus)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
@@ -532,7 +396,7 @@ export default function InvestorBudgetingPage() {
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
                 <span>Savings Target</span>
-                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-indigo-700 text-[10px]">30% Target</span>
+                <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-indigo-700 text-[10px]">{overview.savingsTargetPercentage}% Target</span>
               </div>
               <p className="mt-3 text-2xl sm:text-3xl font-black text-slate-950">
                 {formatCurrency(savingsTarget)}
@@ -578,7 +442,7 @@ export default function InvestorBudgetingPage() {
                   <span className="text-base">📉</span>
                 </div>
                 <p className="mt-2 text-xl font-black text-rose-950">- {formatCurrency(totalExpenses)}</p>
-                <p className="mt-1 text-xs text-rose-700">64% of total income</p>
+                <p className="mt-1 text-xs text-rose-700">{expensePercent}% of total income</p>
               </div>
 
               {/* Arrow */}
@@ -595,7 +459,7 @@ export default function InvestorBudgetingPage() {
                   <span className="text-xs font-bold uppercase tracking-wider text-teal-800">3. Net Surplus</span>
                   <span className="text-base">🎯</span>
                 </div>
-                <p className="mt-2 text-xl font-black text-teal-950">+ {formatCurrency(surplus)}</p>
+                <p className="mt-2 text-xl font-black text-teal-950">{surplus >= 0 ? "+" : ""} {formatCurrency(surplus)}</p>
                 <p className="mt-1 text-xs text-teal-700">Available to fund goals</p>
               </div>
             </div>
@@ -622,7 +486,7 @@ export default function InvestorBudgetingPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsEditingBudget(!isEditingBudget)}
+                onClick={() => isEditingBudget ? setIsEditingBudget(false) : handleStartEditing()}
                 className="inline-flex items-center rounded-xl bg-navy-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
               >
                 {isEditingBudget ? "Close Budget Editor" : "✏️ Edit Budget Limits"}
@@ -644,10 +508,19 @@ export default function InvestorBudgetingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {expensesList.map((item) => {
+                {displayItems.map((item) => {
                   const bVal = item.budgetMonthly * multiplier;
                   const aVal = item.actualMonthly * multiplier;
-                  const vVal = item.varianceMonthly * multiplier;
+                  const vVal = (item.actualMonthly - item.budgetMonthly) * multiplier;
+
+                  const itemStatus = (() => {
+                    if (item.budgetMonthly === 0) return aVal === 0 ? "On Track" : "Over Budget";
+                    const threshold = item.budgetMonthly * 0.05;
+                    const diff = item.actualMonthly - item.budgetMonthly;
+                    if (diff > threshold) return "Over Budget";
+                    if (diff < -threshold) return "Under Budget";
+                    return "On Track";
+                  })();
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
@@ -674,7 +547,7 @@ export default function InvestorBudgetingPage() {
 
                       {/* Budget */}
                       <td className="py-4 px-4 text-right font-semibold text-slate-700">
-                        {formatCurrency(bVal)}
+                        {bVal > 0 ? formatCurrency(bVal) : "—"}
                       </td>
 
                       {/* Actual */}
@@ -685,24 +558,24 @@ export default function InvestorBudgetingPage() {
                       {/* Variance */}
                       <td
                         className={`py-4 px-4 text-right font-bold ${
-                          vVal > 0 ? "text-rose-600" : vVal < 0 ? "text-emerald-600" : "text-slate-500"
+                          bVal === 0 ? "text-slate-400" : vVal > 0 ? "text-rose-600" : vVal < 0 ? "text-emerald-600" : "text-slate-500"
                         }`}
                       >
-                        {vVal > 0 ? `+${formatCurrency(vVal)}` : vVal < 0 ? formatCurrency(vVal) : "₹0"}
+                        {bVal === 0 ? "—" : vVal > 0 ? `+${formatCurrency(vVal)}` : vVal < 0 ? formatCurrency(vVal) : "₹0"}
                       </td>
 
                       {/* Status */}
                       <td className="py-4 px-4 text-center">
                         <span
                           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                            item.status === "On Track"
+                            itemStatus === "On Track"
                               ? "bg-slate-100 text-slate-700"
-                              : item.status === "Under Budget"
+                              : itemStatus === "Under Budget"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-rose-50 text-rose-700 border border-rose-200"
                           }`}
                         >
-                          {item.status}
+                          {itemStatus}
                         </span>
                       </td>
                     </tr>
@@ -721,10 +594,10 @@ export default function InvestorBudgetingPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
               <div>
                 <span className="rounded bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-800">
-                  Local UI State Only
+                  Set Budget Limits
                 </span>
                 <h3 className="mt-2 text-lg font-black text-slate-950">
-                  Edit Category Budget Limits & Classifications
+                  Edit Category Budget Limits &amp; Classifications
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Adjust monthly budget targets and designate whether each expense is a Need or a Want.
@@ -734,23 +607,24 @@ export default function InvestorBudgetingPage() {
               <div className="mt-3 sm:mt-0 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleResetPlaceholderBudget}
+                  onClick={handleResetBudget}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
                 >
-                  Reset Defaults
+                  Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveBudgetEdits}
-                  className="rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800"
+                  disabled={isSaving}
+                  className="rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800 disabled:opacity-50"
                 >
-                  Save Local Edits
+                  {isSaving ? "Saving…" : "Save Budget Limits"}
                 </button>
               </div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {expensesList.map((item) => (
+              {editDraftItems.map((item) => (
                 <div key={item.id} className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
                   <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
                     <span>{item.icon}</span>
@@ -821,7 +695,7 @@ export default function InvestorBudgetingPage() {
             </p>
 
             <div className="mt-6 space-y-4">
-              {expensesList.map((item) => (
+              {displayItems.map((item) => (
                 <div key={item.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <span className="flex items-center gap-1.5 text-slate-800">
@@ -892,18 +766,18 @@ export default function InvestorBudgetingPage() {
               {/* Combined Progress Bar */}
               <div className="mt-6 space-y-2">
                 <div className="flex justify-between text-xs font-bold text-slate-600">
-                  <span>Needs (66%)</span>
-                  <span>Wants (34%)</span>
+                  <span>Needs ({needsPercent}%)</span>
+                  <span>Wants ({wantsPercent}%)</span>
                 </div>
                 <div className="flex h-3 w-full rounded-full overflow-hidden bg-slate-100">
-                  <div className="bg-blue-600" style={{ width: "66%" }} />
-                  <div className="bg-purple-600" style={{ width: "34%" }} />
+                  <div className="bg-blue-600" style={{ width: `${needsPercent}%` }} />
+                  <div className="bg-purple-600" style={{ width: `${wantsPercent}%` }} />
                 </div>
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs text-slate-600 leading-relaxed">
-              💡 <strong>Insight:</strong> Trimming wants by just 10% can liberate an additional ₹4,000 monthly directly into your critical goal corpus.
+              💡 <strong>Insight:</strong> {wantsTotal > 0 ? `Trimming wants by just 10% can liberate an additional ${formatCurrency(Math.round(wantsTotal * 0.1 / multiplier))} monthly directly into your critical goal corpus.` : "Add expense data to see optimization insights."}
             </div>
           </div>
         </section>
@@ -917,10 +791,10 @@ export default function InvestorBudgetingPage() {
               Forward Planning
             </span>
             <h2 id="budget-targets-title" className="mt-1 text-xl font-extrabold text-slate-950 sm:text-2xl">
-              Future Cash-Flow & Budget Targets
+              Future Cash-Flow &amp; Budget Targets
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Set desired targets for monthly savings allocation and reserve surplus buffers (UI controls).
+              Set desired targets for monthly savings allocation and reserve surplus buffers.
             </p>
           </div>
 
@@ -1005,57 +879,6 @@ export default function InvestorBudgetingPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* ================================================================== */}
-        {/* 7. RECOMMENDATIONS (Clearly marked placeholder)                    */}
-        {/* ================================================================== */}
-        <section aria-labelledby="recommendations-title" className="rounded-3xl border border-slate-200 bg-white p-6 lg:p-8 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-                Actionable Insights
-              </span>
-              <h2 id="recommendations-title" className="mt-1 text-xl font-extrabold text-slate-950">
-                Budget Optimization Recommendations
-              </h2>
-            </div>
-            <span className="rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-bold text-amber-800">
-              Preview / Placeholder Recommendations
-            </span>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-            {PLACEHOLDER_RECOMMENDATIONS.map((rec) => (
-              <div
-                key={rec.id}
-                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 flex flex-col justify-between hover:border-teal-300 transition-colors"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {rec.category}
-                    </span>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-100 text-teal-800 text-xs font-bold">
-                      💡
-                    </span>
-                  </div>
-                  <h3 className="mt-2 text-sm font-extrabold text-slate-950">
-                    {rec.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                    {rec.action}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-200">
-                  <p className="text-xs font-bold text-teal-700">
-                    {rec.impactText}
-                  </p>
-                </div>
-              </div>
-            ))}
           </div>
         </section>
 
