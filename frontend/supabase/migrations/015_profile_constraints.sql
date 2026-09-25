@@ -50,14 +50,18 @@ alter table public.profile_constraints enable row level security;
 alter table public.profile_conflicts enable row level security;
 
 drop policy if exists "profile_runs_select_own" on public.profile_runs;
+drop policy if exists "profile_runs_insert_own" on public.profile_runs;
+drop policy if exists "profile_constraints_select_own" on public.profile_constraints;
+drop policy if exists "profile_constraints_insert_own" on public.profile_constraints;
+drop policy if exists "profile_conflicts_select_own" on public.profile_conflicts;
+drop policy if exists "profile_conflicts_insert_own" on public.profile_conflicts;
+
 create policy "profile_runs_select_own" on public.profile_runs for select using (
   exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = (select auth.uid()))
 );
-drop policy if exists "profile_runs_insert_own" on public.profile_runs;
 create policy "profile_runs_insert_own" on public.profile_runs for insert with check (
   exists (select 1 from public.planning_units pu where pu.planning_unit_id = profile_runs.planning_unit_id and pu.user_id = (select auth.uid()))
 );
-
 create policy "profile_constraints_select_own" on public.profile_constraints for select using (
   exists (select 1 from public.profile_runs pr join public.planning_units pu on pu.planning_unit_id = pr.planning_unit_id where pr.profile_run_id = profile_constraints.profile_run_id and pu.user_id = (select auth.uid()))
 );
