@@ -30,6 +30,20 @@ def test_all_twelve_ratios_are_returned():
     result = MoneywheelEngine().build(_input())
     assert len(result.ratios) == 12
     assert all(r.available for r in result.ratios)
+    assert [r.key for r in result.ratios] == [
+        "savings_ratio",
+        "expense_ratio",
+        "emergency_fund_coverage",
+        "current_liquidity_ratio",
+        "debt_to_income_ratio",
+        "leverage_ratio",
+        "liquid_asset_to_total_asset",
+        "solvency_ratio",
+        "financial_asset_ratio",
+        "insurance_gap_ratio",
+        "goal_funding_ratio",
+        "future_funding_ratio",
+    ]
 
 
 def test_zero_is_a_valid_ratio_value():
@@ -99,6 +113,28 @@ def test_future_funding_ratio_is_calculated():
 def test_goal_ratios_are_unavailable_without_goal_inputs():
     result = MoneywheelEngine().build(_input(current_goal_funding=None, goal_target_amount=None, projected_goal_funding=None, future_goal_target=None))
     for key in ("goal_funding_ratio", "future_funding_ratio"):
+        ratio = next(r for r in result.ratios if r.key == key)
+        assert ratio.value is None
+        assert ratio.status == "unavailable"
+        assert ratio.available is False
+
+
+def test_ratio_denominator_zero_is_unavailable():
+    zero_denominator_cases = {
+        "savings_ratio": {"gross_monthly_income": 0},
+        "expense_ratio": {"gross_monthly_income": 0},
+        "emergency_fund_coverage": {"monthly_expenses": 0},
+        "current_liquidity_ratio": {"short_term_liabilities": 0},
+        "debt_to_income_ratio": {"gross_monthly_income": 0},
+        "leverage_ratio": {"total_assets": 0},
+        "liquid_asset_to_total_asset": {"total_assets": 0},
+        "financial_asset_ratio": {"total_assets": 0},
+        "insurance_gap_ratio": {"required_insurance_cover": 0},
+        "goal_funding_ratio": {"goal_target_amount": 0},
+        "future_funding_ratio": {"future_goal_target": 0},
+    }
+    for key, overrides in zero_denominator_cases.items():
+        result = MoneywheelEngine().build(_input(**overrides))
         ratio = next(r for r in result.ratios if r.key == key)
         assert ratio.value is None
         assert ratio.status == "unavailable"
