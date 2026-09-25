@@ -10,14 +10,11 @@ class DashboardService:
         self.goal_repository = GoalRepository()
 
     def build(self, planning_unit_id: str, scope: str = "family", investor_id: str | None = None) -> dict[str, Any]:
-        financial_state = self.financial_state_service.snapshot_repository.get_latest(
-            planning_unit_id, scope, investor_id
-        )
-        if financial_state is None:
-            state = self.financial_state_service.build(planning_unit_id, scope, investor_id)
-            financial_state_data = state.model_dump(mode="json")
-        else:
-            financial_state_data = financial_state.get("financial_state") or financial_state
+        # Always rebuild from the current source tables. The snapshot is a derived
+        # cache and can become stale when onboarding/profile writes update source data
+        # without explicitly rebuilding financial_state_snapshots.
+        state = self.financial_state_service.build(planning_unit_id, scope, investor_id)
+        financial_state_data = state.model_dump(mode="json")
 
         # Dashboard deliberately exposes only decision-useful financial state.
         dashboard_financial_state = {
