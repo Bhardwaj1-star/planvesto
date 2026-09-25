@@ -1,4 +1,5 @@
 from typing import Any
+import time
 import uuid
 from data.supabase import get_supabase
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
@@ -9,33 +10,48 @@ class GoalRepository:
     def __init__(self):
         self.db = get_supabase()
 
+    @staticmethod
+    def _execute(query: Any, retries: int = 3) -> Any:
+        """Retry transient HTTP disconnects from Supabase without changing business logic."""
+        for attempt in range(retries):
+            try:
+                return query.execute()
+            except Exception as exc:
+                transient = exc.__class__.__name__ in {
+                    "RemoteProtocolError",
+                    "ConnectError",
+                    "ReadTimeout",
+                    "WriteTimeout",
+                }
+                if not transient or attempt == retries - 1:
+                    raise
+                time.sleep(0.5 * (2**attempt))
+        raise RuntimeError("Supabase request failed after retries")
+
     def list_goals(self, planning_unit_id: str) -> list[dict[str, Any]]:
-        res = (
+        res = self._execute(
             self.db.table("goals")
             .select("goal_id, planning_unit_id, goal_name, target_amount, target_date, priority, flexibility")
             .eq("planning_unit_id", planning_unit_id)
             .order("created_at")
-            .execute()
         )
         return res.data or []
 
     def get_planning_unit_assets(self, planning_unit_id: str) -> list[dict[str, Any]]:
-        res = (
+        res = self._execute(
             self.db.table("assets")
             .select("*")
             .eq("planning_unit_id", planning_unit_id)
-            .execute()
         )
         return res.data or []
 
     def get_goal(self, planning_unit_id: str, goal_id: str) -> dict[str, Any] | None:
-        res = (
+        res = self._execute(
             self.db.table("goals")
             .select("*")
             .eq("planning_unit_id", planning_unit_id)
             .eq("goal_id", goal_id)
             .maybe_single()
-            .execute()
         )
         return res.data if res else None
 
@@ -63,61 +79,63 @@ class GoalRepository:
         if goal_id:
             existing = self.get_goal(planning_unit_id, goal_id)
             if existing:
-                self.db.table("goals").update(payload).eq("goal_id", goal_id).execute()
+                self._execute(
+                    self.db.table("goals")
+                    .update(payload)
+                    .eq("goal_id", goal_id)
+                )
                 return goal_id
 
-        res = self.db.table("goals").insert(payload).select("goal_id").execute()
+        res = self._execute(
+            self.db.table("goals").insert(payload).select("goal_id")
+        )
         if not res.data:
             raise RuntimeError(f"Failed to insert goal record for planning unit {planning_unit_id}")
         record = res.data[0] if isinstance(res.data, list) else res.data
         return record["goal_id"]
 
     def get_latest_defined_goal(self, planning_unit_id: str, goal_id: str) -> DefinedGoal | None:
-        res = (
+        res = self._execute(
             self.db.table("defined_goals")
             .select("*")
             .eq("planning_unit_id", planning_unit_id)
             .eq("goal_id", goal_id)
             .eq("is_latest", True)
             .maybe_single()
-            .execute()
         )
         if not res or not res.data:
             return None
         return self._hydrate_defined_goal(res.data)
 
     def get_defined_goal_by_version(self, planning_unit_id: str, goal_id: str, version: int) -> DefinedGoal | None:
-        res = (
+        res = self._execute(
             self.db.table("defined_goals")
             .select("*")
             .eq("planning_unit_id", planning_unit_id)
             .eq("goal_id", goal_id)
             .eq("version", version)
             .maybe_single()
-            .execute()
         )
         if not res or not res.data:
             return None
         return self._hydrate_defined_goal(res.data)
 
     def get_all_defined_goal_versions(self, planning_unit_id: str, goal_id: str) -> list[dict[str, Any]]:
-        res = (
+        res = self._execute(
             self.db.table("defined_goals")
             .select("defined_goal_id, goal_id, version, is_latest, today_cost, future_target, projected_mapped_asset_value, funding_gap, funding_status, created_at")
             .eq("planning_unit_id", planning_unit_id)
             .eq("goal_id", goal_id)
             .order("version", desc=True)
-            .execute()
         )
         return res.data or []
 
     def _hydrate_defined_goal(self, row: dict[str, Any]) -> DefinedGoal:
         def_id = row["defined_goal_id"]
-        maps_res = (
+        maps_res = self._execute(
             self.db.table("defined_goal_asset_mappings")
             .select("*")
             .eq("defined_goal_id", def_id)
-            .execute()
         )
         mappings: list[DefinedGoalAssetMapping] = []
         for m in (maps_res.data or []):
@@ -168,13 +186,12 @@ class GoalRepository:
         )
 
     def save_defined_goal_snapshot(self, defined_goal: DefinedGoal) -> str:
-        (
+        self._execute(
             self.db.table("defined_goals")
             .update({"is_latest": False})
             .eq("goal_id", defined_goal.goal_id)
             .eq("planning_unit_id", defined_goal.planning_unit_id)
             .eq("is_latest", True)
-            .execute()
         )
 
         dg_payload = {
@@ -200,11 +217,10 @@ class GoalRepository:
             "funding_status": defined_goal.funding_status,
             "version_metadata": defined_goal.version_metadata,
         }
-        res = (
+        res = self._execute(
             self.db.table("defined_goals")
             .insert(dg_payload)
             .select("defined_goal_id")
-            .execute()
         )
         if not res.data:
             raise RuntimeError("Failed to insert defined goal snapshot")
@@ -227,12 +243,18 @@ class GoalRepository:
                         "projected_value": m.projected_value,
                     }
                 )
-            self.db.table("defined_goal_asset_mappings").insert(map_rows).execute()
+            self._execute(
+                self.db.table("defined_goal_asset_mappings").insert(map_rows)
+            )
 
         return def_id
 
     def update_defined_goal_metadata(self, defined_goal_id: str, metadata: dict[str, Any]) -> None:
-        self.db.table("defined_goals").update({"version_metadata": metadata}).eq("defined_goal_id", defined_goal_id).execute()
+        self._execute(
+            self.db.table("defined_goals")
+            .update({"version_metadata": metadata})
+            .eq("defined_goal_id", defined_goal_id)
+        )
 
     def has_material_change(self, current: DefinedGoal, new_input: GoalInput) -> bool:
         if abs(current.today_cost - new_input.today_cost) > 0.01:
