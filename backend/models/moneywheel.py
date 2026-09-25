@@ -33,6 +33,10 @@ class MoneywheelInput(BaseModel):
     financial_assets: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     existing_sum_assured: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     required_insurance_cover: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    current_goal_funding: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    goal_target_amount: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    projected_goal_funding: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    future_goal_target: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def validate_non_negative(self) -> "MoneywheelInput":
@@ -43,7 +47,7 @@ class MoneywheelResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
     planning_unit_id: str
     overall_status: Literal["excellent", "healthy", "attention", "critical", "incomplete"] | None = None
-    ratios: list[MoneywheelRatio] = Field(min_length=10, max_length=10)
+    ratios: list[MoneywheelRatio] = Field(min_length=12, max_length=12)
     rule_set_version: str
     calculated_at: str
     metadata: dict[str, Any] = Field(default_factory=dict, max_length=50)
