@@ -10,6 +10,7 @@ from engines.goal.funding_gap import (
     calculate_funding_return_assumption,
     calculate_required_monthly_contribution,
 )
+from engines.goal.specialized import resolve_specialized_goal
 from engines.goal.target_calculator import (
     DEFAULT_INFLATION_RATE,
     calculate_duration,
@@ -28,24 +29,50 @@ class GoalEngine:
         is_latest: bool = True,
         reference_date: date | None = None,
     ) -> DefinedGoal:
-        if goal_input.inflation_rate is not None:
-            inflation_rate = goal_input.inflation_rate
-            inflation_source = "custom"
-        else:
-            inflation_rate = DEFAULT_INFLATION_RATE
-            inflation_source = "default"
-
-        duration_years = calculate_duration(
-            target_month=goal_input.target_month,
-            target_year=goal_input.target_year,
-            reference_date=reference_date,
+        reference_date = reference_date or date.today()
+        specialized = resolve_specialized_goal(
+            goal_input.goal_type,
+            goal_input.goal_details,
+            reference_date,
         )
 
-        today_cost = float(goal_input.today_cost)
-        future_target = calculate_future_target(
-            today_cost=today_cost,
-            inflation_rate=inflation_rate,
-            duration_years=duration_years,
+        if specialized:
+            today_cost = float(specialized["today_cost"])
+            future_target = float(specialized["future_target"])
+            target_month = int(specialized["target_month"])
+            target_year = int(specialized["target_year"])
+            inflation_rate = float(specialized["inflation_rate"])
+            inflation_source = "goal_type_calculation"
+            calculation_metadata = specialized
+        else:
+            if goal_input.today_cost is None or goal_input.target_month is None or goal_input.target_year is None:
+                raise ValueError("today_cost, target_month and target_year are required for this goal type")
+            if goal_input.inflation_rate is not None:
+                inflation_rate = goal_input.inflation_rate
+                inflation_source = "custom"
+            else:
+                inflation_rate = DEFAULT_INFLATION_RATE
+                inflation_source = "default"
+
+            target_month = goal_input.target_month
+            target_year = goal_input.target_year
+            duration_years = calculate_duration(
+                target_month=target_month,
+                target_year=target_year,
+                reference_date=reference_date,
+            )
+            today_cost = float(goal_input.today_cost)
+            future_target = calculate_future_target(
+                today_cost=today_cost,
+                inflation_rate=inflation_rate,
+                duration_years=duration_years,
+            )
+            calculation_metadata = {}
+
+        duration_years = calculate_duration(
+            target_month=target_month,
+            target_year=target_year,
+            reference_date=reference_date,
         )
 
         mapped_assets: list[DefinedGoalAssetMapping] = []
@@ -113,6 +140,7 @@ class GoalEngine:
             "funding_model": "target_gap_plus_monthly_contribution",
             "funding_return_assumption": funding_return,
             "required_monthly_contribution": required_monthly,
+            **calculation_metadata,
         }
 
         return DefinedGoal(
@@ -126,8 +154,8 @@ class GoalEngine:
             today_cost=today_cost,
             inflation_rate=inflation_rate,
             inflation_source=inflation_source,
-            target_month=goal_input.target_month,
-            target_year=goal_input.target_year,
+            target_month=target_month,
+            target_year=target_year,
             duration_years=duration_years,
             future_target=future_target,
             priority=goal_input.priority,
