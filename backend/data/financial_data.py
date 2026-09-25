@@ -57,3 +57,19 @@ class FinancialDataRepository:
     def get_insurance_policies(self, planning_unit_id: str) -> list[dict[str, Any]]:
         return self._rows("insurance_policies", planning_unit_id)
 
+    def get_active_asset_types(self) -> list[dict[str, Any]]:
+        result = (
+            self.db.table("asset_type_master")
+            .select("*")
+            .eq("is_active", True)
+            .execute()
+        )
+        return result.data or []
+
+    def get_asset_type_master(self, active_only: bool = True) -> list[dict[str, Any]]:
+        query = self.db.table("asset_type_master").select("*")
+        if active_only:
+            query = query.eq("is_active", True)
+        result = query.execute()
+        return result.data or []
+

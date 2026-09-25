@@ -317,6 +317,18 @@ class TestFinancialDataRepository:
         result = FinancialDataRepository().get_expense_participants(str(uuid.uuid4()))
         assert isinstance(result, list)
 
+    def test_get_active_asset_types_returns_list(self):
+        from data.financial_data import FinancialDataRepository
+        result = FinancialDataRepository().get_active_asset_types()
+        assert isinstance(result, list)
+        assert len(result) > 0
+
+    def test_get_asset_type_master_returns_list(self):
+        from data.financial_data import FinancialDataRepository
+        result = FinancialDataRepository().get_asset_type_master()
+        assert isinstance(result, list)
+        assert len(result) > 0
+
     def test_repository_with_real_unit_id_if_available(self):
         """
         If a planning_unit_id exists in the DB, confirm all repository
