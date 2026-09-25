@@ -5,6 +5,7 @@ from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from data.financial_data import FinancialDataRepository
+from data.goal_repository import GoalRepository
 
 LIQUID_ASSET_TYPES = {"Bank / Cash", "Mutual Funds", "Stocks / Equity"}
 FINANCIAL_ASSET_TYPES = {"Bank / Cash", "Fixed Deposits", "Mutual Funds", "Stocks / Equity", "Bonds / Debt", "EPF / PPF", "NPS"}
@@ -18,6 +19,7 @@ class MoneywheelService:
     def __init__(self, repository):
         self.repository = repository
         self.data_repository = FinancialDataRepository()
+        self.goal_repository = GoalRepository()
         self.engine = MoneywheelEngine()
         self.adapter = MoneywheelFinancialStateAdapter()
 
@@ -61,12 +63,20 @@ class MoneywheelService:
         total_liabilities = float(financial_state.total_liabilities.value or 0)
         required_insurance_cover = (annual_income * 10) + total_liabilities
 
+        goal_target_amount, current_goal_funding, future_goal_target, projected_goal_funding = self._goal_funding(planning_unit_id)
+
         protection_metadata = {
             "total_sum_assured": total_sum_assured,
             "life_cover": total_life_cover,
             "health_cover": total_health_cover,
             "required_insurance_cover": required_insurance_cover,
             "policy_count": len(policies),
+        }
+        goal_metadata = {
+            "goal_target_amount": goal_target_amount,
+            "current_goal_funding": current_goal_funding,
+            "future_goal_target": future_goal_target,
+            "projected_goal_funding": projected_goal_funding,
         }
 
         data = self.adapter.build(
@@ -78,7 +88,39 @@ class MoneywheelService:
             existing_sum_assured=total_sum_assured,
             required_insurance_cover=required_insurance_cover,
         )
-        return self.calculate(data, financial_state.model_dump(mode="json"), protection_metadata=protection_metadata)
+        data.current_goal_funding = current_goal_funding
+        data.goal_target_amount = goal_target_amount
+        data.projected_goal_funding = projected_goal_funding
+        data.future_goal_target = future_goal_target
+
+        result = self.calculate(data, financial_state.model_dump(mode="json"), protection_metadata=protection_metadata)
+        result.metadata["goals"] = goal_metadata
+        return result
+
+    def _goal_funding(self, planning_unit_id: str):
+        goals = self.goal_repository.list_goals(planning_unit_id)
+        if not goals:
+            return None, None, None, None
+
+        current_target = 0.0
+        current_funding = 0.0
+        future_target = 0.0
+        projected_funding = 0.0
+        found = False
+
+        for goal in goals:
+            defined = self.goal_repository.get_latest_defined_goal(planning_unit_id, goal["goal_id"])
+            if not defined:
+                continue
+            found = True
+            current_target += max(float(defined.today_cost or 0), 0.0)
+            current_funding += sum(max(float(m.allocated_amount or 0), 0.0) for m in defined.mapped_assets)
+            future_target += max(float(defined.future_target or 0), 0.0)
+            projected_funding += max(float(defined.projected_mapped_asset_value or 0), 0.0)
+
+        if not found:
+            return None, None, None, None
+        return current_target, current_funding, future_target, projected_funding
 
     @staticmethod
     def _sum_assets(rows, allowed_types):
