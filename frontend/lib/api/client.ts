@@ -18,6 +18,22 @@ export class ApiError extends Error {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function getSessionWithRetry(retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      return await supabase.auth.getSession();
+    } catch (error) {
+      if (!isAbortError(error) || attempt === retries - 1) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+  }
+  throw new Error("Unable to read authentication session.");
+}
+
 /**
  * Centralized API request function.
  *
@@ -36,7 +52,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   if (!BACKEND_URL) throw new Error("Backend URL is not configured.");
 
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await getSessionWithRetry();
   if (error) throw error;
   if (!data.session) throw new Error("Authentication required.");
 
@@ -78,9 +94,12 @@ export async function apiRequest<T>(
 
 /**
  * Read the active planning unit ID from localStorage.
- * Returns null on the server or if unset.
+ * Supports the legacy underscore key during migration.
  */
 export function getPlanningUnitId(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("planvesto-planning-unit-id");
+  return (
+    window.localStorage.getItem("planvesto-planning-unit-id") ??
+    window.localStorage.getItem("planvesto_planning_unit_id")
+  );
 }
