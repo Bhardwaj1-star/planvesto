@@ -1,7 +1,7 @@
 from typing import Literal
 
 
-RULE_SET_VERSION = "1.1"
+RULE_SET_VERSION = "1.2"
 
 Status = Literal["excellent", "healthy", "attention", "critical"]
 
@@ -19,6 +19,8 @@ RULES = {
     "solvency_ratio": {"name": "Solvency Ratio", "unit": "%", "formula": "(1 - Leverage Ratio) × 100", "excellent": (80.0, None), "healthy": (70.0, 80.0), "attention": (50.0, 70.0), "critical": (None, 50.0)},
     "financial_asset_ratio": {"name": "Financial Asset Ratio", "unit": "%", "formula": "Financial Assets / Total Assets × 100", "excellent": (70.0, None), "healthy": (50.0, 70.0), "attention": (30.0, 50.0), "critical": (None, 30.0)},
     "insurance_gap_ratio": {"name": "Insurance Coverage Ratio", "unit": "%", "formula": "Existing Sum Assured / Required Insurance Cover × 100", "excellent": (80.0, None), "healthy": (60.0, 80.0), "attention": (40.0, 60.0), "critical": (None, 40.0)},
+    "goal_funding_ratio": {"name": "Goal Funding Ratio", "unit": "%", "formula": "Current Goal Funding / Goal Target Amount × 100", "excellent": (100.0, None), "healthy": (80.0, 100.0), "attention": (50.0, 80.0), "critical": (None, 50.0)},
+    "future_funding_ratio": {"name": "Future Funding Ratio", "unit": "%", "formula": "Projected Goal Funding / Future Goal Target × 100", "excellent": (100.0, None), "healthy": (80.0, 100.0), "attention": (50.0, 80.0), "critical": (None, 50.0)},
 }
 
 
