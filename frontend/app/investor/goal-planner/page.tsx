@@ -4,6 +4,7 @@ import { useEffect, useState, useId } from "react";
 import Link from "next/link";
 import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
 import { supabase } from "../../../lib/supabase";
+import { apiRequest, ApiError } from "../../../lib/api/client";
 import {
   formatINR,
   formatTargetMonthYear,
@@ -133,7 +134,6 @@ export default function GoalPlannerPage() {
   const [goals, setGoals] = useState<DefinedGoal[]>([]);
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [planningUnitId, setPlanningUnitId] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -150,8 +150,6 @@ export default function GoalPlannerPage() {
   const [formData, setFormData] = useState<GoalFormData>(createEmptyForm());
   const [previewResult, setPreviewResult] = useState<DefinedGoal | null>(null);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
   // 1. Initial Load: Authenticate, resolve planning unit, load assets & DefinedGoals
   useEffect(() => {
     let active = true;
@@ -159,7 +157,6 @@ export default function GoalPlannerPage() {
     async function loadData() {
       try {
         setIsLoading(true);
-        if (!backendUrl) throw new Error("Backend URL is not configured.");
         setError(null);
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -169,9 +166,6 @@ export default function GoalPlannerPage() {
         if (!session) {
           throw new Error("You must be logged in to access the Goal Planner.");
         }
-
-        const token = session.access_token;
-        if (active) setAccessToken(token);
 
         // Resolve planning unit ID
         let resolvedPuId =
@@ -233,53 +227,41 @@ export default function GoalPlannerPage() {
 
         for (const g of goalRows || []) {
           try {
-            const resp = await fetch(
-              `${backendUrl}/api/goals/${g.goal_id}/defined/latest?planning_unit_id=${resolvedPuId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
+            try {
+              const dg = await apiRequest<DefinedGoal>(
+                `/api/goals/${g.goal_id}/defined/latest?planning_unit_id=${resolvedPuId}`
+              );
 
-            if (resp.ok) {
-              const dg: DefinedGoal = await resp.json();
               // Cancelled goals remain in history, but must not appear in the active Goal Planner.
               if (dg.status !== "Cancelled") {
                 definedGoalsList.push(dg);
               }
-            } else if (resp.status === 404) {
-              // Legacy goal without DefinedGoal snapshot: initialize it via backend
-              const [yearStr, monthStr] = (g.target_date || "").split("-");
-              const targetYear = parseInt(yearStr, 10) || new Date().getFullYear() + 3;
-              const targetMonth = parseInt(monthStr, 10) || 12;
+            } catch (fetchErr: unknown) {
+              if (fetchErr instanceof ApiError && fetchErr.status === 404) {
+                // Legacy goal without DefinedGoal snapshot: initialize it via backend
+                const [yearStr, monthStr] = (g.target_date || "").split("-");
+                const targetYear = parseInt(yearStr, 10) || new Date().getFullYear() + 3;
+                const targetMonth = parseInt(monthStr, 10) || 12;
 
-              const initPayload: GoalInput = {
-                planning_unit_id: resolvedPuId,
-                goal_id: g.goal_id,
-                goal_name: g.goal_name || "Untitled Goal",
-                goal_type: "Other",
-                today_cost: Number(g.target_amount) || 100000,
-                target_month: targetMonth,
-                target_year: targetYear,
-                inflation_rate: 0.06,
-                priority: g.priority || "Important",
-                flexibility: g.flexibility || "Flexible",
-                status: "Active",
-                asset_mappings: [],
-              };
+                const initPayload: GoalInput = {
+                  planning_unit_id: resolvedPuId,
+                  goal_id: g.goal_id,
+                  goal_name: g.goal_name || "Untitled Goal",
+                  goal_type: "Other",
+                  today_cost: Number(g.target_amount) || 100000,
+                  target_month: targetMonth,
+                  target_year: targetYear,
+                  inflation_rate: 0.06,
+                  priority: g.priority || "Important",
+                  flexibility: g.flexibility || "Flexible",
+                  status: "Active",
+                  asset_mappings: [],
+                };
 
-              const postResp = await fetch(`${backendUrl}/api/goals`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(initPayload),
-              });
-
-              if (postResp.ok) {
-                const newDg: DefinedGoal = await postResp.json();
+                const newDg = await apiRequest<DefinedGoal>("/api/goals", {
+                  method: "POST",
+                  body: JSON.stringify(initPayload),
+                });
                 definedGoalsList.push(newDg);
               }
             }
@@ -307,7 +289,7 @@ export default function GoalPlannerPage() {
     return () => {
       active = false;
     };
-  }, [backendUrl]);
+  }, []);
 
   // Helper to build GoalInput payload from form state
   function buildGoalInputPayload(forCalculate = false): GoalInput | null {
@@ -479,21 +461,12 @@ export default function GoalPlannerPage() {
 
     try {
       setIsPreviewing(true);
-      const resp = await fetch(`${backendUrl}/api/goals/calculate`, {
+      const data = await apiRequest<DefinedGoal>("/api/goals/calculate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify(payload),
       });
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.detail || "Calculation preview failed.");
-      }
-
-      setPreviewResult(data as DefinedGoal);
+      setPreviewResult(data);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Unable to calculate goal preview.");
     } finally {
@@ -509,30 +482,11 @@ export default function GoalPlannerPage() {
 
     try {
       setIsSaving(true);
-      const resp = await fetch(`${backendUrl}/api/goals`, {
+      const savedDefinedGoal = await apiRequest<DefinedGoal>("/api/goals", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify(payload),
       });
 
-      const responseBody = await resp.json();
-      if (!resp.ok) {
-        if (resp.status === 401) {
-          throw new Error("Your session has expired. Please refresh the page and sign in again.");
-        }
-        if (resp.status === 403) {
-          throw new Error("You do not have permission to modify this planning unit.");
-        }
-        if (resp.status === 400 || resp.status === 422) {
-          throw new Error(responseBody.detail || "Invalid goal input. Please check the values entered.");
-        }
-        throw new Error(responseBody.detail || "Failed to save goal.");
-      }
-
-      const savedDefinedGoal: DefinedGoal = responseBody;
       setLastSavedGoalId(savedDefinedGoal.goal_id);
 
       // Update local state with the returned authoritative DefinedGoal
@@ -554,6 +508,22 @@ export default function GoalPlannerPage() {
 
       handleCancelForm();
     } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setFormError("Your session has expired. Please refresh the page and sign in again.");
+          return;
+        }
+        if (err.status === 403) {
+          setFormError("You do not have permission to modify this planning unit.");
+          return;
+        }
+        if (err.status === 400 || err.status === 422) {
+          setFormError(err.detail || "Invalid goal input. Please check the values entered.");
+          return;
+        }
+        setFormError(err.detail || "Failed to save goal.");
+        return;
+      }
       setFormError(err instanceof Error ? err.message : "Unable to save goal.");
     } finally {
       setIsSaving(false);
@@ -597,21 +567,10 @@ export default function GoalPlannerPage() {
         })),
       };
 
-      const resp = await fetch(`${backendUrl}/api/goals`, {
+      const updatedGoal = await apiRequest<DefinedGoal>("/api/goals", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify(cancelPayload),
       });
-
-      const result = await resp.json();
-      if (!resp.ok) {
-        throw new Error(result.detail || "Unable to cancel goal.");
-      }
-
-      const updatedGoal: DefinedGoal = result;
       setGoals((prev) =>
         prev.map((g) => (g.goal_id === updatedGoal.goal_id ? updatedGoal : g))
       );
