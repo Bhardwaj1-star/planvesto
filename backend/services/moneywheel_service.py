@@ -1,41 +1,43 @@
 from typing import Any
 
-from engines.moneywheel.engine import MoneywheelEngine
-from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
+from engines.moneywheel.engine import MoneywheelEngine
+from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
+
+LIQUID_ASSET_TYPES = {"Bank / Cash", "Mutual Funds", "Stocks / Equity"}
+FINANCIAL_ASSET_TYPES = {"Bank / Cash", "Fixed Deposits", "Mutual Funds", "Stocks / Equity", "Bonds / Debt", "EPF / PPF", "NPS"}
+SHORT_TERM_LIABILITY_TYPES = {"Credit Card", "Personal Loan", "Consumer Loan", "Other"}
+ESSENTIAL_EXPENSE_TYPES = {"Housing", "Utilities", "Groceries", "Healthcare", "Insurance", "Education", "Debt Payments"}
 
 
 class MoneywheelService:
-    """Coordinates Moneywheel calculation and immutable snapshot persistence."""
+    """Calculates Moneywheel from the authoritative FinancialState plus source classifications."""
 
     def __init__(self, repository):
         self.repository = repository
         self.engine = MoneywheelEngine()
         self.adapter = MoneywheelFinancialStateAdapter()
 
-    def calculate(
-        self,
-        data: MoneywheelInput,
-        financial_state_snapshot: dict[str, Any] | None = None,
-    ) -> MoneywheelResult:
+    def calculate(self, data: MoneywheelInput, financial_state_snapshot: dict[str, Any] | None = None) -> MoneywheelResult:
         result = self.engine.build(data)
         return self.repository.save_snapshot(result, financial_state_snapshot or {})
 
-    def calculate_from_financial_state(
-        self,
-        financial_state: FinancialState,
-        *,
-        essential_monthly_expenses: float | None = None,
-        liquid_assets: float | None = None,
-        short_term_liabilities: float | None = None,
-        financial_assets: float | None = None,
-    ) -> MoneywheelResult:
-        """Build Moneywheel from FinancialState plus explicit classified inputs.
+    def calculate_from_financial_state(self, financial_state: FinancialState, *, essential_monthly_expenses: float | None = None, liquid_assets: float | None = None, short_term_liabilities: float | None = None, financial_assets: float | None = None) -> MoneywheelResult:
+        planning_unit_id = financial_state.planning_unit_id
+        expenses = self.repository_source("expenses", planning_unit_id)
+        assets = self.repository_source("assets", planning_unit_id)
+        liabilities = self.repository_source("liabilities", planning_unit_id)
 
-        Classification-dependent fields remain explicit until their future
-        authoritative source systems are implemented.
-        """
+        if essential_monthly_expenses is None:
+            essential_monthly_expenses = self._sum_expenses(expenses)
+        if liquid_assets is None:
+            liquid_assets = self._sum_assets(assets, LIQUID_ASSET_TYPES)
+        if financial_assets is None:
+            financial_assets = self._sum_assets(assets, FINANCIAL_ASSET_TYPES)
+        if short_term_liabilities is None:
+            short_term_liabilities = self._sum_liabilities(liabilities, SHORT_TERM_LIABILITY_TYPES)
+
         data = self.adapter.build(
             financial_state,
             essential_monthly_expenses=essential_monthly_expenses,
@@ -44,3 +46,27 @@ class MoneywheelService:
             financial_assets=financial_assets,
         )
         return self.calculate(data, financial_state.model_dump(mode="json"))
+
+    def repository_source(self, kind: str, planning_unit_id: str):
+        if kind == "expenses":
+            return self.repository.data_repository.get_expenses(planning_unit_id)
+        if kind == "assets":
+            return self.repository.data_repository.get_assets(planning_unit_id)
+        return self.repository.data_repository.get_liabilities(planning_unit_id)
+
+    @staticmethod
+    def _sum_assets(rows, allowed_types):
+        return sum(float(row.get("current_value") or 0) for row in rows if str(row.get("asset_type") or "Other") in allowed_types)
+
+    @staticmethod
+    def _sum_liabilities(rows, allowed_types):
+        return sum(float(row.get("outstanding_amount") or 0) for row in rows if str(row.get("liability_type") or "Other") in allowed_types)
+
+    @staticmethod
+    def _sum_expenses(rows):
+        from engines.calculation.engine import monthly_amount
+        return sum(
+            monthly_amount(float(row.get("amount") or 0), str(row.get("frequency") or "")) or 0
+            for row in rows
+            if str(row.get("expense_type") or "Other") in ESSENTIAL_EXPENSE_TYPES
+        )
