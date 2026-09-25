@@ -55,17 +55,10 @@ export const emptyGoal: Omit<Goal, "id"> = {
   notes: "",
 };
 
-// ============================================================================
-// DefinedGoal ARCHITECTURE (Authoritative Backend Model)
-// ============================================================================
-
 export const goalStatuses = ["Active", "Completed", "Paused", "Cancelled"] as const;
 export type GoalStatus = (typeof goalStatuses)[number];
-
 export type FundingStatus = "Shortfall" | "On Track" | "Overfunded";
-
 export type AssetMappingAllocationType = "currency" | "percentage";
-
 export const returnFrequencies = ["annual", "semi-annual", "quarterly", "monthly"] as const;
 export type ReturnFrequency = (typeof returnFrequencies)[number];
 
@@ -91,6 +84,7 @@ export type GoalInput = {
   flexibility: string;
   status: string;
   asset_mappings: AssetMappingInput[];
+  specialized_data?: Record<string, unknown>;
 };
 
 export type DefinedGoalAssetMapping = {
