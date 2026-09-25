@@ -8,11 +8,16 @@ type NavItem = { label: string; href: string; exact?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
 const navigation: NavGroup[] = [
-  { label: "Overview", items: [{ label: "Dashboard", href: "/investor/financial-state" }] },
+  {
+    label: "Overview",
+    items: [
+      { label: "Dashboard", href: "/investor/financial-state" },
+      { label: "Moneywheel", href: "/investor/moneywheel" },
+    ],
+  },
   {
     label: "Plan",
     items: [
-      { label: "Moneywheel", href: "/investor/moneywheel" },
       { label: "Budgeting", href: "/investor/budgeting" },
       { label: "Goal Planner", href: "/investor/goal-planner" },
     ],
