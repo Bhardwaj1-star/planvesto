@@ -20,35 +20,27 @@ class GoalService:
 
     def calculate_preview(self, request: GoalCalculateRequest) -> DefinedGoal:
         assets_lookup = self._get_assets_lookup(request.planning_unit_id)
-        return self.engine.calculate_defined_goal(
-            goal_input=request,
-            assets_lookup=assets_lookup,
-            version=1,
-            is_latest=True,
-        )
+        return self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
 
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
-        # 1. Ensure primary goal entity
+        assets_lookup = self._get_assets_lookup(request.planning_unit_id)
+        preview = self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
+
         goal_id = self.repository.ensure_goal_record(
             planning_unit_id=request.planning_unit_id,
             goal_id=request.goal_id,
             goal_name=request.goal_name,
-            today_cost=request.today_cost,
-            target_month=request.target_month,
-            target_year=request.target_year,
+            today_cost=preview.today_cost,
+            target_month=preview.target_month,
+            target_year=preview.target_year,
             priority=request.priority,
             flexibility=request.flexibility,
+            goal_type=request.goal_type,
+            goal_details=request.goal_details,
         )
         request.goal_id = goal_id
 
-        # 2. Check existing latest DefinedGoal
-        current_latest = self.repository.get_latest_defined_goal(
-            planning_unit_id=request.planning_unit_id,
-            goal_id=goal_id,
-        )
-
-        assets_lookup = self._get_assets_lookup(request.planning_unit_id)
-
+        current_latest = self.repository.get_latest_defined_goal(request.planning_unit_id, goal_id)
         if current_latest is None:
             new_version = 1
             is_material = True
@@ -58,7 +50,6 @@ class GoalService:
                 return current_latest
             new_version = current_latest.version + 1
 
-        # 3. Calculate new DefinedGoal
         defined_goal = self.engine.calculate_defined_goal(
             goal_input=request,
             assets_lookup=assets_lookup,
@@ -66,11 +57,9 @@ class GoalService:
             is_latest=True,
         )
 
-        # 4. Persist snapshot
         def_id = self.repository.save_defined_goal_snapshot(defined_goal)
         defined_goal.defined_goal_id = def_id
 
-        # 5. Trigger Strategy recalculation if material change occurred
         if is_material and new_version > 1:
             try:
                 from services.strategy_service import StrategyService
@@ -82,13 +71,7 @@ class GoalService:
                 defined_goal.version_metadata["strategy_recalculation"] = "succeeded"
                 self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
             except Exception as exc:
-                logger.error(
-                    "Automatic strategy recalculation failed for goal %s (version %d): %s",
-                    goal_id,
-                    new_version,
-                    exc,
-                    exc_info=True,
-                )
+                logger.error("Automatic strategy recalculation failed for goal %s (version %d): %s", goal_id, new_version, exc, exc_info=True)
                 defined_goal.version_metadata["strategy_recalculation"] = "failed"
                 defined_goal.version_metadata["strategy_recalculation_error"] = str(exc)
                 self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
@@ -109,18 +92,4 @@ class GoalService:
 
     def get_version_history(self, planning_unit_id: str, goal_id: str) -> list[DefinedGoalVersionSummary]:
         rows = self.repository.get_all_defined_goal_versions(planning_unit_id, goal_id)
-        return [
-            DefinedGoalVersionSummary(
-                defined_goal_id=r["defined_goal_id"],
-                goal_id=r["goal_id"],
-                version=r["version"],
-                is_latest=r["is_latest"],
-                today_cost=float(r["today_cost"]),
-                future_target=float(r["future_target"]),
-                projected_mapped_asset_value=float(r.get("projected_mapped_asset_value", 0.0)),
-                funding_gap=float(r["funding_gap"]),
-                funding_status=r["funding_status"],
-                created_at=r["created_at"],
-            )
-            for r in rows
-        ]
+        return [DefinedGoalVersionSummary(defined_goal_id=r["defined_goal_id"], goal_id=r["goal_id"], version=r["version"], is_latest=r["is_latest"], today_cost=float(r["today_cost"]), future_target=float(r["future_target"]), projected_mapped_asset_value=float(r.get("projected_mapped_asset_value", 0.0)), funding_gap=float(r["funding_gap"]), funding_status=r["funding_status"], created_at=r["created_at"]) for r in rows]
