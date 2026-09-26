@@ -1,14 +1,15 @@
 export const goalTypes = [
-  "Emergency Fund",
-  "Child Education",
-  "Child Marriage",
-  "Home Purchase",
+  "Retirement / Financial Freedom",
+  "Passive Income",
+  "Education",
+  "Marriage",
+  "Dream Home",
   "Vehicle",
-  "Retirement",
-  "Travel",
-  "Business",
+  "Vacation",
   "Wealth Creation",
-  "Other",
+  "Debt Repayment",
+  "Philanthropy",
+  "Others",
 ] as const;
 export const goalPriorities = ["Critical", "Important", "Aspirational"] as const;
 export const goalFlexibilities = ["Fixed", "Flexible"] as const;
@@ -133,4 +134,4 @@ export type DefinedGoal = {
   funding_status: FundingStatus;
   version_metadata?: Record<string, unknown>;
   created_at?: string | null;
-};
+};
