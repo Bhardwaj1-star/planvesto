@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingNavigation, useOnboardingStore } from "../../../components/onboarding/OnboardingProvider";
 import { createGoalId } from "../../../lib/onboarding/goals/goals";
+import { saveDynamicGoalDetailsForList } from "../../../lib/onboarding/goals/dynamicPersistence";
 import { emptyGoal, type Goal, type GoalErrors } from "../../../lib/onboarding/goals/types";
 import { validateGoal } from "../../../lib/onboarding/goals/validation";
 
@@ -23,11 +24,19 @@ export function useGoals() {
   function cancelEditing() { setDraft({ id: createGoalId(), ...emptyGoal }); setEditingGoalId(null); setIsAdding(false); setErrors({}); setIsSubmitted(false); }
   function updateDraft(changes: Partial<Goal>) { const nextDraft = { ...draft, ...changes }; setDraft(nextDraft); setIsComplete(false); if (isSubmitted) setErrors(validateGoal(nextDraft)); }
 
+  async function persistGoals(nextGoals: Goal[]) {
+    const data = await saveGoals(nextGoals);
+    const savedGoals = data.goals || nextGoals;
+    await saveDynamicGoalDetailsForList(savedGoals, nextGoals);
+    setGoals(savedGoals);
+    return savedGoals;
+  }
+
   async function saveGoal(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setIsSubmitted(true); const nextErrors = validateGoal(draft); setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) { document.getElementById(Object.keys(nextErrors)[0])?.focus(); return false; }
     const nextGoals = editingGoalId ? goals.map((goal) => goal.id === editingGoalId ? draft : goal) : [...goals, draft];
-    try { await saveGoals(nextGoals); setGoals(nextGoals); } catch { return false; }
+    try { await persistGoals(nextGoals); } catch { return false; }
     setDraft({ id: createGoalId(), ...emptyGoal }); setEditingGoalId(null); setIsAdding(false); setErrors({}); setIsSubmitted(false); return true;
   }
 
@@ -46,7 +55,7 @@ export function useGoals() {
       if (Object.keys(nextErrors).length > 0) { document.getElementById(Object.keys(nextErrors)[0])?.focus(); return; }
       goalsToSave = editingGoalId ? goals.map((goal) => (goal.id === editingGoalId ? draft : goal)) : [...goals, draft];
     }
-    try { await saveGoals(goalsToSave); setGoals(goalsToSave); } catch { return; }
+    try { await persistGoals(goalsToSave); } catch { return; }
     setDraft({ id: createGoalId(), ...emptyGoal }); setEditingGoalId(null); setIsAdding(false); setErrors({}); setIsSubmitted(false); setIsComplete(true); completeStep(7); router.push("/investor/financial-state");
   }
 
