@@ -125,26 +125,44 @@ export type StrategyRun = {
 
 export { getPlanningUnitId } from "./client";
 
-export function buildStrategy(planningUnitId: string, goalId: string, investorPriorities?: InvestorPriorities) {
-  return apiRequest<StrategyRun>("/api/strategy/build", {
+function limitToTopTwoStrategies(run: StrategyRun): StrategyRun {
+  const strategyIds: string[] = [];
+  for (const ranking of [...run.rankings].sort((a, b) => a.rank - b.rank)) {
+    if (!strategyIds.includes(ranking.strategy_id)) strategyIds.push(ranking.strategy_id);
+    if (strategyIds.length === 2) break;
+  }
+  if (!strategyIds.length) return run;
+  const allowed = new Set(strategyIds);
+  return {
+    ...run,
+    applicable_strategies: run.applicable_strategies.filter((strategy) => allowed.has(strategy.strategy_id)),
+    rankings: run.rankings.filter((ranking) => allowed.has(ranking.strategy_id)),
+  };
+}
+
+export async function buildStrategy(planningUnitId: string, goalId: string, investorPriorities?: InvestorPriorities) {
+  const run = await apiRequest<StrategyRun>("/api/strategy/build", {
     method: "POST",
     body: JSON.stringify({ planning_unit_id: planningUnitId, goal_id: goalId, investor_priorities: investorPriorities }),
   });
+  return limitToTopTwoStrategies(run);
 }
 
-export function getLatestStrategyRun(planningUnitId: string, goalId: string) {
-  return apiRequest<StrategyRun>(`/api/strategy/runs/${encodeURIComponent(goalId)}/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+export async function getLatestStrategyRun(planningUnitId: string, goalId: string) {
+  const run = await apiRequest<StrategyRun>(`/api/strategy/runs/${encodeURIComponent(goalId)}/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+  return limitToTopTwoStrategies(run);
 }
 
 export function getStrategyRunHistory(planningUnitId: string, goalId: string) {
   return apiRequest<StrategyRun[]>(`/api/strategy/runs/${encodeURIComponent(goalId)}/history?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
-export function updateStrategyPriorities(planningUnitId: string, strategyRunId: string, priorities: InvestorPriorities) {
-  return apiRequest<StrategyRun>("/api/strategy/priorities", {
+export async function updateStrategyPriorities(planningUnitId: string, strategyRunId: string, priorities: InvestorPriorities) {
+  const run = await apiRequest<StrategyRun>("/api/strategy/priorities", {
     method: "POST",
     body: JSON.stringify({ planning_unit_id: planningUnitId, strategy_run_id: strategyRunId, priorities }),
   });
+  return limitToTopTwoStrategies(run);
 }
 
 export function addCustomScenario(planningUnitId: string, strategyRunId: string, strategyId: string, scenarioName: string, assumptions: Record<string, unknown>, fundingStructure: Record<string, unknown>) {
