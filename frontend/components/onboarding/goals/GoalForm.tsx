@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { supabase } from "../../../lib/supabase";
 import {
   goalFlexibilities,
-  goalPriorities,
   goalTypes,
   type Goal,
   type GoalErrors,
+  type GoalDynamicDetails,
 } from "../../../lib/onboarding/goals/types";
 
 type Props = {
@@ -19,17 +20,14 @@ type Props = {
   onCancel: () => void;
 };
 
-const PRESET_GOAL_NAMES = [
-  "Retirement",
-  "Child Education",
-  "Child Marriage",
-  "Dream Home",
-  "Vehicle",
-  "Travel",
-  "Wealth Creation",
-  "Emergency Fund",
-  "Other",
-] as const;
+type LiabilityOption = {
+  id: string;
+  name: string;
+  outstandingAmount: number;
+  interestRate: number | null;
+  emi: number | null;
+  endDate: string | null;
+};
 
 function fieldClasses(hasError = false) {
   return `form-field w-full rounded-xl border bg-white px-4 py-3 text-sm text-navy-900 placeholder:text-slate-400 ${hasError ? "border-red-300" : "border-slate-200"}`;
@@ -39,38 +37,14 @@ function ErrorMessage({ id, message }: { id: string; message?: string }) {
   return message ? <p id={id} className="mt-1.5 text-xs font-medium text-red-600" role="alert">{message}</p> : null;
 }
 
-function ChoiceGroup({
-  label,
-  name,
-  value,
-  options,
-  error,
-  onChange,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  options: readonly string[];
-  error?: string;
-  onChange: (value: string) => void;
-}) {
+function ChoiceGroup({ label, name, value, options, error, onChange }: { label: string; name: string; value: string; options: readonly string[]; error?: string; onChange: (value: string) => void }) {
   return (
     <fieldset>
       <legend className="mb-2 text-xs font-semibold text-navy-900">{label}</legend>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {options.map((option) => (
-          <label
-            key={option}
-            className={`flex cursor-pointer items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-xs font-semibold ${value === option ? "border-teal-500 ring-2 ring-teal-50" : "border-slate-200"}`}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option}
-              checked={value === option}
-              onChange={() => onChange(option)}
-              className="h-3.5 w-3.5 accent-teal-600"
-            />
+          <label key={option} className={`flex cursor-pointer items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-xs font-semibold ${value === option ? "border-teal-500 ring-2 ring-teal-50" : "border-slate-200"}`}>
+            <input type="radio" name={name} value={option} checked={value === option} onChange={() => onChange(option)} className="h-3.5 w-3.5 accent-teal-600" />
             {option}
           </label>
         ))}
@@ -80,14 +54,51 @@ function ChoiceGroup({
   );
 }
 
+function TextField({ id, label, value, onChange, placeholder, type = "text", error }: { id: string; label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string; error?: string }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-navy-900">{label}</label>
+      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={fieldClasses(Boolean(error))} />
+      <ErrorMessage id={`${id}-error`} message={error} />
+    </div>
+  );
+}
+
+function updateDetails(goal: Goal, changes: Partial<GoalDynamicDetails>, onChange: Props["onChange"]) {
+  onChange({ dynamicDetails: { ...goal.dynamicDetails, ...changes } });
+}
+
 export default function GoalForm({ goal, errors, isEditing, onChange, onSave, onCancel }: Props) {
   const isProfile = usePathname() === "/investor/profile";
   const [profileOpen, setProfileOpen] = useState(false);
-  const presetValue = PRESET_GOAL_NAMES.includes(goal.name as (typeof PRESET_GOAL_NAMES)[number])
-    ? goal.name
-    : goal.name
-      ? "Other"
-      : "";
+  const [liabilities, setLiabilities] = useState<LiabilityOption[]>([]);
+  const details = goal.dynamicDetails;
+
+  useEffect(() => {
+    if (goal.goalType !== "Debt Repayment") return;
+    let active = true;
+    async function loadLiabilities() {
+      const planningUnitId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
+      if (!planningUnitId) return;
+      const { data } = await supabase.from("liabilities").select("liability_id, liability_name, outstanding_amount, interest_rate, emi_amount, end_date").eq("planning_unit_id", planningUnitId).order("created_at");
+      if (!active) return;
+      setLiabilities((data || []).map((row) => ({
+        id: row.liability_id,
+        name: row.liability_name,
+        outstandingAmount: Number(row.outstanding_amount || 0),
+        interestRate: row.interest_rate == null ? null : Number(row.interest_rate),
+        emi: row.emi_amount == null ? null : Number(row.emi_amount),
+        endDate: row.end_date || null,
+      })));
+    }
+    loadLiabilities();
+    return () => { active = false; };
+  }, [goal.goalType]);
+
+  const isOther = goal.goalType === "Others";
+  const isRetirement = goal.goalType === "Retirement / Financial Freedom";
+  const isDebt = goal.goalType === "Debt Repayment";
+  const needsTodayCost = !isRetirement && !isDebt;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const saved = await onSave(event);
@@ -95,13 +106,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
   }
 
   if (isProfile && !isEditing && !profileOpen) {
-    return (
-      <div className="flex justify-start">
-        <button type="button" onClick={() => setProfileOpen(true)} className="inline-flex items-center justify-center rounded-xl border border-teal-600 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50">
-          + Add new goal
-        </button>
-      </div>
-    );
+    return <div className="flex justify-start"><button type="button" onClick={() => setProfileOpen(true)} className="inline-flex items-center justify-center rounded-xl border border-teal-600 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm hover:bg-teal-50">+ Add new goal</button></div>;
   }
 
   return (
@@ -110,66 +115,83 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-teal-700">{isEditing ? "Edit goal" : "New goal"}</p>
           <h2 className="mt-1.5 text-lg font-extrabold text-navy-900">Give this goal a shape</h2>
-          <p className="mt-1 text-xs text-slate-500">Tell us what you are planning for. We&apos;ll use this information later to build your plan.</p>
+          <p className="mt-1 text-xs text-slate-500">Choose a goal and we&apos;ll ask only for the information relevant to it.</p>
         </div>
         <button type="button" onClick={onCancel} className="text-xs font-bold text-slate-500 underline underline-offset-4">Cancel</button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="goalPreset" className="mb-1.5 block text-xs font-semibold text-navy-900">Goal</label>
+          <label htmlFor="goalType" className="mb-1.5 block text-xs font-semibold text-navy-900">Goal</label>
           <select
-            id="goalPreset"
-            value={presetValue}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === "Other") {
-                onChange({ name: "", goalType: "Other" });
-              } else {
-                const mappedType = value === "Dream Home" ? "Home Purchase" : value;
-                onChange({ name: value, goalType: mappedType as Goal["goalType"] });
-              }
-            }}
-            className={`${fieldClasses(Boolean(errors.name || errors.goalType))} appearance-none`}
+            id="goalType"
+            value={goal.goalType}
+            onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Others" ? "" : e.target.value })}
+            className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
           >
             <option value="">Select a goal</option>
-            {PRESET_GOAL_NAMES.map((name) => <option key={name} value={name}>{name}</option>)}
+            {goalTypes.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
-          <ErrorMessage id="goalPreset-error" message={errors.name || errors.goalType} />
+          <ErrorMessage id="goalType-error" message={errors.goalType} />
         </div>
 
-        {presetValue === "Other" && (
-          <div>
-            <label htmlFor="name" className="mb-1.5 block text-xs font-semibold text-navy-900">Goal name</label>
-            <input id="name" value={goal.name} onChange={(e) => onChange({ name: e.target.value, goalType: "Other" })} placeholder="e.g. A family milestone" className={fieldClasses(Boolean(errors.name))} />
-            <ErrorMessage id="name-error" message={errors.name} />
-          </div>
-        )}
+        {isOther && <TextField id="otherGoalName" label="Goal Name" value={details.otherGoalName} onChange={(value) => updateDetails(goal, { otherGoalName: value }, onChange)} placeholder="e.g. Family milestone" error={errors["otherGoalName"]} />}
+
+        {isRetirement && <>
+          <TextField id="lifeExpectancy" label="Life Expectancy" value={details.lifeExpectancy} onChange={(value) => updateDetails(goal, { lifeExpectancy: value }, onChange)} type="number" placeholder="e.g. 85" error={errors["lifeExpectancy"]} />
+          <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
+        </>}
+
+        {goal.goalType === "Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
+
+        {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
+
+        {goal.goalType === "Marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
+
+        {goal.goalType === "Dream Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
+
+        {goal.goalType === "Vehicle" && <>
+          <TextField id="vehicleType" label="Vehicle Type" value={details.vehicleType} onChange={(value) => updateDetails(goal, { vehicleType: value }, onChange)} placeholder="e.g. SUV, Sedan, Bike" error={errors["vehicleType"]} />
+          <ChoiceGroup label="Condition" name="vehicleCondition" value={details.vehicleCondition} options={["New", "Used"]} error={errors["vehicleCondition"]} onChange={(value) => updateDetails(goal, { vehicleCondition: value as GoalDynamicDetails["vehicleCondition"] }, onChange)} />
+        </>}
+
+        {goal.goalType === "Vacation" && <>
+          <TextField id="vacationFrequency" label="Frequency" value={details.vacationFrequency} onChange={(value) => updateDetails(goal, { vacationFrequency: value }, onChange)} placeholder="e.g. Once a year" error={errors["vacationFrequency"]} />
+          <ChoiceGroup label="Travel Type" name="vacationType" value={details.vacationType} options={["Domestic", "International"]} error={errors["vacationType"]} onChange={(value) => updateDetails(goal, { vacationType: value as GoalDynamicDetails["vacationType"] }, onChange)} />
+        </>}
+
+        {goal.goalType === "Wealth Creation" && <TextField id="targetWealthCorpus" label="Target Wealth / Corpus" value={details.targetWealthCorpus} onChange={(value) => updateDetails(goal, { targetWealthCorpus: value }, onChange)} type="number" placeholder="₹" error={errors["targetWealthCorpus"]} />}
+
+        {isDebt && <div className="sm:col-span-2">
+          <label htmlFor="selectedLiabilityId" className="mb-1.5 block text-xs font-semibold text-navy-900">Select Liability / Debt</label>
+          <select id="selectedLiabilityId" value={details.selectedLiabilityId} onChange={(e) => updateDetails(goal, { selectedLiabilityId: e.target.value }, onChange)} className={`${fieldClasses(Boolean(errors["selectedLiabilityId"]))} appearance-none`}>
+            <option value="">Select an existing liability</option>
+            {liabilities.map((liability) => <option key={liability.id} value={liability.id}>{liability.name} · ₹{liability.outstandingAmount.toLocaleString("en-IN")}</option>)}
+          </select>
+          <ErrorMessage id="selectedLiabilityId-error" message={errors["selectedLiabilityId"]} />
+          {details.selectedLiabilityId && (() => {
+            const selected = liabilities.find((item) => item.id === details.selectedLiabilityId);
+            return selected ? <p className="mt-2 text-xs text-slate-500">Outstanding ₹{selected.outstandingAmount.toLocaleString("en-IN")}{selected.interestRate != null ? ` · ${selected.interestRate}% interest` : ""}{selected.emi != null ? ` · EMI ₹${selected.emi.toLocaleString("en-IN")}` : ""}</p> : null;
+          })()}
+        </div>}
+
+        {goal.goalType === "Philanthropy" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
+
+        {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
 
         <div>
-          <label htmlFor="targetAmount" className="mb-1.5 block text-xs font-semibold text-navy-900">Today&apos;s cost</label>
-          <div className="relative"><span className="pointer-events-none absolute left-4 top-2.5 text-sm text-slate-400">₹</span><input id="targetAmount" type="number" min="0.01" step="0.01" inputMode="decimal" value={goal.targetAmount} onChange={(e) => onChange({ targetAmount: e.target.value })} placeholder="0.00" className={`${fieldClasses(Boolean(errors.targetAmount))} pl-8`} /></div>
-          <ErrorMessage id="targetAmount-error" message={errors.targetAmount} />
-        </div>
-
-        <div>
-          <label htmlFor="targetDate" className="mb-1.5 block text-xs font-semibold text-navy-900">Target month &amp; year</label>
-          <input
-            id="targetDate"
-            type="month"
-            min={new Date().toISOString().slice(0, 7)}
-            value={goal.targetDate.slice(0, 7)}
-            onChange={(e) => onChange({ targetMode: "Date", targetDate: e.target.value ? `${e.target.value}-01` : "" })}
-            className={fieldClasses(Boolean(errors.targetDate || errors.targetMode))}
-          />
+          <label htmlFor="targetDate" className="mb-1.5 block text-xs font-semibold text-navy-900">Target Month &amp; Year</label>
+          <input id="targetDate" type="month" min={new Date().toISOString().slice(0, 7)} value={goal.targetDate.slice(0, 7)} onChange={(e) => onChange({ targetMode: "Date", targetDate: e.target.value ? `${e.target.value}-01` : "" })} className={fieldClasses(Boolean(errors.targetDate || errors.targetMode))} />
           <ErrorMessage id="targetDate-error" message={errors.targetDate || errors.targetMode} />
         </div>
 
-        <ChoiceGroup label="Priority" name="priority" value={goal.priority} options={goalPriorities} error={errors.priority} onChange={(value) => onChange({ priority: value as Goal["priority"] })} />
         <ChoiceGroup label="Flexibility" name="flexibility" value={goal.flexibility} options={goalFlexibilities} error={errors.flexibility} onChange={(value) => onChange({ flexibility: value as Goal["flexibility"] })} />
-      </div>
 
-      <input type="hidden" value={goal.targetMode || "Date"} readOnly />
+        {isOther && <>
+          <TextField id="otherGoalDescription" label="Goal Description" value={details.otherGoalDescription} onChange={(value) => updateDetails(goal, { otherGoalDescription: value }, onChange)} placeholder="Describe the goal" error={errors["otherGoalDescription"]} />
+          <TextField id="otherAdditionalDetails" label="Relevant Additional Details" value={details.otherAdditionalDetails} onChange={(value) => updateDetails(goal, { otherAdditionalDetails: value }, onChange)} placeholder="Anything else we should know?" error={errors["otherAdditionalDetails"]} />
+        </>}
+      </div>
 
       <div className="mt-5 flex justify-end">
         <button type="submit" className="rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white shadow-sm">{isEditing ? "Save changes" : "Add goal"}</button>
