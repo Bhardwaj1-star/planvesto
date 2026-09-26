@@ -3,13 +3,34 @@ from models.strategy import StrategyDefinition
 from library.strategies.registry import get_active_strategies
 
 
+# Goal Planner uses user-facing goal names while the strategy catalog keeps
+# canonical goal types. Keep this mapping in the applicability layer so the
+# catalog and persisted goal records do not need to be rewritten.
+GOAL_TYPE_ALIASES = {
+    "retirement/financial freedom": "retirement",
+    "education": "child education",
+    "marriage": "child marriage",
+    "dream home": "home purchase",
+    "vacation": "travel",
+    "others": "other",
+    "passive income": "other",
+    "debt repayment": "other",
+    "philanthropy": "other",
+}
+
+
+def _canonical_goal_type(value: str | None) -> str:
+    clean = (value or "").strip().lower()
+    return GOAL_TYPE_ALIASES.get(clean, clean)
+
+
 def filter_applicable_strategies(goal_type: str | None = None, defined_goal: DefinedGoal | None = None, financial_context: dict | None = None) -> list[StrategyDefinition]:
     """Evaluate eligibility from the goal plus available financial-state context."""
     if defined_goal is not None:
-        clean_goal_type = (defined_goal.goal_type or "").strip().lower()
+        clean_goal_type = _canonical_goal_type(defined_goal.goal_type)
         goal = defined_goal
     else:
-        clean_goal_type = (goal_type or "").strip().lower()
+        clean_goal_type = _canonical_goal_type(goal_type)
         goal = None
     if not clean_goal_type:
         return []
@@ -17,7 +38,7 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
     context = financial_context or {}
     applicable: list[StrategyDefinition] = []
     for strategy in get_active_strategies():
-        types_lower = [t.strip().lower() for t in strategy.applicable_goal_types]
+        types_lower = [_canonical_goal_type(t) for t in strategy.applicable_goal_types]
         if clean_goal_type not in types_lower:
             continue
 
