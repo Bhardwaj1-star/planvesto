@@ -114,88 +114,93 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
       <div className="mb-5 flex items-start justify-between gap-4 border-b border-teal-100 pb-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-teal-700">{isEditing ? "Edit goal" : "New goal"}</p>
-          <h2 className="mt-1.5 text-lg font-extrabold text-navy-900">Give this goal a shape</h2>
-          <p className="mt-1 text-xs text-slate-500">Choose a goal and we&apos;ll ask only for the information relevant to it.</p>
+          <h2 className="mt-1.5 text-lg font-extrabold text-navy-900">{goal.goalType ? "Shape your goal" : "Select a goal"}</h2>
+          <p className="mt-1 text-xs text-slate-500">{goal.goalType ? "We&apos;ll ask only for the information relevant to this goal." : "Start by selecting the goal you are planning for."}</p>
         </div>
         <button type="button" onClick={onCancel} className="text-xs font-bold text-slate-500 underline underline-offset-4">Cancel</button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="goalType" className="mb-1.5 block text-xs font-semibold text-navy-900">Goal</label>
-          <select
-            id="goalType"
-            value={goal.goalType}
-            onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Others" ? "" : e.target.value })}
-            className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
-          >
-            <option value="">Select a goal</option>
-            {goalTypes.map((name) => <option key={name} value={name}>{name}</option>)}
-          </select>
-          <ErrorMessage id="goalType-error" message={errors.goalType} />
-        </div>
-
-        {isOther && <TextField id="otherGoalName" label="Goal Name" value={details.otherGoalName} onChange={(value) => updateDetails(goal, { otherGoalName: value }, onChange)} placeholder="e.g. Family milestone" error={errors["otherGoalName"]} />}
-
-        {isRetirement && <>
-          <TextField id="lifeExpectancy" label="Life Expectancy" value={details.lifeExpectancy} onChange={(value) => updateDetails(goal, { lifeExpectancy: value }, onChange)} type="number" placeholder="e.g. 85" error={errors["lifeExpectancy"]} />
-          <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
-        </>}
-
-        {goal.goalType === "Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
-
-        {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
-
-        {goal.goalType === "Marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
-
-        {goal.goalType === "Dream Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
-
-        {goal.goalType === "Vehicle" && <>
-          <TextField id="vehicleType" label="Vehicle Type" value={details.vehicleType} onChange={(value) => updateDetails(goal, { vehicleType: value }, onChange)} placeholder="e.g. SUV, Sedan, Bike" error={errors["vehicleType"]} />
-          <ChoiceGroup label="Condition" name="vehicleCondition" value={details.vehicleCondition} options={["New", "Used"]} error={errors["vehicleCondition"]} onChange={(value) => updateDetails(goal, { vehicleCondition: value as GoalDynamicDetails["vehicleCondition"] }, onChange)} />
-        </>}
-
-        {goal.goalType === "Vacation" && <>
-          <TextField id="vacationFrequency" label="Frequency" value={details.vacationFrequency} onChange={(value) => updateDetails(goal, { vacationFrequency: value }, onChange)} placeholder="e.g. Once a year" error={errors["vacationFrequency"]} />
-          <ChoiceGroup label="Travel Type" name="vacationType" value={details.vacationType} options={["Domestic", "International"]} error={errors["vacationType"]} onChange={(value) => updateDetails(goal, { vacationType: value as GoalDynamicDetails["vacationType"] }, onChange)} />
-        </>}
-
-        {goal.goalType === "Wealth Creation" && <TextField id="targetWealthCorpus" label="Target Wealth / Corpus" value={details.targetWealthCorpus} onChange={(value) => updateDetails(goal, { targetWealthCorpus: value }, onChange)} type="number" placeholder="₹" error={errors["targetWealthCorpus"]} />}
-
-        {isDebt && <div className="sm:col-span-2">
-          <label htmlFor="selectedLiabilityId" className="mb-1.5 block text-xs font-semibold text-navy-900">Select Liability / Debt</label>
-          <select id="selectedLiabilityId" value={details.selectedLiabilityId} onChange={(e) => updateDetails(goal, { selectedLiabilityId: e.target.value }, onChange)} className={`${fieldClasses(Boolean(errors["selectedLiabilityId"]))} appearance-none`}>
-            <option value="">Select an existing liability</option>
-            {liabilities.map((liability) => <option key={liability.id} value={liability.id}>{liability.name} · ₹{liability.outstandingAmount.toLocaleString("en-IN")}</option>)}
-          </select>
-          <ErrorMessage id="selectedLiabilityId-error" message={errors["selectedLiabilityId"]} />
-          {details.selectedLiabilityId && (() => {
-            const selected = liabilities.find((item) => item.id === details.selectedLiabilityId);
-            return selected ? <p className="mt-2 text-xs text-slate-500">Outstanding ₹{selected.outstandingAmount.toLocaleString("en-IN")}{selected.interestRate != null ? ` · ${selected.interestRate}% interest` : ""}{selected.emi != null ? ` · EMI ₹${selected.emi.toLocaleString("en-IN")}` : ""}</p> : null;
-          })()}
-        </div>}
-
-        {goal.goalType === "Philanthropy" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
-
-        {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
-
-        <div>
-          <label htmlFor="targetDate" className="mb-1.5 block text-xs font-semibold text-navy-900">Target Month &amp; Year</label>
-          <input id="targetDate" type="month" min={new Date().toISOString().slice(0, 7)} value={goal.targetDate.slice(0, 7)} onChange={(e) => onChange({ targetMode: "Date", targetDate: e.target.value ? `${e.target.value}-01` : "" })} className={fieldClasses(Boolean(errors.targetDate || errors.targetMode))} />
-          <ErrorMessage id="targetDate-error" message={errors.targetDate || errors.targetMode} />
-        </div>
-
-        <ChoiceGroup label="Flexibility" name="flexibility" value={goal.flexibility} options={goalFlexibilities} error={errors.flexibility} onChange={(value) => onChange({ flexibility: value as Goal["flexibility"] })} />
-
-        {isOther && <>
-          <TextField id="otherGoalDescription" label="Goal Description" value={details.otherGoalDescription} onChange={(value) => updateDetails(goal, { otherGoalDescription: value }, onChange)} placeholder="Describe the goal" error={errors["otherGoalDescription"]} />
-          <TextField id="otherAdditionalDetails" label="Relevant Additional Details" value={details.otherAdditionalDetails} onChange={(value) => updateDetails(goal, { otherAdditionalDetails: value }, onChange)} placeholder="Anything else we should know?" error={errors["otherAdditionalDetails"]} />
-        </>}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <label htmlFor="goalType" className="mb-1.5 block text-xs font-semibold text-navy-900">Goal</label>
+        <select
+          id="goalType"
+          value={goal.goalType}
+          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Others" ? "" : e.target.value })}
+          className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
+        >
+          <option value="">Select a goal</option>
+          {goalTypes.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <ErrorMessage id="goalType-error" message={errors.goalType} />
       </div>
 
-      <div className="mt-5 flex justify-end">
-        <button type="submit" className="rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white shadow-sm">{isEditing ? "Save changes" : "Add goal"}</button>
-      </div>
+      {goal.goalType && <>
+        <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50/30 p-4 sm:p-5">
+          <h3 className="text-sm font-extrabold text-navy-900">Goal details</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {isOther && <TextField id="otherGoalName" label="Goal Name" value={details.otherGoalName} onChange={(value) => updateDetails(goal, { otherGoalName: value }, onChange)} placeholder="e.g. Family milestone" error={errors["otherGoalName"]} />}
+
+            {isRetirement && <>
+              <TextField id="lifeExpectancy" label="Life Expectancy" value={details.lifeExpectancy} onChange={(value) => updateDetails(goal, { lifeExpectancy: value }, onChange)} type="number" placeholder="e.g. 85" error={errors["lifeExpectancy"]} />
+              <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
+            </>}
+
+            {goal.goalType === "Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
+
+            {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
+
+            {goal.goalType === "Marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
+
+            {goal.goalType === "Dream Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
+
+            {goal.goalType === "Vehicle" && <>
+              <TextField id="vehicleType" label="Vehicle Type" value={details.vehicleType} onChange={(value) => updateDetails(goal, { vehicleType: value }, onChange)} placeholder="e.g. SUV, Sedan, Bike" error={errors["vehicleType"]} />
+              <ChoiceGroup label="Condition" name="vehicleCondition" value={details.vehicleCondition} options={["New", "Used"]} error={errors["vehicleCondition"]} onChange={(value) => updateDetails(goal, { vehicleCondition: value as GoalDynamicDetails["vehicleCondition"] }, onChange)} />
+            </>}
+
+            {goal.goalType === "Vacation" && <>
+              <TextField id="vacationFrequency" label="Frequency" value={details.vacationFrequency} onChange={(value) => updateDetails(goal, { vacationFrequency: value }, onChange)} placeholder="e.g. Once a year" error={errors["vacationFrequency"]} />
+              <ChoiceGroup label="Travel Type" name="vacationType" value={details.vacationType} options={["Domestic", "International"]} error={errors["vacationType"]} onChange={(value) => updateDetails(goal, { vacationType: value as GoalDynamicDetails["vacationType"] }, onChange)} />
+            </>}
+
+            {goal.goalType === "Wealth Creation" && <TextField id="targetWealthCorpus" label="Target Wealth / Corpus" value={details.targetWealthCorpus} onChange={(value) => updateDetails(goal, { targetWealthCorpus: value }, onChange)} type="number" placeholder="₹" error={errors["targetWealthCorpus"]} />}
+
+            {isDebt && <div className="sm:col-span-2">
+              <label htmlFor="selectedLiabilityId" className="mb-1.5 block text-xs font-semibold text-navy-900">Select Liability / Debt</label>
+              <select id="selectedLiabilityId" value={details.selectedLiabilityId} onChange={(e) => updateDetails(goal, { selectedLiabilityId: e.target.value }, onChange)} className={`${fieldClasses(Boolean(errors["selectedLiabilityId"]))} appearance-none`}>
+                <option value="">Select an existing liability</option>
+                {liabilities.map((liability) => <option key={liability.id} value={liability.id}>{liability.name} · ₹{liability.outstandingAmount.toLocaleString("en-IN")}</option>)}
+              </select>
+              <ErrorMessage id="selectedLiabilityId-error" message={errors["selectedLiabilityId"]} />
+              {details.selectedLiabilityId && (() => {
+                const selected = liabilities.find((item) => item.id === details.selectedLiabilityId);
+                return selected ? <p className="mt-2 text-xs text-slate-500">Outstanding ₹{selected.outstandingAmount.toLocaleString("en-IN")}{selected.interestRate != null ? ` · ${selected.interestRate}% interest` : ""}{selected.emi != null ? ` · EMI ₹${selected.emi.toLocaleString("en-IN")}` : ""}</p> : null;
+              })()}
+            </div>}
+
+            {goal.goalType === "Philanthropy" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
+
+            {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
+
+            <div>
+              <label htmlFor="targetDate" className="mb-1.5 block text-xs font-semibold text-navy-900">Target Month &amp; Year</label>
+              <input id="targetDate" type="month" min={new Date().toISOString().slice(0, 7)} value={goal.targetDate.slice(0, 7)} onChange={(e) => onChange({ targetMode: "Date", targetDate: e.target.value ? `${e.target.value}-01` : "" })} className={fieldClasses(Boolean(errors.targetDate || errors.targetMode))} />
+              <ErrorMessage id="targetDate-error" message={errors.targetDate || errors.targetMode} />
+            </div>
+
+            <ChoiceGroup label="Flexibility" name="flexibility" value={goal.flexibility} options={goalFlexibilities} error={errors.flexibility} onChange={(value) => onChange({ flexibility: value as Goal["flexibility"] })} />
+
+            {isOther && <>
+              <TextField id="otherGoalDescription" label="Goal Description" value={details.otherGoalDescription} onChange={(value) => updateDetails(goal, { otherGoalDescription: value }, onChange)} placeholder="Describe the goal" error={errors["otherGoalDescription"]} />
+              <TextField id="otherAdditionalDetails" label="Relevant Additional Details" value={details.otherAdditionalDetails} onChange={(value) => updateDetails(goal, { otherAdditionalDetails: value }, onChange)} placeholder="Anything else we should know?" error={errors["otherAdditionalDetails"]} />
+            </>}
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button type="submit" className="rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white">{isEditing ? "Save changes" : "Add goal"}</button>
+        </div>
+      </>}
     </form>
   );
 }
