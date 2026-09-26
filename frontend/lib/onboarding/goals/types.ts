@@ -16,7 +16,8 @@ export const goalFlexibilities = ["Fixed", "Flexible"] as const;
 export const targetModes = ["Date", "Age"] as const;
 export const inflationOptions = ["Yes", "No"] as const;
 
-export type GoalType = (typeof goalTypes)[number];
+// Legacy backend values are retained for compatibility; they are not shown as selectable goals.
+export type GoalType = (typeof goalTypes)[number] | "Home Purchase" | "Other";
 export type GoalPriority = (typeof goalPriorities)[number];
 export type GoalFlexibility = (typeof goalFlexibilities)[number];
 export type TargetMode = (typeof targetModes)[number];
