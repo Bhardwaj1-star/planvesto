@@ -123,7 +123,7 @@ export type GoalInput = {
   flexibility: GoalFlexibility;
   status: GoalStatus;
   asset_mappings: AssetMappingInput[];
-  dynamic_details?: Record<string, unknown>;
+  dynamic_details?: object;
 };
 export type DefinedGoalAssetMapping = {
   mapping_id?: string | null;
