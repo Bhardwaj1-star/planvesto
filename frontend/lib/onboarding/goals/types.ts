@@ -10,7 +10,7 @@ export const goalTypes = [
   "Debt Repayment",
   "Philanthropy",
   "Others",
-] as const;
+];
 export const goalPriorities = ["Critical", "Important", "Aspirational"] as const;
 export const goalFlexibilities = ["Fixed", "Flexible"] as const;
 export const targetModes = ["Date", "Age"] as const;
@@ -120,48 +120,35 @@ export type GoalInput = {
   target_month: number;
   target_year: number;
   inflation_rate: number | null;
-  priority: string;
-  flexibility: string;
-  status: string;
+  priority: GoalPriority;
+  flexibility: GoalFlexibility;
+  status: GoalStatus;
   asset_mappings: AssetMappingInput[];
 };
 export type DefinedGoalAssetMapping = {
-  mapping_id?: string | null;
-  defined_goal_id?: string | null;
+  mapping_id?: string;
   asset_id: string;
-  asset_name?: string | null;
   allocation_type: AssetMappingAllocationType;
   allocation_value: number;
-  allocated_amount: number;
-  allocated_percentage: number;
-  expected_return: number;
+  expected_return: number | null;
   return_frequency: string;
-  projected_value: number;
-  created_at?: string | null;
 };
 export type DefinedGoal = {
-  defined_goal_id?: string | null;
   goal_id: string;
   planning_unit_id: string;
-  investor_id?: string | null;
-  version: number;
-  is_latest: boolean;
-  goal_type: string;
   goal_name: string;
+  goal_type: GoalType;
   today_cost: number;
   inflation_rate: number;
-  inflation_source: string;
   target_month: number;
   target_year: number;
-  duration_years: number;
-  future_target: number;
-  priority: string;
-  flexibility: string;
-  status: string;
-  mapped_assets: DefinedGoalAssetMapping[];
-  projected_mapped_asset_value: number;
+  target_amount: number;
   funding_gap: number;
+  required_monthly_contribution: number;
   funding_status: FundingStatus;
-  version_metadata?: Record<string, unknown>;
-  created_at?: string | null;
+  priority: GoalPriority;
+  flexibility: GoalFlexibility;
+  status: GoalStatus;
+  version: number;
+  mapped_assets: DefinedGoalAssetMapping[];
 };
