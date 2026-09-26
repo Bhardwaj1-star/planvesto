@@ -5,6 +5,7 @@ import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import { InvestorButton, InvestorPageHeader, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
+import { apiRequest } from "../../../lib/api/client";
 import {
   buildStrategy,
   getLatestStrategyRun,
@@ -16,6 +17,7 @@ import {
   type StrategyArchitecture,
   type StrategyRun,
 } from "../../../lib/api/strategy";
+import type { DefinedGoal } from "../../../lib/onboarding/goals/types";
 
 const DEFAULT_PRIORITIES: InvestorPriorities = { safety: 0.25, liquidity: 0.25, growth: 0.25, flexibility: 0.25 };
 
@@ -31,9 +33,15 @@ function displayMetric(value: unknown) {
   return String(value);
 }
 
+function formatINR(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+}
+
 export default function InvestorStrategyBuilderPage() {
   const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
+  const [goalPreview, setGoalPreview] = useState<DefinedGoal | null>(null);
   const [run, setRun] = useState<StrategyRun | null>(null);
   const [history, setHistory] = useState<StrategyRun[]>([]);
   const [priorities, setPriorities] = useState(DEFAULT_PRIORITIES);
@@ -54,7 +62,6 @@ export default function InvestorStrategyBuilderPage() {
         const nextGoals = (data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" }));
         setGoals(nextGoals);
 
-        // Preserve the goal selected in the Goal Planner → Strategy handoff.
         const requestedGoalId =
           typeof window !== "undefined"
             ? new URLSearchParams(window.location.search).get("goalId")
@@ -71,13 +78,21 @@ export default function InvestorStrategyBuilderPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedGoalId) { setRun(null); setHistory([]); return; }
+    if (!selectedGoalId) { setGoalPreview(null); setRun(null); setHistory([]); return; }
     let active = true;
     (async () => {
-      setWorking(true); setError(null); setRun(null);
+      setWorking(true); setError(null); setRun(null); setGoalPreview(null);
       try {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+
+        try {
+          const preview = await apiRequest<DefinedGoal>(`/api/goals/${selectedGoalId}/defined/latest?planning_unit_id=${planningUnitId}`);
+          if (active) setGoalPreview(preview);
+        } catch {
+          if (active) setGoalPreview(null);
+        }
+
         try {
           const latest = await getLatestStrategyRun(planningUnitId, selectedGoalId);
           if (!active) return;
@@ -160,19 +175,26 @@ export default function InvestorStrategyBuilderPage() {
                 <option value="">Select goal</option>
                 {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
-              {selectedGoalId && (
-                <span className="mt-2 block text-xs font-semibold text-teal-700">
-                  Planning strategy for: {goals.find((g) => g.id === selectedGoalId)?.name ?? "Selected goal"}
-                </span>
-              )}
+              {selectedGoalId && <span className="mt-2 block text-xs font-semibold text-teal-700">Planning strategy for: {goals.find((g) => g.id === selectedGoalId)?.name ?? "Selected goal"}</span>}
             </label>
             <InvestorButton onClick={handleBuild} disabled={working || !selectedGoalId}>{working ? "Working…" : run ? "Rebuild Strategy Run" : "Build Strategy"}</InvestorButton>
           </div>
           {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span></div>}
         </section>
 
+        {goalPreview && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div><h2 className="text-lg font-bold">Goal Calculation &amp; Preview</h2><p className="mt-1 text-sm text-slate-500">This is the Goal Planner calculation that the Strategy Run is based on.</p></div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Today&apos;s Cost</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.today_cost)}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Inflation</p><p className="mt-1 text-lg font-extrabold">{(goalPreview.inflation_rate * 100).toFixed(1)}%</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Required Corpus</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.future_target)}</p></div>
+            <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Funding Gap</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.funding_gap)}</p></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600"><span>Target: <strong>{String(goalPreview.target_month).padStart(2, "0")}/{goalPreview.target_year}</strong></span><span>•</span><span>Mapped Assets: <strong>{formatINR(goalPreview.projected_mapped_asset_value)}</strong></span><span>•</span><span>Monthly Contribution: <strong>{formatINR(goalPreview.required_monthly_contribution)}</strong></span><span>•</span><span>Status: <strong>{goalPreview.funding_status}</strong></span></div>
+        </section>}
+
         {!run ? (
-          <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Run yet</h2><p className="mt-2 text-sm text-slate-500">Set the investor priorities below, then build the Strategy Run.</p></section>
+          <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Run yet</h2><p className="mt-2 text-sm text-slate-500">Review the Goal Calculation &amp; Preview above, then build the Strategy Run.</p></section>
         ) : (
           <>
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -186,7 +208,7 @@ export default function InvestorStrategyBuilderPage() {
               {run.architectures.length > 1 && <div className="mt-5"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Available Architectures</p><div className="mt-2 flex flex-wrap gap-2">{run.architectures.map((architecture) => <button key={architecture.architecture_id} onClick={() => { setSelectedArchitectureId(architecture.architecture_id); setSelectedStrategyId(architecture.primary_strategy_id); const firstScenario = run.scenarios.find((s) => s.strategy_id === architecture.primary_strategy_id); if (firstScenario) setSelectedScenarioId(firstScenario.scenario_id); }} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${selectedArchitectureId === architecture.architecture_id ? "border-teal-500 bg-teal-50 text-teal-800" : "border-slate-200 hover:bg-slate-50"}`}>{strategyName(architecture.primary_strategy_id)}</button>)}</div></div>}
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-1 text-sm text-slate-500">The engine's recommendation is an architecture, not merely a product or single portfolio label.</p></div><div className="mt-5 rounded-2xl border border-teal-200 bg-teal-50 p-5"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Recommended Primary</p><h3 className="mt-1 text-xl font-extrabold">{strategyName(run.recommendation.architecture?.primary_strategy_id ?? run.recommendation.recommended_strategy_id)}</h3><p className="mt-1 text-sm text-slate-600">Scenario: {run.recommendation.recommended_scenario_id}</p>{run.recommendation.feasibility_status && <p className="mt-2 text-xs font-semibold text-slate-500">Feasibility: {run.recommendation.feasibility_status}</p>}{run.recommendation.short_reasons.length > 0 && <ul className="mt-4 space-y-2 text-sm text-slate-700">{run.recommendation.short_reasons.map((reason, i) => <li key={i}>• {reason}</li>)}</ul>}{run.recommendation.constraints.length > 0 && <p className="mt-4 text-sm text-amber-700">Constraints: {run.recommendation.constraints.join("; ")}</p>}{run.recommendation.complete_reasoning && <details className="mt-4"><summary className="cursor-pointer text-sm font-bold text-teal-800">View complete reasoning</summary><p className="mt-3 text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p></details>}</div></section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-1 text-sm text-slate-500">The engine&apos;s recommendation is an architecture, not merely a product or single portfolio label.</p></div><div className="mt-5 rounded-2xl border border-teal-200 bg-teal-50 p-5"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Recommended Primary</p><h3 className="mt-1 text-xl font-extrabold">{strategyName(run.recommendation.architecture?.primary_strategy_id ?? run.recommendation.recommended_strategy_id)}</h3><p className="mt-1 text-sm text-slate-600">Scenario: {run.recommendation.recommended_scenario_id}</p>{run.recommendation.feasibility_status && <p className="mt-2 text-xs font-semibold text-slate-500">Feasibility: {run.recommendation.feasibility_status}</p>}{run.recommendation.short_reasons.length > 0 && <ul className="mt-4 space-y-2 text-sm text-slate-700">{run.recommendation.short_reasons.map((reason, i) => <li key={i}>• {reason}</li>)}</ul>}{run.recommendation.constraints.length > 0 && <p className="mt-4 text-sm text-amber-700">Constraints: {run.recommendation.constraints.join("; ")}</p>}{run.recommendation.complete_reasoning && <details className="mt-4"><summary className="cursor-pointer text-sm font-bold text-teal-800">View complete reasoning</summary><p className="mt-3 text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p></details>}</div></section>
 
             <section><div className="mb-4"><h2 className="text-lg font-bold">Strategy alternatives</h2><p className="mt-1 text-sm text-slate-500">Alternative pathways returned by the engine. These are strategic trade-offs, not product comparisons.</p></div><div className="grid gap-5 lg:grid-cols-2">{run.rankings.map((ranking) => { const strategy = run.applicable_strategies.find((s) => s.strategy_id === ranking.strategy_id); const isSelected = selectedStrategyId === ranking.strategy_id && selectedScenarioId === ranking.scenario_id; return <article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${isSelected ? "border-teal-500 ring-2 ring-teal-100" : "border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Rank #{ranking.rank}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended && <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{strategy?.description ?? "Strategy definition supplied by the engine."}</p><div className="mt-5 grid grid-cols-2 gap-3">{Object.entries(ranking.dimension_scores).map(([k,v]) => <div key={k} className="rounded-xl bg-slate-50 p-3"><p className="text-xs capitalize text-slate-400">{k}</p><p className="mt-1 font-bold">{displayMetric(v)}</p></div>)}<div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Composite</p><p className="mt-1 font-bold">{displayMetric(ranking.composite_score)}</p></div></div><button onClick={() => { setSelectedStrategyId(ranking.strategy_id); setSelectedScenarioId(ranking.scenario_id); const s = run.applicable_strategies.find((x) => x.strategy_id === ranking.strategy_id); const defaults = Object.fromEntries((s?.implementation_parameters ?? []).map((p) => [p.name, p.default_value])); setParameters(defaults); const architecture = run.architectures.find((a) => a.primary_strategy_id === ranking.strategy_id); if (architecture) setSelectedArchitectureId(architecture.architecture_id); }} className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50">{isSelected ? "Selected" : "Select this pathway"}</button></article>; })}</div></section>
 
