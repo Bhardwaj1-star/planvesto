@@ -30,6 +30,8 @@ class StrategyEngine:
         if priorities is None:
             raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
+        # Goal type is the library index. Final eligibility uses goal characteristics
+        # and available financial-state facts; risk-profile inputs are intentionally absent.
         strategies = filter_applicable_strategies(
             defined_goal=defined_goal,
             financial_context=financial_context,
@@ -45,28 +47,11 @@ class StrategyEngine:
             )
             return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [])
 
-        # Rank all eligible strategies first, then expose only the two highest-ranked
-        # distinct strategies for the goal. This keeps the comparison focused while
-        # preserving the existing applicability and ranking logic.
         all_scenarios: list[Scenario] = []
         for strategy in strategies:
             all_scenarios.extend(generate_baseline_scenarios(strategy, defined_goal))
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
-
-        initial_rankings = rank_scenarios(strategies, all_scenarios, priorities)
-        top_strategy_ids: list[str] = []
-        for item in initial_rankings:
-            if item.strategy_id not in top_strategy_ids:
-                top_strategy_ids.append(item.strategy_id)
-            if len(top_strategy_ids) == 2:
-                break
-        if not top_strategy_ids:
-            top_strategy_ids = [strategy.strategy_id for strategy in strategies[:2]]
-
-        strategies = [strategy for strategy in strategies if strategy.strategy_id in top_strategy_ids]
-        allowed_ids = {strategy.strategy_id for strategy in strategies}
-        all_scenarios = [scenario for scenario in all_scenarios if scenario.strategy_id in allowed_ids]
 
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         rankings = rank_scenarios(strategies, all_scenarios, priorities)
