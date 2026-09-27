@@ -17,9 +17,11 @@ export default function RetirementReportPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const runId = new URLSearchParams(window.location.search).get('run_id');
-    if (!runId) { setError('No strategy run selected.'); return; }
-    fetch(`/api/strategy/runs/${encodeURIComponent(runId)}/retirement-report`)
+    const params = new URLSearchParams(window.location.search);
+    const runId = params.get('run_id');
+    const planningUnitId = params.get('planning_unit_id');
+    if (!runId || !planningUnitId) { setError('A strategy run and planning unit are required.'); return; }
+    fetch(`/api/strategy/runs/${encodeURIComponent(runId)}/retirement-report?planning_unit_id=${encodeURIComponent(planningUnitId)}`)
       .then(async r => { if (!r.ok) throw new Error(await r.text()); return r.json(); })
       .then(setReport)
       .catch(e => setError(e.message || 'Unable to load report.'));
