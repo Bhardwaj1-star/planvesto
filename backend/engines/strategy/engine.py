@@ -20,6 +20,36 @@ class StrategyEngineResult:
 
 
 class StrategyEngine:
+    @staticmethod
+    def _decision_context(financial_context: dict | None, rule_assessment=None) -> dict:
+        context = dict(financial_context or {})
+        if rule_assessment is None:
+            context["rule_diagnostics"] = []
+            context["decision_roles"] = {"eligibility": [], "ranking": [], "recommendation": []}
+            return context
+
+        diagnostics = list(rule_assessment.diagnostics)
+        # Current rule set: hard constraints govern eligibility; financial-health
+        # diagnostics are recommendation evidence. Ranking remains driven by the
+        # explicit investor priority weights until a documented scoring policy exists.
+        roles = {
+            "eligibility": [r.rule_id for r in rule_assessment.hard_constraints],
+            "ranking": [],
+            "recommendation": [r.rule_id for r in diagnostics],
+        }
+        context["rule_diagnostics"] = [
+            {
+                "rule_id": r.rule_id,
+                "passed": r.passed,
+                "severity": r.severity,
+                "message": r.message,
+                "evidence": r.evidence,
+            }
+            for r in diagnostics
+        ]
+        context["decision_roles"] = roles
+        return context
+
     def execute(
         self,
         defined_goal: DefinedGoal,
@@ -52,13 +82,7 @@ class StrategyEngine:
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
 
-        # Diagnostics describe the investor's financial state. They are passed
-        # through as context for downstream strategy components, but do not by
-        # themselves alter the existing priority-weighted ranking formula.
-        strategy_context = dict(financial_context or {})
-        if rule_assessment is not None:
-            strategy_context["rule_assessment"] = rule_assessment
-
+        strategy_context = self._decision_context(financial_context, rule_assessment)
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         rankings = rank_scenarios(strategies, all_scenarios, priorities)
         architectures = compose_architectures(strategies, defined_goal, strategy_context)
