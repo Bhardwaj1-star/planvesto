@@ -42,6 +42,14 @@ class StrategyPlan:
 
 
 def _matches(actual: Any, operator: str, expected: Any) -> bool:
+    """Compare normalized financial values without inventing missing data."""
+    if isinstance(actual, dict):
+        if actual.get("available") is False:
+            return False
+        if "value" not in actual:
+            return False
+        actual = actual["value"]
+
     if operator == "eq": return actual == expected
     if operator == "neq": return actual != expected
     if operator == "gte": return actual is not None and actual >= expected
