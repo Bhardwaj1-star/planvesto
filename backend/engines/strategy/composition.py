@@ -1,5 +1,6 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyArchitecture, StrategyDefinition
+from engines.strategy.components.adapters import component_for_strategy
 
 
 def compose_architectures(
@@ -7,80 +8,83 @@ def compose_architectures(
     defined_goal: DefinedGoal,
     financial_context: dict | None = None,
 ) -> list[StrategyArchitecture]:
-    """Build coherent goal-level architectures from eligible strategies.
+    """Compose goal-level architectures from reusable strategy components.
 
-    Composition is strategic only: no investment products or risk-profile inputs are used.
+    The composer deliberately does not inspect strategy names or strategy IDs.
+    Existing library families are translated through the component adapter, and
+    component compatibility/conflict rules govern composition.
     """
     context = financial_context or {}
-    by_id = {s.strategy_id: s for s in strategies}
-    ordered = list(strategies)
-    if not ordered:
+    if not strategies:
         return []
 
-    surplus = _metric(context, "investable_surplus_monthly")
-    liabilities = _metric(context, "total_liabilities")
-    safety_months = _metric(context, "safety_reserve_months")
+    mapped = [(strategy, component_for_strategy(strategy)) for strategy in strategies]
+    mapped = [(strategy, component) for strategy, component in mapped if component is not None]
+    if not mapped:
+        return []
 
-    def make(primary: StrategyDefinition, supporting: list[str], rationale: list[str], techniques: list[str], constraints: list[str] | None = None):
-        support = [sid for sid in supporting if sid in by_id and sid != primary.strategy_id]
-        # Never compose an explicit conflict.
-        support = [sid for sid in support if sid not in primary.conflicting_strategy_ids]
+    by_id = {strategy.strategy_id: (strategy, component) for strategy, component in mapped}
+    ordered = [strategy for strategy, _ in mapped]
+
+    def can_support(primary, candidate) -> bool:
+        if candidate.strategy_id == primary.strategy_id:
+            return False
+        if candidate.strategy_id in primary.conflicting_strategy_ids:
+            return False
+        if primary.strategy_id in candidate.conflicting_strategy_ids:
+            return False
+        primary_component = by_id[primary.strategy_id][1]
+        candidate_component = by_id[candidate.strategy_id][1]
+        return primary_component.can_combine_with(candidate_component)
+
+    def make(primary: StrategyDefinition, supporting: list[StrategyDefinition], reason: str):
+        support = [s for s in supporting if can_support(primary, s)]
+        primary_component = by_id[primary.strategy_id][1]
+        support_components = [by_id[s.strategy_id][1] for s in support]
+        constraints = list(primary.constraints)
+        missing_inputs = [name for name in primary.required_inputs if name not in context]
+        if missing_inputs:
+            constraints.append(f"Missing strategy inputs: {', '.join(missing_inputs)}")
         return StrategyArchitecture(
-            architecture_id=f"arch-{defined_goal.goal_id}-{primary.strategy_id}-{'-'.join(support) or 'core'}",
+            architecture_id=f"arch-{defined_goal.goal_id}-{primary.strategy_id}-{'-'.join(s.strategy_id for s in support) or 'core'}",
             primary_strategy_id=primary.strategy_id,
-            supporting_strategy_ids=support,
-            technique_ids=techniques,
-            rationale=rationale,
+            supporting_strategy_ids=[s.strategy_id for s in support],
+            technique_ids=primary.technique_ids[:3],
+            rationale=[reason, f"Primary component: {primary_component.role}."] + [f"Supporting component: {c.role}." for c in support_components],
             trade_offs=primary.trade_offs[:2],
-            feasibility_status="conditional" if constraints else "feasible",
-            constraints=constraints or [],
+            feasibility_status="conditional" if missing_inputs else "feasible",
+            constraints=constraints,
         )
 
     architectures: list[StrategyArchitecture] = []
     primary = ordered[0]
 
-    # Funding gaps favour a funding strategy; supporting strategies can protect liquidity,
-    # reduce debt pressure, or allocate existing resources.
-    funding = next((s for s in ordered if "fund" in s.name.lower() or s.strategy_id == "strat-calibrated-growth"), None)
-    preservation = next((s for s in ordered if s.strategy_id == "strat-cap-preservation"), None)
-    debt = next((s for s in ordered if "debt" in s.name.lower()), None)
-    allocation = next((s for s in ordered if "allocation" in s.name.lower() or "repriorit" in s.name.lower()), None)
-    accumulation = next((s for s in ordered if "accumulation" in s.name.lower()), None)
-    derisk = next((s for s in ordered if "de-risk" in s.name.lower()), None)
-    income = next((s for s in ordered if "income transition" in s.name.lower()), None)
+    # Build candidate architectures from the available component roles and the
+    # goal state. No goal-specific engine or strategy-name heuristic is used.
+    for candidate in ordered:
+        role = by_id[candidate.strategy_id][1].role
+        if role == "funding" and defined_goal.funding_status == "Shortfall":
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role in {"preservation", "debt", "orchestration"}]
+            architectures.append(make(candidate, supports, "The goal has a funding shortfall, so funding is the primary strategic role."))
+        elif role == "accumulation" and defined_goal.duration_years >= 7:
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role in {"transition", "preservation"}]
+            architectures.append(make(candidate, supports, "The goal has a sufficiently long horizon for an accumulation-led architecture."))
+        elif role == "transition" and defined_goal.duration_years <= 7:
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role == "preservation"]
+            architectures.append(make(candidate, supports, "The goal is approaching maturity, so transition becomes strategically relevant."))
+        elif role == "income" and defined_goal.duration_years <= 5:
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role == "preservation"]
+            architectures.append(make(candidate, supports, "The goal is close enough that dependable cash-flow support becomes strategically relevant."))
+        elif role == "debt" and _metric(context, "total_liabilities") not in (None, 0):
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role in {"funding", "orchestration"}]
+            architectures.append(make(candidate, supports, "Liability pressure is part of the available financial context and can affect goal feasibility."))
+        elif role == "orchestration" and defined_goal.funding_status in {"Overfunded", "On Track"}:
+            supports = [s for s in ordered if by_id[s.strategy_id][1].role in {"preservation", "funding"}]
+            architectures.append(make(candidate, supports, "The goal is funded or on track, so resource allocation can be coordinated explicitly."))
 
-    if defined_goal.funding_status == "Shortfall" and funding:
-        supporting = []
-        if preservation and defined_goal.duration_years <= 5:
-            supporting.append(preservation.strategy_id)
-        if debt and liabilities is not None and liabilities > 0:
-            supporting.append(debt.strategy_id)
-        if allocation and len(strategies) > 2:
-            supporting.append(allocation.strategy_id)
-        architectures.append(make(funding, supporting, ["The goal has a funding shortfall, so the architecture prioritises closing the gap."], ["tech-contribution-escalation", "tech-asset-earmarking"]))
-
-    if accumulation and defined_goal.duration_years >= 7:
-        supporting = [derisk.strategy_id] if derisk else []
-        architectures.append(make(accumulation, supporting, ["The long horizon creates room for an accumulation-led architecture.", "De-risking is treated as a supporting strategy when the goal approaches maturity."], ["tech-glide-path", "tech-asset-earmarking"]))
-
-    if derisk and defined_goal.duration_years <= 7:
-        supporting = [preservation.strategy_id] if preservation else []
-        architectures.append(make(derisk, supporting, ["As the goal approaches, the architecture prioritises reducing late-horizon funding risk."], ["tech-glide-path", "tech-cashflow-matching"]))
-
-    if income and defined_goal.duration_years <= 5:
-        architectures.append(make(income, [preservation.strategy_id] if preservation else [], ["The goal is close enough that converting accumulated resources into dependable cash flows becomes strategically relevant."], ["tech-cashflow-matching", "tech-bucketing"]))
-
-    if debt and liabilities is not None and liabilities > 0:
-        architectures.append(make(debt, [funding.strategy_id] if funding else [], ["Liability pressure is material enough to make debt structure part of the goal strategy."], ["tech-goal-segmentation"]))
-
-    if allocation and defined_goal.funding_status in {"Overfunded", "On Track"}:
-        architectures.append(make(allocation, [preservation.strategy_id] if preservation else [], ["The goal is already funded or ahead, so resources should be deliberately allocated rather than automatically accumulated further."], ["tech-asset-earmarking", "tech-goal-segmentation"]))
-
-    # Always retain the best eligible strategy as a fallback architecture.
     if not architectures:
-        architectures.append(make(primary, [], ["This is the strongest eligible architecture under the currently available goal information."], primary.technique_ids[:3]))
+        architectures.append(make(primary, [], "This is the strongest eligible architecture under the currently available goal information."))
 
-    # De-duplicate architectures while preserving order.
     unique: list[StrategyArchitecture] = []
     seen: set[tuple[str, tuple[str, ...]]] = set()
     for architecture in architectures:
