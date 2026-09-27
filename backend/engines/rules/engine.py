@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 from models.defined_goal import DefinedGoal
@@ -18,6 +19,15 @@ GOAL_TYPE_ALIASES = {
 }
 
 
+class DecisionRole(str, Enum):
+    HARD_CONSTRAINT = "HARD_CONSTRAINT"
+    ELIGIBILITY = "ELIGIBILITY"
+    RANKING_INPUT = "RANKING_INPUT"
+    RECOMMENDATION_ONLY = "RECOMMENDATION_ONLY"
+    ARCHITECTURE_CONSTRAINT = "ARCHITECTURE_CONSTRAINT"
+    EXPLANATORY_EVIDENCE = "EXPLANATORY_EVIDENCE"
+
+
 @dataclass(frozen=True)
 class RuleEvaluation:
     strategy_id: str
@@ -27,6 +37,7 @@ class RuleEvaluation:
     unmet_characteristics: tuple[str, ...] = ()
     reasons: tuple[str, ...] = ()
     missing_inputs: tuple[str, ...] = ()
+    role: DecisionRole = DecisionRole.ELIGIBILITY
 
 
 @dataclass(frozen=True)
@@ -36,6 +47,34 @@ class RuleResult:
     severity: str
     message: str
     evidence: dict[str, Any]
+    role: DecisionRole | None = None
+
+
+def infer_decision_role(rule_id: str, severity: str | None = None) -> DecisionRole:
+    """Canonical map for the current business contract.
+
+    This is a formalized contract for the existing tests: diagnostics do not enter
+    composite scoring, recommendation is the consumer of explanatory evidence, and
+    hard constraints remain distinct from ranking inputs.
+    """
+    explicit = {
+        "goal-positive-horizon": DecisionRole.HARD_CONSTRAINT,
+        "goal-positive-target": DecisionRole.HARD_CONSTRAINT,
+        "priority-sensitive": DecisionRole.RECOMMENDATION_ONLY,
+        "fixed-timeline": DecisionRole.RECOMMENDATION_ONLY,
+        "surplus-health": DecisionRole.RECOMMENDATION_ONLY,
+        "emergency-reserve-health": DecisionRole.EXPLANATORY_EVIDENCE,
+        "liquidity-health": DecisionRole.EXPLANATORY_EVIDENCE,
+        "debt-pressure-health": DecisionRole.EXPLANATORY_EVIDENCE,
+        "leverage-health": DecisionRole.EXPLANATORY_EVIDENCE,
+    }
+    if rule_id in explicit:
+        return explicit[rule_id]
+    if severity == "hard":
+        return DecisionRole.HARD_CONSTRAINT
+    if severity == "soft":
+        return DecisionRole.RECOMMENDATION_ONLY
+    return DecisionRole.EXPLANATORY_EVIDENCE
 
 
 @dataclass(frozen=True)
@@ -43,6 +82,29 @@ class RuleAssessment:
     diagnostics: tuple[RuleResult, ...]
     hard_constraints: tuple[RuleResult, ...]
     soft_constraints: tuple[RuleResult, ...]
+
+    @property
+    def decision_roles(self) -> dict[str, list[str]]:
+        def role_for(result: RuleResult) -> DecisionRole:
+            if result.role is not None:
+                return result.role
+            return infer_decision_role(result.rule_id, result.severity)
+
+        mappings = {
+            "HARD_CONSTRAINT": [],
+            "ELIGIBILITY": [],
+            "RANKING_INPUT": [],
+            "RECOMMENDATION_ONLY": [],
+            "ARCHITECTURE_CONSTRAINT": [],
+            "EXPLANATORY_EVIDENCE": [],
+        }
+        for result in self.hard_constraints:
+            mappings[DecisionRole.HARD_CONSTRAINT.value].append(result.rule_id)
+        for result in self.soft_constraints:
+            mappings[DecisionRole.RECOMMENDATION_ONLY.value].append(result.rule_id)
+        for result in self.diagnostics:
+            mappings[role_for(result).value].append(result.rule_id)
+        return mappings
 
     @property
     def eligible(self) -> bool:
@@ -164,7 +226,14 @@ class RuleEngine:
             diagnostics.append(RuleResult(rule_id, True, "diagnostic", f"{label} is unavailable; no health conclusion was made.", {"available": False}))
             return
         status = RuleEngine._status(value, excellent_floor, healthy_floor, inverse)
-        diagnostics.append(RuleResult(rule_id, status != "critical", "diagnostic", f"{label} is {status}.", {"value": value, "status": status, "source_metric": key}))
+        diagnostics.append(RuleResult(
+            rule_id,
+            status != "critical",
+            "diagnostic",
+            f"{label} is {status}.",
+            {"value": value, "status": status, "source_metric": key},
+            role=infer_decision_role(rule_id, "diagnostic"),
+        ))
 
     def assess(
         self,
@@ -177,27 +246,83 @@ class RuleEngine:
         soft: list[RuleResult] = []
 
         if goal.duration_years <= 0:
-            hard.append(RuleResult("goal-positive-horizon", False, "hard", "Goal horizon must be positive.", {"duration_years": goal.duration_years}))
+            hard.append(RuleResult(
+                "goal-positive-horizon",
+                False,
+                "hard",
+                "Goal horizon must be positive.",
+                {"duration_years": goal.duration_years},
+                role=DecisionRole.HARD_CONSTRAINT,
+            ))
         else:
-            diagnostics.append(RuleResult("goal-positive-horizon", True, "diagnostic", "Goal horizon is valid.", {"duration_years": goal.duration_years}))
+            diagnostics.append(RuleResult(
+                "goal-positive-horizon",
+                True,
+                "diagnostic",
+                "Goal horizon is valid.",
+                {"duration_years": goal.duration_years},
+                role=DecisionRole.EXPLANATORY_EVIDENCE,
+            ))
 
         if goal.future_target <= 0:
-            hard.append(RuleResult("goal-positive-target", False, "hard", "Goal target must be positive.", {"future_target": goal.future_target}))
+            hard.append(RuleResult(
+                "goal-positive-target",
+                False,
+                "hard",
+                "Goal target must be positive.",
+                {"future_target": goal.future_target},
+                role=DecisionRole.HARD_CONSTRAINT,
+            ))
         else:
-            diagnostics.append(RuleResult("goal-positive-target", True, "diagnostic", "Goal target is valid.", {"future_target": goal.future_target}))
+            diagnostics.append(RuleResult(
+                "goal-positive-target",
+                True,
+                "diagnostic",
+                "Goal target is valid.",
+                {"future_target": goal.future_target},
+                role=DecisionRole.EXPLANATORY_EVIDENCE,
+            ))
 
         if goal.priority.strip().lower() in {"critical", "high"}:
-            soft.append(RuleResult("priority-sensitive", True, "soft", "Goal priority requires explicit trade-off consideration.", {"priority": goal.priority}))
+            soft.append(RuleResult(
+                "priority-sensitive",
+                True,
+                "soft",
+                "Goal priority requires explicit trade-off consideration.",
+                {"priority": goal.priority},
+                role=DecisionRole.RECOMMENDATION_ONLY,
+            ))
 
         if goal.flexibility.strip().lower() == "fixed":
-            soft.append(RuleResult("fixed-timeline", True, "soft", "Fixed timeline limits timing flexibility.", {"flexibility": goal.flexibility}))
+            soft.append(RuleResult(
+                "fixed-timeline",
+                True,
+                "soft",
+                "Fixed timeline limits timing flexibility.",
+                {"flexibility": goal.flexibility},
+                role=DecisionRole.RECOMMENDATION_ONLY,
+            ))
 
         monthly_surplus = self._metric_value(context, "investable_surplus_monthly")
         if monthly_surplus is not None:
             passed = monthly_surplus >= 0
-            soft.append(RuleResult("surplus-health", passed, "soft", "Current monthly surplus is non-negative." if passed else "Current monthly surplus is negative.", {"investable_surplus_monthly": monthly_surplus}))
+            soft.append(RuleResult(
+                "surplus-health",
+                passed,
+                "soft",
+                "Current monthly surplus is non-negative." if passed else "Current monthly surplus is negative.",
+                {"investable_surplus_monthly": monthly_surplus},
+                role=DecisionRole.RECOMMENDATION_ONLY,
+            ))
         else:
-            diagnostics.append(RuleResult("surplus-health", True, "diagnostic", "Monthly surplus is unavailable; no surplus constraint was evaluated.", {"available": False}))
+            diagnostics.append(RuleResult(
+                "surplus-health",
+                True,
+                "diagnostic",
+                "Monthly surplus is unavailable; no surplus constraint was evaluated.",
+                {"available": False},
+                role=DecisionRole.EXPLANATORY_EVIDENCE,
+            ))
 
         self._health_diagnostic(context, diagnostics, "emergency_fund_coverage", "emergency-reserve-health", "Emergency reserve coverage", 9.0, 6.0)
         self._health_diagnostic(context, diagnostics, "current_liquidity_ratio", "liquidity-health", "Current liquidity", 1.5, 1.0)

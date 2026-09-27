@@ -29,13 +29,21 @@ class StrategyEngine:
             return context
         diagnostics = list(rule_assessment.diagnostics)
         context["rule_diagnostics"] = [
-            {"rule_id": r.rule_id, "passed": r.passed, "severity": r.severity, "message": r.message, "evidence": r.evidence}
+            {
+                "rule_id": r.rule_id,
+                "passed": r.passed,
+                "severity": r.severity,
+                "message": r.message,
+                "evidence": r.evidence,
+                "role": (r.role.value if getattr(r, "role", None) is not None else None),
+            }
             for r in diagnostics
         ]
+        roles = rule_assessment.decision_roles
         context["decision_roles"] = {
             "eligibility": [r.rule_id for r in rule_assessment.hard_constraints],
-            "ranking": [],
-            "recommendation": [r.rule_id for r in diagnostics],
+            "ranking": roles.get("RANKING_INPUT", []),
+            "recommendation": roles.get("RECOMMENDATION_ONLY", []) + roles.get("EXPLANATORY_EVIDENCE", []),
         }
         return context
 
