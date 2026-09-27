@@ -47,3 +47,10 @@ def get_run_history(goal_id: str, planning_unit_id: str = Query(...), authorizat
     user_id = authenticate_user(authorization)
     verify_goal_ownership(planning_unit_id, goal_id, user_id)
     return StrategyService().get_run_history(planning_unit_id, goal_id)
+
+
+@router.get("/runs/{strategy_run_id}/retirement-report")
+def get_retirement_report(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
+    return StrategyService().get_retirement_report(planning_unit_id, strategy_run_id)
