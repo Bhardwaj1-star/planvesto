@@ -1,6 +1,7 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
 from library.strategies.registry import get_active_strategies
+from engines.strategy.components.registry import get_component
 
 
 # Goal Planner uses user-facing goal names while the strategy catalog keeps
@@ -25,7 +26,7 @@ def _canonical_goal_type(value: str | None) -> str:
 
 
 def filter_applicable_strategies(goal_type: str | None = None, defined_goal: DefinedGoal | None = None, financial_context: dict | None = None) -> list[StrategyDefinition]:
-    """Evaluate eligibility from the goal plus available financial-state context."""
+    """Evaluate strategy eligibility from goal metadata and reusable components."""
     if defined_goal is not None:
         clean_goal_type = _canonical_goal_type(defined_goal.goal_type)
         goal = defined_goal
@@ -35,7 +36,16 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
     if not clean_goal_type:
         return []
 
-    context = financial_context or {}
+    context = dict(financial_context or {})
+    if goal is not None:
+        context.update({
+            "funding_status": goal.funding_status,
+            "duration_years": goal.duration_years,
+            "flexibility": goal.flexibility,
+            "priority": goal.priority,
+            "funding_gap": goal.funding_gap,
+        })
+
     applicable: list[StrategyDefinition] = []
     for strategy in get_active_strategies():
         types_lower = [_canonical_goal_type(t) for t in strategy.applicable_goal_types]
@@ -57,33 +67,13 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
             if not any(signals.get(c, False) for c in characteristics):
                 continue
 
-        liabilities = _metric(context, "total_liabilities")
-        surplus = _metric(context, "investable_surplus_monthly")
-        emi = _metric(context, "emi_burden_monthly")
-        if strategy.strategy_id == "strat-debt-reduction":
-            # Debt reduction is only a financially grounded strategy when the
-            # household actually has debt and its servicing burden is known.
-            if liabilities is not None and liabilities <= 0:
-                continue
-            if liabilities is not None and emi is None:
-                continue
-        if strategy.strategy_id == "strat-credit-utilisation":
-            # Credit is only considered when there is positive surplus and the
-            # existing debt-service burden is known. Unknown cash-flow capacity
-            # must not be treated as affordability.
-            if surplus is not None and surplus <= 0:
-                continue
-            if surplus is not None and emi is None:
+        if strategy.component_ids:
+            if not all(_component_is_active(component_id, context) for component_id in strategy.component_ids):
                 continue
         applicable.append(strategy)
     return applicable
 
 
-def _metric(context: dict, name: str) -> float | None:
-    raw = context.get(name)
-    if isinstance(raw, dict):
-        raw = raw.get("value") if raw.get("available", True) else None
-    try:
-        return float(raw) if raw is not None else None
-    except (TypeError, ValueError):
-        return None
+def _component_is_active(component_id: str, context: dict) -> bool:
+    component = get_component(component_id)
+    return component is None or component.is_preferred(context)
