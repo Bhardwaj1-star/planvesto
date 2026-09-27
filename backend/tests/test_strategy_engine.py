@@ -39,7 +39,7 @@ class TestStrategyApplicability:
         strats = filter_applicable_strategies("")
         assert len(strats) == 0
 
-    def test_debt_reduction_requires_known_debt_service_context(self):
+    def test_debt_strategy_eligibility_is_separate_from_component_activation(self):
         goal = _make_goal()
         without_emi = filter_applicable_strategies(
             defined_goal=goal,
@@ -53,10 +53,10 @@ class TestStrategyApplicability:
                 "emi_burden_monthly": {"value": 12000, "available": True},
             },
         )
-        assert "strat-debt-reduction" not in {s.strategy_id for s in without_emi}
+        assert "strat-debt-reduction" in {s.strategy_id for s in without_emi}
         assert "strat-debt-reduction" in {s.strategy_id for s in with_emi}
 
-    def test_credit_utilisation_requires_known_debt_service_context(self):
+    def test_credit_strategy_eligibility_is_separate_from_component_activation(self):
         goal = _make_goal(goal_type="Home Purchase")
         without_emi = filter_applicable_strategies(
             defined_goal=goal,
@@ -69,9 +69,8 @@ class TestStrategyApplicability:
                 "emi_burden_monthly": {"value": 12000, "available": True},
             },
         )
-        assert "strat-credit-utilisation" not in {s.strategy_id for s in without_emi}
+        assert "strat-credit-utilisation" in {s.strategy_id for s in without_emi}
         assert "strat-credit-utilisation" in {s.strategy_id for s in with_emi}
-
 
     def test_engine_raises_error_if_priorities_missing(self):
         engine = StrategyEngine()
@@ -118,7 +117,6 @@ class TestPriorityBasedRanking:
         priorities = InvestorPriorities(safety=0.8, liquidity=0.1, growth=0.05, flexibility=0.05)
         res = engine.execute(goal, priorities=priorities)
         top = res.rankings[0]
-        # Capital preservation should rank top with 80% safety weight
         assert top.strategy_id == "strat-cap-preservation"
         assert res.recommendation.recommended_strategy_id == "strat-cap-preservation"
 
@@ -128,7 +126,6 @@ class TestPriorityBasedRanking:
         priorities = InvestorPriorities(safety=0.05, liquidity=0.05, growth=0.85, flexibility=0.05)
         res = engine.execute(goal, priorities=priorities)
         top = res.rankings[0]
-        # Calibrated or Dynamic Growth should rank top
         assert top.strategy_id in {"strat-calibrated-growth", "strat-dynamic-accumulation"}
 
     def test_liquidity_prioritized_ranks_liquidity_highest(self):
