@@ -26,17 +26,64 @@ function numeric(value: string, optional = false) { if (optional && !value.trim(
 function encodeName(primary: string, description: string) { return description.trim() ? `${primary} - ${description.trim()}` : primary; }
 function decodeName(value: string, options: readonly string[]) { const option = options.find((item) => value === item || value.startsWith(`${item} - `)); return { primary: option || "", description: option ? value.slice(option.length).replace(/^ - /, "") : value }; }
 
-async function getPlanningUnitId() {
+async function getPlanningUnitId(): Promise<string> {
   const user = await getAuthenticatedUser();
   if (planningUnitPromise && planningUnitUserId === user.id) return planningUnitPromise;
   planningUnitUserId = user.id;
   planningUnitPromise = (async () => {
+    // Retrieve stored ID if any
     const storedId = typeof window !== "undefined" ? window.localStorage.getItem(planningUnitStorageKey) : null;
-    if (storedId && isUuid(storedId)) { const { data, error } = await supabase.from("planning_units").select("planning_unit_id").eq("planning_unit_id", storedId).eq("user_id", user.id).maybeSingle(); if (error) throw error; if (data) return data.planning_unit_id; }
-    const { data, error } = await supabase.from("planning_units").insert({ user_id: user.id }).select("planning_unit_id").single(); if (error) throw error;
-    if (typeof window !== "undefined") window.localStorage.setItem(planningUnitStorageKey, data.planning_unit_id); return data.planning_unit_id;
+    // Get all planning units for this user
+    const { data: userUnits, error: unitsError } = await supabase
+      .from("planning_units")
+      .select("planning_unit_id")
+      .eq("user_id", user.id);
+    if (unitsError) throw unitsError;
+    const unitIds = (userUnits || []).map((u) => u.planning_unit_id);
+    let chosenId: string | null = null;
+    // Validate stored ID belongs to this user
+    if (storedId && isUuid(storedId) && unitIds.includes(storedId)) {
+      chosenId = storedId;
+    }
+    // Prefer a unit that already has investor data
+    if (unitIds.length) {
+      const { data: invData, error: invError } = await supabase
+        .from("investors")
+        .select("planning_unit_id")
+        .in("planning_unit_id", unitIds)
+        .limit(1)
+        .maybeSingle();
+      if (invError) throw invError;
+      if (invData && invData.planning_unit_id) {
+        chosenId = invData.planning_unit_id;
+      } else if (!chosenId) {
+        // No unit with investors; fallback to any existing unit
+        chosenId = unitIds[0];
+      }
+    }
+    // If no existing planning unit, create a new one
+    if (!chosenId) {
+      const { data: newData, error: newError } = await supabase
+        .from("planning_units")
+        .insert({ user_id: user.id })
+        .select("planning_unit_id")
+        .single();
+      if (newError) throw newError;
+      chosenId = newData.planning_unit_id;
+    }
+    // Persist chosen ID to localStorage
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(planningUnitStorageKey, chosenId!);
+    }
+    return chosenId!;
   })();
-  try { return await planningUnitPromise; } catch (error) { planningUnitPromise = null; planningUnitUserId = null; throw error; }
+  try {
+    return await planningUnitPromise;
+  } catch (error) {
+    planningUnitPromise = null;
+    planningUnitUserId = null;
+    throw error;
+  }
 }
 
 async function loadRows(planningUnitId: string) {
