@@ -1,5 +1,11 @@
 """Rule Engine package."""
 
-from .engine import RuleEngine, RuleResult, RuleAssessment
+from .engine import RuleAssessment, RuleEngine, RuleEvaluation, RuleResult, StrategyRuleEngine
 
-__all__ = ["RuleEngine", "RuleResult", "RuleAssessment"]
+__all__ = [
+    "RuleEngine",
+    "RuleResult",
+    "RuleAssessment",
+    "StrategyRuleEngine",
+    "RuleEvaluation",
+]
