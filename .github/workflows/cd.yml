@@ -18,7 +18,11 @@ jobs:
       vars.GCP_PROJECT_ID != '' &&
       vars.GCP_REGION != '' &&
       vars.CLOUD_RUN_SERVICE != '' &&
-      vars.FIREBASE_APP_HOSTING_BACKEND_ID != '' &&
+      secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
+      secrets.GCP_DEPLOY_SERVICE_ACCOUNT != '' &&
+      secrets.VERCEL_TOKEN != '' &&
+      vars.VERCEL_ORG_ID != '' &&
+      vars.VERCEL_PROJECT_ID != '' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == 'main'))
@@ -31,10 +35,12 @@ jobs:
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       GCP_REGION: ${{ vars.GCP_REGION }}
       CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
-      FIREBASE_APP_HOSTING_BACKEND_ID: ${{ vars.FIREBASE_APP_HOSTING_BACKEND_ID }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
       - name: Checkout deployed commit
@@ -63,11 +69,17 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars "SUPABASE_URL=$SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY,CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS"
 
-      - name: Install Firebase CLI
-        run: npm install --global firebase-tools
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
-      - name: Trigger Firebase App Hosting rollout
-        run: |
-          firebase apphosting:rollouts:create "$FIREBASE_APP_HOSTING_BACKEND_ID" \
-            --project "$GCP_PROJECT_ID" \
-            --git_branch main
+      - name: Pull Vercel production configuration
+        working-directory: frontend
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build frontend for Vercel
+        working-directory: frontend
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy frontend to Vercel
+        working-directory: frontend
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
