@@ -55,6 +55,7 @@ class StrategyRuleEngine:
     @staticmethod
     def canonical_goal_type(value: str | None) -> str:
         clean = (value or "").strip().lower()
+        clean = clean.replace(" / ", "/")
         return GOAL_TYPE_ALIASES.get(clean, clean)
 
     def evaluate(
