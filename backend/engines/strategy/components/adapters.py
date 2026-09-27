@@ -4,12 +4,12 @@ from .registry import get_component
 
 
 # Explicit library migration map. Component composition is now driven by the
-# strategy record itself rather than by strategy_family semantics.
+# strategy record identity rather than by strategy_family semantics.
 STRATEGY_TO_COMPONENTS = {
     "strat-calibrated-growth": ("component-funding",),
     "strat-dynamic-accumulation": ("component-accumulation",),
-    "strat-high-liquidity-flex": ("component-transition", "component-liquation"),
-    "strat-cap-preservation": ("component-preservation",),
+    "strat-high-liquidity-flex": ("component-transition", "component-liquidity"),
+    "strat-cap-preservation": ("component-preservation", "component-liquidity"),
     "strat-debt-reduction": ("component-debt",),
     "strat-credit-utilisation": ("component-credit",),
     "strat-goal-reprioritisation": ("component-orchestration",),
