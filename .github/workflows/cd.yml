@@ -15,9 +15,13 @@ jobs:
   deploy:
     name: Deploy Planvesto
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+      vars.GCP_PROJECT_ID != '' &&
+      vars.GCP_REGION != '' &&
+      vars.CLOUD_RUN_SERVICE != '' &&
+      vars.FIREBASE_APP_HOSTING_BACKEND_ID != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
