@@ -5,14 +5,8 @@ from engines.strategy.components.registry import get_component
 from engines.strategy.components.definitions import register_default_components
 
 
-# Register the reusable component catalog once when the applicability layer is loaded.
-# Strategy eligibility must evaluate registered metadata rather than silently treating
-# an unknown component as active.
 register_default_components()
 
-# Goal Planner uses user-facing goal names while the strategy catalog keeps
-# canonical goal types. Keep this mapping in the applicability layer so the
-# catalog and persisted goal records do not need to be rewritten.
 GOAL_TYPE_ALIASES = {
     "retirement/financial freedom": "retirement",
     "education": "child education",
@@ -32,7 +26,12 @@ def _canonical_goal_type(value: str | None) -> str:
 
 
 def filter_applicable_strategies(goal_type: str | None = None, defined_goal: DefinedGoal | None = None, financial_context: dict | None = None) -> list[StrategyDefinition]:
-    """Evaluate strategy eligibility from goal metadata and reusable components."""
+    """Evaluate strategy eligibility from goal metadata and reusable components.
+
+    Goal-type-only calls are discovery calls and therefore do not have enough
+    financial context to activate/deactivate components. Full goal evaluation
+    applies component activation rules using the supplied financial state.
+    """
     if defined_goal is not None:
         clean_goal_type = _canonical_goal_type(defined_goal.goal_type)
         goal = defined_goal
@@ -73,7 +72,9 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
             if not any(signals.get(c, False) for c in characteristics):
                 continue
 
-        if strategy.component_ids:
+        # Only a fully defined goal should activate component-level financial
+        # rules. A goal-type discovery call must remain useful without state.
+        if strategy.component_ids and goal is not None:
             if not all(_component_is_active(component_id, context) for component_id in strategy.component_ids):
                 continue
         applicable.append(strategy)
