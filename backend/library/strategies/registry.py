@@ -2,7 +2,7 @@ from models.strategy import StrategyDefinition
 from library.strategies.catalog import STRATEGY_CATALOG
 
 
-LIBRARY_VERSION = "1.0"
+LIBRARY_VERSION = "1.1"
 
 
 def validate_strategy_library(strategies: list[StrategyDefinition] | None = None) -> None:
