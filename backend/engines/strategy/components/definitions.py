@@ -9,7 +9,7 @@ COMPONENT_DEFINITIONS = (
     StrategyComponent("component-preservation", "preservation", "Protects resources whose loss would materially impair the goal."),
     StrategyComponent("component-liquidity", "liquidity", "Maintains accessible resources needed for near-term or uncertain cash-flow requirements."),
     StrategyComponent("component-debt", "debt", "Treats liabilities and debt service as a strategic resource-allocation constraint.", activation_rules=(("total_liabilities", "gt", 0),)),
-    StrategyComponent("component-credit", "credit", "Evaluates credit as a funding lever alongside other available resources."),
+    StrategyComponent("component-credit", "credit", "Evaluates credit as a funding lever alongside other available resources.", activation_rules=(("funding_gap", "gt", 0), ("investable_surplus_monthly", "gt", 0), ("emi_burden_monthly", "gte", 0))),
     StrategyComponent("component-orchestration", "orchestration", "Coordinates competing goals and prevents double-counting of resources.", activation_rules=(("funding_status", "in", ("On Track", "Overfunded")),)),
     StrategyComponent("component-income", "income", "Converts an accumulated resource base into goal-supporting cash flows.", activation_rules=(("duration_years", "lte", 5),)),
 )
