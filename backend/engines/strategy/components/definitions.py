@@ -7,6 +7,7 @@ COMPONENT_DEFINITIONS = (
     StrategyComponent("component-accumulation", "accumulation", "Builds the resource base over time through disciplined accumulation."),
     StrategyComponent("component-transition", "transition", "Changes the strategic structure as a goal approaches its required date."),
     StrategyComponent("component-preservation", "preservation", "Protects resources whose loss would materially impair the goal."),
+    StrategyComponent("component-liquidity", "liquidity", "Maintains accessible resources needed to meet near-term or uncertain cash-flow requirements."),
     StrategyComponent("component-debt", "debt", "Treats liabilities and debt service as a strategic resource-allocation constraint."),
     StrategyComponent("component-credit", "credit", "Evaluates credit as a funding lever alongside other available resources."),
     StrategyComponent("component-orchestration", "orchestration", "Coordinates competing goals and prevents double-counting of resources."),
