@@ -4,6 +4,7 @@ from engines.strategy.engine import StrategyEngine
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities
 from .goal_matrix import GOAL_CASES
+from engines.strategy.components.adapters import components_for_strategy
 
 
 def make_defined_goal(case):
@@ -41,9 +42,28 @@ def test_strategy_engine_executes_cross_goal(case):
     assert isinstance(result.architectures, list)
     assert result.recommendation is not None
 
-    # If strategies are eligible, the full downstream pipeline must produce
-    # scenarios and architectures rather than stopping at applicability.
     if result.applicable_strategies:
         assert result.scenarios
         assert result.architectures
         assert result.recommendation.recommended_strategy_id
+
+        applicable_ids = {strategy.strategy_id for strategy in result.applicable_strategies}
+        for architecture in result.architectures:
+            assert architecture.primary_strategy_id in applicable_ids
+            for supporting_id in architecture.supporting_strategy_ids:
+                assert supporting_id in applicable_ids
+
+            primary = next(
+                strategy for strategy in result.applicable_strategies
+                if strategy.strategy_id == architecture.primary_strategy_id
+            )
+            expected_components = components_for_strategy(primary)
+            assert expected_components, f"No reusable components mapped for {primary.strategy_id}"
+            rationale = " ".join(architecture.rationale)
+            assert any(
+                component.role in rationale for component in expected_components
+            ), f"Architecture does not expose primary component roles for {primary.strategy_id}"
+
+        assert result.recommendation.recommended_strategy_id in applicable_ids
+        assert result.recommendation.architecture is not None
+        assert result.recommendation.architecture.primary_strategy_id in applicable_ids
