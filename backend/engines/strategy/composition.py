@@ -64,16 +64,19 @@ def compose_architectures(
     for candidate in ordered:
         primary_components = by_id[candidate.strategy_id][1]
         preferred = [c for c in primary_components if c.is_preferred(context)]
-        if not preferred:
-            continue
-        preferred_roles = {c.role for c in preferred}
-        supports = [s for s in ordered if any(c.role not in preferred_roles for c in by_id[s.strategy_id][1])]
-        reason = "Architecture activated by component metadata: " + ", ".join(c.role for c in preferred)
-        architectures.append(make(candidate, supports, reason))
-
-    if not architectures:
-        primary = ordered[0]
-        architectures.append(make(primary, [], "Fallback architecture using the first eligible strategy because no component activation rule matched."))
+        if preferred:
+            preferred_roles = {c.role for c in preferred}
+            supports = [s for s in ordered if any(c.role not in preferred_roles for c in by_id[s.strategy_id][1])]
+            reason = "Architecture activated by component metadata: " + ", ".join(c.role for c in preferred)
+            architectures.append(make(candidate, supports, reason))
+        else:
+            architectures.append(
+                make(
+                    candidate,
+                    [],
+                    "Architecture retained for the eligible strategy; no preferred component activation matched the current context.",
+                )
+            )
 
     unique, seen = [], set()
     for architecture in architectures:
