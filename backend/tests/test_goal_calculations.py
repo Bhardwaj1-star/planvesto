@@ -3,6 +3,7 @@ import pytest
 from engines.goal.target_calculator import (
     calculate_duration,
     calculate_future_target,
+    calculate_retirement_corpus,
     DEFAULT_INFLATION_RATE,
 )
 from engines.goal.asset_projection import (
@@ -37,6 +38,23 @@ class TestTargetCalculator:
 
     def test_future_target_zero_cost(self):
         assert calculate_future_target(0.0, 0.06, 5.0) == 0.0
+
+    def test_retirement_corpus_uses_post_retirement_horizon(self):
+        retirement_age, retirement_years, corpus = calculate_retirement_corpus(
+            current_monthly_expense=100000.0,
+            inflation_rate=0.06,
+            years_to_retirement=14.0,
+            current_age=30.0,
+            life_expectancy=80.0,
+            retirement_return=0.08,
+        )
+        assert retirement_age == 44.0
+        assert retirement_years == 36.0
+        assert corpus == 66440975.63
+
+    def test_retirement_corpus_rejects_invalid_lifespan(self):
+        with pytest.raises(ValueError):
+            calculate_retirement_corpus(100000, 0.06, 14, 70, 75, 0.08)
 
 
 class TestAssetProjection:
@@ -108,7 +126,6 @@ class TestFundingGap:
         assert calculate_required_monthly_contribution(120000.0, 0.0, 1.0) == 10000.0
 
     def test_required_monthly_contribution_with_return(self):
-        # End-of-month contributions; 12% nominal annual / 12 monthly rate.
         result = calculate_required_monthly_contribution(120000.0, 0.12, 1.0)
         assert result == 9461.85
 
@@ -161,6 +178,32 @@ class TestGoalEngineFull:
         assert defined.funding_status == "Shortfall"
         assert defined.funding_return_assumption == 0.12
         assert defined.required_monthly_contribution == 7754.27
+
+    def test_retirement_goal_uses_corpus_not_annual_expense(self):
+        engine = GoalEngine()
+        ref = date(2026, 1, 1)
+        inp = GoalInput(
+            planning_unit_id="pu-123",
+            goal_id="retirement-1",
+            goal_name="Retirement / Financial Freedom",
+            goal_type="Retirement / Financial Freedom",
+            today_cost=1200000.0,
+            target_month=1,
+            target_year=2040,
+            inflation_rate=0.06,
+            priority="Critical",
+            flexibility="Flexible",
+            asset_mappings=[],
+            dynamic_details={"currentAge": "30", "lifeExpectancy": "80"},
+        )
+        defined = engine.calculate_defined_goal(inp, {}, version=1, reference_date=ref)
+
+        assert defined.duration_years == 14.0
+        assert defined.future_target == 66440975.63
+        assert defined.version_metadata["retirement_age"] == 44.0
+        assert defined.version_metadata["retirement_years"] == 36.0
+        assert defined.funding_return_assumption == 0.08
+        assert defined.funding_gap == 66440975.63
 
 
 class TestFinancialInputValidation:
