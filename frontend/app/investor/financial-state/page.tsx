@@ -43,12 +43,31 @@ export default function FinancialStatePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<DashboardGoal | null>(null);
   const [detail, setDetail] = useState<"assets" | "liabilities" | "goal" | null>(null);
-  async function load() { setLoading(true); setError(null); try { setData(await getDashboard()); } catch (e) { setError(e instanceof Error ? e.message : "Unable to load Dashboard."); } finally { setLoading(false); } }
+  async function load(): Promise<DashboardData | null> {
+    setLoading(true);
+    setError(null);
+    try {
+      const dashboard = await getDashboard();
+      setData(dashboard);
+      return dashboard;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load Dashboard.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }
   useEffect(() => {
-    void load();
-    const planningUnitId = window.localStorage.getItem("planvesto_planning_unit_id");
-    if (!planningUnitId) return;
-    return subscribeToFinancialChanges(planningUnitId, () => { void load(); });
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    void load().then((dashboard) => {
+      if (!active || !dashboard) return;
+      unsubscribe = subscribeToFinancialChanges(dashboard.planning_unit_id, () => { void load(); });
+    });
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
   const fs = data?.financial_state;
   const income = fs?.income_monthly.value ?? 0;

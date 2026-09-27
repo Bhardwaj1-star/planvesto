@@ -1,4 +1,5 @@
-import { apiRequest, getPlanningUnitId } from "./client";
+import { apiRequest } from "./client";
+import { getPlanningUnitId } from "../planning-unit";
 
 export type DashboardMetric = {
   value: number | null;
@@ -53,8 +54,7 @@ export type DashboardData = {
 };
 
 export async function getDashboard(): Promise<DashboardData> {
-  const planningUnitId = getPlanningUnitId();
-  if (!planningUnitId) throw new Error("Planning unit is not configured.");
+  const planningUnitId = await getPlanningUnitId();
 
   return apiRequest<DashboardData>(
     `/api/dashboard?planning_unit_id=${encodeURIComponent(planningUnitId)}`,

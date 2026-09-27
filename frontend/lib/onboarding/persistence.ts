@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { getPlanningUnitId } from "../planning-unit";
 import type { Database } from "../database.types";
 import type { Asset } from "./assets/types";
 import type { Expense } from "./expenses/types";
@@ -13,11 +14,7 @@ export type GoalPlannerGoal = { id: string; name: string; targetAmount: string; 
 export type GoalPlannerData = { goals: GoalPlannerGoal[]; assets: Array<{ id: string; name: string; currentValue: string }> };
 export type OnboardingData = { planningUnitId: string; investorId: string | null; personalInformation: PersonalInformation; familyMembers: FamilyMember[]; incomeSources: IncomeSource[]; expenses: Expense[]; assets: Asset[]; liabilities: Liability[]; goals: Goal[] };
 type Tables = Database["public"]["Tables"];
-const planningUnitStorageKey = "planvesto-planning-unit-id";
-let planningUnitPromise: Promise<string> | null = null;
-let planningUnitUserId: string | null = null;
 
-async function getAuthenticatedUser() { const { data, error } = await supabase.auth.getUser(); if (error) throw error; if (!data.user) throw new Error("You must be signed in to access onboarding."); return data.user; }
 function isUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 function nullable(value: string) { return value.trim() || null; }
 function numeric(value: string): number;
@@ -25,66 +22,6 @@ function numeric(value: string, optional: true): number | null;
 function numeric(value: string, optional = false) { if (optional && !value.trim()) return null; return Number(value); }
 function encodeName(primary: string, description: string) { return description.trim() ? `${primary} - ${description.trim()}` : primary; }
 function decodeName(value: string, options: readonly string[]) { const option = options.find((item) => value === item || value.startsWith(`${item} - `)); return { primary: option || "", description: option ? value.slice(option.length).replace(/^ - /, "") : value }; }
-
-async function getPlanningUnitId(): Promise<string> {
-  const user = await getAuthenticatedUser();
-  if (planningUnitPromise && planningUnitUserId === user.id) return planningUnitPromise;
-  planningUnitUserId = user.id;
-  planningUnitPromise = (async () => {
-    // Retrieve stored ID if any
-    const storedId = typeof window !== "undefined" ? window.localStorage.getItem(planningUnitStorageKey) : null;
-    // Get all planning units for this user
-    const { data: userUnits, error: unitsError } = await supabase
-      .from("planning_units")
-      .select("planning_unit_id")
-      .eq("user_id", user.id);
-    if (unitsError) throw unitsError;
-    const unitIds = (userUnits || []).map((u) => u.planning_unit_id);
-    let chosenId: string | null = null;
-    // Validate stored ID belongs to this user
-    if (storedId && isUuid(storedId) && unitIds.includes(storedId)) {
-      chosenId = storedId;
-    }
-    // Prefer a unit that already has investor data
-    if (unitIds.length) {
-      const { data: invData, error: invError } = await supabase
-        .from("investors")
-        .select("planning_unit_id")
-        .in("planning_unit_id", unitIds)
-        .limit(1)
-        .maybeSingle();
-      if (invError) throw invError;
-      if (invData && invData.planning_unit_id) {
-        chosenId = invData.planning_unit_id;
-      } else if (!chosenId) {
-        // No unit with investors; fallback to any existing unit
-        chosenId = unitIds[0];
-      }
-    }
-    // If no existing planning unit, create a new one
-    if (!chosenId) {
-      const { data: newData, error: newError } = await supabase
-        .from("planning_units")
-        .insert({ user_id: user.id })
-        .select("planning_unit_id")
-        .single();
-      if (newError) throw newError;
-      chosenId = newData.planning_unit_id;
-    }
-    // Persist chosen ID to localStorage
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(planningUnitStorageKey, chosenId!);
-    }
-    return chosenId!;
-  })();
-  try {
-    return await planningUnitPromise;
-  } catch (error) {
-    planningUnitPromise = null;
-    planningUnitUserId = null;
-    throw error;
-  }
-}
 
 async function loadRows(planningUnitId: string) {
   const [investors, dependents, income, expenses, assets, liabilities, goals] = await Promise.all([
