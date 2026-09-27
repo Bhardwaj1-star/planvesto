@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any
 
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
@@ -26,6 +27,26 @@ class RuleEvaluation:
     unmet_characteristics: tuple[str, ...] = ()
     reasons: tuple[str, ...] = ()
     missing_inputs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RuleResult:
+    rule_id: str
+    passed: bool
+    severity: str
+    message: str
+    evidence: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class RuleAssessment:
+    diagnostics: tuple[RuleResult, ...]
+    hard_constraints: tuple[RuleResult, ...]
+    soft_constraints: tuple[RuleResult, ...]
+
+    @property
+    def eligible(self) -> bool:
+        return not any(not result.passed for result in self.hard_constraints)
 
 
 class StrategyRuleEngine:
@@ -94,3 +115,39 @@ class StrategyRuleEngine:
                 else "No applicable goal characteristic matched.",
             ),
         )
+
+
+class RuleEngine:
+    """Goal diagnostics and constraint evaluation consumed by downstream engines."""
+
+    def assess(
+        self,
+        goal: DefinedGoal,
+        financial_context: dict[str, Any] | None = None,
+    ) -> RuleAssessment:
+        context = financial_context or {}
+        diagnostics: list[RuleResult] = []
+        hard: list[RuleResult] = []
+        soft: list[RuleResult] = []
+
+        if goal.duration_years <= 0:
+            hard.append(RuleResult("goal-positive-horizon", False, "hard", "Goal horizon must be positive.", {"duration_years": goal.duration_years}))
+        else:
+            diagnostics.append(RuleResult("goal-positive-horizon", True, "diagnostic", "Goal horizon is valid.", {"duration_years": goal.duration_years}))
+
+        if goal.future_target <= 0:
+            hard.append(RuleResult("goal-positive-target", False, "hard", "Goal target must be positive.", {"future_target": goal.future_target}))
+        else:
+            diagnostics.append(RuleResult("goal-positive-target", True, "diagnostic", "Goal target is valid.", {"future_target": goal.future_target}))
+
+        if goal.priority.strip().lower() in {"critical", "high"}:
+            soft.append(RuleResult("priority-sensitive", True, "soft", "Goal priority requires explicit trade-off consideration.", {"priority": goal.priority}))
+
+        if goal.flexibility.strip().lower() == "fixed":
+            soft.append(RuleResult("fixed-timeline", True, "soft", "Fixed timeline limits timing flexibility.", {"flexibility": goal.flexibility}))
+
+        monthly_surplus = context.get("investable_surplus_monthly")
+        if monthly_surplus is not None and monthly_surplus < 0:
+            soft.append(RuleResult("negative-surplus", False, "soft", "Current monthly surplus is negative.", {"investable_surplus_monthly": monthly_surplus}))
+
+        return RuleAssessment(tuple(diagnostics), tuple(hard), tuple(soft))
