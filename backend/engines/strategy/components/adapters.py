@@ -3,25 +3,32 @@ from .definitions import register_default_components
 from .registry import get_component
 
 
-# Transitional adapter: existing strategy-library records already carry a
-# semantic strategy_family. This lets the new component layer work before every
-# library record is explicitly migrated to component metadata.
-FAMILY_TO_COMPONENT = {
-    "Goal Funding": "component-funding",
-    "Growth": "component-accumulation",
-    "Transition": "component-transition",
-    "Capital Protection": "component-preservation",
-    "Credit": "component-debt",
-    "Orchestration": "component-orchestration",
-    "Income": "component-income",
+# Explicit library migration map. Component composition is now driven by the
+# strategy record itself rather than by strategy_family semantics.
+STRATEGY_TO_COMPONENTS = {
+    "strat-calibrated-growth": ("component-funding",),
+    "strat-dynamic-accumulation": ("component-accumulation",),
+    "strat-high-liquidity-flex": ("component-transition", "component-liquation"),
+    "strat-cap-preservation": ("component-preservation",),
+    "strat-debt-reduction": ("component-debt",),
+    "strat-credit-utilisation": ("component-credit",),
+    "strat-goal-reprioritisation": ("component-orchestration",),
+    "strat-income-transition": ("component-income", "component-transition"),
 }
 
 
-def component_for_strategy(strategy: StrategyDefinition):
+def component_ids_for_strategy(strategy: StrategyDefinition) -> tuple[str, ...]:
+    return STRATEGY_TO_COMPONENTS.get(strategy.strategy_id, ())
+
+
+def components_for_strategy(strategy: StrategyDefinition):
     register_default_components()
-    component_id = FAMILY_TO_COMPONENT.get(strategy.strategy_family)
-    return get_component(component_id) if component_id else None
+    return [
+        component
+        for component_id in component_ids_for_strategy(strategy)
+        if (component := get_component(component_id)) is not None
+    ]
 
 
 def components_for_strategies(strategies: list[StrategyDefinition]):
-    return [(strategy, component_for_strategy(strategy)) for strategy in strategies]
+    return [(strategy, components_for_strategy(strategy)) for strategy in strategies]
