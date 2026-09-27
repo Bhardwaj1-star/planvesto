@@ -9,6 +9,7 @@ def generate_recommendation(
     defined_goal: DefinedGoal,
     priorities: InvestorPriorities,
     architectures: list[StrategyArchitecture] | None = None,
+    rule_diagnostics: list[dict] | None = None,
 ) -> StrategyRecommendation:
     architectures = architectures or []
     if not ranked_items:
@@ -41,6 +42,17 @@ def generate_recommendation(
         short_reasons.append(f"Maintains the goal trajectory toward the required ₹{defined_goal.future_target:,.2f} target.")
     else:
         short_reasons.append(f"Recognises the current surplus of ₹{abs(defined_goal.funding_gap):,.2f} and avoids blindly treating it as additional required funding.")
+
+    # Financial-state diagnostics are explanatory evidence only. They do not
+    # change the ranking score or selected strategy.
+    diagnostics = rule_diagnostics or []
+    for diagnostic in diagnostics:
+        status = diagnostic.get("evidence", {}).get("status")
+        if status in {"healthy", "excellent"}:
+            short_reasons.append(diagnostic.get("message", "Financial-state health is supportive."))
+        elif status == "critical":
+            short_reasons.append(diagnostic.get("message", "A financial-state constraint should be addressed alongside the strategy."))
+
     if architecture and architecture.supporting_strategy_ids:
         short_reasons.append("Combines a primary strategy with supporting strategies because one isolated strategy is not sufficient for the goal context.")
     if top_strat and top_strat.good_outcomes:
@@ -51,8 +63,11 @@ def generate_recommendation(
         f"The recommendation is a goal-level strategy architecture rather than a product or portfolio selection. "
         f"The goal is currently {defined_goal.funding_status.lower()} with a {defined_goal.duration_years}-year horizon. "
         f"The dominant stated priority is {dominant_priority}, with a strategy-fit score of {round(dominant_score, 1)}/10. "
-        f"Trade-off: {top_scen.trade_off_notes if top_scen else 'The selected architecture must be implemented downstream without changing the strategic objective.'}"
     )
+    critical = [d.get("message") for d in diagnostics if d.get("evidence", {}).get("status") == "critical"]
+    if critical:
+        complete_reasoning += "Financial-state considerations: " + " ".join(critical) + " "
+    complete_reasoning += f"Trade-off: {top_scen.trade_off_notes if top_scen else 'The selected architecture must be implemented downstream without changing the strategic objective.'}"
 
     return StrategyRecommendation(
         recommended_strategy_id=top.strategy_id,
