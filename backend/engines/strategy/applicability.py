@@ -2,7 +2,13 @@ from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
 from library.strategies.registry import get_active_strategies
 from engines.strategy.components.registry import get_component
+from engines.strategy.components.definitions import register_default_components
 
+
+# Register the reusable component catalog once when the applicability layer is loaded.
+# Strategy eligibility must evaluate registered metadata rather than silently treating
+# an unknown component as active.
+register_default_components()
 
 # Goal Planner uses user-facing goal names while the strategy catalog keeps
 # canonical goal types. Keep this mapping in the applicability layer so the
@@ -76,4 +82,4 @@ def filter_applicable_strategies(goal_type: str | None = None, defined_goal: Def
 
 def _component_is_active(component_id: str, context: dict) -> bool:
     component = get_component(component_id)
-    return component is None or component.is_preferred(context)
+    return component is not None and component.is_preferred(context)
