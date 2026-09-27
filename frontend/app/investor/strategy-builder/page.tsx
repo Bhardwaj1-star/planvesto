@@ -76,26 +76,43 @@ export default function InvestorStrategyBuilderPage() {
       try {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+
+        let preview: DefinedGoal | null = null;
         try {
-          const preview = await apiRequest<DefinedGoal>(`/api/goals/${selectedGoalId}/defined/latest?planning_unit_id=${planningUnitId}`);
+          preview = await apiRequest<DefinedGoal>(`/api/goals/${selectedGoalId}/defined/latest?planning_unit_id=${planningUnitId}`);
           if (active) setGoalPreview(preview);
         } catch { if (active) setGoalPreview(null); }
+
+        let latest: StrategyRun | null = null;
         try {
-          const latest = await getLatestStrategyRun(planningUnitId, selectedGoalId);
-          if (!active) return;
-          setRun(latest);
-          setPriorities(latest.investor_priorities);
-          setSelectedStrategyId(latest.selected_strategy_id ?? latest.recommendation.recommended_strategy_id ?? "");
-          setSelectedScenarioId(latest.selected_scenario_id ?? latest.recommendation.recommended_scenario_id ?? "");
-          setSelectedArchitectureId(latest.selected_architecture?.architecture_id ?? latest.recommendation.architecture?.architecture_id ?? "");
-          setParameters(latest.selected_implementation_parameters ?? {});
-          setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
+          latest = await getLatestStrategyRun(planningUnitId, selectedGoalId);
         } catch {
-          if (active) {
-            setRun(null); setHistory([]); setPriorities(DEFAULT_PRIORITIES);
-            setSelectedStrategyId(""); setSelectedScenarioId(""); setSelectedArchitectureId(""); setParameters({});
-          }
+          latest = null;
         }
+
+        // A saved DefinedGoal is the source of truth for Strategy Builder.
+        // If no run exists, or the latest run was built from an older goal version,
+        // create a fresh run automatically instead of asking the investor to rebuild it manually.
+        const runIsStale = Boolean(preview && latest && latest.defined_goal_version !== preview.version);
+        if (preview && (!latest || runIsStale)) {
+          const nextPriorities = latest?.investor_priorities ?? DEFAULT_PRIORITIES;
+          latest = await buildStrategy(planningUnitId, selectedGoalId, nextPriorities);
+        }
+
+        if (!active) return;
+        if (!latest) {
+          setRun(null); setHistory([]); setPriorities(DEFAULT_PRIORITIES);
+          setSelectedStrategyId(""); setSelectedScenarioId(""); setSelectedArchitectureId(""); setParameters({});
+          return;
+        }
+
+        setRun(latest);
+        setPriorities(latest.investor_priorities);
+        setSelectedStrategyId(latest.selected_strategy_id ?? latest.recommendation.recommended_strategy_id ?? "");
+        setSelectedScenarioId(latest.selected_scenario_id ?? latest.recommendation.recommended_scenario_id ?? "");
+        setSelectedArchitectureId(latest.selected_architecture?.architecture_id ?? latest.recommendation.architecture?.architecture_id ?? "");
+        setParameters(latest.selected_implementation_parameters ?? {});
+        setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Strategy Builder."); }
       finally { if (active) setWorking(false); }
     })();
