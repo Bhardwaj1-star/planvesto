@@ -26,12 +26,11 @@ class StrategyEngine:
         priorities: InvestorPriorities | None = None,
         custom_scenarios: list[Scenario] | None = None,
         financial_context: dict | None = None,
+        rule_assessment=None,
     ) -> StrategyEngineResult:
         if priorities is None:
             raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
-        # Goal type is the library index. Final eligibility uses goal characteristics
-        # and available financial-state facts; risk-profile inputs are intentionally absent.
         strategies = filter_applicable_strategies(
             defined_goal=defined_goal,
             financial_context=financial_context,
@@ -53,9 +52,16 @@ class StrategyEngine:
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
 
+        # Diagnostics describe the investor's financial state. They are passed
+        # through as context for downstream strategy components, but do not by
+        # themselves alter the existing priority-weighted ranking formula.
+        strategy_context = dict(financial_context or {})
+        if rule_assessment is not None:
+            strategy_context["rule_assessment"] = rule_assessment
+
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         rankings = rank_scenarios(strategies, all_scenarios, priorities)
-        architectures = compose_architectures(strategies, defined_goal, financial_context)
+        architectures = compose_architectures(strategies, defined_goal, strategy_context)
 
         recommendation = generate_recommendation(
             ranked_items=rankings,
