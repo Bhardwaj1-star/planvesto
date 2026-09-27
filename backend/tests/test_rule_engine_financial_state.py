@@ -3,7 +3,24 @@ from models.defined_goal import DefinedGoal
 
 
 def _goal(**overrides):
-    data = {"goal_type": "retirement", "name": "Retirement", "priority": "High", "flexibility": "Fixed", "duration_years": 15, "future_target": 10000000, "funding_status": "Shortfall"}
+    data = {
+        "goal_id": "g-rule-financial-state",
+        "planning_unit_id": "pu-rule-financial-state",
+        "version": 1,
+        "is_latest": True,
+        "goal_type": "retirement",
+        "goal_name": "Retirement",
+        "today_cost": 5000000.0,
+        "inflation_rate": 0.06,
+        "target_month": 6,
+        "target_year": 2041,
+        "duration_years": 15.0,
+        "future_target": 10000000.0,
+        "priority": "High",
+        "flexibility": "Fixed",
+        "funding_gap": 1000000.0,
+        "funding_status": "Shortfall",
+    }
     data.update(overrides)
     return DefinedGoal(**data)
 
