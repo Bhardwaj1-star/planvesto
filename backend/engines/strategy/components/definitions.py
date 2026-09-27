@@ -1,5 +1,5 @@
 from .contracts import StrategyComponent
-from .registry import register_component
+from .registry import get_active_components, register_component
 
 
 COMPONENT_DEFINITIONS = (
@@ -15,6 +15,7 @@ COMPONENT_DEFINITIONS = (
 
 
 def register_default_components() -> None:
+    existing = {component.component_id for component in get_active_components()}
     for component in COMPONENT_DEFINITIONS:
-        if component.component_id not in {c.component_id for c in __import__("engines.strategy.components.registry", fromlist=["get_active_components"]).get_active_components()}:
+        if component.component_id not in existing:
             register_component(component)
