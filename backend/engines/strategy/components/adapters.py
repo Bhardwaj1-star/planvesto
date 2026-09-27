@@ -3,22 +3,9 @@ from .definitions import register_default_components
 from .registry import get_component
 
 
-# Explicit library migration map. Component composition is now driven by the
-# strategy record identity rather than by strategy_family semantics.
-STRATEGY_TO_COMPONENTS = {
-    "strat-calibrated-growth": ("component-funding",),
-    "strat-dynamic-accumulation": ("component-accumulation",),
-    "strat-high-liquidity-flex": ("component-transition", "component-liquidity"),
-    "strat-cap-preservation": ("component-preservation", "component-liquidity"),
-    "strat-debt-reduction": ("component-debt",),
-    "strat-credit-utilisation": ("component-credit",),
-    "strat-goal-reprioritisation": ("component-orchestration",),
-    "strat-income-transition": ("component-income", "component-transition"),
-}
-
-
 def component_ids_for_strategy(strategy: StrategyDefinition) -> tuple[str, ...]:
-    return STRATEGY_TO_COMPONENTS.get(strategy.strategy_id, ())
+    """Return component IDs declared by the Strategy Library record."""
+    return tuple(strategy.component_ids)
 
 
 def components_for_strategy(strategy: StrategyDefinition):
