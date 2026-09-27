@@ -133,25 +133,22 @@ class RuleEngine:
             return None
 
     @staticmethod
-    def _status(value: float, excellent_floor: float | None, healthy_floor: float | None, attention_floor: float | None, inverse: bool = False) -> str:
+    def _status(value: float, excellent_floor: float | None, healthy_floor: float | None, inverse: bool = False) -> str:
+        """Return only stable three-state diagnostics: excellent, healthy, critical."""
         if inverse:
             if excellent_floor is not None and value < excellent_floor:
-                return "critical"
+                return "excellent"
             if healthy_floor is not None and value < healthy_floor:
-                return "attention"
-            if attention_floor is not None and value < attention_floor:
                 return "healthy"
-            return "excellent"
+            return "critical"
         if excellent_floor is not None and value >= excellent_floor:
             return "excellent"
         if healthy_floor is not None and value >= healthy_floor:
             return "healthy"
-        if attention_floor is not None and value >= attention_floor:
-            return "attention"
         return "critical"
 
+    @staticmethod
     def _health_diagnostic(
-        self,
         context: dict[str, Any],
         diagnostics: list[RuleResult],
         key: str,
@@ -159,14 +156,13 @@ class RuleEngine:
         label: str,
         excellent_floor: float | None,
         healthy_floor: float | None,
-        attention_floor: float | None,
         inverse: bool = False,
     ) -> None:
-        value = self._metric_value(context, key)
+        value = RuleEngine._metric_value(context, key)
         if value is None:
             diagnostics.append(RuleResult(rule_id, True, "diagnostic", f"{label} is unavailable; no health conclusion was made.", {"available": False}))
             return
-        status = self._status(value, excellent_floor, healthy_floor, attention_floor, inverse)
+        status = RuleEngine._status(value, excellent_floor, healthy_floor, inverse)
         diagnostics.append(RuleResult(rule_id, status != "critical", "diagnostic", f"{label} is {status}.", {"value": value, "status": status, "source_metric": key}))
 
     def assess(
@@ -202,12 +198,9 @@ class RuleEngine:
         else:
             diagnostics.append(RuleResult("surplus-health", True, "diagnostic", "Monthly surplus is unavailable; no surplus constraint was evaluated.", {"available": False}))
 
-        # These diagnostics reuse the existing Moneywheel metric vocabulary and
-        # baselines; Rule Engine reports the state but does not turn diagnostics
-        # into strategy ranking or architecture decisions.
-        self._health_diagnostic(context, diagnostics, "emergency_fund_coverage", "emergency-reserve-health", "Emergency reserve coverage", 9.0, 6.0, 3.0)
-        self._health_diagnostic(context, diagnostics, "current_liquidity_ratio", "liquidity-health", "Current liquidity", 1.5, 1.0, 0.75)
-        self._health_diagnostic(context, diagnostics, "debt_to_income_ratio", "debt-pressure-health", "Debt-to-income", 20.0, 30.0, 40.0, inverse=True)
-        self._health_diagnostic(context, diagnostics, "leverage_ratio", "leverage-health", "Leverage", 20.0, 30.0, 50.0, inverse=True)
+        self._health_diagnostic(context, diagnostics, "emergency_fund_coverage", "emergency-reserve-health", "Emergency reserve coverage", 9.0, 6.0)
+        self._health_diagnostic(context, diagnostics, "current_liquidity_ratio", "liquidity-health", "Current liquidity", 1.5, 1.0)
+        self._health_diagnostic(context, diagnostics, "debt_to_income_ratio", "debt-pressure-health", "Debt-to-income", 20.0, 30.0, True)
+        self._health_diagnostic(context, diagnostics, "leverage_ratio", "leverage-health", "Leverage", 20.0, 30.0, True)
 
         return RuleAssessment(tuple(diagnostics), tuple(hard), tuple(soft))
