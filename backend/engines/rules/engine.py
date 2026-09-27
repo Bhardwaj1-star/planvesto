@@ -97,9 +97,7 @@ class StrategyRuleEngine:
             "flexible_timeline": defined_goal.flexibility.lower() != "fixed",
             "high_priority": defined_goal.priority.lower() in {"critical", "high"},
         }
-        characteristics = tuple(
-            c.strip().lower() for c in strategy.applicable_goal_characteristics
-        )
+        characteristics = tuple(c.strip().lower() for c in strategy.applicable_goal_characteristics)
         matched = tuple(c for c in characteristics if signals.get(c, False))
         unmet = tuple(c for c in characteristics if not signals.get(c, False))
 
@@ -119,6 +117,20 @@ class StrategyRuleEngine:
 
 class RuleEngine:
     """Goal diagnostics and constraint evaluation consumed by downstream engines."""
+
+    @staticmethod
+    def _metric_value(context: dict[str, Any], key: str) -> float | None:
+        raw = context.get(key)
+        if isinstance(raw, dict):
+            if not raw.get("available", True):
+                return None
+            raw = raw.get("value")
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
 
     def assess(
         self,
@@ -146,8 +158,11 @@ class RuleEngine:
         if goal.flexibility.strip().lower() == "fixed":
             soft.append(RuleResult("fixed-timeline", True, "soft", "Fixed timeline limits timing flexibility.", {"flexibility": goal.flexibility}))
 
-        monthly_surplus = context.get("investable_surplus_monthly")
-        if monthly_surplus is not None and monthly_surplus < 0:
-            soft.append(RuleResult("negative-surplus", False, "soft", "Current monthly surplus is negative.", {"investable_surplus_monthly": monthly_surplus}))
+        monthly_surplus = self._metric_value(context, "investable_surplus_monthly")
+        if monthly_surplus is not None:
+            passed = monthly_surplus >= 0
+            soft.append(RuleResult("surplus-health", passed, "soft", "Current monthly surplus is non-negative." if passed else "Current monthly surplus is negative.", {"investable_surplus_monthly": monthly_surplus}))
+        else:
+            diagnostics.append(RuleResult("surplus-health", True, "diagnostic", "Monthly surplus is unavailable; no surplus constraint was evaluated.", {"available": False}))
 
         return RuleAssessment(tuple(diagnostics), tuple(hard), tuple(soft))
