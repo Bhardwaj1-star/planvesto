@@ -1,7 +1,9 @@
 import logging
+from datetime import date, datetime
 from typing import Any
 from fastapi import HTTPException
 from data.goal_repository import GoalRepository
+from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
 from schemas.goals import GoalInput, GoalCalculateRequest
@@ -18,11 +20,36 @@ class GoalService:
         rows = self.repository.get_planning_unit_assets(planning_unit_id)
         return {r["asset_id"]: r for r in rows}
 
+    def _enrich_retirement_context(self, request: GoalInput | GoalCalculateRequest) -> None:
+        if request.goal_type != "Retirement / Financial Freedom":
+            return
+        details = dict(request.dynamic_details or {})
+        if details.get("currentAge") is not None or details.get("current_age") is not None:
+            return
+
+        query = get_supabase().table("investors").select("date_of_birth").eq("planning_unit_id", request.planning_unit_id).limit(1).execute()
+        row = (query.data or [None])[0]
+        dob_value = row.get("date_of_birth") if row else None
+        if not dob_value:
+            raise ValueError("Retirement planning requires the investor date of birth in Personal Information")
+
+        try:
+            dob = datetime.fromisoformat(str(dob_value)).date()
+        except ValueError:
+            dob = date.fromisoformat(str(dob_value))
+
+        today = date.today()
+        current_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        details["currentAge"] = current_age
+        request.dynamic_details = details
+
     def calculate_preview(self, request: GoalCalculateRequest) -> DefinedGoal:
+        self._enrich_retirement_context(request)
         assets_lookup = self._get_assets_lookup(request.planning_unit_id)
         return self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
 
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
+        self._enrich_retirement_context(request)
         goal_id = self.repository.ensure_goal_record(
             planning_unit_id=request.planning_unit_id,
             goal_id=request.goal_id,
