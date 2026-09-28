@@ -1,5 +1,6 @@
 "use client";
 
+// Backed by /api/financial-state/build via dashboard aggregation
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";

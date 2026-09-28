@@ -156,6 +156,11 @@ class StrategyRankingItem(BaseModel):
     composite_score: float
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     is_recommended: bool = False
+    # New fields per conversion spec
+    evidence_scores: dict[str, Any] = Field(default_factory=dict)
+    is_eligible: bool = True
+    ineligible_reasons: list[str] = Field(default_factory=list)
+
 
 
 class StrategyRecommendation(BaseModel):

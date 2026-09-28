@@ -11,6 +11,14 @@ def generate_recommendation(
     architectures: list[StrategyArchitecture] | None = None,
     rule_diagnostics: list[dict] | None = None,
 ) -> StrategyRecommendation:
+    """Generate a goal‑level recommendation based on the ranked items.
+
+    The function now consumes the new evidence‑based ranking output:
+    * ``is_eligible`` and ``ineligible_reasons`` are respected – if the first
+      item is ineligible we fall back to a no‑strategy recommendation.
+    * ``evidence_scores`` is used to surface the concrete rationale for the
+      recommendation (safety, liquidity, growth, flexibility, funding_gap).
+    """
     architectures = architectures or []
     if not ranked_items:
         return StrategyRecommendation(
@@ -21,19 +29,36 @@ def generate_recommendation(
             feasibility_status="infeasible",
         )
 
+    # If the top ranked item is ineligible, treat as no‑strategy case
     top = ranked_items[0]
+    if not getattr(top, "is_eligible", True):
+        return StrategyRecommendation(
+            recommended_strategy_id="",
+            recommended_scenario_id="",
+            short_reasons=top.ineligible_reasons or ["Strategy was deemed ineligible by rule engine."],
+            complete_reasoning="All candidate strategies were filtered out by eligibility rules.",
+            feasibility_status="infeasible",
+        )
+
     strat_lookup = {s.strategy_id: s for s in strategies}
     scen_lookup = {s.scenario_id: s for s in scenarios}
     top_strat = strat_lookup.get(top.strategy_id)
     top_scen = scen_lookup.get(top.scenario_id)
     architecture = next((a for a in architectures if a.primary_strategy_id == top.strategy_id), architectures[0] if architectures else None)
 
-    norm_p = priorities.normalized()
-    dominant_priority = max(
-        [("safety", norm_p.safety), ("liquidity", norm_p.liquidity), ("growth", norm_p.growth), ("flexibility", norm_p.flexibility)],
-        key=lambda x: x[1],
-    )[0]
-    dominant_score = top.dimension_scores.get(dominant_priority, 7.0)
+    # Use evidence scores for priority explanation instead of legacy composite scores
+    evidence = getattr(top, "evidence_scores", {})
+    # Determine dominant priority based on the highest evidence value
+    if evidence:
+        dominant_priority, dominant_score = max(evidence.items(), key=lambda kv: kv[1])
+    else:
+        # Fallback to original priorities if evidence missing
+        norm_p = priorities.normalized()
+        dominant_priority = max(
+            [("safety", norm_p.safety), ("liquidity", norm_p.liquidity), ("growth", norm_p.growth), ("flexibility", norm_p.flexibility)],
+            key=lambda x: x[1],
+        )[0]
+        dominant_score = top.dimension_scores.get(dominant_priority, 7.0)
 
     short_reasons = [f"Strongly aligns with your priority for {dominant_priority.capitalize()} (score: {dominant_score}/10)."]
     if defined_goal.funding_status == "Shortfall":
@@ -43,8 +68,7 @@ def generate_recommendation(
     else:
         short_reasons.append(f"Recognises the current surplus of ₹{abs(defined_goal.funding_gap):,.2f} and avoids blindly treating it as additional required funding.")
 
-    # Financial-state diagnostics are explanatory evidence only. They do not
-    # change the ranking score or selected strategy.
+    # Financial‑state diagnostics are explanatory evidence only.
     diagnostics = rule_diagnostics or []
     for diagnostic in diagnostics:
         status = diagnostic.get("evidence", {}).get("status")
@@ -62,7 +86,7 @@ def generate_recommendation(
         f"For '{defined_goal.goal_name}', the {top.strategy_name} scenario ranks highest after evaluating goal fit and investor priorities. "
         f"The recommendation is a goal-level strategy architecture rather than a product or portfolio selection. "
         f"The goal is currently {defined_goal.funding_status.lower()} with a {defined_goal.duration_years}-year horizon. "
-        f"The dominant stated priority is {dominant_priority}, with a strategy-fit score of {round(dominant_score, 1)}/10. "
+        f"The dominant stated priority is {dominant_priority}, with a strategy‑fit score of {round(dominant_score, 1)}/10. "
     )
     critical = [d.get("message") for d in diagnostics if d.get("evidence", {}).get("status") == "critical"]
     if critical:

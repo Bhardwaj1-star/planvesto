@@ -11,6 +11,7 @@ GOAL_TYPE_ALIASES = {
     "education": "child education",
     "marriage": "child marriage",
     "dream home": "home purchase",
+    "home": "home purchase",
     "vacation": "travel",
     "others": "other",
     "passive income": "other",
