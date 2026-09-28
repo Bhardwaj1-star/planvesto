@@ -223,7 +223,7 @@ export default function InvestorStrategyBuilderPage() {
                       {strategy?.description ?? "Strategy architecture evaluated by the engine."}
                     </p>
 
-                    {/* Architecture Details per conversion spec */}
+                    {/* Architecture Details — spec §7 Strategy Builder UI contract */}
                     <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-xs text-slate-600">
                       {strategy?.strategic_objective && (
                         <div>
@@ -233,45 +233,55 @@ export default function InvestorStrategyBuilderPage() {
                       )}
                       {arch?.rationale && arch.rationale.length > 0 && (
                         <div>
-                          <span className="font-bold text-slate-700">Why applicable: </span>
-                          <span>{arch.rationale[0]}</span>
+                          <span className="font-bold text-slate-700">Why applicable / Goal fit: </span>
+                          <span>{arch.rationale.join("; ")}</span>
                         </div>
                       )}
-                      {strategy?.technique_ids && strategy.technique_ids.length > 0 && (
+                      {arch && (
                         <div>
-                          <span className="font-bold text-slate-700">Techniques: </span>
-                          <span className="capitalize">{strategy.technique_ids.join(", ").replaceAll("-", " ")}</span>
+                          <span className="font-bold text-slate-700">Feasibility: </span>
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${arch.feasibility_status === "feasible" ? "bg-emerald-50 text-emerald-700" : arch.feasibility_status === "conditional" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{arch.feasibility_status}</span>
+                        </div>
+                      )}
+                      {arch?.constraints && arch.constraints.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Constraints: </span>
+                          <span>{arch.constraints.join("; ")}</span>
                         </div>
                       )}
                       {strategy?.trade_offs && strategy.trade_offs.length > 0 && (
                         <div>
                           <span className="font-bold text-slate-700">Trade-offs: </span>
-                          <span>{strategy.trade_offs.slice(0, 2).join("; ")}</span>
+                          <span>{strategy.trade_offs.join("; ")}</span>
                         </div>
                       )}
-                      {arch?.constraints && arch.constraints.length > 0 && (
-                        <div>
-                          <span className="font-bold text-slate-700">Key constraints: </span>
-                          <span>{arch.constraints.slice(0, 2).join("; ")}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Supporting Evidence Scores (explicitly labeled per spec) */}
-                    <div className="mt-5 border-t border-slate-100 pt-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Supporting Evidence</p>
-                      <div className="mt-2 grid grid-cols-2 gap-3">
-                        {Object.entries(ranking.dimension_scores).map(([k, v]) => (
-                          <div key={k} className="rounded-xl bg-slate-50 p-3">
-                            <p className="text-xs capitalize text-slate-400">{k}</p>
-                            <p className="mt-1 font-bold">{displayMetric(v)}</p>
+                      {(() => {
+                        const baselineScenario = run.scenarios.find((s) => s.strategy_id === ranking.strategy_id && s.scenario_type === "baseline");
+                        if (!baselineScenario) return null;
+                        const assumptionEntries = Object.entries(baselineScenario.assumptions);
+                        return assumptionEntries.length > 0 ? (
+                          <div>
+                            <span className="font-bold text-slate-700">Assumptions: </span>
+                            <span>{assumptionEntries.map(([k, v]) => `${k.replaceAll("_", " ")}: ${displayMetric(v)}`).join("; ")}</span>
                           </div>
-                        ))}
-                        <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="text-xs text-slate-400">Score Fit</p>
-                          <p className="mt-1 font-bold">{displayMetric(ranking.composite_score)}</p>
+                        ) : null;
+                      })()}
+                      {strategy?.technique_ids && strategy.technique_ids.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Techniques / implementation direction: </span>
+                          <span className="capitalize">{strategy.technique_ids.join(", ").replaceAll("-", " ")}</span>
                         </div>
-                      </div>
+                      )}
+                      {(() => {
+                        const scenariosForStrategy = run.scenarios.filter((s) => s.strategy_id === ranking.strategy_id);
+                        if (scenariosForStrategy.length <= 1) return null;
+                        return (
+                          <div>
+                            <span className="font-bold text-slate-700">Scenarios: </span>
+                            <span>{scenariosForStrategy.map((s) => s.scenario_name).join("; ")}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <button
@@ -286,11 +296,68 @@ export default function InvestorStrategyBuilderPage() {
                       }}
                       className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50"
                     >
-                      {isSelected ? "Selected" : "Select this pathway"}
+                      {isSelected ? "Selected" : "Select this architecture"}
                     </button>
                   </article>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Recommendation — spec §3.8 */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold">Recommendation</h2>
+            <div className="mt-4 space-y-3 text-sm text-slate-600">
+              {(() => {
+                const recStrategy = run.applicable_strategies.find((s) => s.strategy_id === run.recommendation.recommended_strategy_id);
+                return (
+                  <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Recommended Architecture</p>
+                    <p className="mt-1 text-base font-extrabold text-slate-900">{recStrategy?.name ?? run.recommendation.recommended_strategy_id}</p>
+                  </div>
+                );
+              })()}
+              {run.recommendation.short_reasons.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Reasoning</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
+                    {run.recommendation.short_reasons.map((reason, i) => (
+                      <li key={i}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {run.recommendation.complete_reasoning && (
+                <p className="text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p>
+              )}
+              {run.recommendation.constraints.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Constraints</p>
+                  <p className="mt-1 text-sm text-slate-600">{run.recommendation.constraints.join("; ")}</p>
+                </div>
+              )}
+              {run.recommendation.feasibility_status && (
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Feasibility: </span>
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${run.recommendation.feasibility_status === "feasible" ? "bg-emerald-50 text-emerald-700" : run.recommendation.feasibility_status === "conditional" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{run.recommendation.feasibility_status}</span>
+                </div>
+              )}
+              {run.recommendation.alternative_architecture_ids.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Alternatives</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {run.recommendation.alternative_architecture_ids.map((altId) => {
+                      const altArch = run.architectures.find((a) => a.architecture_id === altId);
+                      const altStrategy = altArch ? run.applicable_strategies.find((s) => s.strategy_id === altArch.primary_strategy_id) : null;
+                      return (
+                        <span key={altId} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                          {altStrategy?.name ?? altId}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
