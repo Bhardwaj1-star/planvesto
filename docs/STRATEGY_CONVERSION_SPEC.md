@@ -1,23 +1,21 @@
 # Planvesto Strategy Architecture Conversion Specification
 
-**Status:** Conversion plan / implementation contract
-**Purpose:** This document is the source of truth for converting the current Strategy Builder from the legacy score-driven model to the goal-first strategy architecture already covered by the new tests.
+**Status:** Final architecture / implementation contract
+**Purpose:** Define the goal-agnostic Strategy Builder architecture and the conversion required to make the current implementation conform to it.
 
 ## 1. Objective
 
-Convert Strategy Builder from a model where `Safety`, `Liquidity`, `Growth`, `Flexibility` and a composite score effectively determine the strategy into a model where the system first determines **which strategy architectures are applicable to this investor and this goal**, then evaluates eligible alternatives using explicit strategy-fit evidence.
+Strategy Builder is a **goal-agnostic financial strategy decision system**. For a specific investor, financial state, and defined goal, it must determine which strategy architectures are applicable, compare the eligible architectures using explicit strategy-fit evidence, and produce an explainable Strategy Result.
 
 The target definition of strategy is:
 
 > For THIS investor, for THIS goal, given THIS financial state and THESE priorities, what is the appropriate way to fund and achieve the goal?
 
-The system must produce a **strategy architecture**, not a product recommendation and not a portfolio allocation disguised as a strategy.
+The system must produce a **strategy architecture**, not a product recommendation, portfolio allocation, or retirement-only plan.
 
----
+`Safety`, `Liquidity`, `Growth`, `Flexibility`, and the legacy composite score are **not strategy-selection mechanisms**. They must not determine strategy identity, eligibility, ranking, or recommendation.
 
 ## 2. Non-negotiable architecture
-
-Target flow:
 
 ```text
 Investor Financial State
@@ -29,11 +27,11 @@ Constraints / Priorities
         v
    RULE / ELIGIBILITY ENGINE
         |
-        |  applicable strategies
+        | applicable architectures
         v
- STRATEGY LIBRARY
+   STRATEGY LIBRARY
         |
-        |  strategy architectures
+        | strategy architectures
         v
  STRATEGY VARIANTS / IMPLEMENTATION LOGIC
         |
@@ -41,15 +39,16 @@ Constraints / Priorities
  COMPARISON / DECISION ENGINE
         |
         v
- Strategy Recommendation
+ Strategy Result / Recommendation
         |
         v
- Action Plan / Product & Portfolio Implementation
+ Goal-specific Output
+        |
+        +--> Retirement Report / PDF (retirement only)
+        +--> Future goal-specific outputs
 ```
 
-The engine must not invert this flow by starting with products, portfolios, or generic score dimensions.
-
----
+The engine must not invert this flow by starting with products, portfolios, retirement reports, or generic score dimensions.
 
 ## 3. Responsibilities by layer
 
@@ -65,23 +64,23 @@ The goal is the strategic context. At minimum the engine needs:
 
 - goal type / normalized goal key
 - target date / horizon
-- target amount or retirement-specific required corpus
+- target amount or goal-specific target requirement
 - funding status
 - funding gap / surplus
 - existing mapped assets
-- flexibility / constraints
+- relevant constraints
 
-Retirement must use the corrected retirement-specific corpus calculation already protected by tests. Do not regress to the old annual-expense-only target calculation.
+Retirement is one supported goal type and must use its dedicated retirement corpus calculation.
 
 ### 3.3 Rule / Eligibility Engine
 
 This layer answers:
 
-> Which strategies are applicable for this goal and financial state?
+> Which strategy architectures are applicable for this investor and this goal?
 
 Rules are deterministic and explainable. Each rule should return evidence/diagnostics rather than silently changing a score.
 
-Examples of rule concepts:
+Examples include:
 
 - goal type applicability
 - time horizon
@@ -89,11 +88,11 @@ Examples of rule concepts:
 - cash-flow requirements
 - existing assets available for the goal
 - debt constraints
-- liquidity requirements
+- liquidity requirements as a constraint where relevant
 - feasibility constraints
 - retirement-specific requirements
 
-Eligibility is a gate. A strategy that is not applicable must not enter ranking/comparison simply because it has a high generic dimension score.
+Eligibility is a gate. An inapplicable architecture must not enter comparison simply because of any generic numeric score.
 
 ### 3.4 Strategy Library
 
@@ -106,7 +105,7 @@ A strategy is a reusable architecture for achieving a goal. Examples include:
 - retirement glide path
 - goal funding from existing assets + future contributions
 
-The library must be extensible. Strategy definitions should describe applicability, constraints, intended outcome, trade-offs and implementation concepts.
+Strategy definitions should describe applicability, constraints, intended outcome, trade-offs and implementation concepts.
 
 ### 3.5 Strategy Variant
 
@@ -128,20 +127,22 @@ A strategy may use one or more techniques.
 
 ### 3.7 Comparison / Decision Engine
 
-The decision layer compares **eligible strategies**, using explicit evidence such as:
+The decision layer compares **eligible strategy architectures** using explicit strategy-fit evidence, including where supported:
 
-- eligibility
 - goal fit
+- horizon fit
 - funding fit
 - implementation complexity
-- liquidity implications
 - constraint compatibility
 - assumptions
 - trade-offs
 - stress-test behavior
 - feasibility
+- applicable component/strategy evidence
 
-`Safety`, `Liquidity`, `Growth`, and `Flexibility` may remain as descriptive attributes/evidence where useful, but they must NOT be the primary strategy-selection mechanism and must NOT be presented as the strategy itself.
+These are evidence dimensions, not strategy identities.
+
+The decision engine must never reduce the decision to a renamed or reweighted version of the legacy four-dimension score.
 
 ### 3.8 Recommendation
 
@@ -155,45 +156,40 @@ Recommendation must identify:
 - alternative eligible architectures
 - feasibility status
 
-Recommendation must remain goal-level. Product and portfolio selection happen downstream.
+Recommendation remains at the strategy level. Product and portfolio selection happen downstream.
 
----
+## 4. Legacy behavior explicitly removed
 
-## 4. Legacy behavior to remove from decision authority
-
-The current ranking implementation calculates:
+The previous model used:
 
 ```text
-Composite Score = normalized safety weight * safety score
-               + normalized liquidity weight * liquidity score
-               + normalized growth weight * growth score
-               + normalized flexibility weight * flexibility score
+Composite Score = weighted Safety + weighted Liquidity
+               + weighted Growth + weighted Flexibility
 ```
 
-and sorts scenarios by that composite score. This is legacy behavior and must no longer determine the selected strategy.
-
-The current implementation is visible in `backend/engines/strategy/ranking.py` and must be converted rather than cosmetically renamed.
+That model is no longer authoritative.
 
 Do NOT:
 
-- rename the four dimensions and keep the same formula;
+- rename the four dimensions and keep the same decision logic;
 - replace the composite score with another arbitrary weighted score;
 - treat a scenario as a strategy;
 - make the highest numeric score automatically the recommendation;
 - use risk profiling as a substitute for strategy eligibility;
-- select a financial product before the strategy architecture exists.
+- select a financial product before the strategy architecture exists;
+- present Safety/Liquidity/Growth/Flexibility as competing strategy architectures.
 
----
+Legacy dimension fields may exist temporarily for compatibility or historical evidence, but they are non-authoritative and must not determine the Strategy Result.
 
-## 5. Target data contract
+## 5. Generic Strategy Result contract
 
-A Strategy Run should conceptually contain:
+A Strategy Run / Strategy Result should conceptually contain:
 
 ```text
 Defined Goal snapshot
 Financial State snapshot / relevant evidence
-Eligible strategies
-Ineligible strategies + reasons where useful
+Eligible architectures
+Ineligible architectures + reasons where useful
 Strategy architectures
 Variants / scenarios
 Comparison evidence
@@ -204,26 +200,42 @@ Recommendation
 Diagnostics
 ```
 
-Every selected recommendation must be traceable to the rule/eligibility evidence and the comparison evidence that produced it.
+Every recommendation must be traceable to eligibility evidence and comparison evidence.
 
-The run must remain reproducible from its persisted inputs.
+The contract must remain goal-agnostic. Retirement-specific report fields must not be mandatory for every strategy run.
 
----
+## 6. Goal-specific outputs
 
-## 6. Retirement-specific requirements
+Strategy Builder produces the generic Strategy Result. Goal-specific outputs consume that result downstream.
+
+### Retirement
+
+Retirement may provide:
+
+- Retirement Report
+- retirement-specific projections and rationale
+- PDF export
+
+### Other goals
+
+Education, home purchase, vehicle purchase, major expense, and other supported goals use the same Strategy Builder architecture. Their future reports/presentations can be added independently without rewriting the core decision engine.
+
+A non-retirement goal must never require a Retirement Report or retirement PDF to complete Strategy Builder.
+
+## 7. Retirement-specific requirements
 
 Retirement is a distinct goal type, not merely a generic future-expense goal.
 
 The retirement pipeline must account for:
 
-- investor date of birth / current age from Personal Information
+- investor date of birth / current age
 - retirement target date
 - desired lifestyle monthly expense
 - inflation until retirement
 - retirement-date expense
 - life expectancy
 - post-retirement horizon
-- retirement-period return assumption where defined by the engine
+- retirement-period return assumption where defined
 - existing mapped retirement assets
 - funding gap / surplus
 
@@ -236,28 +248,26 @@ The output must distinguish at least:
 5. funding gap,
 6. required contribution where applicable.
 
-A single inflation-adjusted annual expense is NOT a retirement corpus.
+A single inflation-adjusted annual expense is not a retirement corpus.
 
----
+## 8. Strategy Builder UI contract
 
-## 7. Strategy Builder UI contract
+The UI must represent strategy architectures and strategy-fit evidence.
 
-The UI must represent the new architecture.
+### Must not be strategy identity
 
-### Remove as strategy identity
-
-Do not display cards/headings implying that a strategy is:
+Do not display:
 
 - Safety
 - Liquidity
 - Growth
 - Flexibility
 
-Do not display these as competing strategy names.
+as competing strategy names, strategy cards, or ranking criteria.
 
 ### Display instead
 
-For each eligible strategy:
+For each eligible architecture:
 
 - Strategy name
 - What it does
@@ -268,45 +278,12 @@ For each eligible strategy:
 - Important assumptions
 - Techniques used
 - Feasibility
-- Stress-test summary
+- Stress-test/scenario summary
 - Implementation direction
 
-Dimension scores can be retained only if they are explicitly labeled as supporting evidence and are not used as the strategy identity or sole decision criterion.
+Recommendation should show the selected architecture, reasoning and alternatives.
 
-### Recommended presentation
-
-```text
-Strategy Run
-
-Goal: Retirement / Financial Freedom
-
-Applicable Strategies
-
-1. Retirement Glide Path
-   Purpose
-   Why applicable
-   Trade-offs
-   Constraints
-   Techniques
-   Stress behavior
-
-2. Cash-Flow Matching
-   Purpose
-   Why applicable
-   Trade-offs
-   Constraints
-   Techniques
-   Stress behavior
-
-Recommendation
-   Selected architecture
-   Reasoning
-   Alternatives
-```
-
----
-
-## 8. Goal Planner → Strategy Builder contract
+## 9. Goal Planner → Strategy Builder contract
 
 Goal Planner is the source of truth for the saved Defined Goal.
 
@@ -315,125 +292,95 @@ When Strategy Builder opens:
 1. Load the latest saved Defined Goal.
 2. Verify the goal version against the existing Strategy Run.
 3. If there is no run or the run is based on an older goal version, automatically build a fresh Strategy Run.
-4. Do not require the user to manually rebuild merely because the saved goal changed.
+4. Do not require manual rebuilding merely because the saved goal changed.
 5. Persist immutable run versions for history.
 
-The Strategy Builder must never silently display a stale run for a changed goal.
+Strategy Builder must never silently display a stale run for a changed goal.
 
----
+## 10. Existing investor capabilities and navigation
 
-## 9. Tests and conversion order
+Moneywheel and Budgeting are independent investor capabilities and are not part of this Strategy Builder conversion. They must remain available unless a separate authoritative product decision explicitly deprecates them.
 
-The project has intentionally followed a test-first/refactor-second process. Preserve that discipline.
+Strategy-specific lifecycle pages may be contextual rather than primary sidebar navigation. Removing a page from the sidebar does not mean deleting its underlying route or backend capability when the workflow still depends on it.
 
-Conversion order:
+## 11. Conversion and testing order
+
+The project follows a test-first/refactor-second process.
 
 ### Phase A — Contract protection
 
-Keep all current tests green before each conversion batch.
+Keep the baseline suite green before conversion.
 
-### Phase B — Strategy eligibility
+### Phase B — Eligibility
 
-Convert strategy applicability from legacy score-driven behavior to explicit rule outputs.
-
-Acceptance criteria:
-
-- inapplicable strategies are excluded;
-- applicable strategies are returned;
-- diagnostics explain important exclusions;
-- retirement rules are recognized consistently, including normalized goal labels.
+Determine applicability using explicit rules and diagnostics.
 
 ### Phase C — Strategy architecture
 
-Move reusable strategy definitions into the Strategy Library contract.
-
-Acceptance criteria:
-
-- strategy != scenario;
-- strategy != product;
-- strategy may contain techniques;
-- strategy may have variants;
-- strategy has explicit applicability/constraints/trade-offs.
+Use reusable Strategy Library definitions. Keep strategy, variant, scenario, technique and product distinct.
 
 ### Phase D — Comparison / decision
 
-Replace composite-dimension ranking as decision authority.
-
-Acceptance criteria:
-
-- no automatic selection based solely on safety/liquidity/growth/flexibility;
-- eligible strategy comparison is explainable;
-- recommendation references goal fit and constraints;
-- alternatives remain visible.
+Compare eligible architectures using explicit strategy-fit evidence. Remove composite-score decision authority.
 
 ### Phase E — Recommendation
 
-Update recommendation generation so it consumes the new decision output rather than a legacy ranked scenario list.
-
-Current `backend/engines/strategy/recommendation.py` still expects `ranked_items[0]` and derives a dominant priority from the four legacy dimensions. This must be converted.
+Recommendation consumes the new decision output and exposes architecture, rationale, constraints, assumptions, trade-offs, alternatives and feasibility.
 
 ### Phase F — API/service persistence
 
-Update Strategy Run payloads, service orchestration and persistence only as required by the new contracts. Do not create unnecessary schema changes.
+Expose and persist the generic Strategy Result without unnecessary schema changes.
 
 ### Phase G — Frontend
 
-After backend contracts stabilize, update Strategy Builder UI to render strategies/architectures rather than dimension-score cards.
+Render strategy architectures and decision evidence rather than legacy dimension-score identities.
 
-### Phase H — Reports
+### Phase H — Goal-specific reports
 
-Retirement Report and PDF renderer must consume the final Strategy Run/recommendation contract. They must not reconstruct strategy decisions independently.
+Retirement Report/PDF consumes the final generic Strategy Result. It must not independently reconstruct the strategy decision.
 
----
+## 12. Regression requirements
 
-## 10. Regression requirements
+Preserve:
 
-Every conversion batch must preserve:
-
-- existing goal calculation behavior outside the intended retirement correction;
+- goal calculation behavior outside intended changes;
 - corrected retirement calculation;
 - Goal Planner → Strategy Builder handoff;
 - automatic fresh run when the goal version changes;
-- strategy eligibility;
-- strategy recommendation traceability;
-- report generation;
+- strategy eligibility and traceability;
+- generic Strategy Result for non-retirement goals;
+- retirement report generation;
 - PDF rendering;
 - CI test suite.
 
-Add regression tests whenever a previously observed bug is fixed.
+Known regressions must remain covered:
 
-Known regressions that must remain covered:
-
-- retirement goal label normalization (`Retirement / Financial Freedom` vs equivalent normalized key);
+- retirement goal label normalization;
 - stale Strategy Run after a saved goal change;
-- retirement corpus must not collapse to the old ~₹26.1L annual-expense-style target;
+- retirement corpus must not collapse to the old annual-expense-style target;
 - no-strategy state must be distinguishable from an implementation failure.
 
----
+## 13. Definition of Done
 
-## 11. Definition of Done
-
-Conversion is complete only when all are true:
-
-- [ ] Rule/eligibility layer determines applicability.
+- [ ] Strategy Builder is goal-agnostic.
+- [ ] Eligibility determines applicable architectures.
 - [ ] Strategy Library contains reusable goal-level architectures.
 - [ ] Techniques are separate from strategies.
-- [ ] Strategy variants/scenarios are separate from strategy identity.
-- [ ] Safety/Liquidity/Growth/Flexibility are no longer the strategy-selection engine.
-- [ ] Composite score is no longer the decision authority.
+- [ ] Variants/scenarios are separate from strategy identity.
+- [ ] Safety/Liquidity/Growth/Flexibility are not strategy-selection mechanisms.
+- [ ] Composite score is not decision authority.
 - [ ] Recommendation is explainable and goal-specific.
-- [ ] Goal version changes automatically invalidate/rebuild stale runs.
+- [ ] Strategy Result remains generic across goals.
+- [ ] Goal version changes invalidate/rebuild stale runs.
 - [ ] Retirement uses the dedicated corpus calculation.
-- [ ] Strategy Builder UI displays strategy architectures, not dimension-score identities.
-- [ ] Report renderer consumes the final strategy output.
-- [ ] PDF output remains functional.
+- [ ] Retirement Report/PDF is downstream and retirement-specific.
+- [ ] Non-retirement goals do not depend on retirement reporting.
+- [ ] Moneywheel and Budgeting remain available.
 - [ ] Existing and new regression tests pass.
 - [ ] CI is green.
 
----
+## 14. Important implementation rule
 
-## 12. Important implementation rule
-
-Do not perform a broad rewrite just to satisfy this document. Convert one bounded contract at a time, run the relevant tests, then CI, and only then proceed to the next layer.
+Do not perform a broad rewrite merely to satisfy this specification. Convert one bounded contract at a time, run relevant tests, then CI, and proceed only after validation.
 
 The objective is **architectural conversion with behavioral safety**, not a cosmetic refactor.
