@@ -10,6 +10,7 @@ from typing import List, Tuple
 from models.strategy import StrategyDefinition
 from models.defined_goal import DefinedGoal as GoalSnapshot
 from models.financial_state import FinancialState
+from engines.rules.engine import GOAL_TYPE_ALIASES
 
 
 def evaluate_eligibility(
@@ -20,68 +21,62 @@ def evaluate_eligibility(
     """Determine whether *strategy* is applicable for *goal* and *state*.
 
     The rules are deterministic and explainable. Each rule that fails adds a
-    human‑readable reason to the *reasons* list.
-
-    The implementation follows the spec sections:
-    * goal type applicability
-    * time horizon
-    * funding shortfall / surplus
-    * cash‑flow requirements
-    * existing assets
-    * debt constraints
-    * liquidity requirements
-    * retirement‑specific requirements (if goal.type == "retirement")
+    human-readable reason to the *reasons* list.
     """
     reasons: List[str] = []
     eligible = True
 
-    # If no goal or state is provided, assume no constraints (eligible)
-    if goal is None or state is None:
+    # If no goal is provided, assume no goal-level constraints
+    if goal is None:
         return True, []
 
-    # Example rule: goal type must be in strategy.applicable_goal_types
-    if getattr(strategy, "applicable_goal_types", None) and goal.type not in strategy.applicable_goal_types:
-        eligible = False
-        reasons.append(
-            f"Goal type '{goal.type}' not allowed for strategy {strategy.strategy_id}"
-        )
+    raw_type = (getattr(goal, "goal_type", getattr(goal, "type", "")) or "").strip().lower()
+    canonical_type = GOAL_TYPE_ALIASES.get(raw_type, raw_type)
+    duration_years = float(getattr(goal, "duration_years", getattr(goal, "horizon_years", 0)) or 0.0)
 
-    # Example rule: horizon (in years) must be within strategy constraints if any
-    if hasattr(strategy, "constraints"):
+    # Goal type applicability
+    strategy_types = [
+        GOAL_TYPE_ALIASES.get(t.strip().lower(), t.strip().lower())
+        for t in getattr(strategy, "applicable_goal_types", [])
+    ]
+    if strategy_types and canonical_type and canonical_type not in strategy_types and "other" not in strategy_types:
+        eligible = False
+        reasons.append(f"Goal type '{raw_type}' not allowed for strategy {strategy.strategy_id}")
+
+    # Horizon constraints
+    if hasattr(strategy, "constraints") and strategy.constraints:
         for c in strategy.constraints:
             if c.startswith("horizon<="):
                 try:
                     max_h = float(c.split("<=")[1])
-                    if getattr(goal, "horizon_years", 0) > max_h:
+                    if duration_years > max_h:
                         eligible = False
                         reasons.append(
-                            f"Goal horizon {getattr(goal, 'horizon_years', 'N/A')} exceeds max {max_h} for strategy"
+                            f"Goal horizon {duration_years:g} exceeds max {max_h:g} for strategy"
                         )
                 except ValueError:
                     pass
             elif c.startswith("horizon>="):
                 try:
                     min_h = float(c.split(">=")[1])
-                    if getattr(goal, "horizon_years", 0) < min_h:
+                    if duration_years < min_h:
                         eligible = False
                         reasons.append(
-                            f"Goal horizon {getattr(goal, 'horizon_years', 'N/A')} below min {min_h} for strategy"
+                            f"Goal horizon {duration_years:g} below min {min_h:g} for strategy"
                         )
                 except ValueError:
                     pass
 
-    # Funding gap / surplus rule
-    funding_gap = getattr(goal, "target_amount", 0) - getattr(state, "liquidity", 0)
-    if "funding_gap" in getattr(strategy, "constraints", []):
-        for c in strategy.constraints:
+    # Financial state constraints (if state is present)
+    if state is not None:
+        funding_gap = getattr(goal, "funding_gap", getattr(goal, "target_amount", 0) - getattr(state, "liquidity", 0))
+        for c in getattr(strategy, "constraints", []):
             if c.startswith("funding_gap<="):
                 try:
                     max_gap = float(c.split("<=")[1])
                     if funding_gap > max_gap:
                         eligible = False
-                        reasons.append(
-                            f"Funding gap {funding_gap:.2f} exceeds allowed {max_gap}"
-                        )
+                        reasons.append(f"Funding gap {funding_gap:.2f} exceeds allowed {max_gap}")
                 except ValueError:
                     pass
             elif c.startswith("funding_gap>="):
@@ -89,15 +84,15 @@ def evaluate_eligibility(
                     min_gap = float(c.split(">=")[1])
                     if funding_gap < min_gap:
                         eligible = False
-                        reasons.append(
-                            f"Funding gap {funding_gap:.2f} below required {min_gap}"
-                        )
+                        reasons.append(f"Funding gap {funding_gap:.2f} below required {min_gap}")
                 except ValueError:
                     pass
 
-    # Retirement‑specific rule example
-    if getattr(goal, "type", None) == "retirement":
-        if "retirement" not in getattr(strategy, "applicable_goal_characteristics", []):
+    # Retirement-specific rule
+    if canonical_type == "retirement":
+        chars = getattr(strategy, "applicable_goal_characteristics", [])
+        types = [t.strip().lower() for t in getattr(strategy, "applicable_goal_types", [])]
+        if "retirement" not in chars and "retirement" not in types:
             eligible = False
             reasons.append("Strategy not marked for retirement goals")
 

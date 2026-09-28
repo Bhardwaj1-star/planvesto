@@ -6,6 +6,7 @@ from engines.strategy.ranking import rank_scenarios
 from engines.strategy.recommendation import generate_recommendation
 from engines.strategy.scenario import generate_baseline_scenarios
 from engines.strategy.composition import compose_architectures
+from engines.strategy.decision import evaluate_decision
 
 
 class StrategyEngineResult:
@@ -74,11 +75,40 @@ class StrategyEngine:
 
         strategy_context = self._decision_context(financial_context, rule_assessment)
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
-        rankings = rank_scenarios(strategies, all_scenarios, priorities)
         architectures = compose_architectures(strategies, defined_goal, strategy_context)
+
+        # Authoritative decision engine evaluation (spec §3.7 & §3.8)
+        decision_result = evaluate_decision(
+            strategies=strategies,
+            scenarios=all_scenarios,
+            architectures=architectures,
+            defined_goal=defined_goal,
+            financial_context=financial_context,
+            rule_assessment=rule_assessment,
+            priorities=priorities,
+        )
+
+        # Scenarios ranked by decision evidence; is_recommended assigned from decision_result
+        rankings = rank_scenarios(
+            strategies=strategies,
+            scenarios=all_scenarios,
+            priorities=priorities,
+            decision_result=decision_result,
+            defined_goal=defined_goal,
+            financial_context=financial_context,
+            architectures=architectures,
+        )
+
+        # Recommendation consumes DecisionResult
         recommendation = generate_recommendation(
-            ranked_items=rankings, strategies=strategies, scenarios=all_scenarios,
-            defined_goal=defined_goal, priorities=priorities, architectures=architectures,
+            decision_result=decision_result,
+            ranked_items=rankings,
+            strategies=strategies,
+            scenarios=all_scenarios,
+            defined_goal=defined_goal,
+            priorities=priorities,
+            architectures=architectures,
             rule_diagnostics=strategy_context["rule_diagnostics"],
         )
+
         return StrategyEngineResult(strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures)

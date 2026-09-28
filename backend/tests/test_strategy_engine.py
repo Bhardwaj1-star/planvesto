@@ -110,31 +110,68 @@ class TestStrategyApplicability:
         assert len(res.rankings) > 0
 
 
-class TestPriorityBasedRanking:
-    def test_safety_prioritized_ranks_safety_highest(self):
+class TestEvidenceBasedDecision:
+    def test_changing_dimension_scores_does_not_change_selected_strategy(self):
+        """Spec §4 & §3.7: Changing dimension weights cannot change the selected strategy when decision evidence is unchanged."""
+        engine = StrategyEngine()
+        goal = _make_goal()
+
+        # Execute with extreme safety preference
+        res_safety = engine.execute(goal, priorities=InvestorPriorities(safety=0.9, liquidity=0.03, growth=0.04, flexibility=0.03))
+        # Execute with extreme growth preference
+        res_growth = engine.execute(goal, priorities=InvestorPriorities(safety=0.03, liquidity=0.04, growth=0.9, flexibility=0.03))
+
+        # Strategic decision must be identical: governed by goal fit & funding fit, not dimension weights
+        assert res_safety.recommendation.recommended_strategy_id == res_growth.recommendation.recommended_strategy_id
+        assert res_safety.rankings[0].strategy_id == res_growth.rankings[0].strategy_id
+        assert res_safety.recommendation.recommended_strategy_id == "strat-calibrated-growth"
+
+    def test_composite_score_is_not_decision_authority(self):
+        """Spec §4: Strategy recommendation is NOT driven by composite_score."""
         engine = StrategyEngine()
         goal = _make_goal()
         priorities = InvestorPriorities(safety=0.8, liquidity=0.1, growth=0.05, flexibility=0.05)
         res = engine.execute(goal, priorities=priorities)
-        top = res.rankings[0]
-        assert top.strategy_id == "strat-cap-preservation"
-        assert res.recommendation.recommended_strategy_id == "strat-cap-preservation"
 
-    def test_growth_prioritized_ranks_growth_highest(self):
+        top_rec = res.recommendation.recommended_strategy_id
+        # The recommended item must have is_recommended=True
+        recommended_item = next(r for r in res.rankings if r.strategy_id == top_rec)
+        assert recommended_item.is_recommended is True
+        # Even if another strategy might have a different composite_score under these weights,
+        # the decision engine's evidence-based choice governs recommendation
+        assert top_rec == "strat-calibrated-growth"
+        assert res.recommendation.architecture is not None
+        assert res.recommendation.architecture.primary_strategy_id == top_rec
+
+    def test_ineligible_strategies_cannot_be_recommended(self):
+        """Spec §3.3: Ineligible strategies cannot enter recommendation."""
         engine = StrategyEngine()
         goal = _make_goal()
-        priorities = InvestorPriorities(safety=0.05, liquidity=0.05, growth=0.85, flexibility=0.05)
-        res = engine.execute(goal, priorities=priorities)
-        top = res.rankings[0]
-        assert top.strategy_id in {"strat-calibrated-growth", "strat-dynamic-accumulation"}
+        res = engine.execute(goal, priorities=InvestorPriorities())
+        for r in res.rankings:
+            if not r.is_eligible:
+                assert r.is_recommended is False
+                assert r.strategy_id != res.recommendation.recommended_strategy_id
 
-    def test_liquidity_prioritized_ranks_liquidity_highest(self):
+    def test_recommendation_comes_from_new_decision_output(self):
+        """Spec §3.8: Recommendation provides goal fit, horizon fit, and architectural reasoning."""
+        engine = StrategyEngine()
+        goal = _make_goal()
+        res = engine.execute(goal, priorities=InvestorPriorities())
+        rec = res.recommendation
+        assert rec.recommended_strategy_id != ""
+        assert rec.architecture is not None
+        assert "deterministic" in rec.complete_reasoning or "Goal Fit" in rec.complete_reasoning
+        assert not any("Strongly aligns with your priority for" in r for r in rec.short_reasons)
+
+    def test_near_term_liquidity_goal_selects_liquidity_architecture(self):
+        """Emergency fund near-term goal selects liquidity/preservation based on goal fit, not slider."""
         engine = StrategyEngine()
         goal = _make_goal(goal_type="Emergency Fund")
-        priorities = InvestorPriorities(safety=0.1, liquidity=0.8, growth=0.05, flexibility=0.05)
+        goal.duration_years = 1.0
+        priorities = InvestorPriorities(safety=0.25, liquidity=0.25, growth=0.25, flexibility=0.25)
         res = engine.execute(goal, priorities=priorities)
-        top = res.rankings[0]
-        assert top.strategy_id == "strat-high-liquidity-flex"
+        assert res.recommendation.recommended_strategy_id in {"strat-high-liquidity-flex", "strat-cap-preservation"}
 
 
 class TestCustomScenarios:

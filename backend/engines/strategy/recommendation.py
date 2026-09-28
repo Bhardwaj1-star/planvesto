@@ -1,75 +1,110 @@
+from typing import Any
 from models.defined_goal import DefinedGoal
-from models.strategy import Scenario, StrategyDefinition, StrategyRankingItem, StrategyRecommendation, InvestorPriorities, StrategyArchitecture
+from models.strategy import (
+    InvestorPriorities,
+    Scenario,
+    StrategyArchitecture,
+    StrategyDefinition,
+    StrategyRankingItem,
+    StrategyRecommendation,
+)
+from engines.strategy.decision import DecisionResult, evaluate_decision
 
 
 def generate_recommendation(
-    ranked_items: list[StrategyRankingItem],
-    strategies: list[StrategyDefinition],
-    scenarios: list[Scenario],
-    defined_goal: DefinedGoal,
-    priorities: InvestorPriorities,
+    ranked_items: list[StrategyRankingItem] | None = None,
+    strategies: list[StrategyDefinition] | None = None,
+    scenarios: list[Scenario] | None = None,
+    defined_goal: DefinedGoal | None = None,
+    priorities: InvestorPriorities | None = None,
     architectures: list[StrategyArchitecture] | None = None,
     rule_diagnostics: list[dict] | None = None,
+    decision_result: DecisionResult | None = None,
 ) -> StrategyRecommendation:
-    """Generate a goal‑level recommendation based on the ranked items.
+    """Generate a goal-level strategy recommendation based on decision evidence.
 
-    The function now consumes the new evidence‑based ranking output:
-    * ``is_eligible`` and ``ineligible_reasons`` are respected – if the first
-      item is ineligible we fall back to a no‑strategy recommendation.
-    * ``evidence_scores`` is used to surface the concrete rationale for the
-      recommendation (safety, liquidity, growth, flexibility, funding_gap).
+    Consumes the new DecisionResult from ComparisonDecisionEngine rather than
+    blindly taking ranked_items[0] or deriving recommendations from legacy priority dimensions.
     """
     architectures = architectures or []
-    if not ranked_items:
-        return StrategyRecommendation(
-            recommended_strategy_id="",
-            recommended_scenario_id="",
-            short_reasons=["No applicable strategy available for the current goal and constraints."],
-            complete_reasoning="No eligible strategy was found. The goal or its constraints must be changed before a strategy can be recommended.",
-            feasibility_status="infeasible",
-        )
-
-    # If the top ranked item is ineligible, treat as no‑strategy case
-    top = ranked_items[0]
-    if not getattr(top, "is_eligible", True):
-        return StrategyRecommendation(
-            recommended_strategy_id="",
-            recommended_scenario_id="",
-            short_reasons=top.ineligible_reasons or ["Strategy was deemed ineligible by rule engine."],
-            complete_reasoning="All candidate strategies were filtered out by eligibility rules.",
-            feasibility_status="infeasible",
-        )
-
-    strat_lookup = {s.strategy_id: s for s in strategies}
-    scen_lookup = {s.scenario_id: s for s in scenarios}
-    top_strat = strat_lookup.get(top.strategy_id)
-    top_scen = scen_lookup.get(top.scenario_id)
-    architecture = next((a for a in architectures if a.primary_strategy_id == top.strategy_id), architectures[0] if architectures else None)
-
-    # Use evidence scores for priority explanation instead of legacy composite scores
-    evidence = getattr(top, "evidence_scores", {})
-    # Determine dominant priority based on the highest evidence value
-    if evidence:
-        dominant_priority, dominant_score = max(evidence.items(), key=lambda kv: kv[1])
-    else:
-        # Fallback to original priorities if evidence missing
-        norm_p = priorities.normalized()
-        dominant_priority = max(
-            [("safety", norm_p.safety), ("liquidity", norm_p.liquidity), ("growth", norm_p.growth), ("flexibility", norm_p.flexibility)],
-            key=lambda x: x[1],
-        )[0]
-        dominant_score = top.dimension_scores.get(dominant_priority, 7.0)
-
-    short_reasons = [f"Strongly aligns with your priority for {dominant_priority.capitalize()} (score: {dominant_score}/10)."]
-    if defined_goal.funding_status == "Shortfall":
-        short_reasons.append(f"Addresses the current funding shortfall of ₹{defined_goal.funding_gap:,.2f} over {defined_goal.duration_years} years.")
-    elif defined_goal.funding_status == "On Track":
-        short_reasons.append(f"Maintains the goal trajectory toward the required ₹{defined_goal.future_target:,.2f} target.")
-    else:
-        short_reasons.append(f"Recognises the current surplus of ₹{abs(defined_goal.funding_gap):,.2f} and avoids blindly treating it as additional required funding.")
-
-    # Financial‑state diagnostics are explanatory evidence only.
+    strategies = strategies or []
+    scenarios = scenarios or []
     diagnostics = rule_diagnostics or []
+
+    # If decision_result is not passed, evaluate it from the available context
+    if decision_result is None:
+        if defined_goal and strategies and scenarios:
+            decision_result = evaluate_decision(
+                strategies=strategies,
+                scenarios=scenarios,
+                architectures=architectures,
+                defined_goal=defined_goal,
+                financial_context=None,
+                priorities=priorities,
+            )
+        elif ranked_items:
+            # Fallback for mock/isolated calls with only ranked_items
+            eligible_items = [r for r in ranked_items if getattr(r, "is_eligible", True)]
+            if not eligible_items:
+                return StrategyRecommendation(
+                    recommended_strategy_id="",
+                    recommended_scenario_id="",
+                    short_reasons=["All candidate strategies were deemed ineligible by rule engine."],
+                    complete_reasoning="All candidate strategies were filtered out by eligibility rules.",
+                    feasibility_status="infeasible",
+                    constraints=["Ineligible by rule constraints."],
+                )
+            top = eligible_items[0]
+            matched_arch = next((a for a in architectures if a.primary_strategy_id == top.strategy_id), architectures[0] if architectures else None)
+            return StrategyRecommendation(
+                recommended_strategy_id=top.strategy_id,
+                recommended_scenario_id=top.scenario_id,
+                short_reasons=[f"Selected strategy architecture '{top.strategy_name}' best satisfies goal requirements."],
+                complete_reasoning=f"Strategy architecture '{top.strategy_name}' was selected as the optimal pathway for this goal.",
+                architecture=matched_arch,
+                alternative_architecture_ids=[a.architecture_id for a in architectures if not matched_arch or a.architecture_id != matched_arch.architecture_id],
+                feasibility_status=matched_arch.feasibility_status if matched_arch else "feasible",
+                constraints=matched_arch.constraints if matched_arch else [],
+            )
+        else:
+            return StrategyRecommendation(
+                recommended_strategy_id="",
+                recommended_scenario_id="",
+                short_reasons=["No applicable strategy available for the current goal and constraints."],
+                complete_reasoning="No eligible strategy architecture was found in the library for this goal.",
+                feasibility_status="infeasible",
+                constraints=["No eligible strategy found."],
+            )
+
+    # Ineligible / no-strategy case
+    if not decision_result.recommended_strategy_id:
+        return StrategyRecommendation(
+            recommended_strategy_id="",
+            recommended_scenario_id="",
+            short_reasons=decision_result.decision_rationale or ["No applicable strategy available for current constraints."],
+            complete_reasoning=decision_result.complete_reasoning or "All candidate strategies were filtered out by deterministic rules.",
+            feasibility_status="infeasible",
+            constraints=decision_result.constraints or ["No eligible strategy found."],
+        )
+
+    short_reasons: list[str] = list(decision_result.decision_rationale)
+
+    # Funding context description
+    if defined_goal:
+        if defined_goal.funding_status == "Shortfall":
+            short_reasons.append(
+                f"Addresses the funding shortfall of ₹{defined_goal.funding_gap:,.2f} over a {defined_goal.duration_years:g}-year horizon."
+            )
+        elif defined_goal.funding_status == "On Track":
+            short_reasons.append(
+                f"Maintains the goal trajectory toward the required ₹{defined_goal.future_target:,.2f} target."
+            )
+        else:
+            short_reasons.append(
+                f"Preserves the current surplus of ₹{abs(defined_goal.funding_gap):,.2f} without exposing capital to unneeded market risk."
+            )
+
+    # Append financial-state diagnostics as explanatory evidence only
     for diagnostic in diagnostics:
         status = diagnostic.get("evidence", {}).get("status")
         if status in {"healthy", "excellent"}:
@@ -77,29 +112,27 @@ def generate_recommendation(
         elif status == "critical":
             short_reasons.append(diagnostic.get("message", "A financial-state constraint should be addressed alongside the strategy."))
 
-    if architecture and architecture.supporting_strategy_ids:
+    arch = decision_result.recommended_architecture
+    if arch and arch.supporting_strategy_ids:
         short_reasons.append("Combines a primary strategy with supporting strategies because one isolated strategy is not sufficient for the goal context.")
+
+    strat_lookup = {s.strategy_id: s for s in strategies}
+    top_strat = strat_lookup.get(decision_result.recommended_strategy_id)
     if top_strat and top_strat.good_outcomes:
         short_reasons.append(top_strat.good_outcomes[0])
 
-    complete_reasoning = (
-        f"For '{defined_goal.goal_name}', the {top.strategy_name} scenario ranks highest after evaluating goal fit and investor priorities. "
-        f"The recommendation is a goal-level strategy architecture rather than a product or portfolio selection. "
-        f"The goal is currently {defined_goal.funding_status.lower()} with a {defined_goal.duration_years}-year horizon. "
-        f"The dominant stated priority is {dominant_priority}, with a strategy‑fit score of {round(dominant_score, 1)}/10. "
-    )
-    critical = [d.get("message") for d in diagnostics if d.get("evidence", {}).get("status") == "critical"]
-    if critical:
-        complete_reasoning += "Financial-state considerations: " + " ".join(critical) + " "
-    complete_reasoning += f"Trade-off: {top_scen.trade_off_notes if top_scen else 'The selected architecture must be implemented downstream without changing the strategic objective.'}"
+    complete_reasoning = decision_result.complete_reasoning
+    critical_notes = [d.get("message") for d in diagnostics if d.get("evidence", {}).get("status") == "critical" and d.get("message")]
+    if critical_notes:
+        complete_reasoning += " Financial-state considerations: " + " ".join(critical_notes)
 
     return StrategyRecommendation(
-        recommended_strategy_id=top.strategy_id,
-        recommended_scenario_id=top.scenario_id,
+        recommended_strategy_id=decision_result.recommended_strategy_id,
+        recommended_scenario_id=decision_result.recommended_scenario_id,
         short_reasons=short_reasons,
         complete_reasoning=complete_reasoning,
-        architecture=architecture,
-        alternative_architecture_ids=[a.architecture_id for a in architectures if not architecture or a.architecture_id != architecture.architecture_id],
-        feasibility_status=architecture.feasibility_status if architecture else "conditional",
-        constraints=architecture.constraints if architecture else ["Financial-state context is incomplete."],
+        architecture=arch,
+        alternative_architecture_ids=[a.architecture_id for a in decision_result.alternative_architectures],
+        feasibility_status=decision_result.feasibility_status,  # type: ignore
+        constraints=decision_result.constraints,
     )
