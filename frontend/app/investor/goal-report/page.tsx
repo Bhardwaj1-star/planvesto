@@ -20,12 +20,22 @@ export default function GoalReportPage() {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
         const data = await loadGoalPlannerData();
+        const goals = data?.goals ?? [];
         const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("goalId") : null;
-        const goal = (data?.goals ?? []).find((item) => item.id === requested) ?? data?.goals?.[0];
-        if (!goal) throw new Error("No goal is available for reporting.");
-        const run = await getLatestStrategyRun(planningUnitId, goal.id);
-        if (!run.strategy_run_id) throw new Error("No completed Strategy Run is available for this goal.");
-        const next = await getGoalStrategyReport(planningUnitId, run.strategy_run_id);
+        const candidates = requested ? goals.filter((item) => item.id === requested) : goals;
+        if (!candidates.length) throw new Error("No goal is available for reporting.");
+
+        let selectedRun: Awaited<ReturnType<typeof getLatestStrategyRun>> | null = null;
+        for (const goal of candidates) {
+          try {
+            const candidate = await getLatestStrategyRun(planningUnitId, goal.id);
+            if (candidate.strategy_run_id && (!selectedRun || String(candidate.created_at ?? "") > String(selectedRun.created_at ?? ""))) selectedRun = candidate;
+          } catch {
+            // Skip goals that do not yet have a Strategy Run.
+          }
+        }
+        if (!selectedRun?.strategy_run_id) throw new Error("No completed Strategy Run is available for the selected goal.");
+        const next = await getGoalStrategyReport(planningUnitId, selectedRun.strategy_run_id);
         if (active) setReport(next);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load goal report.");
