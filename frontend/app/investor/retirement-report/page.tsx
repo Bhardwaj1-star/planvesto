@@ -38,7 +38,10 @@ export default function RetirementReportPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const currentRunId = params.get('run_id') || '';
-    const currentPlanningUnitId = params.get('planning_unit_id') || '';
+    const storedPlanningUnitId = typeof window !== 'undefined'
+      ? (window.localStorage.getItem('planvesto-planning-unit-id') || window.localStorage.getItem('planvesto_planning_unit_id') || '')
+      : '';
+    const currentPlanningUnitId = params.get('planning_unit_id') || storedPlanningUnitId;
     setRunId(currentRunId); setPlanningUnitId(currentPlanningUnitId);
     if (!currentRunId || !currentPlanningUnitId) { setError('A strategy run and planning unit are required.'); return; }
     fetch(`/api/strategy/runs/${encodeURIComponent(currentRunId)}/retirement-report?planning_unit_id=${encodeURIComponent(currentPlanningUnitId)}`)

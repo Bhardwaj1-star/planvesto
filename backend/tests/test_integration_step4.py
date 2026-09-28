@@ -35,6 +35,20 @@ HEALTH_URL = f"{BASE_URL}/health"
 ROOT_URL = BASE_URL
 
 
+def _is_server_running():
+    try:
+        r = requests.get(HEALTH_URL, timeout=1)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _is_server_running(),
+    reason="Live backend server is not running on http://127.0.0.1:8000 (start uvicorn main:app to run integration tests)",
+)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────

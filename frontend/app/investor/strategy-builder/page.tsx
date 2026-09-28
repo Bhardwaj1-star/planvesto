@@ -177,7 +177,7 @@ export default function InvestorStrategyBuilderPage() {
             <label className="block flex-1"><span className="text-sm font-bold text-slate-700">Goal</span><select value={selectedGoalId} onChange={(e) => setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-600"><option value="">Select goal</option>{goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>{selectedGoalId && <span className="mt-2 block text-xs font-semibold text-teal-700">Planning strategy for: {goals.find((g) => g.id === selectedGoalId)?.name ?? "Selected goal"}</span>}</label>
             <InvestorButton onClick={handleBuild} disabled={working || !selectedGoalId}>{working ? "Working…" : run ? "Rebuild Strategy Run" : "Build Strategy"}</InvestorButton>
           </div>
-          {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span><Link href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}`} className="rounded-full bg-navy-900 px-3 py-1 font-bold text-white hover:opacity-90">View Retirement Report</Link></div>}
+          {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span><Link href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`} className="rounded-full bg-navy-900 px-3 py-1 font-bold text-white hover:opacity-90">View Retirement Report</Link></div>}
         </section>
 
         {goalPreview && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div><h2 className="text-lg font-bold">Goal Calculation &amp; Preview</h2><p className="mt-1 text-sm text-slate-500">This is the Goal Planner calculation that the Strategy Run is based on.</p></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Today&apos;s Cost</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.today_cost)}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Inflation</p><p className="mt-1 text-lg font-extrabold">{(goalPreview.inflation_rate * 100).toFixed(1)}%</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Required Corpus</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.future_target)}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Funding Gap</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.funding_gap)}</p></div></div><div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600"><span>Target: <strong>{String(goalPreview.target_month).padStart(2, "0")}/{goalPreview.target_year}</strong></span><span>•</span><span>Mapped Assets: <strong>{formatINR(goalPreview.projected_mapped_asset_value)}</strong></span><span>•</span><span>Monthly Contribution: <strong>{formatINR(goalPreview.required_monthly_contribution)}</strong></span><span>•</span><span>Status: <strong>{goalPreview.funding_status}</strong></span></div></section>}
@@ -185,7 +185,114 @@ export default function InvestorStrategyBuilderPage() {
         {!run ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Run yet</h2><p className="mt-2 text-sm text-slate-500">Review the Goal Calculation &amp; Preview above, then build the Strategy Run.</p></section> : <>
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-bold">Investor priorities</h2><p className="mt-1 text-sm text-slate-500">These weights tell the engine what matters most to the investor.</p></div><InvestorButton variant="secondary" onClick={handlePriorities} disabled={working}>Recalculate</InvestorButton></div><div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{(Object.keys(priorities) as Array<keyof InvestorPriorities>).map((key) => <label key={key} className="rounded-2xl bg-slate-50 p-4"><div className="flex justify-between text-sm font-bold capitalize"><span>{key}</span><span>{percent(priorities[key])}</span></div><input type="range" min="0" max="100" value={Math.round(priorities[key] * 100)} onChange={(e) => setPriorities((p) => ({ ...p, [key]: Number(e.target.value) / 100 }))} className="mt-4 w-full" /><p className="mt-2 text-xs text-slate-500">Weights are normalized by the backend.</p></label>)}</div></section>
 
-          <section><div className="mb-4"><h2 className="text-lg font-bold">Strategy Run</h2><p className="mt-1 text-sm text-slate-500">Choose one of the two strategy pathways returned for this goal.</p></div><div className="grid gap-5 lg:grid-cols-2">{displayedRankings.map((ranking) => { const strategy = run.applicable_strategies.find((s) => s.strategy_id === ranking.strategy_id); const isSelected = selectedStrategyId === ranking.strategy_id && selectedScenarioId === ranking.scenario_id; return <article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${isSelected ? "border-teal-500 ring-2 ring-teal-100" : "border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{ranking.is_recommended ? "Recommended" : "Alternative"}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended && <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{strategy?.description ?? "Strategy definition supplied by the engine."}</p><div className="mt-5 grid grid-cols-2 gap-3">{Object.entries(ranking.dimension_scores).map(([k,v]) => <div key={k} className="rounded-xl bg-slate-50 p-3"><p className="text-xs capitalize text-slate-400">{k}</p><p className="mt-1 font-bold">{displayMetric(v)}</p></div>)}<div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-400">Composite</p><p className="mt-1 font-bold">{displayMetric(ranking.composite_score)}</p></div></div><button onClick={() => { setSelectedStrategyId(ranking.strategy_id); setSelectedScenarioId(ranking.scenario_id); const s = run.applicable_strategies.find((x) => x.strategy_id === ranking.strategy_id); const defaults = Object.fromEntries((s?.implementation_parameters ?? []).map((p) => [p.name, p.default_value])); setParameters(defaults); }} className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50">{isSelected ? "Selected" : "Select this pathway"}</button></article>; })}</div></section>
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold">Strategy Architectures</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Applicable strategy architectures evaluated for this goal by the decision engine.
+              </p>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {displayedRankings.map((ranking) => {
+                const strategy = run.applicable_strategies.find((s) => s.strategy_id === ranking.strategy_id);
+                const isSelected = selectedStrategyId === ranking.strategy_id && selectedScenarioId === ranking.scenario_id;
+                const arch = run.architectures?.find((a) => a.primary_strategy_id === ranking.strategy_id);
+                return (
+                  <article
+                    key={`${ranking.strategy_id}-${ranking.scenario_id}`}
+                    className={`rounded-3xl border bg-white p-6 shadow-sm ${
+                      isSelected ? "border-teal-500 ring-2 ring-teal-100" : "border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                          {ranking.is_recommended ? "Recommended Architecture" : "Alternative Architecture"}
+                        </p>
+                        <h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3>
+                        <p className="mt-1 text-sm font-medium text-slate-500">{ranking.scenario_name}</p>
+                      </div>
+                      {ranking.is_recommended && (
+                        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+                          Recommended
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-4 text-sm leading-6 text-slate-600">
+                      {strategy?.description ?? "Strategy architecture evaluated by the engine."}
+                    </p>
+
+                    {/* Architecture Details per conversion spec */}
+                    <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-xs text-slate-600">
+                      {strategy?.strategic_objective && (
+                        <div>
+                          <span className="font-bold text-slate-700">Purpose: </span>
+                          <span>{strategy.strategic_objective}</span>
+                        </div>
+                      )}
+                      {arch?.rationale && arch.rationale.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Why applicable: </span>
+                          <span>{arch.rationale[0]}</span>
+                        </div>
+                      )}
+                      {strategy?.technique_ids && strategy.technique_ids.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Techniques: </span>
+                          <span className="capitalize">{strategy.technique_ids.join(", ").replaceAll("-", " ")}</span>
+                        </div>
+                      )}
+                      {strategy?.trade_offs && strategy.trade_offs.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Trade-offs: </span>
+                          <span>{strategy.trade_offs.slice(0, 2).join("; ")}</span>
+                        </div>
+                      )}
+                      {arch?.constraints && arch.constraints.length > 0 && (
+                        <div>
+                          <span className="font-bold text-slate-700">Key constraints: </span>
+                          <span>{arch.constraints.slice(0, 2).join("; ")}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Supporting Evidence Scores (explicitly labeled per spec) */}
+                    <div className="mt-5 border-t border-slate-100 pt-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Supporting Evidence</p>
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {Object.entries(ranking.dimension_scores).map(([k, v]) => (
+                          <div key={k} className="rounded-xl bg-slate-50 p-3">
+                            <p className="text-xs capitalize text-slate-400">{k}</p>
+                            <p className="mt-1 font-bold">{displayMetric(v)}</p>
+                          </div>
+                        ))}
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs text-slate-400">Score Fit</p>
+                          <p className="mt-1 font-bold">{displayMetric(ranking.composite_score)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setSelectedStrategyId(ranking.strategy_id);
+                        setSelectedScenarioId(ranking.scenario_id);
+                        const s = run.applicable_strategies.find((x) => x.strategy_id === ranking.strategy_id);
+                        const defaults = Object.fromEntries(
+                          (s?.implementation_parameters ?? []).map((p) => [p.name, p.default_value])
+                        );
+                        setParameters(defaults);
+                      }}
+                      className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50"
+                    >
+                      {isSelected ? "Selected" : "Select this pathway"}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
 
           {selectedStrategy && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation parameters</h2><p className="mt-1 text-sm text-slate-500">Only editable parameters defined by the backend are presented for investor input.</p><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter((p) => p.editable).map((p) => <label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold text-slate-800">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type === "choice" ? <select value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: e.target.value }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{(p.choices ?? []).map((choice) => <option key={choice}>{choice}</option>)}</select> : <input type="number" step={p.param_type === "integer" ? 1 : "any"} min={p.min_value ?? undefined} max={p.max_value ?? undefined} value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: Number(e.target.value) }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />}</label>)}</div>{selectedScenario && <div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes || "No additional trade-off notes supplied."}</p></div>}<InvestorButton className="mt-6" onClick={handleSelect} disabled={working || !selectedScenarioId}>{working ? "Saving…" : run.selected_strategy_version_id ? "Save selection again" : "Confirm selection"}</InvestorButton>{run.selected_strategy_version_id && <p className="mt-3 text-sm text-teal-700">Strategy Version created: {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "—"}).</p>}</section>}
 

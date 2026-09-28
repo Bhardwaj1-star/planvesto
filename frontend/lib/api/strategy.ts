@@ -82,6 +82,9 @@ export type StrategyRankingItem = {
   composite_score: number;
   dimension_scores: Record<string, number>;
   is_recommended: boolean;
+  evidence_scores?: Record<string, unknown>;
+  is_eligible?: boolean;
+  ineligible_reasons?: string[];
 };
 
 export type StrategyRecommendation = {
