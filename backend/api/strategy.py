@@ -5,6 +5,7 @@ from models.strategy import StrategyRun
 from schemas.strategy import CustomScenarioRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
 from services.strategy_service import StrategyService
 from services.retirement_report_pdf_service import RetirementReportPDFService
+from services.goal_report_service import GoalReportService
 
 router = APIRouter(prefix="/api/strategy", tags=["Strategy Builder"])
 
@@ -49,6 +50,21 @@ def get_run_history(goal_id: str, planning_unit_id: str = Query(...), authorizat
     user_id = authenticate_user(authorization)
     verify_goal_ownership(planning_unit_id, goal_id, user_id)
     return StrategyService().get_run_history(planning_unit_id, goal_id)
+
+
+@router.get("/runs/{strategy_run_id}/report")
+def get_goal_strategy_report(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
+    return GoalReportService().build_report(planning_unit_id, strategy_run_id)
+
+
+@router.get("/runs/{strategy_run_id}/report.pdf")
+def download_goal_strategy_report_pdf(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
+    pdf = GoalReportService().generate_pdf(planning_unit_id, strategy_run_id)
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=goal-strategy-report-{strategy_run_id}.pdf"})
 
 
 @router.get("/runs/{strategy_run_id}/retirement-report")
