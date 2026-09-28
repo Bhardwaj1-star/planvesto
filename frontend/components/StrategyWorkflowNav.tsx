@@ -4,8 +4,9 @@ import { usePathname } from "next/navigation";
 
 const steps = [
   { label: "Build & Compare", href: "/investor/strategy-builder" },
-  { label: "Custom Scenarios", href: "/investor/strategy-scenarios" },
   { label: "Approval", href: "/investor/strategy-approval" },
+  { label: "Action Plan", href: "/investor/action-plan" },
+  { label: "Retirement Report", href: "/investor/retirement-report" },
 ];
 
 export default function StrategyWorkflowNav() {

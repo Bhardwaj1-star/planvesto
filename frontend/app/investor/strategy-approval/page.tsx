@@ -85,7 +85,26 @@ export default function StrategyApprovalPage() {
     <StrategyWorkflowNav />
     <InvestorPageHeader eyebrow="Final decision" title="Strategy Approval" description="Review the selected Strategy Version, record suitability, and approve the immutable strategy snapshot." />
     {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
-    {success && <InvestorStatus tone="success">{success}{approvedVersionId && <Link href={`/investor/action-plan?strategyVersionId=${encodeURIComponent(approvedVersionId)}`} className="ml-3 font-bold underline">Continue to Action Plan →</Link>}</InvestorStatus>}
+    {success && (
+      <InvestorStatus tone="success">
+        <div>
+          <p>{success}</p>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs font-bold">
+            {approvedVersionId && (
+              <Link href={`/investor/action-plan?strategyVersionId=${encodeURIComponent(approvedVersionId)}`} className="underline">
+                Continue to Action Plan →
+              </Link>
+            )}
+            <Link
+              href={`/investor/retirement-report?run_id=${encodeURIComponent(run?.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run?.planning_unit_id ?? "")}`}
+              className="underline"
+            >
+              View Retirement Report →
+            </Link>
+          </div>
+        </div>
+      </InvestorStatus>
+    )}
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><label className="block"><span className="text-sm font-bold text-slate-700">Goal</span><select value={goalId} onChange={(e) => setGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"><option value="">Select goal</option>{goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.name}</option>)}</select></label></section>
     {!run?.selected_strategy_id || !run.selected_strategy_version_id ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Version selected</h2><p className="mt-2 text-sm text-slate-500">Approval is available only after Strategy Builder creates a selected Strategy Version.</p><Link href="/investor/strategy-builder" className="mt-6 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white">Return to Strategy Builder</Link></section> : <>
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Selected Strategy</p><h2 className="mt-2 text-2xl font-extrabold">{selectedStrategy?.name ?? run.selected_strategy_id}</h2><p className="mt-1 text-sm text-slate-500">Scenario: {run.selected_scenario_id ?? "—"}</p><div className="mt-5 flex flex-wrap gap-3 text-xs text-slate-600"><span className="rounded-full bg-slate-100 px-3 py-1">Strategy Version {run.selected_strategy_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal Version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span></div></section>

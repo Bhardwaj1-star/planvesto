@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import {
   confirmActionDecision,
   completeAction,
@@ -114,7 +115,22 @@ export default function ActionPlanPage() {
   if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-6xl space-y-6"><div className="h-10 w-64 animate-pulse rounded-xl bg-slate-200" /><div className="h-72 animate-pulse rounded-3xl bg-white" /></div></main>;
 
   return <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900"><div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-10">
-    <header><p className="text-sm font-semibold uppercase tracking-[0.16em] text-teal-700">Implementation</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight">Action Plan</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Turn an approved Strategy Version into concrete implementation actions. Decisions are recorded as immutable history by the backend.</p></header>
+    <StrategyWorkflowNav />
+    <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">Implementation</p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Action Plan</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+          Turn an approved Strategy Version into concrete implementation actions. Decisions are recorded as immutable history by the backend.
+        </p>
+      </div>
+      <Link
+        href="/investor/retirement-report"
+        className="inline-flex shrink-0 items-center justify-center rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
+      >
+        View Retirement Report →
+      </Link>
+    </header>
     {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>}
     {generating && <div className="rounded-2xl border border-teal-100 bg-teal-50 px-5 py-4 text-sm text-teal-800">Generating implementation actions from the approved strategy architecture…</div>}
     {approvedVersion && <section className="rounded-3xl border border-teal-100 bg-white p-6 shadow-sm"><div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Approved Strategy</p><h2 className="mt-2 text-2xl font-extrabold">{approvedVersion.strategy_id}</h2><p className="mt-1 text-sm text-slate-500">Strategy Version {approvedVersion.version} · Implementation version {approvedVersion.implementation_version} · {approvedVersion.source === "investor_edit" ? "Investor-edited" : "Strategy Library"}</p></div><Link href="/investor/strategy-approval" className="text-sm font-bold text-teal-700">Review approval</Link></div><div className="mt-5 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Implementation parameters</p><div className="mt-3 flex flex-wrap gap-2">{Object.entries(approvedVersion.implementation_parameters).map(([key, value]) => <span key={key} className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{key}: {String(value)}</span>)}</div></div></section>}

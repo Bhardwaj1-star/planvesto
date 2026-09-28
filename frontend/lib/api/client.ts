@@ -93,6 +93,53 @@ export async function apiRequest<T>(
 }
 
 /**
+ * Centralized API request function for binary responses (e.g. PDFs).
+ */
+export async function apiRequestBlob(
+  path: string,
+  init?: RequestInit,
+  options?: { timeout?: number },
+): Promise<Blob> {
+  if (!BACKEND_URL) throw new Error("Backend URL is not configured.");
+
+  const { data, error } = await getSessionWithRetry();
+  if (error) throw error;
+  if (!data.session) throw new Error("Authentication required.");
+
+  const timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
+  const controller = timeout > 0 ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeout) : null;
+
+  try {
+    const response = await fetch(`${BACKEND_URL}${path}`, {
+      ...init,
+      signal: init?.signal ?? controller?.signal ?? undefined,
+      headers: {
+        Authorization: `Bearer ${data.session.access_token}`,
+        ...(init?.headers ?? {}),
+      },
+    });
+
+    if (!response.ok) {
+      let detail = `Request failed with status ${response.status}.`;
+      try {
+        const body = await response.json();
+        if (typeof body === "object" && body !== null && "detail" in body) {
+          detail = String((body as { detail: unknown }).detail);
+        }
+      } catch {
+        // Non-JSON server error
+      }
+      throw new ApiError(detail, response.status, detail);
+    }
+
+    return await response.blob();
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+  }
+}
+
+/**
  * Read the active planning unit ID from localStorage.
  * Supports the legacy underscore key during migration.
  */

@@ -112,6 +112,8 @@ class StrategyService:
         run = self.strat_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run: raise HTTPException(status_code=404, detail="Strategy run not found")
         defined_goal = self.goal_repo.get_defined_goal_by_version(planning_unit_id, run.goal_id, run.defined_goal_version)
+        if not defined_goal:
+            defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, run.goal_id)
         if not defined_goal: raise HTTPException(status_code=404, detail="Underlying DefinedGoal snapshot not found")
         financial_context = self._financial_context(planning_unit_id, defined_goal)
         assessment = self._rule_assessment(defined_goal, financial_context)

@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiRequestBlob } from "./client";
 
 export type InvestorPriorities = {
   safety: number;
@@ -199,3 +199,30 @@ export function selectStrategy(
     }),
   });
 }
+
+export type ReportSection = {
+  id: string;
+  title: string;
+  description?: string;
+  columns?: string[];
+  rows?: unknown[][];
+  narratives?: Record<string, unknown>;
+  data?: unknown;
+};
+
+export type RetirementReportData = {
+  title: string;
+  sections: ReportSection[];
+};
+
+export function getRetirementReport(planningUnitId: string, strategyRunId: string): Promise<RetirementReportData> {
+  return apiRequest<RetirementReportData>(
+    `/api/strategy/runs/${encodeURIComponent(strategyRunId)}/retirement-report?planning_unit_id=${encodeURIComponent(planningUnitId)}`
+  );
+}
+
+export function downloadRetirementReportPdf(planningUnitId: string, strategyRunId: string): Promise<Blob> {
+  return apiRequestBlob(
+    `/api/strategy/runs/${encodeURIComponent(strategyRunId)}/retirement-report.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`
+  );
+}

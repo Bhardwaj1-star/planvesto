@@ -163,7 +163,32 @@ export default function InvestorStrategyBuilderPage() {
             <label className="block flex-1"><span className="text-sm font-bold text-slate-700">Goal</span><select value={selectedGoalId} onChange={(e) => setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-600"><option value="">Select goal</option>{goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>{selectedGoalId && <span className="mt-2 block text-xs font-semibold text-teal-700">Planning strategy for: {goals.find((g) => g.id === selectedGoalId)?.name ?? "Selected goal"}</span>}</label>
             <InvestorButton onClick={handleBuild} disabled={working || !selectedGoalId}>{working ? "Working…" : run ? "Rebuild Strategy Run" : "Build Strategy"}</InvestorButton>
           </div>
-          {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span><Link href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`} className="rounded-full bg-navy-900 px-3 py-1 font-bold text-white hover:opacity-90">View Retirement Report</Link></div>}
+          {run && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">Goal version {run.defined_goal_version}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">Approval: {formatStatus(run.approval_status)}</span>
+              <Link
+                href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`}
+                className="rounded-full bg-navy-900 px-3 py-1 font-bold text-white hover:opacity-90"
+              >
+                View Retirement Report
+              </Link>
+              <Link
+                href="/investor/strategy-scenarios"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Custom Scenarios
+              </Link>
+              <Link
+                href="/investor/strategy-history"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Strategy History
+              </Link>
+            </div>
+          )}
         </section>
 
         {goalPreview && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div><h2 className="text-lg font-bold">Goal Calculation &amp; Preview</h2><p className="mt-1 text-sm text-slate-500">This is the Goal Planner calculation that the Strategy Run is based on.</p></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Today&apos;s Cost</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.today_cost)}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Inflation</p><p className="mt-1 text-lg font-extrabold">{(goalPreview.inflation_rate * 100).toFixed(1)}%</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Required Corpus</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.future_target)}</p></div><div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Funding Gap</p><p className="mt-1 text-lg font-extrabold">{formatINR(goalPreview.funding_gap)}</p></div></div><div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600"><span>Target: <strong>{String(goalPreview.target_month).padStart(2, "0")}/{goalPreview.target_year}</strong></span><span>•</span><span>Mapped Assets: <strong>{formatINR(goalPreview.projected_mapped_asset_value)}</strong></span><span>•</span><span>Monthly Contribution: <strong>{formatINR(goalPreview.required_monthly_contribution)}</strong></span><span>•</span><span>Status: <strong>{goalPreview.funding_status}</strong></span></div></section>}
@@ -346,7 +371,48 @@ export default function InvestorStrategyBuilderPage() {
             </div>
           </section>
 
-          {selectedStrategy && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation parameters</h2><p className="mt-1 text-sm text-slate-500">Only editable parameters defined by the backend are presented for investor input.</p><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter((p) => p.editable).map((p) => <label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold text-slate-800">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type === "choice" ? <select value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: e.target.value }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{(p.choices ?? []).map((choice) => <option key={choice}>{choice}</option>)}</select> : <input type="number" step={p.param_type === "integer" ? 1 : "any"} min={p.min_value ?? undefined} max={p.max_value ?? undefined} value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: Number(e.target.value) }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />}</label>)}</div>{selectedScenario && <div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes || "No additional trade-off notes supplied."}</p></div>}<InvestorButton className="mt-6" onClick={handleSelect} disabled={working || !selectedScenarioId}>{working ? "Saving…" : run.selected_strategy_version_id ? "Save selection again" : "Confirm selection"}</InvestorButton>{run.selected_strategy_version_id && <p className="mt-3 text-sm text-teal-700">Strategy Version created: {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "—"}).</p>}</section>}
+          {selectedStrategy && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation parameters</h2><p className="mt-1 text-sm text-slate-500">Only editable parameters defined by the backend are presented for investor input.</p><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter((p) => p.editable).map((p) => <label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold text-slate-800">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type === "choice" ? <select value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: e.target.value }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">{(p.choices ?? []).map((choice) => <option key={choice}>{choice}</option>)}</select> : <input type="number" step={p.param_type === "integer" ? 1 : "any"} min={p.min_value ?? undefined} max={p.max_value ?? undefined} value={String(parameters[p.name] ?? p.default_value)} onChange={(e) => setParameters((x) => ({ ...x, [p.name]: Number(e.target.value) }))} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />}</label>)}</div>{selectedScenario && <div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes || "No additional trade-off notes supplied."}</p></div>}            <InvestorButton className="mt-6" onClick={handleSelect} disabled={working || !selectedScenarioId}>
+              {working ? "Saving…" : run.selected_strategy_version_id ? "Save selection again" : "Confirm selection"}
+            </InvestorButton>
+
+            {run.selected_strategy_version_id && (
+              <div className="mt-6 rounded-2xl border border-teal-200 bg-teal-50/70 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <span className="inline-block rounded-full bg-teal-600 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-white">
+                      Selected &amp; Stored
+                    </span>
+                    <h3 className="mt-2 text-lg font-extrabold text-navy-900">
+                      Strategy Architecture: {selectedStrategy?.name ?? run.selected_strategy_id}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-slate-600">
+                      Strategy Version {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "1"}) persisted. You can now view your comprehensive retirement report or proceed through approval.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`}
+                      className="inline-flex items-center justify-center rounded-xl bg-navy-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
+                    >
+                      View Retirement Report →
+                    </Link>
+                    <Link
+                      href="/investor/strategy-approval"
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Approval Lifecycle
+                    </Link>
+                    <Link
+                      href="/investor/action-plan"
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Action Plan
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>}
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Strategy Run history</h2><p className="mt-1 text-sm text-slate-500">Immutable run versions returned by the backend.</p></div><span className="text-xs font-semibold text-slate-400">{history.length} runs</span></div>{history.length > 0 && <div className="mt-5 space-y-2">{history.map((item) => <div key={item.strategy_run_id ?? `${item.created_at}-${item.run_version}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4"><div><span className="font-bold">Run v{item.run_version}</span><span className="ml-3 text-sm text-slate-500">Goal v{item.defined_goal_version}</span><span className="ml-3 text-xs text-slate-400">{formatStatus(item.approval_status)}</span></div><span className="text-xs text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleString("en-IN") : "—"}</span></div>)}</div>}</section>
         </>}

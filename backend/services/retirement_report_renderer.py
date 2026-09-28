@@ -51,7 +51,8 @@ class RetirementReportRenderer:
         run = strategy_result
         recommendation = self._value(run, "recommendation", default=None)
         priorities = self._value(run, "investor_priorities", default=None)
-        architecture = self._value(recommendation, "architecture", default=None)
+        selected_arch = self._value(run, "selected_architecture", default=None)
+        architecture = selected_arch or self._value(recommendation, "architecture", default=None)
         rankings = self._value(run, "rankings", default=[])
         scenarios = self._value(run, "scenarios", default=[])
         mapped_assets = self._value(defined_goal, "mapped_assets", default=[])
@@ -198,7 +199,7 @@ class RetirementReportRenderer:
         decision_rows = [
             self._row("Selected strategy", self._value(run, "selected_strategy_id")),
             self._row("Selected scenario", self._value(run, "selected_scenario_id")),
-            self._row("Selected architecture", self._value(run, "selected_architecture")),
+            self._row("Selected architecture", self._value(selected_arch, "architecture_id", default=None) or self._value(architecture, "architecture_id", default=self._value(run, "selected_architecture"))),
             self._row("Implementation parameters", self._value(run, "selected_implementation_parameters", default={})),
             self._row("Approval status", self._value(run, "approval_status")),
             self._row("Approval timestamp", self._value(run, "selection_timestamp")),
