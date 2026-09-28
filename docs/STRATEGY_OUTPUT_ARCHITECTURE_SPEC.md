@@ -1,44 +1,64 @@
 # Strategy Output Architecture Specification
 
-## Purpose
+## 1. Objective
 
-Strategy Builder is a **goal-agnostic financial strategy engine**. It must work for every supported financial goal, not only retirement.
+Define the architecture of Strategy Builder as a **goal-agnostic financial strategy decision system**.
 
-Retirement is one goal type. Its Retirement Report/PDF is one goal-specific downstream output; it must not define the Strategy Builder architecture.
+Strategy Builder must determine which strategy architectures are applicable to a specific investor and goal, evaluate those eligible architectures using explicit strategy-fit evidence, and produce a generic Strategy Result.
 
-## Canonical Product Flow
+It must not be architected around retirement, a particular report, or the legacy Safety/Liquidity/Growth/Flexibility scoring model.
+
+## 2. Core Principle
+
+A financial goal determines the planning context. Strategy Builder determines the appropriate strategy architecture for that goal given the investor's financial state and constraints.
+
+**Strategy Builder is not a retirement planner. Retirement is one supported goal.**
+
+## 3. Canonical Flow
 
 `Financial State → Goal → Strategy Builder → Strategy Result → Goal-specific Output`
 
-For retirement:
+Example:
 
 `Financial State → Retirement Goal → Strategy Builder → Strategy Result → Retirement Report → PDF`
 
-For other goals, the same Strategy Builder produces the generic Strategy Result. Any later report or presentation is determined by that goal's requirements.
+Another goal follows the same generic path:
 
-## Core Strategy Decision Model
+`Financial State → Education/Home/Vehicle/etc. Goal → Strategy Builder → Strategy Result → Goal-specific Output`
 
-The current backend decision engine evaluates strategy architectures using explicit strategy-fit evidence. The decision sequence is:
+A non-retirement goal must never require a Retirement Report or retirement PDF to complete Strategy Builder.
 
-1. **Eligibility gate** — determine whether a strategy architecture is applicable to the investor and goal.
-2. **Goal fit** — evaluate the strategy's suitability for the canonical goal type and applicable goal characteristics.
-3. **Horizon fit** — evaluate suitability against the goal's time horizon.
-4. **Funding fit** — evaluate the strategy against the goal's funding status and funding gap.
-5. **Feasibility / constraint compatibility** — evaluate whether the architecture can be implemented under its constraints.
-6. **Component fit** — incorporate applicable component metadata/supporting strategies where present.
-7. **Deterministic comparison** — compare eligible architectures using the explicit decision evidence and select the recommended architecture plus alternatives.
+## 4. Strategy Decision Architecture
 
-The authoritative backend implementation is `backend/engines/strategy/decision.py`. fileciteturn535file0 fileciteturn536file0
+The Strategy Builder decision process is:
 
-### Explicitly Removed From Decision Authority
+1. **Eligibility** — determine whether a strategy architecture is applicable to the investor and goal.
+2. **Goal fit** — evaluate how the architecture fits the canonical goal and its characteristics.
+3. **Horizon fit** — evaluate compatibility with the goal horizon.
+4. **Funding fit** — evaluate compatibility with the goal's funding position/funding gap.
+5. **Feasibility and constraints** — determine whether the architecture can realistically be implemented under its constraints.
+6. **Component fit** — incorporate relevant strategy/component applicability where defined by the backend.
+7. **Deterministic comparison** — compare eligible architectures using explicit evidence and produce a recommendation plus alternatives.
 
-`Safety`, `Liquidity`, `Growth`, and `Flexibility` are **not strategy-selection dimensions** and must not determine the recommendation. The legacy composite score must not determine ranking or recommendation either. The current ranking implementation documents these values as descriptive/backward-compatibility evidence rather than decision authority. fileciteturn534file0
+### 4.1 What Strategy Builder Must NOT Use as Decision Authority
 
-Therefore, new Strategy Builder UI, API contracts, tests, documentation, and future strategy logic must not reintroduce these four dimensions as strategy identity, ranking criteria, or recommendation criteria.
+The following are explicitly **not strategy-selection dimensions**:
 
-## Generic Strategy Result
+- Safety
+- Liquidity
+- Growth
+- Flexibility
+- Legacy composite score
 
-The Strategy Result should expose, as applicable:
+They must not determine strategy identity, eligibility, ranking, recommendation, or Strategy Result presentation.
+
+If legacy dimension values remain anywhere for compatibility or historical data, they are non-authoritative metadata only and must not be reintroduced into the decision model.
+
+## 5. Generic Strategy Result
+
+The Strategy Result is the reusable output of Strategy Builder for every supported goal.
+
+It may contain:
 
 - Goal reference
 - Recommended strategy architecture
@@ -53,39 +73,74 @@ The Strategy Result should expose, as applicable:
 - Scenario / stress-test information
 - Implementation parameters
 
-These are generic strategy outputs and must remain usable for every supported goal.
+The contract must remain goal-agnostic. Retirement-specific fields must not be mandatory for all Strategy Results.
 
-## Retirement Output
+## 6. Goal-Specific Outputs
 
-Retirement may additionally provide:
+Goal-specific outputs are downstream presentation or implementation layers built on the generic Strategy Result.
+
+### Retirement
+
+Retirement may provide:
 
 - Retirement Report
 - Retirement-specific projections and rationale
 - PDF export
 
-These are downstream retirement capabilities. They must not be mandatory fields or mandatory navigation for every strategy run.
+### Other Goals
 
-## Other Financial Goals
+Education, home purchase, vehicle purchase, major expense, and other supported goals may receive their own appropriate output/report in the future.
 
-The architecture must support the same generic Strategy Builder for education, home purchase, vehicle purchase, major expenses, and other supported goals. Goal-specific reports can be introduced independently without rewriting the Strategy Builder decision engine or generic Strategy Result contract.
+Adding a new goal-specific output must not require rewriting the core Strategy Builder decision engine or generic Strategy Result contract.
 
-## Existing Investor Capabilities
+## 7. Frontend Architecture
 
-Moneywheel and Budgeting are independent investor capabilities. They must remain available unless a separate authoritative product specification explicitly deprecates them. Their removal from sidebar navigation must not be interpreted as permission to delete their routes, backend services, or product functionality. 
+The Strategy Builder UI must present strategy architecture and decision evidence—not the legacy four-dimension scoring model.
 
-## Navigation Rule
+Architecture presentation should expose applicable information such as:
 
-Strategy-specific lifecycle routes may be contextual rather than primary sidebar navigation. Hiding a route from the sidebar does **not** mean deleting the underlying route or backend lifecycle capability when it is required by the strategy workflow.
+- Purpose
+- Why applicable / goal fit
+- Feasibility
+- Constraints
+- Trade-offs
+- Assumptions
+- Techniques / implementation direction
+- Scenarios / stress-test information
+- Recommendation reasoning
+- Alternatives
 
-## Acceptance Criteria
+The UI must not present Safety/Liquidity/Growth/Flexibility as strategy identity or ranking criteria.
 
-- Retirement can complete Strategy Builder and reach Retirement Report/PDF.
-- Non-retirement goals can complete Strategy Builder without requiring Retirement Report/PDF.
-- Strategy API contracts remain goal-agnostic.
-- Retirement-specific code remains downstream of the generic Strategy Result.
-- Adding another goal-specific report does not require rewriting Strategy Builder.
-- Safety/Liquidity/Growth/Flexibility cannot determine the recommended strategy.
-- Composite score cannot determine the recommended strategy.
-- Eligibility, goal fit, horizon fit, funding fit, feasibility/constraints, and applicable component fit remain the decision evidence defined by the backend.
-- Moneywheel and Budgeting remain available unless separately deprecated by an authoritative specification.
-- Tests cover at least one retirement and one non-retirement strategy flow.
+## 8. Navigation and Existing Capabilities
+
+Strategy-specific lifecycle pages may be contextual rather than primary sidebar navigation. Removing a page from the sidebar does **not** mean deleting the underlying route or backend capability unless an authoritative specification explicitly requires deletion.
+
+Existing investor capabilities such as **Moneywheel** and **Budgeting** remain part of the product unless separately deprecated by an authoritative product decision.
+
+## 9. Separation of Responsibilities
+
+**Strategy Builder:** decides the appropriate strategy architecture.
+
+**Strategy Result:** communicates the generic decision and its evidence.
+
+**Goal-specific output:** presents or operationalizes that result for a particular goal.
+
+**Retirement Report/PDF:** retirement-specific downstream output only.
+
+This separation prevents retirement-specific implementation from becoming a hidden dependency of the generic Strategy Builder.
+
+## 10. Acceptance Criteria
+
+- Strategy Builder works for retirement and non-retirement goals through the same generic decision architecture.
+- Eligible strategy architectures are determined before comparison/recommendation.
+- Recommendation is based on explicit strategy-fit evidence.
+- Safety/Liquidity/Growth/Flexibility do not determine the recommendation.
+- Legacy composite scoring does not determine the recommendation.
+- Strategy Result remains goal-agnostic.
+- Retirement Report/PDF is required only for retirement-specific output.
+- A non-retirement Strategy Result can complete without retirement-report dependencies.
+- Goal-specific outputs can be added without rewriting Strategy Builder.
+- Moneywheel and Budgeting are not removed as a side effect of strategy/retirement cleanup.
+- Contextual strategy routes are not deleted merely because they are absent from the primary sidebar.
+- Tests cover at least one retirement and one non-retirement Strategy Builder flow.
