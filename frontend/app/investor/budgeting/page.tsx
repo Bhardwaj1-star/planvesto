@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { InvestorProfileMenu } from "../../../components/InvestorProfileMenu";
+import InvestorHeader from "../../../components/InvestorHeader";
 import {
   loadBudgetData,
   saveBudgetLimits,
@@ -259,55 +259,36 @@ export default function InvestorBudgetingPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-900 pb-20">
-      {/* 1. PAGE HEADER */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div className="mx-auto flex min-h-[80px] max-w-6xl items-center justify-between gap-6 px-6 lg:px-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-teal-600/20">
-                Cash Flow Management
-              </span>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-                Financial Planning
-              </p>
-            </div>
-            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-              Budgeting
-            </h1>
-          </div>
-
-          {/* Period Selector */}
-          <div className="flex items-center gap-3">
-            {/* Period Selector: Monthly / Annual */}
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setPeriod("Monthly")}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-                  period === "Monthly"
-                    ? "bg-white text-navy-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setPeriod("Annual")}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-                  period === "Annual"
-                    ? "bg-white text-navy-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Annual
-              </button>
-            </div>
-
-            <InvestorProfileMenu />
-          </div>
+      <InvestorHeader
+        eyebrow="Cash Flow Management"
+        title="Budgeting"
+        description="Manage your expenses, monitor variances, and plan future cash flow targets."
+      >
+        <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setPeriod("Monthly")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              period === "Monthly"
+                ? "bg-white text-navy-900 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setPeriod("Annual")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              period === "Annual"
+                ? "bg-white text-navy-900 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Annual
+          </button>
         </div>
-      </header>
+      </InvestorHeader>
 
       {/* Supporting Banner */}
       <div className="border-b border-teal-200 bg-teal-50/60 px-6 py-2.5 text-xs text-teal-900">

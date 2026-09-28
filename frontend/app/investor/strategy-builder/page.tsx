@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
-import { InvestorButton, InvestorPageHeader, InvestorStatus } from "../../../components/InvestorUI";
+import InvestorHeader from "../../../components/InvestorHeader";
+import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { apiRequest } from "../../../lib/api/client";
 import {
@@ -156,9 +157,13 @@ export default function InvestorStrategyBuilderPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
+      <InvestorHeader
+        eyebrow="Decide"
+        title="Strategy Builder"
+        description="Build a coherent strategy architecture for a defined goal. The backend determines applicability, composition, feasibility, trade-offs and recommendation."
+      />
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
         <StrategyWorkflowNav />
-        <InvestorPageHeader eyebrow="Planning" title="Strategy Builder" description="Build a coherent strategy architecture for a defined goal. The backend determines applicability, composition, feasibility, trade-offs and recommendation." />
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

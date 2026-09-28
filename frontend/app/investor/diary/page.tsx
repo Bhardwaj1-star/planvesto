@@ -5,7 +5,7 @@ import { getDiaryEntries, getDecisions, type DiaryEntry, type FinancialDecision 
 import DiaryBook from "../../../components/diary/DiaryBook";
 import DecisionHistoryView from "../../../components/diary/DecisionHistoryView";
 import BackendWriteEntryModal from "../../../components/diary/BackendWriteEntryModal";
-import InvestorProfileMenu from "../../../components/InvestorProfileMenu";
+import InvestorHeader from "../../../components/InvestorHeader";
 
 export default function InvestorDiaryPage() {
   const [activeTab, setActiveTab] = useState<"diary" | "decisions">("diary");
@@ -38,25 +38,15 @@ export default function InvestorDiaryPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-900 pb-20">
-      <header className="border-b border-slate-200 bg-white shadow-xs">
-        <div className="mx-auto flex min-h-[80px] max-w-6xl flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-6 lg:px-8 py-4 sm:py-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-teal-600/20">Memory Layer</span>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Planvesto Investor Diary</p>
-            </div>
-            <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Investor Diary</h1>
+      <InvestorHeader eyebrow="Memory Layer" title="Investor Diary">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold shadow-inner">
+            <button type="button" onClick={() => setActiveTab("diary")} className={`rounded-lg px-3.5 py-2 transition ${activeTab === "diary" ? "bg-white text-navy-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>📖 Diary (Open Book)</button>
+            <button type="button" onClick={() => setActiveTab("decisions")} className={`rounded-lg px-3.5 py-2 transition ${activeTab === "decisions" ? "bg-white text-navy-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>⏱ Decision History ({decisions.length})</button>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold shadow-inner">
-              <button type="button" onClick={() => setActiveTab("diary")} className={`rounded-lg px-3.5 py-2 transition ${activeTab === "diary" ? "bg-white text-navy-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>📖 Diary (Open Book)</button>
-              <button type="button" onClick={() => setActiveTab("decisions")} className={`rounded-lg px-3.5 py-2 transition ${activeTab === "decisions" ? "bg-white text-navy-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>⏱ Decision History ({decisions.length})</button>
-            </div>
-            <button type="button" onClick={() => setIsWriteModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-navy-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-navy-800 focus:outline-none focus:ring-4 focus:ring-teal-100"><span className="text-sm">✎</span><span>Write in Diary</span></button>
-            <InvestorProfileMenu />
-          </div>
+          <button type="button" onClick={() => setIsWriteModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-navy-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition hover:bg-navy-800 focus:outline-none focus:ring-4 focus:ring-teal-100"><span className="text-sm">✎</span><span>Write in Diary</span></button>
         </div>
-      </header>
+      </InvestorHeader>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-8">
         {loading ? (

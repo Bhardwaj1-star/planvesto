@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
-import { InvestorButton, InvestorPageHeader, InvestorStatus } from "../../../components/InvestorUI";
+import InvestorHeader from "../../../components/InvestorHeader";
+import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { getLatestStrategyRun, getPlanningUnitId, type StrategyRun } from "../../../lib/api/strategy";
 import { approveStrategy, type SuitabilityStatus } from "../../../lib/api/strategy-approval";
@@ -86,10 +87,16 @@ export default function StrategyApprovalPage() {
 
   if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-4xl"><div className="h-10 w-72 animate-pulse rounded-xl bg-slate-200" /><div className="mt-6 h-96 animate-pulse rounded-3xl bg-white" /></div></main>;
 
-  return <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900"><div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-10">
-    <StrategyWorkflowNav />
-    <InvestorPageHeader eyebrow="Final decision" title="Strategy Approval" description="Review the selected Strategy Version, record suitability, and approve the immutable strategy snapshot." />
-    {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
+  return (
+    <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
+      <InvestorHeader
+        eyebrow="Decide"
+        title="Strategy Approval"
+        description="Review the selected Strategy Version, record suitability, and approve the immutable strategy snapshot."
+      />
+      <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-10">
+        <StrategyWorkflowNav />
+        {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
     {success && (
       <InvestorStatus tone="success">
         <div>
@@ -118,6 +125,8 @@ export default function StrategyApprovalPage() {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Suitability</h2><p className="mt-1 text-sm text-slate-500">Record the suitability assessment. The backend owns approval validation.</p><div className="mt-5 grid gap-3 sm:grid-cols-3">{STATUSES.map((option) => <button key={option} type="button" onClick={() => setStatus(option)} className={`rounded-2xl border p-4 text-left ${status === option ? "border-teal-500 bg-teal-50 ring-2 ring-teal-100" : "border-slate-200 hover:bg-slate-50"}`}><p className="font-bold">{option}</p><p className="mt-1 text-xs text-slate-500">{option === "Suitable" ? "No acknowledgement required." : "Explicit acknowledgement required."}</p></button>)}</div>{requiresAcknowledgement && <label className="mt-5 block"><span className="text-sm font-bold">Acknowledgement</span><textarea value={acknowledgement} onChange={(e) => setAcknowledgement(e.target.value)} rows={4} placeholder={`Explain why you acknowledge the ${status} assessment.`} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-teal-600" /></label>}</section>
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Primary Strategy</h2><label className="mt-4 flex items-start gap-3"><input type="checkbox" checked={makePrimary} onChange={(e) => setMakePrimary(e.target.checked)} className="mt-1 h-4 w-4" /><span><span className="text-sm font-bold">Make this the Primary Strategy</span><span className="mt-1 block text-xs text-slate-500">The backend applies the Primary Strategy lifecycle rules.</span></span></label>{makePrimary && <div className="mt-5 grid gap-4 md:grid-cols-2"><label className="block"><span className="text-sm font-bold">Primary transition</span><select value={primaryDecision} onChange={(e) => setPrimaryDecision(e.target.value as typeof primaryDecision)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="archive_previous">Archive previous</option><option value="keep_previous_approved">Keep previous approved</option></select></label><label className="block"><span className="text-sm font-bold">Pending implementation actions</span><select value={pendingDisposition} onChange={(e) => setPendingDisposition(e.target.value as typeof pendingDisposition)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"><option value="retain_for_reassessment">Retain for reassessment</option><option value="cancel">Cancel</option></select></label></div>}</section>
       <InvestorButton className="w-full" onClick={handleApprove} disabled={working || Boolean(approvedVersionId)}>{working ? "Approving…" : approvedVersionId ? "Strategy Version Approved" : "Approve Strategy Version"}</InvestorButton>
-    </>}
-  </div></main>;
+      </>}
+      </div>
+    </main>
+  );
 }

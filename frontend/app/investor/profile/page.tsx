@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useOnboardingStore } from "../../../components/onboarding/OnboardingProvider";
-import InvestorProfileMenu from "../../../components/InvestorProfileMenu";
+import InvestorHeader from "../../../components/InvestorHeader";
 import FinancialInformationSection from "../../../components/profile/FinancialInformationSection";
 
 function ProfileContent() {
@@ -62,28 +62,11 @@ function ProfileContent() {
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-900 pb-20">
-      {/* Top Header with Profile Menu */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex min-h-[80px] max-w-6xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-teal-600/20">
-                Personal Control Center
-              </span>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                Planvesto Account
-              </p>
-            </div>
-            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
-              Investor Profile
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <InvestorProfileMenu />
-          </div>
-        </div>
-      </header>
+      <InvestorHeader
+        eyebrow="Personal Control Center"
+        title="Investor Profile"
+        description="Planvesto Account and financial information settings"
+      />
 
       {/* Main Container */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-8">

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
-import { InvestorButton, InvestorPageHeader, InvestorStatus } from "../../../components/InvestorUI";
+import InvestorHeader from "../../../components/InvestorHeader";
+import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { addCustomScenario, getLatestStrategyRun, getPlanningUnitId, type Scenario, type StrategyImplementationParamDef, type StrategyRun } from "../../../lib/api/strategy";
 
@@ -149,11 +150,17 @@ export default function StrategyScenariosPage() {
 
   const customScenarios = run?.scenarios.filter((scenario) => scenario.is_investor_modified) ?? [];
 
-  return <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900"><div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-10">
-    <StrategyWorkflowNav />
-    <InvestorPageHeader eyebrow="Scenario planning" title="Custom Scenarios" description="Test changes to the assumptions and implementation choices that the selected strategy actually supports." />
-    {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
-    {success && <InvestorStatus tone="success">{success}</InvestorStatus>}
+  return (
+    <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
+      <InvestorHeader
+        eyebrow="Decide"
+        title="Custom Scenarios"
+        description="Test changes to the assumptions and implementation choices that the selected strategy actually supports."
+      />
+      <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-10">
+        <StrategyWorkflowNav />
+        {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
+        {success && <InvestorStatus tone="success">{success}</InvestorStatus>}
 
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <label className="block"><span className="text-sm font-bold">Active goal</span>
@@ -212,5 +219,7 @@ export default function StrategyScenariosPage() {
         <p className="mt-4 text-sm text-slate-600"><span className="font-semibold text-slate-800">Trade-off: </span>{scenario.trade_off_notes || "Recalculated using your scenario choices."}</p>
       </article>)}</div>
     </section>}
-  </div></main>;
+      </div>
+    </main>
+  );
 }
