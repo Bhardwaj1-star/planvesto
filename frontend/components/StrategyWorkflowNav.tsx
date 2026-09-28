@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const coreSteps = [
   { label: "Build & Compare", href: "/investor/strategy-builder" },
@@ -10,8 +11,12 @@ const coreSteps = [
 
 export default function StrategyWorkflowNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const goalId = searchParams.get("goalId");
+  const [goalId, setGoalId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGoalId(new URLSearchParams(window.location.search).get("goalId"));
+  }, []);
+
   const isRetirementReport = Boolean(pathname?.startsWith("/investor/retirement-report"));
   const isGoalReport = Boolean(pathname?.startsWith("/investor/goal-report"));
   const reportHref = goalId ? `/investor/goal-report?goalId=${encodeURIComponent(goalId)}` : "/investor/goal-report";
@@ -20,6 +25,7 @@ export default function StrategyWorkflowNav() {
     : isGoalReport
       ? [...coreSteps, { label: "Goal Report", href: reportHref }]
       : [...coreSteps, { label: "Goal Report", href: reportHref }];
+
   return (
     <nav aria-label="Strategy workflow" className="overflow-x-auto">
       <ol className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
