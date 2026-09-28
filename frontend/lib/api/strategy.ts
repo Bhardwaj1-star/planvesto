@@ -146,7 +146,11 @@ function limitToTopTwoStrategies(run: StrategyRun): StrategyRun {
 export async function buildStrategy(planningUnitId: string, goalId: string, investorPriorities?: InvestorPriorities) {
   const run = await apiRequest<StrategyRun>("/api/strategy/build", {
     method: "POST",
-    body: JSON.stringify({ planning_unit_id: planningUnitId, goal_id: goalId, investor_priorities: investorPriorities }),
+    body: JSON.stringify({
+      planning_unit_id: planningUnitId,
+      goal_id: goalId,
+      investor_priorities: investorPriorities ?? { safety: 0.25, liquidity: 0.25, growth: 0.25, flexibility: 0.25 },
+    }),
   });
   return limitToTopTwoStrategies(run);
 }
