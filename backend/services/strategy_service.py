@@ -24,11 +24,51 @@ class StrategyService:
         self.strategy_version_service = StrategyVersionService(StrategyVersionRepository(self.strat_repo.db))
         self.report_renderer = RetirementReportRenderer()
 
+    @staticmethod
+    def _metric_value(state: dict, key: str):
+        value = state.get(key)
+        if isinstance(value, dict):
+            return value.get("value")
+        if hasattr(value, "value"):
+            return value.value
+        return value
+
     def _financial_context(self, planning_unit_id: str, defined_goal: DefinedGoal) -> dict:
         snapshot = self.financial_state_repo.get_latest(planning_unit_id, "family")
-        if snapshot and snapshot.get("financial_state"):
-            return snapshot["financial_state"]
-        return {}
+        if not snapshot or not snapshot.get("financial_state"):
+            return {}
+
+        state = snapshot["financial_state"]
+        if hasattr(state, "model_dump"):
+            state = state.model_dump()
+        elif not isinstance(state, dict):
+            return {}
+
+        # Keep the authoritative FinancialState and expose the canonical
+        # presentation keys expected by the retirement report renderer.
+        context = dict(state)
+        income_annual = self._metric_value(state, "income_annual")
+        expenses_annual = self._metric_value(state, "expenses_annual")
+        surplus_monthly = self._metric_value(state, "investable_surplus_monthly")
+        assets = self._metric_value(state, "total_assets")
+        liabilities = self._metric_value(state, "total_liabilities")
+        net_worth = self._metric_value(state, "net_worth")
+
+        context.update({
+            "annual_income": income_annual,
+            "income": income_annual,
+            "annual_expenses": expenses_annual,
+            "expenses": expenses_annual,
+            "monthly_surplus": surplus_monthly,
+            "surplus": surplus_monthly,
+            "financial_assets": assets,
+            "assets": assets,
+            "liabilities": liabilities,
+            "net_worth": net_worth,
+            # Retirement-linked resources come from the goal's explicit mapping.
+            "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0),
+        })
+        return context
 
     def _rule_assessment(self, defined_goal: DefinedGoal, financial_context: dict):
         return self.rule_engine.assess(defined_goal, financial_context)
