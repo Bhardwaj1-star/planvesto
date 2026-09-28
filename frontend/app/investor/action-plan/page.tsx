@@ -41,6 +41,11 @@ export default function ActionPlanPage() {
   const [approvedVersion, setApprovedVersion] = useState<StrategyVersion | null>(null);
   const [generating, setGenerating] = useState(false);
 
+  const isRetirementStrategy = useMemo(() => {
+    const id = approvedVersion?.strategy_id?.toLowerCase() || "";
+    return id.includes("retire") || id.includes("freedom") || id.includes("pension");
+  }, [approvedVersion]);
+
   const refresh = async (strategyVersionIdOverride?: string) => {
     const planningUnitId = getPlanningUnitId();
     if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
@@ -124,12 +129,14 @@ export default function ActionPlanPage() {
           Turn an approved Strategy Version into concrete implementation actions. Decisions are recorded as immutable history by the backend.
         </p>
       </div>
-      <Link
-        href="/investor/retirement-report"
-        className="inline-flex shrink-0 items-center justify-center rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
-      >
-        View Retirement Report →
-      </Link>
+      {isRetirementStrategy && (
+        <Link
+          href="/investor/retirement-report"
+          className="inline-flex shrink-0 items-center justify-center rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
+        >
+          View Retirement Report →
+        </Link>
+      )}
     </header>
     {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>}
     {generating && <div className="rounded-2xl border border-teal-100 bg-teal-50 px-5 py-4 text-sm text-teal-800">Generating implementation actions from the approved strategy architecture…</div>}

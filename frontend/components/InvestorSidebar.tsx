@@ -12,11 +12,13 @@ const navigation: NavGroup[] = [
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/investor/financial-state" },
+      { label: "Moneywheel", href: "/investor/moneywheel" },
     ],
   },
   {
     label: "Plan",
     items: [
+      { label: "Budgeting", href: "/investor/budgeting" },
       { label: "Goal Planner", href: "/investor/goal-planner" },
     ],
   },

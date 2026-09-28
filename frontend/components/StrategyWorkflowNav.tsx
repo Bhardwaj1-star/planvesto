@@ -2,15 +2,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const steps = [
+const coreSteps = [
   { label: "Build & Compare", href: "/investor/strategy-builder" },
   { label: "Approval", href: "/investor/strategy-approval" },
   { label: "Action Plan", href: "/investor/action-plan" },
-  { label: "Retirement Report", href: "/investor/retirement-report" },
 ];
 
 export default function StrategyWorkflowNav() {
   const pathname = usePathname();
+  const isRetirementReport = Boolean(pathname?.startsWith("/investor/retirement-report"));
+  const steps = isRetirementReport
+    ? [...coreSteps, { label: "Retirement Report", href: "/investor/retirement-report" }]
+    : coreSteps;
   return (
     <nav aria-label="Strategy workflow" className="overflow-x-auto">
       <ol className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">

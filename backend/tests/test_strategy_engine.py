@@ -193,3 +193,46 @@ class TestCustomScenarios:
         res = engine.execute(goal, priorities=InvestorPriorities(), custom_scenarios=[custom])
         scenario_ids = [r.scenario_id for r in res.rankings]
         assert custom.scenario_id in scenario_ids
+
+
+class TestGenericMultiGoalArchitecture:
+    """Verifies that StrategyEngine is fully generic across different goal types without retirement dependencies."""
+
+    @pytest.mark.parametrize("goal_type,duration,target_amount", [
+        ("Child Education", 8.0, 3000000.0),
+        ("Home Purchase", 5.0, 5000000.0),
+        ("Wealth Creation", 12.0, 10000000.0),
+        ("Car", 3.0, 1500000.0),
+    ])
+    def test_generic_goal_strategy_generation(self, goal_type, duration, target_amount):
+        engine = StrategyEngine()
+        goal = DefinedGoal(
+            goal_id=f"g-{goal_type.lower().replace(' ', '-')}",
+            planning_unit_id="pu-generic-01",
+            version=1,
+            is_latest=True,
+            goal_type=goal_type,
+            goal_name=f"My {goal_type} Goal",
+            today_cost=target_amount * 0.7,
+            inflation_rate=0.06,
+            target_month=12,
+            target_year=2030,
+            duration_years=duration,
+            future_target=target_amount,
+            priority="High",
+            flexibility="Negotiable",
+            funding_gap=target_amount * 0.5,
+            funding_status="Shortfall",
+        )
+        res = engine.execute(goal, priorities=InvestorPriorities())
+        assert len(res.applicable_strategies) > 0
+        assert len(res.architectures) > 0
+        assert len(res.rankings) > 0
+        assert res.recommendation is not None
+        assert res.recommendation.recommended_strategy_id != ""
+        # Check that recommendation architecture matches an evaluated architecture
+        arch_ids = [a.architecture_id for a in res.architectures]
+        assert res.recommendation.architecture.architecture_id in arch_ids
+        # Strategy Run does not require retirement report or retirement-specific fields
+        assert not hasattr(res, "retirement_report")
+

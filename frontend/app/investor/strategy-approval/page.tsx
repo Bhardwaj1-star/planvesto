@@ -55,6 +55,11 @@ export default function StrategyApprovalPage() {
   }, [goalId]);
 
   const selectedStrategy = useMemo(() => run?.selected_strategy_id ? run.applicable_strategies.find((s) => s.strategy_id === run.selected_strategy_id) ?? null : null, [run]);
+  const isRetirementGoal = useMemo(() => {
+    const rawGoalType = goals.find((g) => g.id === goalId)?.name || "";
+    const lower = rawGoalType.toLowerCase();
+    return lower.includes("retirement") || lower.includes("financial freedom");
+  }, [goals, goalId]);
   const requiresAcknowledgement = status !== "Suitable";
 
   const handleApprove = async () => {
@@ -95,12 +100,14 @@ export default function StrategyApprovalPage() {
                 Continue to Action Plan →
               </Link>
             )}
-            <Link
-              href={`/investor/retirement-report?run_id=${encodeURIComponent(run?.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run?.planning_unit_id ?? "")}`}
-              className="underline"
-            >
-              View Retirement Report →
-            </Link>
+            {isRetirementGoal && (
+              <Link
+                href={`/investor/retirement-report?run_id=${encodeURIComponent(run?.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run?.planning_unit_id ?? "")}`}
+                className="underline"
+              >
+                View Retirement Report →
+              </Link>
+            )}
           </div>
         </div>
       </InvestorStatus>

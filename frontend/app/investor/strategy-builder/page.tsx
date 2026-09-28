@@ -122,6 +122,12 @@ export default function InvestorStrategyBuilderPage() {
     return [recommended, normal].filter((ranking): ranking is typeof run.rankings[number] => Boolean(ranking));
   }, [run]);
 
+  const isRetirementGoal = useMemo(() => {
+    const rawGoalType = goalPreview?.goal_type || goals.find((g) => g.id === selectedGoalId)?.name || "";
+    const lower = rawGoalType.toLowerCase();
+    return lower.includes("retirement") || lower.includes("financial freedom");
+  }, [goalPreview, goals, selectedGoalId]);
+
   const execute = async (operation: () => Promise<StrategyRun>) => {
     setWorking(true); setError(null);
     try {
@@ -386,21 +392,30 @@ export default function InvestorStrategyBuilderPage() {
                       Strategy Architecture: {selectedStrategy?.name ?? run.selected_strategy_id}
                     </h3>
                     <p className="mt-0.5 text-xs text-slate-600">
-                      Strategy Version {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "1"}) persisted. You can now view your comprehensive retirement report or proceed through approval.
+                      Strategy Version {run.selected_strategy_version_id} (v{run.selected_strategy_version ?? "1"}) persisted.{" "}
+                      {isRetirementGoal
+                        ? "You can now view your comprehensive retirement report or proceed through approval."
+                        : "You can now proceed through strategy approval and implementation action planning."}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`}
-                      className="inline-flex items-center justify-center rounded-xl bg-navy-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
-                    >
-                      View Retirement Report →
-                    </Link>
+                    {isRetirementGoal && (
+                      <Link
+                        href={`/investor/retirement-report?run_id=${encodeURIComponent(run.strategy_run_id ?? "")}&planning_unit_id=${encodeURIComponent(run.planning_unit_id ?? "")}`}
+                        className="inline-flex items-center justify-center rounded-xl bg-navy-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800"
+                      >
+                        View Retirement Report →
+                      </Link>
+                    )}
                     <Link
                       href="/investor/strategy-approval"
-                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                      className={`inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-bold transition ${
+                        isRetirementGoal
+                          ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                          : "bg-navy-900 text-white shadow-sm hover:bg-navy-800"
+                      }`}
                     >
-                      Approval Lifecycle
+                      {isRetirementGoal ? "Proceed to Approval" : "Proceed to Approval →"}
                     </Link>
                     <Link
                       href="/investor/action-plan"
