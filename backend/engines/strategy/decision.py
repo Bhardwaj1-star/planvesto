@@ -1,18 +1,15 @@
 """
 Strategy Decision Engine
 ========================
-Authoritative decision layer as specified in STRATEGY_CONVERSION_SPEC.md §3.7 & §3.8.
+Authoritative decision layer for strategy conversion.
 
-The decision engine compares ELIGIBLE strategy architectures using explicit evidence:
-- Eligibility gate (ineligible strategies are disqualified)
-- Goal fit (canonical goal type affinity & characteristic matching)
-- Horizon fit (time-to-goal suitability)
-- Funding fit (shortfall / on-track / overfunded mechanisms)
-- Feasibility & constraint compatibility (inputs, blockers, diagnostics)
-- Component activation preference
-
-Dimension scores (safety, liquidity, growth, flexibility) and composite scores
-are strictly descriptive evidence; they do NOT determine the strategy recommendation.
+Recommendation contract:
+- Eligibility is evaluated with the actual financial context.
+- Only Pass and Conditional candidates can reach investor-facing selection.
+- Recommended is always Pass when at least one Pass exists.
+- Conditional becomes Recommended only when no Pass strategy exists.
+- At most one Alternative is exposed; it may be Pass or Conditional.
+- Fail strategies are never investor-facing recommendations.
 """
 
 from dataclasses import dataclass, field
@@ -44,6 +41,7 @@ class ArchitectureEvaluation:
     total_decision_score: float
     evidence: dict[str, Any]
     rationale: list[str]
+    eligibility_status: str = "fail"  # pass | conditional | fail
 
 
 @dataclass
@@ -67,6 +65,21 @@ def _canonical_goal_type(goal_type: str | None) -> str:
     return GOAL_TYPE_ALIASES.get(clean, clean)
 
 
+def _empty_result(message: str, constraints: list[str] | None = None) -> DecisionResult:
+    reasons = constraints or [message]
+    return DecisionResult(
+        recommended_strategy_id="",
+        recommended_scenario_id="",
+        recommended_architecture=None,
+        alternative_architectures=[],
+        ordered_strategy_ids=[],
+        decision_rationale=reasons,
+        complete_reasoning=message,
+        feasibility_status="infeasible",
+        constraints=reasons,
+    )
+
+
 def evaluate_decision(
     strategies: list[StrategyDefinition],
     scenarios: list[Scenario],
@@ -76,22 +89,9 @@ def evaluate_decision(
     rule_assessment: Any | None = None,
     priorities: InvestorPriorities | None = None,
 ) -> DecisionResult:
-    """Evaluate eligible strategy architectures and make an evidence-based recommendation.
-
-    Dimension scores and composite scores are NOT used as decision authority.
-    """
+    """Evaluate strategies and enforce the Pass/Conditional/Fail contract."""
     if not strategies or not architectures:
-        return DecisionResult(
-            recommended_strategy_id="",
-            recommended_scenario_id="",
-            recommended_architecture=None,
-            alternative_architectures=[],
-            ordered_strategy_ids=[],
-            decision_rationale=["No applicable strategy available for the current goal and constraints."],
-            complete_reasoning="No eligible strategy architecture was found in the library for this goal.",
-            feasibility_status="infeasible",
-            constraints=["No eligible strategy found."],
-        )
+        return _empty_result("No applicable strategy available for the current goal and constraints.")
 
     context = {
         "duration_years": defined_goal.duration_years,
@@ -101,11 +101,9 @@ def evaluate_decision(
 
     strat_lookup = {s.strategy_id: s for s in strategies}
     scen_lookup: dict[str, Scenario] = {}
-    for s in scenarios:
-        if s.strategy_id not in scen_lookup:
-            scen_lookup[s.strategy_id] = s
-        elif "standard" in s.scenario_id or "Recommended Baseline" in s.scenario_name:
-            scen_lookup[s.strategy_id] = s
+    for scenario in scenarios:
+        if scenario.strategy_id not in scen_lookup or "standard" in scenario.scenario_id or "Recommended Baseline" in scenario.scenario_name:
+            scen_lookup[scenario.strategy_id] = scenario
 
     canonical_goal = _canonical_goal_type(defined_goal.goal_type)
     duration = float(defined_goal.duration_years or 0.0)
@@ -118,41 +116,43 @@ def evaluate_decision(
     evaluations: list[ArchitectureEvaluation] = []
 
     for arch in architectures:
-        primary_strat = strat_lookup.get(arch.primary_strategy_id)
-        if not primary_strat:
+        primary = strat_lookup.get(arch.primary_strategy_id)
+        baseline = scen_lookup.get(arch.primary_strategy_id)
+        if not primary or not baseline:
             continue
 
-        baseline_scen = scen_lookup.get(primary_strat.strategy_id)
-        if not baseline_scen:
-            continue
+        # IMPORTANT: pass the actual financial context. The previous implementation
+        # passed None, so cash-flow/liquidity/debt/resource evidence was invisible here.
+        eligible, eligibility_reasons = evaluate_eligibility(
+            primary,
+            defined_goal,
+            financial_context=context,
+            rule_assessment=rule_assessment,
+        )
 
-        # 1. Eligibility Gate
-        is_eligible, ineligible_reasons = evaluate_eligibility(primary_strat, defined_goal, None)
-        if not is_eligible:
-            evaluations.append(
-                ArchitectureEvaluation(
-                    architecture=arch,
-                    primary_strategy=primary_strat,
-                    baseline_scenario=baseline_scen,
-                    is_eligible=False,
-                    ineligible_reasons=ineligible_reasons,
-                    goal_fit_score=0.0,
-                    horizon_fit_score=0.0,
-                    funding_fit_score=0.0,
-                    feasibility_score=0.0,
-                    component_fit_score=0.0,
-                    total_decision_score=-1000.0,
-                    evidence={"eligibility": "failed", "reasons": ineligible_reasons},
-                    rationale=ineligible_reasons,
-                )
-            )
+        if not eligible:
+            evaluations.append(ArchitectureEvaluation(
+                architecture=arch,
+                primary_strategy=primary,
+                baseline_scenario=baseline,
+                is_eligible=False,
+                ineligible_reasons=eligibility_reasons,
+                goal_fit_score=0.0,
+                horizon_fit_score=0.0,
+                funding_fit_score=0.0,
+                feasibility_score=0.0,
+                component_fit_score=0.0,
+                total_decision_score=-1000.0,
+                evidence={"eligibility": "fail", "reasons": eligibility_reasons},
+                rationale=eligibility_reasons,
+                eligibility_status="fail",
+            ))
             continue
 
         rationale: list[str] = []
 
-        # 2. Goal Fit Score (0 - 40 points)
         goal_fit = 0.0
-        applicable_types = [t.strip().lower() for t in primary_strat.applicable_goal_types]
+        applicable_types = [t.strip().lower() for t in primary.applicable_goal_types]
         if canonical_goal in applicable_types:
             goal_fit += 25.0
             rationale.append(f"Explicit target match for {defined_goal.goal_type or canonical_goal.title()} goals.")
@@ -160,8 +160,7 @@ def evaluate_decision(
             goal_fit += 10.0
             rationale.append("General goal coverage applies to this goal type.")
 
-        # Goal characteristic matches
-        strat_chars = set(primary_strat.applicable_goal_characteristics)
+        strat_chars = set(primary.applicable_goal_characteristics)
         if funding_status.lower() in strat_chars or (funding_status == "Shortfall" and "shortfall" in strat_chars):
             goal_fit += 5.0
         if duration >= 7 and "long_term" in strat_chars:
@@ -173,133 +172,92 @@ def evaluate_decision(
         if priority in ("Critical", "High") and "high_priority" in strat_chars:
             goal_fit += 5.0
 
-        # 3. Horizon Fit Score (0 - 30 points)
-        horizon_fit = 0.0
         if duration >= 10:
-            if primary_strat.strategy_id in ("strat-dynamic-accumulation", "strat-calibrated-growth"):
-                horizon_fit += 30.0
-                rationale.append(f"Long horizon of {duration:g} years enables sustained compounding and accumulation.")
-            elif primary_strat.strategy_id == "strat-high-liquidity-flex":
-                horizon_fit += 20.0
-            elif primary_strat.strategy_id == "strat-cap-preservation":
-                horizon_fit += 5.0
+            if primary.strategy_id in ("strat-dynamic-accumulation", "strat-calibrated-growth"):
+                horizon_fit = 30.0
+            elif primary.strategy_id == "strat-high-liquidity-flex":
+                horizon_fit = 20.0
+            elif primary.strategy_id == "strat-cap-preservation":
+                horizon_fit = 5.0
             else:
-                horizon_fit += 15.0
+                horizon_fit = 15.0
         elif 4 <= duration < 10:
-            if primary_strat.strategy_id in ("strat-calibrated-growth", "strat-high-liquidity-flex"):
-                horizon_fit += 30.0
-                rationale.append(f"Medium horizon of {duration:g} years is ideally suited for balanced goal funding and progressive transition.")
-            elif primary_strat.strategy_id == "strat-cap-preservation":
-                horizon_fit += 18.0
-            elif primary_strat.strategy_id == "strat-dynamic-accumulation":
-                horizon_fit += 15.0
+            if primary.strategy_id in ("strat-calibrated-growth", "strat-high-liquidity-flex"):
+                horizon_fit = 30.0
+            elif primary.strategy_id == "strat-cap-preservation":
+                horizon_fit = 18.0
+            elif primary.strategy_id == "strat-dynamic-accumulation":
+                horizon_fit = 15.0
             else:
-                horizon_fit += 15.0
-        else:  # duration < 4
-            if primary_strat.strategy_id in ("strat-cap-preservation", "strat-high-liquidity-flex"):
-                horizon_fit += 30.0
-                rationale.append(f"Near-term horizon of {duration:g} years requires capital preservation and liquidity certainty.")
-            elif primary_strat.strategy_id == "strat-calibrated-growth":
-                horizon_fit += 15.0
+                horizon_fit = 15.0
+        else:
+            if primary.strategy_id in ("strat-cap-preservation", "strat-high-liquidity-flex"):
+                horizon_fit = 30.0
+            elif primary.strategy_id == "strat-calibrated-growth":
+                horizon_fit = 15.0
             else:
-                horizon_fit += 5.0
+                horizon_fit = 5.0
 
-        # 4. Funding Fit Score (0 - 25 points)
         funding_fit = 0.0
         if funding_status == "Shortfall":
-            if total_liabilities > 0 and primary_strat.strategy_id == "strat-debt-reduction":
-                funding_fit += 25.0
-                rationale.append("Addresses debt obligations that actively constrain savings surplus for this goal.")
-            elif canonical_goal == "home purchase" and primary_strat.strategy_id == "strat-credit-utilisation":
-                funding_fit += 22.0
-                rationale.append("Leverages planned credit financing to bridge home acquisition gap.")
-            elif primary_strat.strategy_id in ("strat-calibrated-growth", "strat-dynamic-accumulation"):
-                funding_fit += 20.0
-                rationale.append(f"Addresses funding shortfall of ₹{funding_gap:,.2f} through structured contribution and growth levers.")
+            if total_liabilities > 0 and primary.strategy_id == "strat-debt-reduction":
+                funding_fit = 25.0
+            elif canonical_goal == "home purchase" and primary.strategy_id == "strat-credit-utilisation":
+                funding_fit = 22.0
+            elif primary.strategy_id in ("strat-calibrated-growth", "strat-dynamic-accumulation"):
+                funding_fit = 20.0
             else:
-                funding_fit += 10.0
+                funding_fit = 10.0
         elif funding_status == "On Track":
-            if primary_strat.strategy_id in ("strat-high-liquidity-flex", "strat-cap-preservation"):
-                funding_fit += 25.0
-                rationale.append("Protects on-track trajectory by locking in progress and de-risking as timeline elapses.")
-            elif primary_strat.strategy_id == "strat-goal-reprioritisation":
-                funding_fit += 20.0
-            else:
-                funding_fit += 15.0
-        else:  # Overfunded
-            if primary_strat.strategy_id in ("strat-cap-preservation", "strat-high-liquidity-flex"):
-                funding_fit += 25.0
-                rationale.append("Capital preservation locks in achieved surplus without taking unneeded market risk.")
-            else:
-                funding_fit += 12.0
-
-        # 5. Feasibility & Constraint Compatibility (0 - 15 points)
-        feasibility_score = 0.0
-        if arch.feasibility_status == "feasible":
-            feasibility_score += 15.0
-        elif arch.feasibility_status == "conditional":
-            feasibility_score += 8.0
+            funding_fit = 25.0 if primary.strategy_id in ("strat-high-liquidity-flex", "strat-cap-preservation") else 20.0 if primary.strategy_id == "strat-goal-reprioritisation" else 15.0
         else:
-            feasibility_score += 0.0
+            funding_fit = 25.0 if primary.strategy_id in ("strat-cap-preservation", "strat-high-liquidity-flex") else 12.0
 
-        # 6. Component Fit Score (0 - 15 points)
-        component_fit = 0.0
-        if any("activated by component metadata" in r for r in arch.rationale):
-            component_fit += 10.0
-        if arch.supporting_strategy_ids:
-            component_fit += 5.0
-
+        feasibility_score = 15.0 if arch.feasibility_status == "feasible" else 8.0 if arch.feasibility_status == "conditional" else 0.0
+        component_fit = (10.0 if any("activated by component metadata" in r for r in arch.rationale) else 0.0) + (5.0 if arch.supporting_strategy_ids else 0.0)
         total_score = round(goal_fit + horizon_fit + funding_fit + feasibility_score + component_fit, 2)
 
-        evidence = {
-            "goal_fit_score": goal_fit,
-            "horizon_fit_score": horizon_fit,
-            "funding_fit_score": funding_fit,
-            "feasibility_score": feasibility_score,
-            "component_fit_score": component_fit,
-            "total_decision_score": total_score,
-            "is_eligible": True,
-        }
+        # Architecture feasibility is the explicit conditional signal. It never
+        # outranks a Pass when selecting the Recommended strategy.
+        status = "pass" if arch.feasibility_status == "feasible" else "conditional" if arch.feasibility_status == "conditional" else "fail"
+        if status == "conditional":
+            rationale.append("Strategy is usable only with the listed implementation changes/constraints.")
 
-        evaluations.append(
-            ArchitectureEvaluation(
-                architecture=arch,
-                primary_strategy=primary_strat,
-                baseline_scenario=baseline_scen,
-                is_eligible=True,
-                ineligible_reasons=[],
-                goal_fit_score=goal_fit,
-                horizon_fit_score=horizon_fit,
-                funding_fit_score=funding_fit,
-                feasibility_score=feasibility_score,
-                component_fit_score=component_fit,
-                total_decision_score=total_score,
-                evidence=evidence,
-                rationale=rationale,
-            )
-        )
+        evaluations.append(ArchitectureEvaluation(
+            architecture=arch,
+            primary_strategy=primary,
+            baseline_scenario=baseline,
+            is_eligible=status in {"pass", "conditional"},
+            ineligible_reasons=[] if status != "fail" else list(arch.constraints),
+            goal_fit_score=goal_fit,
+            horizon_fit_score=horizon_fit,
+            funding_fit_score=funding_fit,
+            feasibility_score=feasibility_score,
+            component_fit_score=component_fit,
+            total_decision_score=total_score,
+            evidence={
+                "goal_fit_score": goal_fit,
+                "horizon_fit_score": horizon_fit,
+                "funding_fit_score": funding_fit,
+                "feasibility_score": feasibility_score,
+                "component_fit_score": component_fit,
+                "total_decision_score": total_score,
+                "eligibility_status": status,
+            },
+            rationale=rationale,
+            eligibility_status=status,
+        ))
 
-    # Deterministic comparison sorting:
-    # 1. Eligible first
-    # 2. Highest total decision score (goal-fit, horizon-fit, funding-fit, feasibility)
-    # 3. Feasibility status tie-breaker
-    # 4. Strategy ID tie-breaker
-    evaluations.sort(
-        key=lambda e: (
-            1 if e.is_eligible else 0,
-            e.total_decision_score,
-            1 if e.architecture.feasibility_status == "feasible" else 0,
-            -len(e.architecture.constraints),
-            e.primary_strategy.strategy_id,
-        ),
-        reverse=True,
-    )
+    pass_evals = [e for e in evaluations if e.eligibility_status == "pass"]
+    conditional_evals = [e for e in evaluations if e.eligibility_status == "conditional"]
+    selectable = pass_evals or conditional_evals
 
-    eligible_evals = [e for e in evaluations if e.is_eligible]
-    if not eligible_evals:
-        # All candidates were ineligible
-        first_ineligible = evaluations[0] if evaluations else None
-        reasons = first_ineligible.ineligible_reasons if first_ineligible else ["No strategies passed eligibility."]
+    if not selectable:
+        failure_reasons: list[str] = []
+        for evaluation in evaluations:
+            failure_reasons.extend(evaluation.ineligible_reasons)
+        if not failure_reasons:
+            failure_reasons = ["No strategy passed the eligibility requirements."]
         return DecisionResult(
             recommended_strategy_id="",
             recommended_scenario_id="",
@@ -307,27 +265,33 @@ def evaluate_decision(
             alternative_architectures=[],
             ordered_strategy_ids=[e.primary_strategy.strategy_id for e in evaluations],
             evaluations=evaluations,
-            decision_rationale=reasons,
-            complete_reasoning="All candidate strategies were filtered out by deterministic eligibility rules.",
+            decision_rationale=failure_reasons,
+            complete_reasoning="No Pass or Conditional strategy is available. The listed eligibility failures must be addressed before a strategy can be recommended.",
             feasibility_status="infeasible",
-            constraints=reasons,
+            constraints=failure_reasons,
         )
 
-    best = eligible_evals[0]
-    alternatives = [e.architecture for e in eligible_evals[1:]]
+    # Pass always wins over Conditional. Conditional can be Recommended only
+    # when there are zero Pass candidates.
+    candidate_pool = pass_evals if pass_evals else conditional_evals
+    candidate_pool.sort(key=lambda e: (-e.total_decision_score, e.primary_strategy.strategy_id))
+    best = candidate_pool[0]
 
-    # Combine rationale cleanly
-    clean_reasons = list(best.rationale)
-    if not clean_reasons:
-        clean_reasons.append(f"Highest strategic fit for {defined_goal.goal_name}.")
+    # Exactly one Alternative, selected from the remaining Pass candidates first;
+    # if none remain, use Conditional candidates.
+    remaining_pass = [e for e in pass_evals if e is not best]
+    remaining_conditional = [e for e in conditional_evals if e is not best]
+    alternative_pool = remaining_pass or remaining_conditional
+    alternative_pool.sort(key=lambda e: (-e.total_decision_score, e.primary_strategy.strategy_id))
+    alternatives = [alternative_pool[0].architecture] if alternative_pool else []
 
+    clean_reasons = list(best.rationale) or [f"Highest strategic fit for {defined_goal.goal_name}."]
     complete_reasoning = (
-        f"For '{defined_goal.goal_name}', {best.primary_strategy.name} was selected through deterministic "
-        f"evidence comparison (Goal Fit: {best.goal_fit_score:g}, Horizon Fit: {best.horizon_fit_score:g}, "
-        f"Funding Fit: {best.funding_fit_score:g}). "
-        f"The goal is currently {funding_status.lower()} with a {duration:g}-year horizon. "
-        f"Recommendation is governed by strategy architecture suitability rather than dimension score weighting. "
-        f"Trade-off: {best.baseline_scenario.trade_off_notes or (best.primary_strategy.trade_offs[0] if best.primary_strategy.trade_offs else 'Downstream implementation parameters must align with this strategic objective.')}"
+        f"For '{defined_goal.goal_name}', {best.primary_strategy.name} was selected after deterministic eligibility "
+        f"and strategy-fit evaluation. Eligibility status: {best.eligibility_status}. "
+        f"Goal Fit: {best.goal_fit_score:g}; Horizon Fit: {best.horizon_fit_score:g}; "
+        f"Funding Fit: {best.funding_fit_score:g}. "
+        f"Pass strategies take precedence over Conditional strategies; Conditional becomes Recommended only when no Pass exists."
     )
 
     return DecisionResult(
@@ -339,6 +303,6 @@ def evaluate_decision(
         evaluations=evaluations,
         decision_rationale=clean_reasons,
         complete_reasoning=complete_reasoning,
-        feasibility_status=best.architecture.feasibility_status,
+        feasibility_status="feasible" if best.eligibility_status == "pass" else "conditional",
         constraints=best.architecture.constraints,
     )
