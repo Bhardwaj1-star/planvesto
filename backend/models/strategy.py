@@ -139,12 +139,7 @@ class InvestorPriorities(BaseModel):
         total = self.safety + self.liquidity + self.growth + self.flexibility
         if total <= 0:
             return InvestorPriorities(safety=0.25, liquidity=0.25, growth=0.25, flexibility=0.25)
-        return InvestorPriorities(
-            safety=round(self.safety / total, 4),
-            liquidity=round(self.liquidity / total, 4),
-            growth=round(self.growth / total, 4),
-            flexibility=round(self.flexibility / total, 4),
-        )
+        return InvestorPriorities(safety=round(self.safety / total, 4), liquidity=round(self.liquidity / total, 4), growth=round(self.growth / total, 4), flexibility=round(self.flexibility / total, 4))
 
 
 class StrategyRankingItem(BaseModel):
@@ -156,11 +151,9 @@ class StrategyRankingItem(BaseModel):
     composite_score: float
     dimension_scores: dict[str, float] = Field(default_factory=dict)
     is_recommended: bool = False
-    # New fields per conversion spec
     evidence_scores: dict[str, Any] = Field(default_factory=dict)
     is_eligible: bool = True
     ineligible_reasons: list[str] = Field(default_factory=list)
-
 
 
 class StrategyRecommendation(BaseModel):
@@ -197,7 +190,6 @@ class StrategyRun(BaseModel):
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict)
     selected_architecture: StrategyArchitecture | None = None
     selection_timestamp: str | None = None
-    approval_status: Literal["not_selected", "selected", "approved", "rejected", "superseded"] = "not_selected"
     run_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
 
