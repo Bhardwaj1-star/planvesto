@@ -7,6 +7,7 @@ from engines.strategy.recommendation import generate_recommendation
 from engines.strategy.scenario import generate_baseline_scenarios
 from engines.strategy.composition import compose_architectures
 from engines.strategy.decision import evaluate_decision
+from engines.rules.engine import RuleEngine
 
 
 class StrategyEngineResult:
@@ -59,6 +60,12 @@ class StrategyEngine:
         if priorities is None:
             raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
+        # The rule engine is authoritative for hard constraints and diagnostics.
+        # If the caller did not supply an assessment, build it here so the
+        # eligibility gate never runs with a silently missing rule assessment.
+        if rule_assessment is None:
+            rule_assessment = RuleEngine().assess(defined_goal, financial_context or {})
+
         strategies = filter_applicable_strategies(defined_goal=defined_goal, financial_context=financial_context)
         if not strategies:
             empty_rec = StrategyRecommendation(
@@ -77,7 +84,6 @@ class StrategyEngine:
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         architectures = compose_architectures(strategies, defined_goal, strategy_context)
 
-        # Authoritative decision engine evaluation (spec §3.7 & §3.8)
         decision_result = evaluate_decision(
             strategies=strategies,
             scenarios=all_scenarios,
@@ -88,7 +94,6 @@ class StrategyEngine:
             priorities=priorities,
         )
 
-        # Scenarios ranked by decision evidence; is_recommended assigned from decision_result
         rankings = rank_scenarios(
             strategies=strategies,
             scenarios=all_scenarios,
@@ -99,7 +104,6 @@ class StrategyEngine:
             architectures=architectures,
         )
 
-        # Recommendation consumes DecisionResult
         recommendation = generate_recommendation(
             decision_result=decision_result,
             ranked_items=rankings,
