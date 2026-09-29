@@ -12,6 +12,13 @@
 → **Decision Engine**
 → **Personalised Financial Plan**
 
+## Personalised Plan Output Levels
+
+The system does not have a fixed set of plan "types". Plans are generated dynamically from the investor's goals, financial state, constraints, selected strategy architectures and multi-goal interactions.
+
+1. **Goal-Level Financial Plan** — generated for each individual goal, containing its selected strategy/variant, funding approach, implementation parameters, constraints and trade-offs.
+2. **Complete Financial Plan** — combines all goal-level plans with the investor's overall financial state and the Multi-Goal Orchestration result, including resource allocation, priorities, conflicts and overall trade-offs.
+
 ## Core Principle
 
 Eligibility does **not** create the personalised plan. Strategy Library provides reusable strategy architectures; investor-specific data, goals, constraints, eligibility results, adaptations and trade-offs determine the personalised strategy variant. Decision Engine makes the final selection/architecture.
