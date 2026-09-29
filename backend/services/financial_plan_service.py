@@ -13,17 +13,31 @@ from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from models.strategy import InvestorPriorities
 from services.goal_report_service import GoalReportService
+from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 
 
 class FinancialPlanService:
     """Build a live consolidated plan across all goals without introducing new DB tables."""
 
-    def __init__(self):
-        self.goal_repo = GoalRepository()
-        self.strategy_repo = StrategyRepository()
-        self.strategy_service = StrategyService()
-        self.goal_report_service = GoalReportService()
+    def __init__(
+        self,
+        goal_repo: GoalRepository | None = None,
+        strategy_repo: StrategyRepository | None = None,
+        strategy_service: StrategyService | None = None,
+        goal_report_service: GoalReportService | None = None,
+        multi_goal_service: MultiGoalPlanningService | None = None,
+    ):
+        self.goal_repo = goal_repo or GoalRepository()
+        self.strategy_repo = strategy_repo or StrategyRepository()
+        self.strategy_service = strategy_service or StrategyService()
+        self.goal_report_service = goal_report_service or GoalReportService()
+        self.multi_goal_service = multi_goal_service or MultiGoalPlanningService(
+            goal_repo=self.goal_repo,
+            strategy_repo=self.strategy_repo,
+            strategy_service=self.strategy_service,
+            goal_report_service=self.goal_report_service,
+        )
 
     @staticmethod
     def _priority_rank(value: Any) -> int:
@@ -33,100 +47,102 @@ class FinancialPlanService:
     def _goal_row(report: dict[str, Any]) -> dict[str, Any]:
         calc = report.get("goal_calculation", {})
         rec = report.get("recommendation", {})
+        client_p = calc.get("priority") or report.get("priority")
         return {
             "goal_id": report.get("goal_id"),
             "goal_name": report.get("goal_name"),
             "goal_type": report.get("goal_type"),
-            "priority": calc.get("priority") or report.get("priority"),
+            "priority": client_p,
+            "client_priority": client_p,
+            "resolved_priority": client_p,
             "target_date": f"{calc.get('target_year')}-{calc.get('target_month'):02d}" if calc.get("target_year") and calc.get("target_month") else None,
             "today_cost": calc.get("today_cost"),
             "future_target": calc.get("future_target"),
             "funding_gap": calc.get("funding_gap"),
             "required_monthly_contribution": calc.get("required_monthly_contribution") or 0.0,
+            "allocated_monthly_contribution": calc.get("required_monthly_contribution") or 0.0,
+            "monthly_shortfall": 0.0,
             "funding_status": calc.get("funding_status"),
             "strategy_id": report.get("selected_strategy_id") or rec.get("recommended_strategy_id"),
             "strategy_name": report.get("strategy", {}).get("name"),
             "feasibility_status": rec.get("feasibility_status"),
             "reasoning": rec.get("complete_reasoning"),
             "reasons": rec.get("short_reasons", []),
+            "override_applied": False,
+            "override_reason": None,
         }
 
-    def build_plan(self, planning_unit_id: str, priorities: InvestorPriorities | None = None) -> dict[str, Any]:
+    def build_plan(
+        self,
+        planning_unit_id: str,
+        priorities: InvestorPriorities | None = None,
+        rule_overrides: dict[str, dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Builds one coherent consolidated financial plan using MultiGoalPlanningService."""
+        multi_plan = self.multi_goal_service.build_multi_goal_plan(
+            planning_unit_id=planning_unit_id,
+            priorities=priorities,
+            rule_overrides=rule_overrides,
+        )
+
+        # Retrieve strategy run ids for auditability
         goals = self.goal_repo.list_goals(planning_unit_id)
-        if not goals:
-            raise HTTPException(status_code=404, detail="No goals found for this planning unit")
+        strategy_runs: list[str] = []
+        for g in goals:
+            run = self.strategy_repo.get_latest_run(planning_unit_id, g["goal_id"])
+            if run and run.strategy_run_id:
+                strategy_runs.append(run.strategy_run_id)
 
         rows: list[dict[str, Any]] = []
-        strategy_runs: list[str] = []
-        for goal in goals:
-            goal_id = goal["goal_id"]
-            run = self.strategy_repo.get_latest_run(planning_unit_id, goal_id)
-            if not run:
-                if priorities is None:
-                    raise HTTPException(status_code=400, detail=f"Strategy run missing for goal '{goal_id}'. Build the goal strategy first or provide investor priorities.")
-                run = self.strategy_service.build_strategy(planning_unit_id, goal_id, priorities)
-            report = self.goal_report_service.build_report(planning_unit_id, run.strategy_run_id)
-            row = self._goal_row(report)
-            row["priority"] = goal.get("priority") or row.get("priority")
-            row["flexibility"] = goal.get("flexibility")
-            rows.append(row)
-            strategy_runs.append(run.strategy_run_id or "")
-
-        rows.sort(key=lambda item: (self._priority_rank(item.get("priority")), item.get("target_date") or "9999-99"))
-
-        first_defined_goal = next((self.goal_repo.get_latest_defined_goal(planning_unit_id, g["goal_id"]) for g in goals), None)
-        financial_state = self.strategy_service._financial_context(planning_unit_id, first_defined_goal) if first_defined_goal else {}
-        surplus = financial_state.get("monthly_surplus")
-        required_total = round(sum(float(row.get("required_monthly_contribution") or 0) for row in rows), 2)
-        surplus_value = float(surplus) if surplus is not None else None
-        monthly_gap = round(required_total - surplus_value, 2) if surplus_value is not None else None
-
-        if monthly_gap is None:
-            funding_status = "requires_review"
-        elif monthly_gap <= 0:
-            funding_status = "within_current_surplus"
-        else:
-            funding_status = "surplus_shortfall"
-
-        actions = []
-        for index, row in enumerate(rows, start=1):
-            contribution = float(row.get("required_monthly_contribution") or 0)
-            actions.append({
-                "sequence": index,
-                "goal_id": row["goal_id"],
-                "goal_name": row["goal_name"],
-                "action": f"Fund {row['goal_name']} according to its selected strategy",
-                "monthly_contribution": contribution,
-                "target_date": row.get("target_date"),
-                "strategy": row.get("strategy_name"),
+        for res in multi_plan.goals:
+            rows.append({
+                "goal_id": res.goal_id,
+                "goal_name": res.goal_name,
+                "goal_type": res.goal_type,
+                "priority": res.client_priority,
+                "client_priority": res.client_priority,
+                "resolved_priority": res.resolved_priority,
+                "target_date": res.target_date,
+                "required_monthly_contribution": res.required_monthly_contribution,
+                "allocated_monthly_contribution": res.allocated_monthly_contribution,
+                "monthly_shortfall": res.shortfall,
+                "funding_status": res.funding_status,
+                "strategy_id": res.recommended_strategy_id,
+                "strategy_name": res.recommended_strategy_name,
+                "feasibility_status": res.feasibility_status,
+                "override_applied": res.override_applied,
+                "override_reason": res.override_reason,
+                "reasons": res.reasons,
+                "notes": res.notes,
             })
 
+        f_state = multi_plan.financial_state
         return {
             "report_type": "complete_financial_plan",
             "planning_unit_id": planning_unit_id,
             "goals": rows,
             "goal_count": len(rows),
             "financial_state": {
-                "annual_income": financial_state.get("annual_income"),
-                "annual_expenses": financial_state.get("annual_expenses"),
-                "monthly_surplus": surplus,
-                "assets": financial_state.get("assets"),
-                "liabilities": financial_state.get("liabilities"),
-                "net_worth": financial_state.get("net_worth"),
+                "annual_income": f_state.get("annual_income"),
+                "annual_expenses": f_state.get("annual_expenses"),
+                "monthly_surplus": multi_plan.total_available_surplus,
+                "assets": f_state.get("assets"),
+                "liabilities": f_state.get("liabilities"),
+                "net_worth": f_state.get("net_worth"),
             },
             "consolidated_funding": {
-                "required_monthly_contribution": required_total,
-                "available_monthly_surplus": surplus_value,
-                "monthly_gap": monthly_gap,
-                "funding_status": funding_status,
+                "required_monthly_contribution": multi_plan.total_required_contribution,
+                "allocated_monthly_contribution": multi_plan.total_allocated_contribution,
+                "available_monthly_surplus": multi_plan.total_available_surplus,
+                "monthly_gap": multi_plan.monthly_gap,
+                "funding_status": multi_plan.overall_funding_status,
+                "competition_detected": multi_plan.competing_resources_detected,
             },
             "strategy_runs": strategy_runs,
-            "actions": actions,
-            "planning_notes": [
-                "Goals are ordered by recorded priority and then target date.",
-                "The consolidated contribution is the sum of goal-level required monthly contributions; it must be reviewed against the investor's current surplus.",
-                "The plan does not silently change a goal strategy when a combined funding shortfall exists; it exposes the conflict for the planning decision layer.",
-            ],
+            "actions": multi_plan.action_plan,
+            "trade_offs": multi_plan.trade_offs,
+            "audit_trail": multi_plan.audit_trail,
+            "planning_notes": multi_plan.planning_notes,
         }
 
     @staticmethod
@@ -162,10 +178,26 @@ class FinancialPlanService:
             Spacer(1, 14),
         ])
 
-        goal_rows = [["Priority", "Goal", "Target", "Monthly", "Strategy", "Status"]]
+        goal_rows = [["Priority", "Goal", "Target", "Required/Mo", "Allocated/Mo", "Status"]]
         for row in plan["goals"]:
-            goal_rows.append([str(row.get("priority") or "—"), str(row.get("goal_name") or "—"), str(row.get("target_date") or "—"), str(row.get("required_monthly_contribution") or 0), str(row.get("strategy_name") or "—"), str(row.get("feasibility_status") or "—")])
-        story.extend([Paragraph("Goal Strategies", styles["Heading2"]), self._table(goal_rows, [55, 100, 65, 65, 105, 65]), Spacer(1, 14)])
+            priority_label = row.get("resolved_priority") or row.get("priority") or "—"
+            if row.get("override_applied"):
+                priority_label += "*"
+            goal_rows.append([
+                priority_label,
+                str(row.get("goal_name") or "—"),
+                str(row.get("target_date") or "—"),
+                str(row.get("required_monthly_contribution") or 0),
+                str(row.get("allocated_monthly_contribution") or 0),
+                str(row.get("funding_status") or "—"),
+            ])
+        story.extend([Paragraph("Goal Strategies & Allocation", styles["Heading2"]), self._table(goal_rows, [60, 95, 65, 75, 75, 75]), Spacer(1, 14)])
+
+        if plan.get("trade_offs"):
+            story.append(Paragraph("Trade-offs & Constraints", styles["Heading2"]))
+            for to in plan["trade_offs"]:
+                story.append(Paragraph(f"• {to}", styles["BodyText"]))
+            story.append(Spacer(1, 10))
 
         story.append(Paragraph("Action Plan", styles["Heading2"]))
         for action in plan["actions"]:
