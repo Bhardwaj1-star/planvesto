@@ -15,7 +15,7 @@ from services.strategy_service import StrategyService
 
 
 class GoalReportService:
-    """Goal-agnostic report/PDF service built from the persisted StrategyRun."""
+    """Generate the same complete report contract for every goal type."""
 
     def __init__(self):
         self.goal_repo = GoalRepository()
@@ -43,36 +43,35 @@ class GoalReportService:
         return str(goal_type).replace("_", " ").title()
 
     @staticmethod
-    def _goal_specific_details(goal: Any) -> dict[str, Any]:
+    def _goal_details(goal: Any) -> dict[str, Any]:
+        """Expose the goal's own dynamic inputs without goal-type assumptions."""
         metadata = getattr(goal, "version_metadata", None) or {}
         dynamic = metadata.get("dynamic_details") if isinstance(metadata, dict) else None
         if not isinstance(dynamic, dict):
             dynamic = {}
+        return {
+            str(key).replace("_", " ").replace("-", " ").title(): value
+            for key, value in dynamic.items()
+            if value not in (None, "", [], {})
+        }
 
-        # Never expose retirement-only calculation metadata as generic goal details.
-        details: dict[str, Any] = {}
-        goal_type = str(getattr(goal, "goal_type", "") or "")
-        if goal_type == "Vehicle":
-            for key, label in (
-                ("vehicleType", "Vehicle Type"),
-                ("vehicleCondition", "Vehicle Condition"),
-            ):
-                value = dynamic.get(key)
-                if value not in (None, ""):
-                    details[label] = value
-        elif goal_type == "Retirement / Financial Freedom":
-            for key, label in (
-                ("currentAge", "Current Age"),
-                ("lifeExpectancy", "Life Expectancy"),
-            ):
-                value = dynamic.get(key)
-                if value not in (None, ""):
-                    details[label] = value
-        else:
-            for key, value in dynamic.items():
-                if value not in (None, ""):
-                    details[str(key).replace("_", " ").title()] = value
-        return details
+    @staticmethod
+    def _mapped_assets(goal: Any) -> list[dict[str, Any]]:
+        mappings = getattr(goal, "mapped_assets", None) or []
+        rows: list[dict[str, Any]] = []
+        for mapping in mappings:
+            if hasattr(mapping, "model_dump"):
+                mapping = mapping.model_dump(mode="json")
+            if not isinstance(mapping, dict):
+                continue
+            rows.append({
+                "asset_name": mapping.get("asset_name") or mapping.get("asset_id"),
+                "allocation": mapping.get("allocated_amount"),
+                "allocation_percentage": mapping.get("allocated_percentage"),
+                "expected_return": mapping.get("expected_return"),
+                "projected_value": mapping.get("projected_value"),
+            })
+        return rows
 
     def build_report(self, planning_unit_id: str, strategy_run_id: str) -> dict[str, Any]:
         run, goal, context = self._load(planning_unit_id, strategy_run_id)
@@ -85,7 +84,8 @@ class GoalReportService:
             "goal_id": run.goal_id,
             "goal_name": self._goal_label(goal),
             "goal_type": getattr(goal, "goal_type", None),
-            "goal_details": self._goal_specific_details(goal),
+            "goal_details": self._goal_details(goal),
+            "mapped_assets": self._mapped_assets(goal),
             "strategy_run_id": strategy_run_id,
             "strategy": {
                 "name": strategy.name if strategy else None,
@@ -97,6 +97,7 @@ class GoalReportService:
             "approval_status": run.approval_status,
             "goal_calculation": {
                 "today_cost": getattr(goal, "today_cost", None),
+                "inflation_rate": getattr(goal, "inflation_rate", None),
                 "future_target": getattr(goal, "future_target", None),
                 "funding_gap": getattr(goal, "funding_gap", None),
                 "required_monthly_contribution": getattr(goal, "required_monthly_contribution", None),
@@ -116,6 +117,18 @@ class GoalReportService:
             },
         }
 
+    @staticmethod
+    def _table(rows: list[list[str]]) -> Table:
+        table = Table(rows, colWidths=[210, 270])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("PADDING", (0, 0), (-1, -1), 7),
+        ]))
+        return table
+
     def generate_pdf(self, planning_unit_id: str, strategy_run_id: str) -> bytes:
         report = self.build_report(planning_unit_id, strategy_run_id)
         buffer = BytesIO()
@@ -124,57 +137,68 @@ class GoalReportService:
         story = [
             Paragraph("Financial Goal Strategy Report", styles["Title"]),
             Paragraph(report["goal_name"], styles["Heading2"]),
+            Paragraph(str(report.get("goal_type") or "Financial Goal"), styles["BodyText"]),
             Spacer(1, 12),
         ]
 
         details = report.get("goal_details", {})
         if details:
             story.append(Paragraph("Goal Details", styles["Heading2"]))
-            rows = [["Item", "Value"], *[[str(k), str(v)] for k, v in details.items()]]
-            table = Table(rows, colWidths=[210, 270])
-            table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("PADDING", (0, 0), (-1, -1), 7),
-            ]))
-            story.extend([table, Spacer(1, 16)])
+            story.append(self._table([["Item", "Value"], *[[str(k), str(v)] for k, v in details.items()]]))
+            story.append(Spacer(1, 16))
 
-        rows = [["Item", "Value"]]
         calc = report["goal_calculation"]
-        for key, value in calc.items():
-            if value is not None:
-                rows.append([key.replace("_", " ").title(), str(value)])
+        rows = [["Item", "Value"]] + [
+            [key.replace("_", " ").title(), str(value)]
+            for key, value in calc.items()
+            if value is not None
+        ]
         if len(rows) > 1:
-            table = Table(rows, colWidths=[210, 270])
-            table.setStyle(TableStyle([
+            story.append(Paragraph("Goal Calculation", styles["Heading2"]))
+            story.append(self._table(rows))
+            story.append(Spacer(1, 16))
+
+        mapped_assets = report.get("mapped_assets", [])
+        if mapped_assets:
+            story.append(Paragraph("Goal-Funding Assets", styles["Heading2"]))
+            asset_rows = [["Asset", "Allocated", "Allocation %", "Expected Return", "Projected Value"]]
+            for asset in mapped_assets:
+                asset_rows.append([
+                    str(asset.get("asset_name") or "—"),
+                    str(asset.get("allocation") if asset.get("allocation") is not None else "—"),
+                    str(asset.get("allocation_percentage") if asset.get("allocation_percentage") is not None else "—"),
+                    str(asset.get("expected_return") if asset.get("expected_return") is not None else "—"),
+                    str(asset.get("projected_value") if asset.get("projected_value") is not None else "—"),
+                ])
+            asset_table = Table(asset_rows, colWidths=[125, 85, 75, 90, 105], repeatRows=1)
+            asset_table.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("PADDING", (0, 0), (-1, -1), 7),
+                ("PADDING", (0, 0), (-1, -1), 5),
             ]))
-            story.extend([table, Spacer(1, 16)])
+            story.extend([asset_table, Spacer(1, 16)])
 
         strategy = report["strategy"]
         story.append(Paragraph("Strategy", styles["Heading2"]))
         story.append(Paragraph(str(strategy.get("name") or "Not selected"), styles["Heading3"]))
         if strategy.get("objective"):
             story.append(Paragraph(str(strategy["objective"]), styles["BodyText"]))
+        if strategy.get("trade_offs"):
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("Trade-offs", styles["Heading3"]))
+            for trade_off in strategy["trade_offs"]:
+                story.append(Paragraph(f"• {trade_off}", styles["BodyText"]))
         story.append(Spacer(1, 12))
 
         story.append(Paragraph("Financial State", styles["Heading2"]))
         financial = report["financial_state"]
-        rows = [[k.replace("_", " ").title(), str(v) if v is not None else "Not available"] for k, v in financial.items()]
-        table = Table([["Item", "Value"], *rows], colWidths=[210, 270])
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-            ("PADDING", (0, 0), (-1, -1), 7),
+        story.append(self._table([
+            ["Item", "Value"],
+            *[[k.replace("_", " ").title(), str(v) if v is not None else "Not available"] for k, v in financial.items()],
         ]))
-        story.extend([table, Spacer(1, 16)])
+        story.append(Spacer(1, 16))
 
         rec = report["recommendation"]
         story.append(Paragraph("Recommendation", styles["Heading2"]))
