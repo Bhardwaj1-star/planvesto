@@ -2,7 +2,6 @@ from typing import Any
 
 from pydantic import Field
 from models.strategy import InvestorPriorities
-from models.strategy_approval import SuitabilityAssessment
 from schemas.base import StrictRequestModel
 
 
@@ -34,13 +33,3 @@ class StrategySelectRequest(StrictRequestModel):
     selected_scenario_id: str = Field(min_length=1, max_length=100)
     selected_architecture_id: str | None = Field(default=None, min_length=1, max_length=100)
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
-
-
-class StrategyApprovalRequest(StrictRequestModel):
-    planning_unit_id: str = Field(min_length=1, max_length=100)
-    strategy_run_id: str = Field(min_length=1, max_length=100)
-    suitability: SuitabilityAssessment
-    acknowledgement_text: str | None = Field(default=None, max_length=2000)
-    make_primary: bool = False
-    primary_transition_decision: str | None = Field(default=None, min_length=1, max_length=50)
-    pending_action_disposition: str | None = Field(default=None, min_length=1, max_length=50)
