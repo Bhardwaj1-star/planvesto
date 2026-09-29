@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 
 const coreSteps = [
   { label: "Build & Compare", href: "/investor/strategy-builder" },
-  { label: "Approval", href: "/investor/strategy-approval" },
   { label: "Action Plan", href: "/investor/action-plan" },
 ];
 
