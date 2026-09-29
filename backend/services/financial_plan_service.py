@@ -73,7 +73,9 @@ class FinancialPlanService:
             strategy_runs.append(run.strategy_run_id or "")
 
         rows.sort(key=lambda item: (self._priority_rank(item.get("priority")), item.get("target_date") or "9999-99"))
-        financial_state = self.strategy_service._financial_context(planning_unit_id, next((self.goal_repo.get_latest_defined_goal(planning_unit_id, g["goal_id"]) for g in goals), None)) if goals else {}
+
+        first_defined_goal = next((self.goal_repo.get_latest_defined_goal(planning_unit_id, g["goal_id"]) for g in goals), None)
+        financial_state = self.strategy_service._financial_context(planning_unit_id, first_defined_goal) if first_defined_goal else {}
         surplus = financial_state.get("monthly_surplus")
         required_total = round(sum(float(row.get("required_monthly_contribution") or 0) for row in rows), 2)
         surplus_value = float(surplus) if surplus is not None else None
