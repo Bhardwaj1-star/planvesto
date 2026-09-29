@@ -262,11 +262,12 @@ class TestRetirementPlanningFlow:
         rows = {r[0]: r[1] for r in arch_sec["rows"]}
         assert rows["Primary strategy"] == "strat-retirement-diversified"
 
-        # Check investor decision section reflects the persisted selection
+        # Check investor decision section reflects the persisted selection.
+        # Approval is no longer part of the strategy lifecycle.
         decision_sec = next(s for s in report.sections if s["id"] == "investor_decision")
         dec_rows = {r[0]: r[1] for r in decision_sec["rows"]}
         assert dec_rows["Selected strategy"] == "strat-retirement-diversified"
-        assert dec_rows["Approval status"] == "selected"
+        assert "Approval status" not in dec_rows
 
     def test_pdf_export_matches_web_report_data_contract(self):
         """RetirementReportPDFExporter successfully renders the RetirementReport data model."""
