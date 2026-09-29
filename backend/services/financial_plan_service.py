@@ -199,6 +199,17 @@ class FinancialPlanService:
                 story.append(Paragraph(f"• {to}", styles["BodyText"]))
             story.append(Spacer(1, 10))
 
+        overrides = [g for g in plan["goals"] if g.get("override_applied")]
+        if overrides:
+            story.append(Paragraph("System Priority Adjustments & Rule Explanations", styles["Heading2"]))
+            for g in overrides:
+                story.append(Paragraph(
+                    f"• <b>{g['goal_name']}</b>: Client Priority was <i>{g['client_priority']}</i>, resolved by system rules to <i>{g['resolved_priority']}</i>.<br/>"
+                    f"&nbsp;&nbsp;<b>Reason:</b> {g.get('override_reason') or 'Financial ratio constraint.'}",
+                    styles["BodyText"],
+                ))
+            story.append(Spacer(1, 10))
+
         story.append(Paragraph("Action Plan", styles["Heading2"]))
         for action in plan["actions"]:
             story.append(Paragraph(f"{action['sequence']}. {action['action']} — {action['monthly_contribution']}/month; target {action.get('target_date') or 'review required'}.", styles["BodyText"]))
