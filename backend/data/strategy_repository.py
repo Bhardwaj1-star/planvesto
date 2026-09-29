@@ -17,15 +17,7 @@ class StrategyRepository:
         return self._hydrate_run(res.data) if res and res.data else None
 
     def get_run_by_strategy_version_id(self, planning_unit_id: str, strategy_version_id: str) -> StrategyRun | None:
-        res = (
-            self.db.table("strategy_runs")
-            .select("*")
-            .eq("planning_unit_id", planning_unit_id)
-            .eq("selected_strategy_version_id", strategy_version_id)
-            .order("run_version", desc=True)
-            .limit(1)
-            .execute()
-        )
+        res = self.db.table("strategy_runs").select("*").eq("planning_unit_id", planning_unit_id).eq("selected_strategy_version_id", strategy_version_id).order("run_version", desc=True).limit(1).execute()
         rows = res.data or []
         return self._hydrate_run(rows[0]) if rows else None
 
@@ -35,7 +27,7 @@ class StrategyRepository:
 
     def save_run(self, run: StrategyRun) -> str:
         self.db.table("strategy_runs").update({"is_latest": False}).eq("planning_unit_id", run.planning_unit_id).eq("goal_id", run.goal_id).eq("is_latest", True).execute()
-        metadata = {**run.run_metadata, "architectures": [a.model_dump() for a in run.architectures], "selected_architecture": run.selected_architecture.model_dump() if run.selected_architecture else None, "approval_status": run.approval_status}
+        metadata = {**run.run_metadata, "architectures": [a.model_dump() for a in run.architectures], "selected_architecture": run.selected_architecture.model_dump() if run.selected_architecture else None}
         payload = {
             "planning_unit_id": run.planning_unit_id, "goal_id": run.goal_id, "defined_goal_id": run.defined_goal_id, "defined_goal_version": run.defined_goal_version,
             "run_version": run.run_version, "is_latest": True, "status": run.status, "investor_priorities": run.investor_priorities.model_dump(),
@@ -55,8 +47,8 @@ class StrategyRepository:
             self.db.table("strategy_scenarios").insert(custom_rows).execute()
         return record["strategy_run_id"]
 
-    def update_selection(self, planning_unit_id: str, strategy_run_id: str, selected_strategy_id: str, selected_scenario_id: str, selected_params: dict[str, Any], selected_architecture: StrategyArchitecture | None = None, approval_status: str = "selected", selected_strategy_version_id: str | None = None, selected_strategy_version: int | None = None) -> None:
-        metadata = {"selected_architecture": selected_architecture.model_dump() if selected_architecture else None, "approval_status": approval_status}
+    def update_selection(self, planning_unit_id: str, strategy_run_id: str, selected_strategy_id: str, selected_scenario_id: str, selected_params: dict[str, Any], selected_architecture: StrategyArchitecture | None = None, selected_strategy_version_id: str | None = None, selected_strategy_version: int | None = None) -> None:
+        metadata = {"selected_architecture": selected_architecture.model_dump() if selected_architecture else None}
         if selected_strategy_version_id is not None:
             metadata["selected_strategy_version_id"] = selected_strategy_version_id
         if selected_strategy_version is not None:
@@ -68,15 +60,6 @@ class StrategyRepository:
             "selection_timestamp": datetime.now(timezone.utc).isoformat(), "run_metadata": metadata,
         }
         self.db.table("strategy_runs").update(payload).eq("planning_unit_id", planning_unit_id).eq("strategy_run_id", strategy_run_id).execute()
-
-    def update_approval(self, planning_unit_id: str, strategy_run_id: str, decision: str) -> None:
-        run = self.get_run_by_id(planning_unit_id, strategy_run_id)
-        if not run:
-            raise ValueError("Strategy run not found")
-        status = "approved" if decision == "approve" else "rejected"
-        metadata = dict(run.run_metadata)
-        metadata["approval_status"] = status
-        self.db.table("strategy_runs").update({"status": "active" if status == "approved" else "completed", "run_metadata": metadata}).eq("planning_unit_id", planning_unit_id).eq("strategy_run_id", strategy_run_id).execute()
 
     def _hydrate_run(self, row: dict[str, Any]) -> StrategyRun:
         priorities = InvestorPriorities(**(row.get("investor_priorities") or {}))
@@ -95,5 +78,5 @@ class StrategyRepository:
             selected_strategy_version_id=row.get("selected_strategy_version_id") or metadata.get("selected_strategy_version_id"),
             selected_strategy_version=row.get("selected_strategy_version") if row.get("selected_strategy_version") is not None else metadata.get("selected_strategy_version"),
             selected_implementation_parameters=row.get("selected_implementation_parameters") or {}, selected_architecture=StrategyArchitecture(**selected_architecture) if selected_architecture else None,
-            approval_status=metadata.get("approval_status", "not_selected"), selection_timestamp=row.get("selection_timestamp"), run_metadata=metadata, created_at=row.get("created_at"),
+            selection_timestamp=row.get("selection_timestamp"), run_metadata=metadata, created_at=row.get("created_at"),
         )
