@@ -1,19 +1,155 @@
-"""Deterministic eligibility gate for strategy conversion.
+"""Strategy eligibility rules.
 
-Eligibility is deliberately narrower than ranking/recommendation. A strategy is
-rejected only by an explicit hard constraint, goal applicability, horizon/funding
-constraint, or missing data that the strategy explicitly declares as required.
-Financial-health metrics such as cash-flow, liquidity and debt pressure remain
-explanatory/conditional evidence unless the rule engine marks them as hard
-constraints; this prevents the builder from silently rejecting a goal that needs
-a remediation strategy.
+Eligibility is distinct from strategy ranking. Every strategy that reaches the
+recommendation layer must be classified against the approved eligibility fits.
+
+Approved fit outcomes:
+    PASS        -> strategy can be recommended directly.
+    CONDITIONAL -> strategy can be considered only with explicit required changes.
+    FAIL        -> strategy cannot be recommended.
+
+The module intentionally does not invent financial-ratio thresholds. Numeric
+requirements must come from the strategy/goal calculation layer or an explicit
+fit assessment supplied in the financial context.
 """
 
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, List, Tuple
 
 from models.strategy import StrategyDefinition
 from models.defined_goal import DefinedGoal as GoalSnapshot
 from engines.rules.engine import GOAL_TYPE_ALIASES
+
+
+class EligibilityStatus(str, Enum):
+    PASS = "pass"
+    CONDITIONAL = "conditional"
+    FAIL = "fail"
+
+
+ELIGIBILITY_FITS: tuple[str, ...] = (
+    "cashflow_fit",
+    "liquidity_fit",
+    "debt_fit",
+    "asset_resource_fit",
+    "risk_capacity_fit",
+    "goal_constraint_fit",
+    "multi_goal_conflict_fit",
+    "implementation_fit",
+)
+
+
+@dataclass(frozen=True)
+class EligibilityFitResult:
+    fit: str
+    status: EligibilityStatus
+    reason: str = ""
+    required_changes: tuple[str, ...] = ()
+    data: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class EligibilityAssessment:
+    """Complete eligibility assessment for one strategy."""
+
+    results: tuple[EligibilityFitResult, ...]
+
+    @property
+    def status(self) -> EligibilityStatus:
+        statuses = {result.status for result in self.results}
+        if EligibilityStatus.FAIL in statuses:
+            return EligibilityStatus.FAIL
+        if EligibilityStatus.CONDITIONAL in statuses:
+            return EligibilityStatus.CONDITIONAL
+        return EligibilityStatus.PASS
+
+    @property
+    def failed_fits(self) -> tuple[EligibilityFitResult, ...]:
+        return tuple(r for r in self.results if r.status == EligibilityStatus.FAIL)
+
+    @property
+    def conditional_fits(self) -> tuple[EligibilityFitResult, ...]:
+        return tuple(r for r in self.results if r.status == EligibilityStatus.CONDITIONAL)
+
+    @property
+    def required_changes(self) -> tuple[str, ...]:
+        return tuple(
+            change
+            for result in self.results
+            for change in result.required_changes
+        )
+
+    @property
+    def eligible_for_recommendation(self) -> bool:
+        return self.status != EligibilityStatus.FAIL
+
+
+def _fit_input(context: dict[str, Any], strategy_id: str, fit: str) -> dict[str, Any] | None:
+    """Read an explicit calculated fit assessment without inventing thresholds."""
+    root = context.get("eligibility_fits") or {}
+    if not isinstance(root, dict):
+        return None
+    strategy_values = root.get(strategy_id)
+    if not isinstance(strategy_values, dict):
+        return None
+    value = strategy_values.get(fit)
+    if isinstance(value, dict):
+        return value
+    return None
+
+
+def _build_fit_result(fit: str, value: dict[str, Any] | None) -> EligibilityFitResult:
+    """Normalize an upstream fit calculation into the frozen Pass/Conditional/Fail contract."""
+    if value is None:
+        # Missing fit evidence is not silently treated as Pass. The strategy can
+        # still be evaluated, but it must explicitly declare the missing evidence.
+        return EligibilityFitResult(
+            fit=fit,
+            status=EligibilityStatus.CONDITIONAL,
+            reason=f"{fit} assessment is unavailable",
+            required_changes=(f"Provide {fit} assessment before implementation",),
+        )
+
+    raw_status = str(value.get("status", "")).strip().lower()
+    try:
+        status = EligibilityStatus(raw_status)
+    except ValueError as exc:
+        raise ValueError(f"Invalid {fit} status: {raw_status!r}") from exc
+
+    changes = value.get("required_changes") or value.get("required_change") or ()
+    if isinstance(changes, str):
+        changes = (changes,)
+    else:
+        changes = tuple(str(change) for change in changes)
+
+    return EligibilityFitResult(
+        fit=fit,
+        status=status,
+        reason=str(value.get("reason", "")),
+        required_changes=changes,
+        data=dict(value.get("data") or {}),
+    )
+
+
+def evaluate_eligibility_fits(
+    strategy: StrategyDefinition,
+    *,
+    financial_context: dict[str, Any] | None = None,
+) -> EligibilityAssessment:
+    """Evaluate all eight frozen eligibility fits for a strategy.
+
+    The financial-state/goal calculation layer is responsible for producing the
+    actual fit evidence. This function enforces the business contract and keeps
+    the result deterministic: any failed fit fails the strategy; otherwise any
+    conditional fit makes the strategy conditional; otherwise it passes.
+    """
+    context = dict(financial_context or {})
+    results = tuple(
+        _build_fit_result(fit, _fit_input(context, strategy.strategy_id, fit))
+        for fit in ELIGIBILITY_FITS
+    )
+    return EligibilityAssessment(results=results)
 
 
 def _metric_available(context: dict[str, Any], key: str) -> bool:
@@ -35,9 +171,6 @@ def _required_input_available(name: str, goal: GoalSnapshot, context: dict[str, 
             return getattr(goal, "future_target", None) is not None
         return getattr(goal, name, None) is not None
 
-    # A caller that has not supplied a Financial State yet cannot be treated as
-    # evidence that the input is absent. The full runtime supplies this context;
-    # goal-only unit calls therefore retain the pre-existing applicability behavior.
     if not context:
         return True
 
