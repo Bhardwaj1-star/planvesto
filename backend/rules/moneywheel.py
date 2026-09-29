@@ -1,7 +1,7 @@
 from typing import Literal
 
 
-RULE_SET_VERSION = "1.2"
+RULE_SET_VERSION = "1.3"
 
 Status = Literal["excellent", "healthy", "attention", "critical"]
 
@@ -10,7 +10,7 @@ Status = Literal["excellent", "healthy", "attention", "critical"]
 # be replaced by a later Planvesto rule set without changing historical data.
 RULES = {
     "savings_ratio": {"name": "Savings Ratio", "unit": "%", "formula": "Savings / Gross Monthly Income × 100", "excellent": (30.0, None), "healthy": (20.0, 30.0), "attention": (10.0, 20.0), "critical": (None, 10.0)},
-    "expense_ratio": {"name": "Expense Ratio", "unit": "%", "formula": "Essential Expenses / Gross Monthly Income × 100", "excellent": (None, 40.0), "healthy": (40.0, 50.0), "attention": (50.0, 60.0), "critical": (60.0, None)},
+    "expense_ratio": {"name": "Need Expense Ratio", "unit": "%", "formula": "Need Expenses / Gross Monthly Income × 100", "excellent": (None, 40.0), "healthy": (40.0, 50.0), "attention": (50.0, 60.0), "critical": (60.0, None)},
     "emergency_fund_coverage": {"name": "Emergency Fund Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
     "current_liquidity_ratio": {"name": "Current Liquidity Ratio", "unit": "x", "formula": "Liquid Assets / Short-Term Liabilities", "excellent": (1.5, None), "healthy": (1.0, 1.5), "attention": (0.75, 1.0), "critical": (None, 0.75)},
     "debt_to_income_ratio": {"name": "Debt-to-Income Ratio", "unit": "%", "formula": "Total Monthly Debt Payments / Gross Monthly Income × 100", "excellent": (None, 20.0), "healthy": (20.0, 30.0), "attention": (30.0, 40.0), "critical": (40.0, None)},
