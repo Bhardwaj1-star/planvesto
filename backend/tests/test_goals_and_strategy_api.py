@@ -49,11 +49,23 @@ class TestGoalsAndStrategyAPIRoutes:
         assert "/api/goals/{goal_id}/defined/versions" in paths
         assert "/api/goals/{goal_id}/defined/versions/{version}" in paths
         assert "/api/strategy/build" in paths
+        assert "/api/strategy/primary" in paths
         assert "/api/strategy/scenarios/custom" in paths
         assert "/api/strategy/priorities" in paths
         assert "/api/strategy/select" in paths
         assert "/api/strategy/runs/{goal_id}/latest" in paths
         assert "/api/strategy/runs/{goal_id}/history" in paths
+
+    @patch("api.strategy_version.PrimaryStrategyRepository.get_current")
+    @patch("api.strategy_version.verify_planning_unit_ownership")
+    @patch("api.strategy_version.authenticate_user")
+    def test_get_primary_strategy_returns_data_or_null(self, mock_auth, mock_pu, mock_get_current):
+        mock_auth.return_value = "user-1"
+        mock_pu.return_value = None
+        mock_get_current.return_value = None
+        r = client.get("/api/strategy/primary?planning_unit_id=pu-1", headers={"Authorization": "Bearer fake"})
+        assert r.status_code == 200
+        assert r.json() is None
 
     @patch("api.strategy.verify_goal_ownership")
     @patch("api.strategy.authenticate_user")
