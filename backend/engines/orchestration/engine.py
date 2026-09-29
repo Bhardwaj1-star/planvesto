@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable
+from engines.allocation.engine import ResourceAllocationEngine
 from engines.orchestration.models import (
     GoalEvaluationInput,
     GoalPriorityLevel,
@@ -18,6 +19,9 @@ class MultiGoalOrchestrator:
         "medium": 2,
         "low": 3,
     }
+
+    def __init__(self, allocation_engine: ResourceAllocationEngine | None = None):
+        self.allocation_engine = allocation_engine or ResourceAllocationEngine()
 
     @classmethod
     def priority_rank(cls, priority: str | None) -> int:
@@ -71,13 +75,13 @@ class MultiGoalOrchestrator:
                 strat_info = strategy_evaluator(g, context)
             evaluated_goals.append((g, strat_info))
 
-        # Step 2: Resolve priorities & check competition
-        resolutions_pre: list[dict[str, Any]] = []
-        total_required = 0.0
+        # Step 2: Resolve priorities & prepare allocation payload
+        allocation_items: list[dict[str, Any]] = []
+        strat_map: dict[str, dict[str, Any]] = {}
 
         for g, s_info in evaluated_goals:
             req_contrib = float(g.required_monthly_contribution or s_info.get("required_monthly_contribution", 0.0))
-            total_required += req_contrib
+            strat_map[g.goal_id] = s_info
 
             resolved_p, override_applied, override_reason = self.resolve_goal_priority(
                 g, context, rule_overrides
@@ -87,122 +91,69 @@ class MultiGoalOrchestrator:
                 f"{g.target_year}-{g.target_month:02d}" if g.target_year and g.target_month else None
             )
 
-            resolutions_pre.append({
-                "input": g,
-                "strat_info": s_info,
+            allocation_items.append({
+                "goal_id": g.goal_id,
+                "goal_name": g.goal_name,
+                "goal_type": g.goal_type,
                 "client_priority": g.client_priority,
                 "resolved_priority": resolved_p,
-                "override_applied": override_applied,
-                "override_reason": override_reason,
                 "required_monthly_contribution": req_contrib,
                 "target_date": target_dt,
+                "override_applied": override_applied,
+                "override_reason": override_reason,
             })
 
-        # Step 3: Sort by resolved priority, then target date
-        resolutions_pre.sort(
-            key=lambda item: (
-                self.priority_rank(item["resolved_priority"]),
-                item["target_date"] or "9999-99",
-            )
+        # Step 3: Execute Resource Allocation Engine (Step 04)
+        alloc_result = self.allocation_engine.allocate(
+            goals=allocation_items,
+            available_monthly_surplus=available_surplus,
         )
 
-        competing_resources = False
-        if available_surplus is not None and len(goals) > 1:
-            if total_required > available_surplus:
-                competing_resources = True
-
-        # Step 4: Deterministic Resource Allocation across goals
-        remaining_surplus = available_surplus if available_surplus is not None else 0.0
-        total_allocated = 0.0
+        # Step 4: Assemble GoalResolutions, Audit Trail, and Action Plan
         goal_resolutions: list[GoalResolution] = []
         audit_trail: list[dict[str, Any]] = []
-        trade_offs: list[str] = []
 
-        for item in resolutions_pre:
-            g = item["input"]
-            s_info = item["strat_info"]
-            req = item["required_monthly_contribution"]
-            client_p = item["client_priority"]
-            resolved_p = item["resolved_priority"]
-            target_dt = item["target_date"]
-            override_applied = item["override_applied"]
-            override_reason = item["override_reason"]
-
-            allocated = 0.0
-            funding_status = "requires_review"
-            feasibility = s_info.get("feasibility_status", "feasible")
-
-            if available_surplus is not None:
-                if remaining_surplus >= req:
-                    allocated = req
-                    remaining_surplus -= req
-                    funding_status = "fully_funded"
-                elif remaining_surplus > 0:
-                    allocated = round(remaining_surplus, 2)
-                    remaining_surplus = 0.0
-                    funding_status = "partially_funded"
-                    feasibility = "constrained"
-                    trade_offs.append(
-                        f"Goal '{g.goal_name}' is partially funded ({allocated:.2f} of {req:.2f}/month) due to limited investable surplus."
-                    )
-                else:
-                    allocated = 0.0
-                    funding_status = "unfunded"
-                    feasibility = "infeasible" if req > 0 else "feasible"
-                    trade_offs.append(
-                        f"Goal '{g.goal_name}' cannot be funded from current monthly surplus."
-                    )
-
-            total_allocated += allocated
-            shortfall = max(0.0, round(req - allocated, 2))
-
+        for item in alloc_result.allocations:
+            s_info = strat_map.get(item.goal_id, {})
             reasons = list(s_info.get("reasons", []))
-            if override_applied and override_reason:
-                reasons.append(f"Priority Adjusted: {override_reason}")
+            if item.override_applied and item.override_reason:
+                reasons.append(f"Priority Adjusted: {item.override_reason}")
 
             res = GoalResolution(
-                goal_id=g.goal_id,
-                goal_name=g.goal_name,
-                goal_type=g.goal_type,
-                client_priority=client_p,
-                resolved_priority=resolved_p,
-                target_date=target_dt,
-                required_monthly_contribution=req,
-                allocated_monthly_contribution=allocated,
-                shortfall=shortfall,
-                funding_status=funding_status,
-                feasibility_status=feasibility,
+                goal_id=item.goal_id,
+                goal_name=item.goal_name,
+                goal_type=item.goal_type,
+                client_priority=item.client_priority,
+                resolved_priority=item.resolved_priority,
+                target_date=item.target_date,
+                required_monthly_contribution=item.required_monthly_contribution,
+                allocated_monthly_contribution=item.allocated_monthly_contribution,
+                shortfall=item.monthly_shortfall,
+                funding_status=item.funding_status,
+                feasibility_status=item.feasibility_status,
                 recommended_strategy_id=s_info.get("recommended_strategy_id"),
                 recommended_strategy_name=s_info.get("recommended_strategy_name"),
-                override_applied=override_applied,
-                override_reason=override_reason,
+                override_applied=item.override_applied,
+                override_reason=item.override_reason,
                 reasons=reasons,
-                notes=s_info.get("notes", []),
+                notes=s_info.get("notes", []) + ([item.allocation_reasoning] if item.allocation_reasoning else []),
             )
             goal_resolutions.append(res)
 
             audit_trail.append({
-                "goal_id": g.goal_id,
-                "goal_name": g.goal_name,
-                "client_priority": client_p,
-                "resolved_priority": resolved_p,
-                "override_applied": override_applied,
-                "override_reason": override_reason,
-                "required_monthly_contribution": req,
-                "allocated_monthly_contribution": allocated,
-                "funding_status": funding_status,
+                "goal_id": item.goal_id,
+                "goal_name": item.goal_name,
+                "client_priority": item.client_priority,
+                "resolved_priority": item.resolved_priority,
+                "override_applied": item.override_applied,
+                "override_reason": item.override_reason,
+                "required_monthly_contribution": item.required_monthly_contribution,
+                "allocated_monthly_contribution": item.allocated_monthly_contribution,
+                "funding_status": item.funding_status,
+                "allocation_reasoning": item.allocation_reasoning,
             })
 
-        # Step 5: Overall summary metrics
-        monthly_gap = round(total_required - available_surplus, 2) if available_surplus is not None else None
-        if monthly_gap is None:
-            overall_status = "requires_review"
-        elif monthly_gap <= 0:
-            overall_status = "within_surplus"
-        else:
-            overall_status = "surplus_shortfall"
-
-        # Step 6: Formulate Action Plan
+        # Step 5: Action Plan formulation
         actions = []
         for index, res in enumerate(goal_resolutions, start=1):
             actions.append({
@@ -220,22 +171,24 @@ class MultiGoalOrchestrator:
             "Goals are prioritized by resolved priority and target date.",
             "Client-selected priorities are preserved for full traceability.",
         ]
-        if competing_resources:
+        if alloc_result.competition_detected:
             planning_notes.append("Multiple goals are competing for the same investable surplus.")
         if any(r.override_applied for r in goal_resolutions):
             planning_notes.append("One or more goals have system-resolved priorities due to business/financial rules.")
 
+        planning_notes.extend(alloc_result.decision_log)
+
         return MultiGoalPlanResult(
             planning_unit_id=context.get("planning_unit_id"),
             financial_state=context,
-            total_available_surplus=available_surplus,
-            total_required_contribution=round(total_required, 2),
-            total_allocated_contribution=round(total_allocated, 2),
-            monthly_gap=monthly_gap,
-            overall_funding_status=overall_status,
+            total_available_surplus=alloc_result.total_available_monthly_surplus,
+            total_required_contribution=alloc_result.total_required_monthly_contribution,
+            total_allocated_contribution=alloc_result.total_allocated_monthly_contribution,
+            monthly_gap=alloc_result.net_monthly_gap,
+            overall_funding_status=alloc_result.overall_funding_status,
             goals=goal_resolutions,
-            competing_resources_detected=competing_resources,
-            trade_offs=trade_offs,
+            competing_resources_detected=alloc_result.competition_detected,
+            trade_offs=alloc_result.trade_offs,
             action_plan=actions,
             audit_trail=audit_trail,
             planning_notes=planning_notes,
