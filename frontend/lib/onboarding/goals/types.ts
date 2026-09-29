@@ -18,6 +18,38 @@ export const inflationOptions = ["Yes", "No"] as const;
 
 export type GoalType = string;
 export type GoalPriority = (typeof goalPriorities)[number];
+export type BackendGoalPriority = "critical" | "high" | "medium" | "low";
+
+export const UI_PRIORITY_OPTIONS = [
+  { label: "Must-Have (Critical)", value: "critical" as BackendGoalPriority },
+  { label: "Important (High)", value: "high" as BackendGoalPriority },
+  { label: "Moderate (Medium)", value: "medium" as BackendGoalPriority },
+  { label: "Nice-to-Have (Low)", value: "low" as BackendGoalPriority },
+] as const;
+
+export function toBackendPriority(priority?: string | null): BackendGoalPriority {
+  if (!priority) return "medium";
+  const p = priority.toLowerCase();
+  if (p === "critical" || p === "must-have" || p === "must have") return "critical";
+  if (p === "high" || p === "important") return "high";
+  if (p === "medium" || p === "aspirational" || p === "moderate" || p === "nice-to-have") return "medium";
+  if (p === "low" || p === "discretionary") return "low";
+  return "medium";
+}
+
+export function toUiPriorityLabel(priority?: string | null): string {
+  const backendP = toBackendPriority(priority);
+  switch (backendP) {
+    case "critical":
+      return "Must-Have";
+    case "high":
+      return "Important";
+    case "medium":
+      return "Moderate";
+    case "low":
+      return "Nice-to-Have";
+  }
+}
 export type GoalFlexibility = (typeof goalFlexibilities)[number];
 export type TargetMode = (typeof targetModes)[number];
 export type InflationOption = (typeof inflationOptions)[number];
@@ -119,7 +151,7 @@ export type GoalInput = {
   target_month: number;
   target_year: number;
   inflation_rate: number | null;
-  priority: GoalPriority;
+  priority: GoalPriority | BackendGoalPriority | string;
   flexibility: GoalFlexibility;
   status: GoalStatus;
   asset_mappings: AssetMappingInput[];
@@ -155,7 +187,7 @@ export type DefinedGoal = {
   target_year: number;
   duration_years: number;
   future_target: number;
-  priority: GoalPriority;
+  priority: GoalPriority | BackendGoalPriority | string;
   flexibility: GoalFlexibility;
   status: GoalStatus;
   mapped_assets: DefinedGoalAssetMapping[];

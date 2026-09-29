@@ -117,6 +117,48 @@ class FinancialPlanService:
             })
 
         f_state = multi_plan.financial_state
+        total_surplus = float(multi_plan.total_available_surplus or 0.0)
+        total_allocated = float(multi_plan.total_allocated_contribution or 0.0)
+        unallocated = max(0.0, total_surplus - total_allocated)
+        fully_funded_count = sum(1 for r in rows if r.get("funding_status") == "fully_funded")
+        partially_funded_count = sum(1 for r in rows if r.get("funding_status") in ("partially_funded", "unfunded"))
+
+        goal_allocations = []
+        for index, r in enumerate(rows, start=1):
+            req = float(r.get("required_monthly_contribution") or 0.0)
+            alloc = float(r.get("allocated_monthly_contribution") or 0.0)
+            pct = (alloc / req * 100.0) if req > 0 else 100.0
+            goal_allocations.append({
+                "goal_id": r.get("goal_id"),
+                "goal_name": r.get("goal_name"),
+                "requested_amount": req,
+                "allocated_amount": alloc,
+                "shortfall": float(r.get("monthly_shortfall") or 0.0),
+                "funding_percentage": pct,
+                "priority_rank": index,
+                "client_priority": r.get("client_priority"),
+                "resolved_priority": r.get("resolved_priority"),
+                "override_applied": r.get("override_applied", False),
+                "override_reason": r.get("override_reason"),
+            })
+
+        action_items = [
+            {
+                "action_id": f"act_{a.get('sequence', idx)}",
+                "category": "goal",
+                "title": a.get("action", f"Fund {a.get('goal_name')}"),
+                "description": a.get("action", ""),
+                "priority": "high",
+                "target_type": "goal",
+                "target_id": a.get("goal_id"),
+                "monthly_commitment": float(a.get("monthly_contribution") or 0.0),
+                "lump_sum_commitment": 0.0,
+                "deadline": a.get("target_date"),
+                "status": a.get("funding_status", "pending"),
+            }
+            for idx, a in enumerate(multi_plan.action_plan, start=1)
+        ]
+
         return {
             "report_type": "complete_financial_plan",
             "planning_unit_id": planning_unit_id,
@@ -138,8 +180,47 @@ class FinancialPlanService:
                 "funding_status": multi_plan.overall_funding_status,
                 "competition_detected": multi_plan.competing_resources_detected,
             },
+            "summary": {
+                "total_goals_count": len(rows),
+                "fully_funded_goals_count": fully_funded_count,
+                "partially_funded_goals_count": partially_funded_count,
+                "total_funding_gap": float(multi_plan.monthly_gap or 0.0),
+                "total_monthly_commitment": total_allocated,
+            },
+            "resource_allocation": {
+                "total_monthly_surplus": total_surplus,
+                "foundation_allocation": {
+                    "emergency_fund_monthly": 0.0,
+                    "debt_reduction_monthly": 0.0,
+                    "mandatory_savings_monthly": 0.0,
+                },
+                "discretionary_surplus_monthly": total_surplus,
+                "goal_allocations": goal_allocations,
+                "total_allocated_monthly": total_allocated,
+                "unallocated_surplus": unallocated,
+            },
+            "goal_plans": [
+                {
+                    "goal_id": r.get("goal_id"),
+                    "goal_name": r.get("goal_name"),
+                    "goal_type": r.get("goal_type"),
+                    "target_amount": float(r.get("future_target") or r.get("today_cost") or 0.0),
+                    "target_date": r.get("target_date"),
+                    "strategy_run_id": "",
+                    "strategy_name": r.get("strategy_name") or "Recommended Strategy",
+                    "recommended_strategy_name": r.get("strategy_name") or "Recommended Strategy",
+                    "monthly_allocation": float(r.get("allocated_monthly_contribution") or 0.0),
+                    "funding_gap": float(r.get("monthly_shortfall") or 0.0),
+                    "is_feasible": r.get("feasibility_status") == "feasible",
+                }
+                for r in rows
+            ],
             "strategy_runs": strategy_runs,
             "actions": multi_plan.action_plan,
+            "action_plan": {
+                "actions": action_items,
+                "total_actions": len(action_items),
+            },
             "trade_offs": multi_plan.trade_offs,
             "audit_trail": multi_plan.audit_trail,
             "planning_notes": multi_plan.planning_notes,

@@ -73,6 +73,8 @@ export type ResourceAllocationSummary = {
     shortfall: number;
     funding_percentage: number;
     priority_rank: number;
+    client_priority?: string;
+    resolved_priority?: string;
     override_applied: boolean;
     override_reason?: string | null;
   }>;
@@ -95,10 +97,10 @@ export type ConsolidatedActionItem = {
 };
 
 export type ConsolidatedFinancialPlan = {
-  plan_id: string;
+  plan_id?: string;
   planning_unit_id: string;
-  created_at: string;
-  investor_priorities: InvestorPriorities;
+  created_at?: string;
+  investor_priorities?: InvestorPriorities;
   summary: {
     total_goals_count: number;
     fully_funded_goals_count: number;
@@ -106,7 +108,7 @@ export type ConsolidatedFinancialPlan = {
     total_funding_gap: number;
     total_monthly_commitment: number;
   };
-  ratio_constraints: RatioConstraintEvaluation[];
+  ratio_constraints?: RatioConstraintEvaluation[];
   resource_allocation: ResourceAllocationSummary;
   goal_plans: Array<{
     goal_id: string;
@@ -125,6 +127,19 @@ export type ConsolidatedFinancialPlan = {
     actions: ConsolidatedActionItem[];
     total_actions: number;
   };
+  goals?: Array<Record<string, unknown>>;
+  consolidated_funding?: {
+    required_monthly_contribution: number;
+    allocated_monthly_contribution: number;
+    available_monthly_surplus: number | null;
+    monthly_gap: number | null;
+    funding_status: string;
+    competition_detected: boolean;
+  };
+  actions?: Array<Record<string, unknown>>;
+  trade_offs?: string[];
+  audit_trail?: Array<Record<string, unknown>>;
+  planning_notes?: string[];
 };
 
 export function getCompleteFinancialPlan(planningUnitId: string): Promise<ConsolidatedFinancialPlan> {
