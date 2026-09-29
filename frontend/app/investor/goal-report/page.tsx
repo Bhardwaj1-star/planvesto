@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorStatus } from "../../../components/InvestorUI";
@@ -20,23 +19,17 @@ export default function GoalReportPage() {
       try {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-        const data = await loadGoalPlannerData();
-        const goals = data?.goals ?? [];
         const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("goalId") : null;
-        const candidates = requested ? goals.filter((item) => item.id === requested) : goals;
-        if (!candidates.length) throw new Error("No goal is available for reporting.");
+        if (!requested) throw new Error("A goal must be selected before opening its report.");
 
-        let selectedRun: Awaited<ReturnType<typeof getLatestStrategyRun>> | null = null;
-        for (const goal of candidates) {
-          try {
-            const candidate = await getLatestStrategyRun(planningUnitId, goal.id);
-            if (candidate.strategy_run_id && (!selectedRun || String(candidate.created_at ?? "") > String(selectedRun.created_at ?? ""))) selectedRun = candidate;
-          } catch {
-            // Skip goals that do not yet have a Strategy Run.
-          }
-        }
+        const data = await loadGoalPlannerData();
+        const goal = (data?.goals ?? []).find((item) => item.id === requested);
+        if (!goal) throw new Error("The selected goal is not available.");
+
+        const selectedRun = await getLatestStrategyRun(planningUnitId, requested);
         if (!selectedRun?.strategy_run_id) throw new Error("No completed Strategy Run is available for the selected goal.");
         const next = await getGoalStrategyReport(planningUnitId, selectedRun.strategy_run_id);
+        if (next.goal_id !== requested) throw new Error("The report returned does not belong to the selected goal.");
         if (active) setReport(next);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load goal report.");
@@ -76,26 +69,19 @@ export default function GoalReportPage() {
       <InvestorHeader
         eyebrow="Planvesto Report"
         title={report?.goal_name ?? "Goal Report"}
-        description="A goal-specific report generated from the completed Strategy Run and current Financial State."
+        description={report ? `${report.goal_type ?? "Financial"} goal report generated from the selected Strategy Run and Financial State.` : "Goal report"}
       >
-        {report && (
-          <button
-            onClick={() => void download()}
-            disabled={working}
-            className="rounded-xl bg-navy-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-navy-800 disabled:opacity-50"
-          >
-            {working ? "Preparing PDF…" : "Download PDF"}
-          </button>
-        )}
+        {report && <button onClick={() => void download()} disabled={working} className="rounded-xl bg-navy-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-navy-800 disabled:opacity-50">{working ? "Preparing PDF…" : "Download PDF"}</button>}
       </InvestorHeader>
       <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-10">
         <StrategyWorkflowNav />
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
-    {report && <>
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Strategy Result</p><h2 className="mt-2 text-2xl font-extrabold">{report.strategy.name ?? "Strategy not selected"}</h2><p className="mt-1 text-sm text-slate-500">{report.strategy.objective ?? "Goal-specific strategy recommendation"}</p></div><button onClick={() => void download()} disabled={working} className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{working ? "Preparing PDF…" : "Download PDF"}</button></div></section>
-      <section className="grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Goal Calculation</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(report.goal_calculation).map(([key, value]) => <div key={key} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</p><p className="mt-1 font-extrabold">{value == null ? "—" : String(value)}</p></div>)}</div></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Financial State</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(report.financial_state).map(([key, value]) => <div key={key} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</p><p className="mt-1 font-extrabold">{value == null ? "Not available" : String(value)}</p></div>)}</div></div></section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-3 text-sm leading-6 text-slate-600">{String(report.recommendation.complete_reasoning ?? "")}</p></section>
-    </>}
+        {report && <>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Strategy Result</p><h2 className="mt-2 text-2xl font-extrabold">{report.strategy.name ?? "Strategy not selected"}</h2><p className="mt-1 text-sm text-slate-500">{report.strategy.objective ?? "Goal-specific strategy recommendation"}</p></div><button onClick={() => void download()} disabled={working} className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{working ? "Preparing PDF…" : "Download PDF"}</button></div></section>
+          {Object.keys(report.goal_details).length > 0 && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Goal Details</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(report.goal_details).map(([key, value]) => <div key={key} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</p><p className="mt-1 font-extrabold">{value == null ? "—" : String(value)}</p></div>)}</div></section>}
+          <section className="grid gap-5 lg:grid-cols-2"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Goal Calculation</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(report.goal_calculation).map(([key, value]) => <div key={key} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</p><p className="mt-1 font-extrabold">{value == null ? "—" : String(value)}</p></div>)}</div></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Financial State</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(report.financial_state).map(([key, value]) => <div key={key} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</p><p className="mt-1 font-extrabold">{value == null ? "Not available" : String(value)}</p></div>)}</div></div></section>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-3 text-sm leading-6 text-slate-600">{String(report.recommendation.complete_reasoning ?? "")}</p></section>
+        </>}
       </div>
     </main>
   );
