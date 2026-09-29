@@ -5,6 +5,7 @@ from fastapi import HTTPException
 
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
+from engines.constraints.evaluator import FinancialRatioConstraintEvaluator
 from engines.orchestration.engine import MultiGoalOrchestrator
 from engines.orchestration.models import GoalEvaluationInput, MultiGoalPlanResult
 from models.strategy import InvestorPriorities
@@ -22,12 +23,14 @@ class MultiGoalPlanningService:
         strategy_service: StrategyService | None = None,
         goal_report_service: GoalReportService | None = None,
         orchestrator: MultiGoalOrchestrator | None = None,
+        constraint_evaluator: FinancialRatioConstraintEvaluator | None = None,
     ):
         self.goal_repo = goal_repo or GoalRepository()
         self.strategy_repo = strategy_repo or StrategyRepository()
         self.strategy_service = strategy_service or StrategyService()
         self.goal_report_service = goal_report_service or GoalReportService()
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
+        self.constraint_evaluator = constraint_evaluator or FinancialRatioConstraintEvaluator()
 
     def build_multi_goal_plan(
         self,
@@ -102,12 +105,26 @@ class MultiGoalPlanningService:
         )
         financial_context["planning_unit_id"] = planning_unit_id
 
+        # Evaluate financial health ratios and constraints
+        assessment = self.constraint_evaluator.assess_constraints(inputs, financial_context)
+        effective_overrides = dict(assessment.suggested_overrides)
+        if rule_overrides:
+            effective_overrides.update(rule_overrides)
+
         def eval_lookup(goal_input: GoalEvaluationInput, context: dict[str, Any]) -> dict[str, Any]:
             return strategy_eval_map.get(goal_input.goal_id, {})
 
-        return self.orchestrator.orchestrate(
+        plan = self.orchestrator.orchestrate(
             goals=inputs,
             financial_context=financial_context,
             strategy_evaluator=eval_lookup,
-            rule_overrides=rule_overrides,
+            rule_overrides=effective_overrides,
         )
+
+        # Attach ratio assessment diagnostics to notes
+        for warning in assessment.warnings:
+            plan.planning_notes.append(f"Ratio Warning: {warning.message}")
+        for hard in assessment.hard_constraints:
+            plan.trade_offs.append(f"Ratio Constraint: {hard.message}")
+
+        return plan
