@@ -35,3 +35,8 @@ class RatioConstraintAssessment(BaseModel):
     hard_constraints: list[ConstraintCheckResult] = Field(default_factory=list)
     warnings: list[ConstraintCheckResult] = Field(default_factory=list)
     suggested_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+    @property
+    def has_overrides(self) -> bool:
+        return bool(self.suggested_overrides)
+
