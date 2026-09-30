@@ -24,6 +24,7 @@ class MoneywheelInput(BaseModel):
     gross_monthly_income: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     savings: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     need_monthly_expenses: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    essential_monthly_expenses: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     monthly_expenses: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     liquid_assets: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     short_term_liabilities: float | None = Field(default=None, ge=0, allow_inf_nan=False)
