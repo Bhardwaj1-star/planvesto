@@ -1,493 +1,277 @@
-# Planvesto Backend Audit & Cleanup — Coding Agent Instructions
+# Backend Production Cleanup — Structure, Duplication & Rule Centralization
 
-## Objective
+## Purpose
 
-Clean and harden the Planvesto backend without changing the product concept, frontend, Supabase schema, or financial-planning philosophy.
+The Planvesto backend architecture is already largely built and connected. **Do not redesign or rebuild the architecture.**
 
-The target architecture is:
+The current problem is structural clarity:
+- similar responsibilities exist in multiple places;
+- financial/business rules are spread across engines, services and rule files;
+- different components can make their own interpretation of the same condition;
+- the actual decision-policy layer is still pending.
+
+The goal is to make the existing backend **clean enough that every rule has one obvious home** before finalizing the actual decision rules for Strategy Builder and Action Plan.
+
+## 1. Ownership Model
 
 ```text
-Financial State
-      ↓
-Canonical Financial Metrics / Business Rules
-      ↓
-Moneywheel / Constraints / Goal Engine
-      ↓
-Strategy Eligibility
-      ↓
-Strategy Selection
-      ↓
-Conditional → Adapt → Re-check
-      ↓
-Multi-Goal Allocation
-      ↓
-Financial Plan
-      ↓
-Action Plan
+RULES       = What is true / what condition applies
+ENGINES     = Calculate or evaluate using those rules
+LIBRARY     = What reusable strategies/techniques exist
+SERVICES    = Coordinate the workflow
+API         = Expose the workflow
+DATA        = Read/write persistent data
 ```
 
-## Non-negotiable rules
+Do not move code merely because of filenames. Move/merge only when responsibilities overlap.
 
-1. Do NOT redesign the frontend.
-2. Do NOT create or modify Supabase migrations/schema unless explicitly required by a proven defect and separately approved.
-3. Do NOT rewrite working modules merely for style.
-4. Do NOT duplicate business rules to make an engine convenient.
-5. Every business rule must have one authoritative definition.
-6. Engines apply/evaluate rules; services coordinate workflows; repositories access data; APIs handle transport/authentication.
-7. Preserve existing API contracts unless a documented bug requires a breaking change.
-8. Preserve audit/version/history behaviour.
-9. Every behavioural change must have tests.
-10. Do not remove functionality before proving that it is duplicate/dead/obsolete.
+## 2. Audit Before Editing
 
----
+Create `docs/backend-audit-cleanup/RULE_OWNERSHIP_MAP.md`.
 
-# Phase 0 — Baseline
+For every important business decision or financial metric, record:
 
-Before editing code:
+| Decision / Metric | Current files | Current owner | Duplicate? | Final owner |
+|---|---|---|---|---|
 
-- Run the complete backend test suite.
-- Record current failures separately from new failures.
-- Inventory every backend directory and Python module.
-- Identify API → service → engine → repository/data call paths.
-- Do not start refactoring until this baseline is recorded.
-
-Deliverable:
-`docs/backend-audit-cleanup/BASELINE.md`
-
-Include:
-- test command
-- pass/fail counts
-- known failures
-- Python/runtime assumptions
-- current entry points
-
----
-
-# Phase 1 — Responsibility Map
-
-Create:
-`docs/backend-audit-cleanup/RESPONSIBILITY_MAP.md`
-
-For every backend folder, record:
-
-| Layer | Allowed responsibility | Not allowed |
-|---|---|---|
-| `api/` | HTTP, auth, request/response handling | Financial decisions |
-| `schemas/` | Input/output structure validation | Hidden business decisions |
-| `services/` | Workflow coordination | Canonical financial rules |
-| `engines/` | Calculations/evaluation/decision mechanics | Duplicated rule definitions |
-| `rules/` | Authoritative business rules | API/database workflow |
-| `library/` | Strategy knowledge/definitions | Investor-specific decisions |
-| `data/` | Database access/persistence | Financial policy decisions |
-| `models/` | Data structures | Workflow logic |
-| `tests/` | Verification | Production logic |
-
-Mark every module as:
-- KEEP
-- MOVE
-- MERGE
-- DELETE (only if proven dead/duplicate)
-- NEEDS DECISION
-
----
-
-# Phase 2 — Financial Truth Consolidation
-
-This is the highest-priority cleanup.
-
-Audit these together:
+At minimum audit:
 - Moneywheel
 - Financial Health
 - Health Score
-- `rules/moneywheel.py`
-- `rules/financial_state.py`
-- `engines/rules/`
-- `engines/constraints/`
-- financial-state engine/service
+- financial metrics
+- constraints
+- eligibility
+- goal priority
+- goal-type classification
+- strategy applicability
+- strategy selection
+- strategy variants
+- adaptation conditions
+- multi-goal allocation
+- trade-offs
+- action-plan generation
 
-Find every calculation/classification for:
-- cash-flow ratio
-- savings/investment rate
+**Do not implement new decision rules during this audit.** First establish where they will live.
+
+## 3. Financial Truth — Consolidate
+
+Audit Moneywheel, Financial Health, Health Score, `rules/`, `engines/rules/`, `engines/constraints/`, and financial-state components together.
+
+Find repeated calculations for:
 - emergency reserve
 - liquidity
+- savings/investment rate
 - debt ratios
 - leverage
-- insurance/protection baseline
-- financial health status
+- surplus
+- protection/insurance measures
+- cash-flow health
 - other Moneywheel metrics
-
-Create:
-`docs/backend-audit-cleanup/FINANCIAL_RULE_REGISTRY.md`
-
-For every rule:
-
-| Rule | Current locations | Authoritative location | Consumers | Action |
-|---|---|---|---|---|
 
 Target:
 
 ```text
-ONE canonical calculation/rule
-        ↓
-multiple consumers
+Financial State
+      ↓
+Canonical Financial Metrics / Rules
+      ↓
+ ┌────┼───────────┐
+Moneywheel  Health  Constraints
 ```
 
-Do not maintain separate Moneywheel and Financial Health calculations if they represent the same financial truth.
+**Calculate once. Consume everywhere.**
 
-If Financial Health is only a derived interpretation of canonical metrics, make that relationship explicit rather than creating another calculation system.
+Moneywheel may remain a product/view of those metrics. Financial Health may remain a derived interpretation. They must not become competing sources of financial truth.
 
----
+## 4. Business Rules — Centralize
 
-# Phase 3 — Rule Architecture
+Establish one authoritative business-rule layer for genuine policy/truth such as:
+- thresholds
+- classifications
+- goal categories
+- priority rules
+- eligibility conditions
+- applicability conditions
+- constraint conditions
+- strategy-selection conditions
+- action-generation conditions
+- multi-goal trade-off rules
 
-Create:
-`docs/backend-audit-cleanup/RULE_ARCHITECTURE.md`
-
-Separate:
-
-### Rule
-“What is financially/business-wise true?”
-
-### Engine
-“How do we calculate/evaluate it?”
-
-### Service
-“In what workflow do we use it?”
-
-### Strategy Library
-“What reusable strategies exist?”
-
-Audit all hardcoded thresholds and classifications currently hidden inside services/engines.
-
-Move only genuine business rules to the authoritative rule layer.
-
-Do not blindly move calculation code into `rules/` if it is algorithmic rather than policy/business truth.
-
----
-
-# Phase 4 — Strategy System Audit
-
-Audit:
-- `library/strategies/`
-- strategy registry/catalog
-- strategy components
-- eligibility
-- applicability
-- composition
-- decision engine
-- ranking
-- scenario generation
-- recommendation
-- strategy versioning
-- primary strategy lifecycle
-
-Verify these boundaries:
+Do not centralize ordinary algorithms merely because they are code.
 
 ```text
-Strategy Library
-= What strategies exist?
-
-Eligibility
-= Which strategies are allowed?
-
-Applicability
-= Which strategies fit this investor/goal/context?
-
-Adaptation
-= Can a conditional strategy be modified to become valid?
-
-Decision
-= Which valid strategy should be selected according to the business rules?
-
-Scenario
-= What happens under different assumptions?
+Rule    = What is true
+Engine  = Evaluate it
+Service = Use the result in workflow
 ```
 
-Remove duplicate decision logic only after tracing all callers.
+No service or engine should silently create a different threshold for the same concept.
 
-Verify library version and implementation version handling remains intact.
+## 5. Remove Duplicate Components
 
----
+Find components that:
+- calculate the same metric;
+- classify the same condition differently;
+- wrap another component without adding responsibility;
+- maintain a second copy of the same business rule;
+- are obsolete versions of a current component.
 
-# Phase 5 — Conditional Strategy Closure
+For each candidate:
+1. Search all references.
+2. Identify actual runtime owner.
+3. Identify API/frontend dependencies.
+4. Compare tests.
+5. Choose one authoritative component.
+6. Redirect consumers.
+7. Delete only after proving it is unused.
 
-Implement and test the complete loop:
+Do not delete based on similar names alone.
+
+## 6. Moneywheel / Financial Health / Health Score
+
+Explicitly define:
 
 ```text
-CONDITIONAL
-    ↓
-ADAPT
-    ↓
-RE-CHECK
-    ↓
-PASS → eligible
-FAIL → remove
+Moneywheel    = ?
+Financial Health = ?
+Health Score   = ?
 ```
 
-A strategy must not remain eligible merely because it was initially classified as CONDITIONAL.
-
-Add tests for:
-- adaptation succeeds
-- adaptation fails
-- re-check changes status
-- adapted strategy is persisted correctly
-- failed strategy is excluded from final recommendation
-
----
-
-# Phase 6 — Financial State Authority
-
-Financial State must be the authoritative investor financial context.
-
-Audit multi-goal orchestration and every place where financial context is constructed.
-
-Do not derive the investor's complete financial context from whichever goal happens to be processed first.
-
-Required direction:
+If they represent the same underlying capability:
 
 ```text
-Investor Financial State
-        ↓
-Goals consume Financial State
-        ↓
-Strategies consume Financial State + Goal context
+Canonical Financial Metrics
+          ↓
+Moneywheel / Financial Health presentation
+          ↓
+Optional overall Health Score
 ```
 
-Add regression tests for multiple goals with materially different properties.
+There must be no second independent calculation system unless it has a clearly different business purpose.
 
----
+## 7. Strategy Architecture — Prepare for Pending Rules
 
-# Phase 7 — Multi-Goal Audit
+Do not invent final strategy rules during cleanup. Establish ownership:
 
-Audit:
-- goal ordering
-- priority
-- available surplus
-- resource allocation
-- funding gaps
-- trade-offs
-- partial funding
-- conflicting goals
-- final consolidated plan
+```text
+Strategy Library = What strategies exist?
+Eligibility      = Which strategies are allowed?
+Applicability    = Which fit investor + goal?
+Decision Rules   = Which eligible strategy is selected?
+Adaptation Rules = How can a conditional strategy be modified?
+Action Rules     = What should the investor actually do?
+```
 
-Verify that one goal cannot accidentally mutate another goal's financial context.
+The future Strategy Builder rules must not be scattered across strategy engine, service, library and API.
 
-Test:
-1. one goal
-2. two compatible goals
-3. two competing goals
-4. three goals with insufficient surplus
-5. equal priority goals
-6. future goal vs near-term goal
-7. zero/negative available surplus
+## 8. Strategy Builder — Rule Slots
 
----
+Architecture must be ready to answer later:
 
-# Phase 8 — Security & Validation
+- Which strategy is eligible?
+- Which eligible strategy is selected?
+- When is a strategy conditional?
+- How can it be adapted?
+- What action plan follows?
+- What happens when multiple goals compete?
 
-Audit every API endpoint for:
-- authentication
-- planning-unit ownership
-- goal ownership
-- strategy ownership
-- strategy-version ownership
-- input validation
-- numeric bounds
-- impossible dates
-- negative financial values
-- oversized values
-- arbitrary dictionaries
+These are **pending business decisions**, not tasks to invent during this cleanup.
 
-Special attention:
-`rule_overrides`
+## 9. Action Plan Architecture
 
-Do not allow arbitrary client input to silently modify authoritative financial/business rules.
-
-If overrides are required for simulation/testing, model them explicitly as scenario inputs and keep them separate from production business rules.
-
-Add negative/security tests for cross-user access and invalid financial inputs.
-
----
-
-# Phase 9 — Repository & Data Integrity
-
-Audit every repository for:
-- ownership scoping
-- accidental unscoped queries
-- repeated queries
-- N+1 patterns
-- inconsistent version updates
-- multi-step writes
-- missing transaction boundaries
-- stale snapshot handling
-
-Do not optimize prematurely. Fix correctness first.
-
-Where a version/snapshot operation logically requires atomicity, use an appropriate transaction/database function rather than separate writes.
-
----
-
-# Phase 10 — Service Cleanup
-
-Audit large services, especially Moneywheel and multi-goal planning services.
-
-For each service ask:
-
-> “Is this coordinating a workflow, or is it secretly implementing business policy?”
-
-Extract genuine reusable business rules/calculations from services.
-
-Do not split files merely to reduce file size.
-
-Keep cohesive workflow logic together.
-
----
-
-# Phase 11 — Dead/Duplicate Code
-
-Search for:
-- duplicate functions
-- duplicate calculations
-- wrapper modules that only forward calls
-- obsolete aliases
-- unused engines
-- placeholder engines exposed as production capabilities
-- old strategy IDs
-- legacy APIs
-- unreachable code
-
-For every candidate:
-
-1. Find all references.
-2. Confirm runtime usage.
-3. Confirm tests.
-4. Confirm frontend/API dependency.
-5. Only then merge/remove/replace.
-
-Do not delete based on filename similarity alone.
-
----
-
-# Phase 12 — QA / End-to-End Verification
-
-Add/strengthen tests for the complete business path:
+Action Plan must not invent its own financial logic.
 
 ```text
 Financial State
- → Goals
- → Financial Metrics
- → Constraints
- → Eligibility
- → Strategy Selection
- → Adaptation/Re-check
- → Multi-Goal Allocation
- → Financial Plan
- → Action Plan
+ + Goal
+ + Selected Strategy
+ + Strategy Parameters
+ + Rule Results
+        ↓
+Action Plan Generator
+        ↓
+Ordered Actions
 ```
 
-Minimum scenario suite:
+Action-generation rules should have one authoritative home.
 
-- healthy investor
-- weak cash flow
-- high debt
-- insufficient emergency reserve
-- single goal
-- multiple competing goals
-- conditional strategy that becomes valid
-- conditional strategy that fails adaptation
-- insufficient surplus
-- invalid input
-- unauthorized investor access
+## 10. Services
 
-Run the complete suite after every major cleanup phase.
+For each condition in large services, ask:
 
----
+> Is this workflow coordination, or is it a business rule?
 
-# Phase 13 — Final Architecture Gate
+If business rule → central rule layer.
+If workflow coordination → service stays.
 
-Create:
-`docs/backend-audit-cleanup/FINAL_AUDIT.md`
+Do not split services merely to make files smaller.
 
-Report:
+## 11. Engines
 
-| Category | Before | After | Status |
-|---|---|---|---|
-| Duplicate financial rules | | | |
-| Duplicate calculations | | | |
-| Rule ownership | | | |
-| Moneywheel/Financial Health | | | |
-| Strategy architecture | | | |
-| Multi-goal | | | |
-| Security | | | |
-| Data integrity | | | |
-| Test coverage | | | |
-| Dead code | | | |
+Keep engines responsible for calculations, evaluations, transformations and decision execution using centralized rules.
 
-Also include:
-- files changed
-- files deleted
-- files moved
-- business rules centralized
-- API behaviour changes
-- unresolved issues
-- tests executed
-- known limitations
+They must not maintain competing versions of business thresholds or classifications.
 
----
+## 12. What NOT to Change
 
-# Coding Agent Execution Rules
+Do not redesign APIs, database schema, frontend, working engine architecture, product philosophy or multi-goal architecture merely for cleanliness.
 
-## Work order
+Do not add new financial features.
+Do not finalize Strategy Builder policy.
+Do not invent Action Plan policy.
 
-**Do not attempt the entire cleanup in one uncontrolled refactor.**
+This phase is **structural preparation**, not feature expansion.
 
-Execute in this exact order:
+## 13. Target Structure
 
-1. Baseline
-2. Responsibility map
-3. Financial Truth / Moneywheel / Financial Health consolidation
-4. Rule architecture
-5. Strategy system
-6. Conditional adaptation/re-check
-7. Financial State authority
-8. Multi-goal
-9. Security/validation
-10. Repository integrity
-11. Service cleanup
-12. Dead/duplicate code
-13. E2E QA
-14. Final audit
+```text
+                 FINANCIAL STATE
+                        ↓
+            CANONICAL FINANCIAL TRUTH
+                        ↓
+              CENTRAL BUSINESS RULES
+                        ↓
+       ┌────────────────┼────────────────┐
+       ↓                ↓                ↓
+   GOAL ENGINE      CONSTRAINTS     MONEYWHEEL/HEALTH
+       │                │                │
+       └────────────────┼────────────────┘
+                        ↓
+                STRATEGY LIBRARY
+                        ↓
+                  ELIGIBILITY
+                        ↓
+                 APPLICABILITY
+                        ↓
+              PENDING DECISION RULES
+                        ↓
+                  STRATEGY
+                        ↓
+                ACTION PLAN RULES
+                        ↓
+                  ACTION PLAN
+```
 
-## After every phase
+Folder names may remain if responsibilities are clear. **The goal is ownership, not cosmetic restructuring.**
 
-- Run relevant tests.
-- Review git diff.
-- Confirm no unrelated files changed.
-- Document architectural decisions.
-- Do not proceed if a phase introduces unexplained failures.
+## 14. Definition of Done
 
-## Definition of Done
+- Every important financial metric has one authoritative calculation.
+- Every business rule has one authoritative definition.
+- Moneywheel and Financial Health no longer compete for the same truth.
+- Health Score has a clearly defined relationship with those metrics.
+- Constraints consume canonical metrics/rules.
+- Strategy components do not invent their own eligibility policy.
+- Strategy Library only defines reusable strategy knowledge.
+- Services coordinate rather than hide policy.
+- Future Strategy Builder decision rules have an obvious central home.
+- Future Action Plan rules have an obvious central home.
+- Duplicate/legacy components are removed or explicitly justified.
+- Existing backend connections continue to work.
+- Existing behaviour remains intact unless a duplication/ownership bug is being fixed.
 
-The backend is considered cleaned only when:
+## Final principle
 
-- One authoritative source exists for each business rule.
-- Financial metrics are calculated once and reused.
-- Moneywheel and Financial Health have explicit, non-overlapping responsibilities.
-- Services coordinate instead of hiding policy.
-- Strategy Library, eligibility, adaptation and decision layers have distinct responsibilities.
-- Conditional strategies are re-evaluated after adaptation.
-- Financial State is the authoritative investor context.
-- Multi-goal allocation works without goal-order dependency.
-- Client input cannot override production business rules unintentionally.
-- Ownership/security checks are consistent.
-- Critical writes preserve data integrity.
-- End-to-end business scenarios pass.
-- No duplicate/dead component remains without documented justification.
+**Clean the structure first. Centralize the rules second. Finalize the decision policy third.**
 
-## Important
-
-Do not optimize for “fewer files.”
-
-Optimize for:
-
-**one source of truth + clear responsibility + predictable flow + testable business rules + safe changeability.**
+Do not mix these three stages.
