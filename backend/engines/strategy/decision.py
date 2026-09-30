@@ -4,6 +4,14 @@ from typing import Any
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, Scenario, StrategyArchitecture, StrategyDefinition
 from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_type
+from rules.strategy_decision import (
+    calculate_component_score,
+    calculate_feasibility_score,
+    calculate_funding_fit_score,
+    calculate_goal_fit_score,
+    calculate_horizon_fit_score,
+    evaluate_decision_score,
+)
 from engines.strategy.eligibility import evaluate_eligibility, evaluate_eligibility_fits, EligibilityStatus
 
 @dataclass
@@ -59,17 +67,28 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
         status=fit.status if gate_ok else EligibilityStatus.FAIL
         reasons=list(gate_reasons)+[r.reason for r in fit.failed_fits]
         if status==EligibilityStatus.CONDITIONAL: reasons.extend(fit.required_changes)
-        canonical=_canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"; chars=set(primary.applicable_goal_characteristics)
-        goal_fit=25.0 if canonical in [t.strip().lower() for t in primary.applicable_goal_types] else 10.0 if "other" in [t.strip().lower() for t in primary.applicable_goal_types] else 0.0
-        goal_fit+=5.0 if (funding.lower() in chars or funding.lower().replace(" ","_") in chars) else 0.0
-        goal_fit+=5.0 if duration>=7 and "long_term" in chars else 5.0 if duration<=5 and "near_term" in chars else 0.0
-        goal_fit+=5.0 if defined_goal.flexibility=="Fixed" and "fixed_timeline" in chars else 0.0
-        goal_fit+=5.0 if defined_goal.priority in ("Critical","High") and "high_priority" in chars else 0.0
-        horizon=30.0 if (duration>=10 and primary.strategy_id in ("strat-dynamic-accumulation","strat-calibrated-growth")) or (4<=duration<10 and primary.strategy_id in ("strat-calibrated-growth","strat-high-liquidity-flex")) or (duration<4 and primary.strategy_id in ("strat-cap-preservation","strat-high-liquidity-flex")) else 15.0
-        funding_score=25.0 if funding=="Shortfall" and context.get("total_liabilities",0)>0 and primary.strategy_id=="strat-debt-reduction" else 25.0 if funding=="On Track" and primary.strategy_id in ("strat-high-liquidity-flex","strat-cap-preservation") else 20.0 if funding=="Shortfall" and primary.strategy_id in ("strat-calibrated-growth","strat-dynamic-accumulation") else 15.0
-        feasibility=15.0 if status==EligibilityStatus.PASS else 8.0 if status==EligibilityStatus.CONDITIONAL else 0.0
-        component=10.0 if any("activated by component metadata" in r for r in arch.rationale) else 0.0; component+=5.0 if arch.supporting_strategy_ids else 0.0
-        score=round(goal_fit+horizon+funding_score+feasibility+component,2) if status!=EligibilityStatus.FAIL else -1000.0
+        canonical=_canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"
+        goal_fit = calculate_goal_fit_score(
+            canonical_goal_type=canonical,
+            applicable_types=primary.applicable_goal_types,
+            applicable_characteristics=primary.applicable_goal_characteristics,
+            duration_years=duration,
+            funding_status=funding,
+            flexibility=defined_goal.flexibility,
+            priority=defined_goal.priority,
+        )
+        horizon = calculate_horizon_fit_score(duration, primary.strategy_id)
+        funding_score = calculate_funding_fit_score(funding, context.get("total_liabilities", 0), primary.strategy_id)
+        feasibility = calculate_feasibility_score(status)
+        component = calculate_component_score(arch.rationale, arch.supporting_strategy_ids)
+        score = evaluate_decision_score(
+            status=status,
+            goal_fit_score=goal_fit,
+            horizon_fit_score=horizon,
+            funding_fit_score=funding_score,
+            feasibility_score=feasibility,
+            component_fit_score=component,
+        )
         rationale=[] if status==EligibilityStatus.FAIL else [f"Goal-specific eligibility evaluated for {defined_goal.goal_name}."]
         if status==EligibilityStatus.CONDITIONAL: rationale.append("Strategy requires the listed changes before implementation.")
         evaluations.append(ArchitectureEvaluation(arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,feasibility,component,score,{"eligibility_status":status.value,"fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results]},rationale,status.value))

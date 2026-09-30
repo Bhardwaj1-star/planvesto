@@ -5,21 +5,27 @@ and decision constraints. Engines evaluate these rules; services coordinate work
 """
 
 from rules import action_plan
+from rules import adaptation
 from rules import constraints
 from rules import eligibility
 from rules import financial_metrics
 from rules import financial_state
 from rules import goals
 from rules import moneywheel
+from rules import multi_goal
 from rules import protection
+from rules import strategy_decision
 
 __all__ = [
     "action_plan",
+    "adaptation",
     "constraints",
     "eligibility",
     "financial_metrics",
     "financial_state",
     "goals",
     "moneywheel",
+    "multi_goal",
     "protection",
+    "strategy_decision",
 ]
