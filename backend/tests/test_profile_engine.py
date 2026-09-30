@@ -18,7 +18,12 @@ def test_resolution_is_deterministic():
     kwargs = {
         "financial_state": financial_state(),
         "declared_constraints": [{"key": "max_loss_amount", "value": 100000, "kind": "hard"}],
-        "observed_behavior": [{"key": "plan_deviation", "value": "low"}],
+        "observed_behavior": [{
+            "key": "plan_deviation",
+            "value": "low",
+            "dimension": "discipline",
+            "evidence": ["historical plan adherence"],
+        }],
         "preferences": [{"key": "liquidity_priority", "value": "high"}],
         "constraint_priorities": [{"key": "liquidity_priority", "rank": 1}, {"key": "max_loss_amount", "rank": 2}],
     }
@@ -59,44 +64,38 @@ def test_source_priority_confidence():
 def test_investor_priority_is_stored_but_does_not_change_constraint_kind():
     result = ProfileEngine().build(
         financial_state=financial_state(),
-        declared_constraints=[{"key": "liquidity_priority", "value": "high", "kind": "soft"}],
-        constraint_priorities=[{"key": "liquidity_priority", "rank": 1}],
+        constraint_priorities=[{"key": "max_loss_amount", "rank": 1}],
     )
-    item = next(c for c in result["constraints"] if c["key"] == "liquidity_priority")
-    assert item["priority_rank"] == 1
-    assert item["kind"] == "soft"
+    constraint = next(item for item in result["constraints"] if item["key"] == "max_loss_amount")
+    assert constraint["kind"] == "hard"
+    assert constraint["priority_rank"] == 1
 
 
 def test_priority_must_reference_existing_constraints():
-    try:
-        ConstraintRules.validate_priorities([], [{"key": "unknown", "rank": 1}])
-        assert False
-    except ValueError:
-        assert True
+    with pytest.raises(ValueError):
+        ProfileEngine().build(
+            financial_state=financial_state(),
+            constraint_priorities=[{"key": "missing", "rank": 1}],
+        )
 
 
 def test_duplicate_priority_key_is_rejected():
-    constraints = [{"key": "liquidity_priority", "value": "high"}]
-    try:
-        ConstraintRules.validate_priorities(constraints, [
-            {"key": "liquidity_priority", "rank": 1},
-            {"key": "liquidity_priority", "rank": 2},
-        ])
-        assert False
-    except ValueError:
-        assert True
+    with pytest.raises(ValueError):
+        ProfileEngine().build(
+            financial_state=financial_state(),
+            constraint_priorities=[
+                {"key": "max_loss_amount", "rank": 1},
+                {"key": "max_loss_amount", "rank": 2},
+            ],
+        )
 
 
 def test_duplicate_priority_rank_is_rejected():
-    constraints = [
-        {"key": "liquidity_priority", "value": "high"},
-        {"key": "goal_certainty", "value": "high"},
-    ]
-    try:
-        ConstraintRules.validate_priorities(constraints, [
-            {"key": "liquidity_priority", "rank": 1},
-            {"key": "goal_certainty", "rank": 1},
-        ])
-        assert False
-    except ValueError:
-        assert True
+    with pytest.raises(ValueError):
+        ProfileEngine().build(
+            financial_state=financial_state(),
+            constraint_priorities=[
+                {"key": "max_loss_amount", "rank": 1},
+                {"key": "liquidity_priority", "rank": 1},
+            ],
+        )
