@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import PlanningBasketButton from "./PlanningBasketButton";
 
 export default function StrategyWorkflowNav() {
   const pathname = usePathname();
@@ -15,20 +16,11 @@ export default function StrategyWorkflowNav() {
   }, []);
 
   const querySuffix = goalId ? `?goalId=${encodeURIComponent(goalId)}` : "";
+  const isStrategyBuilder = Boolean(pathname?.startsWith("/investor/strategy-builder"));
 
   const steps = [
-    {
-      id: "build",
-      label: "Build",
-      href: `/investor/strategy-builder${querySuffix}`,
-      isActive: Boolean(pathname?.startsWith("/investor/strategy-builder")),
-    },
-    {
-      id: "compare",
-      label: "Compare",
-      href: `/investor/strategy-scenarios${querySuffix}`,
-      isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")),
-    },
+    { id: "build", label: "Build", href: `/investor/strategy-builder${querySuffix}`, isActive: isStrategyBuilder },
+    { id: "compare", label: "Compare", href: `/investor/strategy-scenarios${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")) },
     {
       id: "report-action",
       label: "Report & Action Plan",
@@ -43,36 +35,31 @@ export default function StrategyWorkflowNav() {
   ];
 
   return (
-    <nav aria-label="Strategy workflow" className="overflow-x-auto">
-      <ol className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        {steps.map((step, index) => {
-          const active = step.isActive;
-          return (
-            <li key={step.id} className="flex items-center gap-2">
-              <Link
-                href={step.href}
-                aria-current={active ? "step" : undefined}
-                className={[
-                  "min-h-10 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:text-sm",
-                  active
-                    ? "bg-navy-900 text-white"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
-                ].join(" ")}
-              >
-                <span className={active ? "mr-1 text-slate-300" : "mr-1 text-slate-400"}>
-                  {index + 1}.
-                </span>
-                {step.label}
-              </Link>
-              {index < steps.length - 1 && (
-                <span aria-hidden="true" className="text-slate-300">
-                  →
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <nav aria-label="Strategy workflow" className="overflow-x-auto">
+        <ol className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          {steps.map((step, index) => {
+            const active = step.isActive;
+            return (
+              <li key={step.id} className="flex items-center gap-2">
+                <Link
+                  href={step.href}
+                  aria-current={active ? "step" : undefined}
+                  className={[
+                    "min-h-10 rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:text-sm",
+                    active ? "bg-navy-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                  ].join(" ")}
+                >
+                  <span className={active ? "mr-1 text-slate-300" : "mr-1 text-slate-400"}>{index + 1}.</span>
+                  {step.label}
+                </Link>
+                {index < steps.length - 1 && <span aria-hidden="true" className="text-slate-300">→</span>}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+      {isStrategyBuilder && <PlanningBasketButton />}
+    </div>
   );
 }
