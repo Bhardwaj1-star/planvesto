@@ -9,16 +9,16 @@ import InvestorHeader from "../../../components/InvestorHeader";
 
 function MonitoringView({ entries, decisions }: { entries: DiaryEntry[]; decisions: FinancialDecision[] }) {
   const notes = entries.slice(0, 8).map((entry) => ({
-    date: new Date(entry.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    date: new Date(entry.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     title: entry.title || "A note from your financial life",
     text: entry.content || "You added a new note to your financial diary.",
   }));
   const decisionNotes = decisions.slice(0, 8).map((decision) => ({
-    date: new Date(decision.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    date: new Date(decision.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     title: decision.title || "A decision was recorded",
-    text: decision.summary || decision.description || "A financial decision was recorded and kept for future reference.",
+    text: decision.summary || decision.notes || "A financial decision was recorded and kept for future reference.",
   }));
-  const items = [...notes, ...decisionNotes].sort((a, b) => b.date.localeCompare(a.date));
+  const items = [...notes, ...decisionNotes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <section className="mx-auto max-w-4xl">
