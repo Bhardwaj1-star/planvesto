@@ -201,8 +201,7 @@ class RetirementReportRenderer:
             self._row("Selected scenario", self._value(run, "selected_scenario_id")),
             self._row("Selected architecture", self._value(selected_arch, "architecture_id", default=None) or self._value(architecture, "architecture_id", default=self._value(run, "selected_architecture"))),
             self._row("Implementation parameters", self._value(run, "selected_implementation_parameters", default={})),
-            self._row("Approval status", self._value(run, "approval_status")),
-            self._row("Approval timestamp", self._value(run, "selection_timestamp")),
+            self._row("Selection timestamp", self._value(run, "selection_timestamp")),
             self._row("Plan version", self._value(run, "run_version")),
         ]
 

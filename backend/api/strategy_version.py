@@ -1,11 +1,22 @@
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from api.auth import authenticate_user, verify_planning_unit_ownership, verify_strategy_version_ownership
+from data.primary_strategy_repository import PrimaryStrategyRepository
 from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
+from models.primary_strategy_state import PrimaryStrategyState
 from models.strategy_version import StrategyVersion
 
 router = APIRouter(prefix="/api/strategy", tags=["Strategy Versioning"])
+
+
+@router.get("/primary", response_model=PrimaryStrategyState | None)
+def get_current_primary_strategy(planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_planning_unit_ownership(planning_unit_id, user_id)
+    strategy_repo = StrategyRepository()
+    repo = PrimaryStrategyRepository(strategy_repo.db)
+    return repo.get_current(planning_unit_id)
 
 
 def _repository() -> StrategyVersionRepository:

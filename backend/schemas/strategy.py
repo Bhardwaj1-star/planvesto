@@ -11,6 +11,11 @@ class StrategyBuildRequest(StrictRequestModel):
     investor_priorities: InvestorPriorities | None = None
 
 
+class FinancialPlanBuildRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    investor_priorities: InvestorPriorities | None = None
+
+
 class CustomScenarioRequest(StrictRequestModel):
     planning_unit_id: str = Field(min_length=1, max_length=100)
     strategy_run_id: str = Field(min_length=1, max_length=100)
