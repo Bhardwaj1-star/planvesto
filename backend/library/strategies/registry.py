@@ -2,7 +2,7 @@ from models.strategy import StrategyDefinition
 from library.strategies.catalog import STRATEGY_CATALOG
 
 
-LIBRARY_VERSION = "1.1"
+LIBRARY_VERSION = "2.0"
 
 
 def validate_strategy_library(strategies: list[StrategyDefinition] | None = None) -> None:
@@ -24,9 +24,15 @@ def get_active_strategies() -> list[StrategyDefinition]:
     return [strategy for strategy in STRATEGY_CATALOG if strategy.active]
 
 
+LEGACY_ALIASES: dict[str, str] = {
+    "strat-cap-preservation": "strat-capital-preservation",
+}
+
+
 def get_strategy_by_id(strategy_id: str) -> StrategyDefinition | None:
+    resolved_id = LEGACY_ALIASES.get(strategy_id, strategy_id)
     return next(
-        (strategy for strategy in get_active_strategies() if strategy.strategy_id == strategy_id),
+        (strategy for strategy in get_active_strategies() if strategy.strategy_id == resolved_id),
         None,
     )
 

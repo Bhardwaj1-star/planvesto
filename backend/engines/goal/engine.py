@@ -57,10 +57,60 @@ class GoalEngine:
         funding_return = calculate_funding_return_assumption([m.model_dump() for m in mapped_assets])
 
         dynamic_details = goal_input.dynamic_details or {}
+        specialized_data = goal_input.specialized_data or {}
+        specialized_metadata: dict[str, Any] = {}
         is_retirement = goal_input.goal_type == "Retirement / Financial Freedom"
         retirement_age = None
         retirement_years = None
-        if is_retirement:
+
+        if specialized_data:
+            from engines.goal.specialized import (
+                calculate_retirement_corpus as spec_retirement_corpus,
+                calculate_education_target as spec_education_target,
+                calculate_travel_schedule as spec_travel_schedule,
+            )
+            kind = goal_input.goal_type.strip().lower()
+            ref = reference_date or date.today()
+            if kind in {"retirement", "retirement / financial freedom"}:
+                future_target, specialized_metadata = spec_retirement_corpus(
+                    current_monthly_expense=float(specialized_data.get("current_monthly_expense", 0)),
+                    current_age=float(specialized_data.get("current_age", 0)),
+                    retirement_age=float(specialized_data.get("retirement_age", 0)),
+                    life_expectancy=float(specialized_data.get("life_expectancy", 0)),
+                    inflation_rate=float(specialized_data.get("expense_inflation_rate", inflation_rate)),
+                    post_retirement_return=float(specialized_data.get("post_retirement_return_rate", 0.08)),
+                    reference_date=ref,
+                )
+                duration_years = specialized_metadata["years_to_retirement"]
+                today_cost = float(specialized_data.get("current_monthly_expense", today_cost)) * 12
+            elif kind in {"education", "child education"}:
+                future_target, duration_years = spec_education_target(
+                    current_education_cost=float(specialized_data.get("current_education_cost", 0)),
+                    child_current_age=float(specialized_data.get("child_age", 0)),
+                    education_start_age=float(specialized_data.get("education_start_age", 0)),
+                    inflation_rate=float(specialized_data.get("education_inflation_rate", inflation_rate)),
+                )
+                specialized_metadata = {
+                    "dependent_id": specialized_data.get("dependent_id"),
+                    "child_age": specialized_data.get("child_age"),
+                }
+                today_cost = float(specialized_data.get("current_education_cost", today_cost))
+            elif kind == "travel":
+                first_trip_raw = specialized_data.get("first_trip_date")
+                first_trip = date.fromisoformat(str(first_trip_raw)) if first_trip_raw else ref
+                future_target, duration_years, schedule = spec_travel_schedule(
+                    first_trip_cost=float(specialized_data.get("current_trip_cost", 0)),
+                    first_trip_date=first_trip,
+                    repeat_every_years=float(specialized_data.get("repeat_every_years", 0)),
+                    number_of_trips=int(specialized_data.get("number_of_trips", 0)),
+                    inflation_rate=float(specialized_data.get("travel_inflation_rate", inflation_rate)),
+                    reference_date=ref,
+                )
+                specialized_metadata = {"travel_schedule": schedule}
+                today_cost = float(specialized_data.get("current_trip_cost", today_cost))
+            else:
+                future_target = calculate_future_target(today_cost=today_cost, inflation_rate=inflation_rate, duration_years=duration_years)
+        elif is_retirement:
             try:
                 current_age = float(dynamic_details.get("currentAge", dynamic_details.get("current_age")))
                 life_expectancy = float(dynamic_details.get("lifeExpectancy", dynamic_details.get("life_expectancy")))
@@ -87,6 +137,7 @@ class GoalEngine:
             "funding_return_assumption": funding_return,
             "required_monthly_contribution": required_monthly,
             "dynamic_details": dynamic_details,
+            **specialized_metadata,
         }
         if is_retirement:
             metadata.update({

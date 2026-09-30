@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from engines.profile.behavioral import BehavioralRules
 from engines.profile.constraints import ConstraintRules
+from engines.profile.identity import build_identity_profile
 from engines.profile.risk import build_risk_profile
 
-ENGINE_VERSION = "profile-engine-v5"
+ENGINE_VERSION = "profile-engine-v6"
 
 
 def _metric(state: dict[str, Any], name: str) -> tuple[float | None, bool]:
@@ -21,15 +23,20 @@ class ProfileEngine:
               observed_behavior: list[dict[str, Any]] | None = None,
               preferences: list[dict[str, Any]] | None = None,
               constraint_priorities: list[dict[str, Any]] | None = None,
+              identity_evidence: list[dict[str, Any]] | None = None,
               assets: list[dict[str, Any]] | None = None,
               liabilities: list[dict[str, Any]] | None = None,
               goals: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         constraints: list[dict[str, Any]] = []
+        behavioral_profile = BehavioralRules.resolve(observed_behavior or [])
+        risk_profile = build_risk_profile(financial_state=financial_state, assets=assets, liabilities=liabilities, goals=goals)
+        identity_profile = build_identity_profile(evidence=identity_evidence)
+
         for source, items in (("declared_constraint", declared_constraints or []),
                               ("observed_behavior", observed_behavior or []),
                               ("preference", preferences or [])):
             for item in items:
-                normalized = ConstraintRules.normalize(item, source)  # type: ignore[arg-type]
+                normalized = BehavioralRules.normalize(item) if source == "observed_behavior" else ConstraintRules.normalize(item, source)  # type: ignore[arg-type]
                 normalized["confidence"] = ConstraintRules.confidence(source, len(normalized["evidence"]))  # type: ignore[arg-type]
                 constraints.append(normalized)
 
@@ -53,7 +60,6 @@ class ProfileEngine:
                 item["confidence"] = ConstraintRules.confidence("financial_state", len(evidence))
                 constraints.append(item)
 
-        risk_profile = build_risk_profile(financial_state=financial_state, assets=assets, liabilities=liabilities, goals=goals)
         conflicts = ConstraintRules.conflicts(constraints)
         priorities = ConstraintRules.validate_priorities(constraints, constraint_priorities or [])
         priority_by_key = {item["key"]: item["rank"] for item in priorities}
@@ -65,7 +71,9 @@ class ProfileEngine:
             "constraints": constraints,
             "priorities": priorities,
             "conflicts": conflicts,
+            "behavioral_profile": behavioral_profile,
             "risk_profile": risk_profile,
+            "identity_profile": identity_profile,
             "unresolved_conflict_count": len(conflicts),
             "has_hard_constraints": any(c["kind"] == "hard" for c in constraints),
         }

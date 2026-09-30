@@ -34,6 +34,7 @@ class GoalInput(StrictRequestModel):
     status: str = Field(default="Active", min_length=1, max_length=30)
     asset_mappings: list[AssetMappingInput] = Field(default_factory=list, max_length=100)
     dynamic_details: dict[str, Any] = Field(default_factory=dict, max_length=100)
+    specialized_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class GoalCalculateRequest(GoalInput):

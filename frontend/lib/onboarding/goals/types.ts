@@ -156,6 +156,7 @@ export type GoalInput = {
   status: GoalStatus;
   asset_mappings: AssetMappingInput[];
   dynamic_details?: object;
+  specialized_data?: Record<string, unknown>;
 };
 export type DefinedGoalAssetMapping = {
   mapping_id?: string | null;
