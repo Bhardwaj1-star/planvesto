@@ -24,7 +24,7 @@ INVESTOR
   │      ├── Expenses
   │      ├── Assets
   │      ├── Liabilities
-  │      └── Cash Flow
+  │    
   │
   ├── Financial Metrics / Health
   │
