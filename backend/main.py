@@ -9,6 +9,7 @@ from api.strategy_version import router as strategy_version_router
 from api.action_plan import router as action_plan_router
 from api.moneywheel import router as moneywheel_router
 from api.orchestration import router as orchestration_router
+from api.goal_basket import router as goal_basket_router
 from api.diary import router as diary_router
 from api.profile import router as profile_router
 from api.insurance import router as insurance_router
@@ -31,6 +32,7 @@ app.include_router(strategy_version_router)
 app.include_router(action_plan_router)
 app.include_router(moneywheel_router)
 app.include_router(orchestration_router)
+app.include_router(goal_basket_router)
 app.include_router(diary_router)
 app.include_router(profile_router)
 app.include_router(insurance_router)
