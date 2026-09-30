@@ -27,8 +27,7 @@ const navigation: NavGroup[] = [
   {
     label: "Review",
     items: [
-      { label: "Goal History", href: "/investor/goal-history" },
-      { label: "Strategy History", href: "/investor/strategy-history" },
+      { label: "History", href: "/investor/goal-history" },
       { label: "Investor Diary", href: "/investor/diary" },
     ],
   },
@@ -36,17 +35,25 @@ const navigation: NavGroup[] = [
 ];
 
 function isItemActive(pathname: string | null, item: NavItem) {
-  return Boolean(pathname && pathname.startsWith(item.href));
+  if (!pathname) return false;
+  if (item.label === "History") {
+    return pathname.startsWith("/investor/goal-history") || pathname.startsWith("/investor/strategy-history");
+  }
+  return pathname.startsWith(item.href);
 }
 
 export default function InvestorSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(
+    pathname?.startsWith("/investor/goal-history") || pathname?.startsWith("/investor/strategy-history") || false,
+  );
 
   if (pathname?.startsWith("/investor/onboarding")) return null;
 
   const strategyContextActive = pathname?.startsWith("/investor/strategy-builder");
+  const historyActive = isItemActive(pathname, { label: "History", href: "/investor/goal-history" });
 
   return (
     <>
@@ -70,6 +77,22 @@ export default function InvestorSidebar() {
                 <div className="space-y-1">
                   {group.items.map((item) => {
                     const active = item.label === "Strategy Builder" ? Boolean(strategyContextActive) : isItemActive(pathname, item);
+                    if (item.label === "History" && !isCollapsed) {
+                      return (
+                        <div key={item.href}>
+                          <button type="button" onClick={() => setIsHistoryOpen((current) => !current)} aria-expanded={isHistoryOpen} className={["flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition", active ? "bg-navy-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-navy-900"].join(" ")}>
+                            <span>History</span>
+                            <span aria-hidden="true" className="text-xs">{isHistoryOpen ? "⌃" : "⌄"}</span>
+                          </button>
+                          {isHistoryOpen && (
+                            <div className="mt-1 ml-3 space-y-1 border-l border-slate-200 pl-2">
+                              <Link href="/investor/goal-history" onClick={() => setIsMobileOpen(false)} className={["block rounded-lg px-3 py-2 text-sm font-medium transition", pathname?.startsWith("/investor/goal-history") ? "bg-slate-100 text-navy-900" : "text-slate-500 hover:bg-slate-100 hover:text-navy-900"].join(" ")}>Goal History</Link>
+                              <Link href="/investor/strategy-history" onClick={() => setIsMobileOpen(false)} className={["block rounded-lg px-3 py-2 text-sm font-medium transition", pathname?.startsWith("/investor/strategy-history") ? "bg-slate-100 text-navy-900" : "text-slate-500 hover:bg-slate-100 hover:text-navy-900"].join(" ")}>Strategy History</Link>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
                     return <Link key={item.href} href={item.href} onClick={() => setIsMobileOpen(false)} aria-current={active ? "page" : undefined} title={isCollapsed ? item.label : undefined} className={["flex items-center rounded-xl py-2.5 text-sm font-semibold transition", isCollapsed ? "justify-center px-2" : "px-3", active ? "bg-navy-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-navy-900"].join(" ")}><span className={isCollapsed ? "sr-only" : undefined}>{item.label}</span>{isCollapsed && <span aria-hidden="true" className="text-base">{item.label.slice(0, 1)}</span>}</Link>;
                   })}
                 </div>
