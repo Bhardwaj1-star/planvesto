@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getDiaryEntries, getDecisions, type DiaryEntry, type FinancialDecision } from "../../../lib/diary/diaryStore";
 import DiaryBook from "../../../components/diary/DiaryBook";
+import DiaryActionPlan from "../../../components/diary/DiaryActionPlan";
 import DecisionHistoryView from "../../../components/diary/DecisionHistoryView";
 import BackendWriteEntryModal from "../../../components/diary/BackendWriteEntryModal";
 import InvestorHeader from "../../../components/InvestorHeader";
@@ -57,6 +58,7 @@ export default function InvestorDiaryPage() {
           <div>
             <div className="mb-6 text-center max-w-xl mx-auto"><p className="text-xs font-serif italic text-slate-500">“A personal financial diary that remembers your aspirations, reflects your decisions, and connects your thoughts to real strategy.”</p></div>
             <DiaryBook entries={entries} onWriteNew={() => setIsWriteModalOpen(true)} />
+            <DiaryActionPlan />
           </div>
         ) : (
           <DecisionHistoryView decisions={decisions} />
