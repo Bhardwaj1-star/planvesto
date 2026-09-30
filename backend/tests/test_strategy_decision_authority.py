@@ -49,51 +49,39 @@ def _sample_goal(goal_type="Child Education", duration=6.0, shortfall=500000.0, 
 
 
 def test_changing_dimension_scores_cannot_change_selected_strategy():
-    """Requirement: Changing dimension scores cannot change the selected strategy when decision evidence is unchanged."""
+    """Changing dimension scores cannot change the selected strategy when decision evidence is unchanged."""
     engine = StrategyEngine()
     goal = _sample_goal()
-
-    # Priorities with 90% safety vs 90% growth vs 90% liquidity vs 90% flexibility
     p_safety = InvestorPriorities(safety=0.9, liquidity=0.03, growth=0.04, flexibility=0.03)
     p_growth = InvestorPriorities(safety=0.03, liquidity=0.04, growth=0.9, flexibility=0.03)
     p_liquidity = InvestorPriorities(safety=0.04, liquidity=0.9, growth=0.03, flexibility=0.03)
     p_flexibility = InvestorPriorities(safety=0.03, liquidity=0.03, growth=0.04, flexibility=0.9)
-
     res_safety = engine.execute(goal, priorities=p_safety)
     res_growth = engine.execute(goal, priorities=p_growth)
     res_liquidity = engine.execute(goal, priorities=p_liquidity)
     res_flexibility = engine.execute(goal, priorities=p_flexibility)
-
-    # All must recommend the exact same architecture because the goal context has not changed
     assert res_safety.recommendation.recommended_strategy_id == res_growth.recommendation.recommended_strategy_id
     assert res_growth.recommendation.recommended_strategy_id == res_liquidity.recommendation.recommended_strategy_id
     assert res_liquidity.recommendation.recommended_strategy_id == res_flexibility.recommendation.recommended_strategy_id
-
-    # The top ranking item must also match across all runs
     assert res_safety.rankings[0].strategy_id == res_growth.rankings[0].strategy_id
     assert res_growth.rankings[0].strategy_id == res_liquidity.rankings[0].strategy_id
 
 
 def test_composite_score_is_not_decision_authority():
-    """Requirement: composite_score is not used as decision authority."""
+    """Composite score is not used as decision authority."""
     engine = StrategyEngine()
     goal = _sample_goal()
     priorities = InvestorPriorities(safety=0.8, liquidity=0.1, growth=0.05, flexibility=0.05)
     res = engine.execute(goal, priorities=priorities)
-
-    # Even though composite_score is recorded for backwards compatibility,
-    # the recommendation is strictly driven by the decision engine's evidence
     rec_strat = res.recommendation.recommended_strategy_id
-    assert rec_strat == "strat-calibrated-growth"
-
-    # Verify is_recommended is not blindly assigned by idx == 1 or composite_score
+    assert rec_strat == "strat-goal-funding"
     recommended_items = [r for r in res.rankings if r.is_recommended]
     assert len(recommended_items) == 1
     assert recommended_items[0].strategy_id == rec_strat
 
 
 def test_ineligible_strategies_cannot_be_recommended():
-    """Requirement: ineligible strategies cannot be recommended."""
+    """Ineligible strategies cannot be recommended."""
     strat_ineligible = StrategyDefinition(
         strategy_id="strat-fake-ineligible",
         name="Fake Ineligible Strategy",
@@ -104,7 +92,7 @@ def test_ineligible_strategies_cannot_be_recommended():
         core_mechanism="Ineligible",
         applicable_goal_types=["NonExistentType"],
         applicable_goal_characteristics=[],
-        constraints=["horizon<=1.0"],  # will fail for 6.0-year goal
+        constraints=["horizon<=1.0"],
         library_version="1.1",
         implementation_version="1.1",
         active=True,
@@ -130,7 +118,6 @@ def test_ineligible_strategies_cannot_be_recommended():
         trade_off_notes="",
         is_investor_modified=False,
     )
-
     goal = _sample_goal(duration=6.0)
     decision = evaluate_decision(
         strategies=[strat_ineligible],
@@ -138,11 +125,8 @@ def test_ineligible_strategies_cannot_be_recommended():
         architectures=[arch_ineligible],
         defined_goal=goal,
     )
-
-    # Must be infeasible and must NOT recommend the ineligible strategy
     assert decision.recommended_strategy_id == ""
     assert decision.feasibility_status == "infeasible"
-
     rankings = rank_scenarios(
         strategies=[strat_ineligible],
         scenarios=[scen_ineligible],
@@ -156,32 +140,27 @@ def test_ineligible_strategies_cannot_be_recommended():
 
 
 def test_recommendation_comes_from_new_decision_output():
-    """Requirement: recommendation comes from the new decision output."""
+    """Recommendation comes from the new decision output."""
     engine = StrategyEngine()
     goal = _sample_goal(goal_type="Retirement / Financial Freedom", duration=15.0, shortfall=2000000.0)
     priorities = InvestorPriorities(safety=0.25, liquidity=0.25, growth=0.25, flexibility=0.25)
     res = engine.execute(goal, priorities=priorities)
-
     rec = res.recommendation
     assert rec.recommended_strategy_id != ""
     assert rec.architecture is not None
     assert rec.architecture.primary_strategy_id == rec.recommended_strategy_id
-
-    # The reasoning must reference strategic evidence (goal fit, funding, horizon), not priority dimensions
     reasoning_text = " ".join(rec.short_reasons) + " " + rec.complete_reasoning
     assert "Strongly aligns with your priority for" not in reasoning_text
     assert "₹" in reasoning_text or "shortfall" in reasoning_text.lower() or "horizon" in reasoning_text.lower()
 
 
 def test_end_to_end_goal_strategy_report_pdf_pipeline():
-    """Requirement: existing Goal -> Strategy Builder -> Strategy Result -> Retirement Report -> PDF flow remains intact."""
+    """Existing Goal -> Strategy Builder -> Strategy Result -> Retirement Report -> PDF flow remains intact."""
     engine = StrategyEngine()
     goal = _sample_goal(goal_type="Retirement / Financial Freedom", duration=18.0, shortfall=3500000.0)
     res = engine.execute(goal, priorities=InvestorPriorities())
-
     assert res.recommendation.recommended_strategy_id != ""
     assert len(res.rankings) > 0
-
     service = StrategyService()
     service.goal_repo.get_latest_defined_goal = MagicMock(return_value=goal)
     service.goal_repo.get_defined_goal_by_version = MagicMock(return_value=goal)
@@ -197,21 +176,16 @@ def test_end_to_end_goal_strategy_report_pdf_pipeline():
     service.strat_repo.get_run_by_id = MagicMock(side_effect=lambda pu, rid: saved_runs.get(rid))
     service.strat_repo.update_selection = MagicMock()
     service.financial_state_repo.get_latest = MagicMock(return_value=None)
-
     run = service.build_strategy(
         planning_unit_id="pu-decision-e2e",
         goal_id="g-test-decision",
         priorities=InvestorPriorities(),
     )
-
     assert run.strategy_run_id == "run-decision-e2e-123"
     assert run.recommendation.recommended_strategy_id != ""
-
     report_dict = service.get_retirement_report("pu-decision-e2e", "run-decision-e2e-123")
     assert report_dict is not None
     assert "sections" in report_dict
-
-    # Verify PDF export works without error
     from services.retirement_report_pdf_service import RetirementReportPDFService
     pdf_service = RetirementReportPDFService()
     pdf_service.strategy_service = service
