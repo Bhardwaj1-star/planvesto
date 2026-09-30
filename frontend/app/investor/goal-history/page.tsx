@@ -65,7 +65,57 @@ export default function GoalHistoryPage() {
           </Link>
         </div>
         {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>}
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><label className="block max-w-xl"><span className="text-sm font-bold text-slate-700">Goal</span><select value={goalId} onChange={(e) => setGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"><option value="">Select goal</option>{goals.map((g) => <option key={g.goal_id} value={g.goal_id}>{g.goal_name}</option>)}</select></label></section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <label className="block max-w-xl">
+            <span className="text-sm font-bold text-slate-700">Goal</span>
+            <select value={goalId} onChange={(e) => setGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+              <option value="">Select goal</option>
+              {goals.map((g) => <option key={g.goal_id} value={g.goal_id}>{g.goal_name}</option>)}
+            </select>
+          </label>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Defined Goal History</h2>
+              <p className="mt-1 text-sm text-slate-500">Complete calculation history for the selected goal.</p>
+            </div>
+            {working && <span className="text-xs font-semibold text-slate-400">Loading history…</span>}
+          </div>
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-3 py-3">Version</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3">Today Cost</th>
+                  <th className="px-3 py-3">Future Target</th>
+                  <th className="px-3 py-3">Mapped Assets</th>
+                  <th className="px-3 py-3">Funding Gap</th>
+                  <th className="px-3 py-3">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {versions.map((version) => (
+                  <tr key={`${version.defined_goal_id}-${version.version}`} className="border-b border-slate-100">
+                    <td className="px-3 py-4">
+                      <div className="font-bold">v{version.version}</div>
+                      {version.is_latest && <span className="mt-1 inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-700">Latest</span>}
+                    </td>
+                    <td className="px-3 py-4">{version.funding_status}</td>
+                    <td className="px-3 py-4">{money(version.today_cost)}</td>
+                    <td className="px-3 py-4">{money(version.future_target)}</td>
+                    <td className="px-3 py-4">{money(version.projected_mapped_asset_value)}</td>
+                    <td className="px-3 py-4">{money(version.funding_gap)}</td>
+                    <td className="px-3 py-4 whitespace-nowrap text-slate-500">{new Date(version.created_at).toLocaleString("en-IN")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!working && versions.length === 0 && <p className="py-10 text-center text-sm text-slate-500">No history found for this goal.</p>}
+          </div>
+        </section>
       </div>
     </main>
   );
