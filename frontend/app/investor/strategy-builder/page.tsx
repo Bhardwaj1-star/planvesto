@@ -10,6 +10,9 @@ import { apiRequest } from "../../../lib/api/client";
 import { buildStrategy, getLatestStrategyRun, getStrategyRunHistory, getPlanningUnitId, selectStrategy, type StrategyRun } from "../../../lib/api/strategy";
 import type { DefinedGoal } from "../../../lib/onboarding/goals/types";
 
+type PlanningBasket = { id: string; name: string; goalIds: string[] };
+const BASKET_STORAGE_KEY = "planvesto:planning-baskets";
+
 function displayMetric(value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "number") return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value);
@@ -22,7 +25,9 @@ function formatINR(value: number | null | undefined) {
 
 export default function InvestorStrategyBuilderPage() {
   const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
+  const [baskets, setBaskets] = useState<PlanningBasket[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
+  const [selectedBasketId, setSelectedBasketId] = useState("");
   const [goalPreview, setGoalPreview] = useState<DefinedGoal | null>(null);
   const [run, setRun] = useState<StrategyRun | null>(null);
   const [history, setHistory] = useState<StrategyRun[]>([]);
@@ -34,6 +39,9 @@ export default function InvestorStrategyBuilderPage() {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedTargetKey = selectedBasketId ? `basket:${selectedBasketId}` : selectedGoalId;
+  const selectedBasket = baskets.find((basket) => basket.id === selectedBasketId) ?? null;
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -42,13 +50,30 @@ export default function InvestorStrategyBuilderPage() {
         if (!active) return;
         const nextGoals = (data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" }));
         setGoals(nextGoals);
+        try {
+          const saved = JSON.parse(window.localStorage.getItem(BASKET_STORAGE_KEY) || "[]");
+          setBaskets(Array.isArray(saved) ? saved : []);
+        } catch {
+          setBaskets([]);
+        }
         const requested = new URLSearchParams(window.location.search).get("goalId");
+        setSelectedBasketId("");
         setSelectedGoalId(nextGoals.find((g) => g.id === requested)?.id ?? nextGoals[0]?.id ?? "");
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load goals."); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
   }, []);
+
+  const handleTargetChange = (value: string) => {
+    if (value.startsWith("basket:")) {
+      setSelectedBasketId(value.slice("basket:".length));
+      setSelectedGoalId("");
+      return;
+    }
+    setSelectedBasketId("");
+    setSelectedGoalId(value);
+  };
 
   useEffect(() => {
     if (!selectedGoalId) { setGoalPreview(null); setRun(null); setHistory([]); return; }
@@ -115,13 +140,28 @@ export default function InvestorStrategyBuilderPage() {
       <StrategyWorkflowNav/>
       {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><label className="block flex-1"><span className="text-sm font-bold text-slate-700">Goal</span><select value={selectedGoalId} onChange={(e)=>setSelectedGoalId(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"><option value="">Select goal</option>{goals.map((g)=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label><InvestorButton onClick={handleBuild} disabled={working||!selectedGoalId}>{working?"Working…":run?"Rebuild Strategy Run":"Build Strategy"}</InvestorButton></div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <label className="block flex-1">
+            <span className="text-sm font-bold text-slate-700">Goal / Planning Basket</span>
+            <select value={selectedTargetKey} onChange={(e)=>handleTargetChange(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+              <option value="">Select goal or planning basket</option>
+              <optgroup label="Goals">
+                {goals.map((g)=><option key={g.id} value={g.id}>{g.name}</option>)}
+              </optgroup>
+              {baskets.length > 0 && <optgroup label="Planning Baskets">
+                {baskets.map((basket)=><option key={basket.id} value={`basket:${basket.id}`}>🧺 {basket.name} · {basket.goalIds.length} goals</option>)}
+              </optgroup>}
+            </select>
+          </label>
+          <InvestorButton onClick={handleBuild} disabled={working||!selectedGoalId}>{working?"Working…":run?"Rebuild Strategy Run":"Build Strategy"}</InvestorButton>
+        </div>
+        {selectedBasket && <div className="mt-4 rounded-2xl border border-teal-200 bg-teal-50/60 p-4"><div className="flex items-center gap-2"><span className="text-lg">🧺</span><div><p className="text-sm font-extrabold text-teal-900">{selectedBasket.name}</p><p className="text-xs text-teal-700">{selectedBasket.goalIds.length} goals in this planning basket</p></div></div><p className="mt-3 text-xs leading-5 text-teal-800">This basket is selected as a planning target. Basket-level strategy execution will use the basket’s goals together; the current Strategy Run endpoint remains goal-based.</p><div className="mt-2 flex flex-wrap gap-1.5">{selectedBasket.goalIds.map((id)=>{const goal=goals.find((g)=>g.id===id); return goal ? <span key={id} className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-teal-800">{goal.name}</span> : null;})}</div></div>}
         {run && <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500"><span className="rounded-full bg-slate-100 px-3 py-1">Run v{run.run_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Goal v{run.defined_goal_version}</span><span className="rounded-full bg-slate-100 px-3 py-1">Status: {run.status}</span><Link href={`/investor/goal-report?goalId=${encodeURIComponent(selectedGoalId)}`} className="rounded-full border border-teal-200 bg-teal-50/50 px-3 py-1 font-semibold text-teal-700 hover:bg-teal-50">View Goal Report</Link><Link href="/investor/strategy-scenarios" className="rounded-full border border-slate-200 px-3 py-1 font-semibold">Custom Scenarios</Link><Link href="/investor/strategy-history" className="rounded-full border border-slate-200 px-3 py-1 font-semibold">Strategy History</Link></div>}
       </section>
 
       {goalPreview && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Goal Calculation &amp; Preview</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["Today’s Cost",formatINR(goalPreview.today_cost)],["Inflation",`${(goalPreview.inflation_rate*100).toFixed(1)}%`],["Required Corpus",formatINR(goalPreview.future_target)],["Funding Gap",formatINR(goalPreview.funding_gap)]].map(([label,value])=><div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-lg font-extrabold">{value}</p></div>)}</div><div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600"><span>Target: <strong>{String(goalPreview.target_month).padStart(2,"0")}/{goalPreview.target_year}</strong></span><span>Mapped Assets: <strong>{formatINR(goalPreview.projected_mapped_asset_value)}</strong></span><span>Monthly Contribution: <strong>{formatINR(goalPreview.required_monthly_contribution)}</strong></span><span>Status: <strong>{goalPreview.funding_status}</strong></span></div></section>}
 
-      {!run ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">No Strategy Run yet</h2><p className="mt-2 text-sm text-slate-500">Build the Strategy Run after reviewing the goal calculation.</p></section> : <>
+      {!run ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">{selectedBasket ? "Basket selected" : "No Strategy Run yet"}</h2><p className="mt-2 text-sm text-slate-500">{selectedBasket ? "Select an individual goal to build its Strategy Run. Basket-level execution will be connected to the multi-goal strategy flow." : "Build the Strategy Run after reviewing the goal calculation."}</p></section> : <>
         <section><div className="mb-4"><h2 className="text-lg font-bold">Strategy Architectures</h2><p className="mt-1 text-sm text-slate-500">Applicable architectures evaluated for this goal.</p></div><div className="grid gap-5 lg:grid-cols-2">{displayedRankings.map((ranking)=><article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${selectedStrategyId===ranking.strategy_id&&selectedScenarioId===ranking.scenario_id?"border-teal-500 ring-2 ring-teal-100":"border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{ranking.is_recommended?"Recommended Architecture":"Alternative Architecture"}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended&&<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.description}</p><div className="mt-4 space-y-2 text-xs text-slate-600">{run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale?.length? <div><b>Goal fit:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale.join("; ")}</div>:null}<div><b>Feasibility:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.feasibility_status}</div>{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs?.length?<div><b>Trade-offs:</b> {run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs.join("; ")}</div>:null}</div><button onClick={()=>{setSelectedStrategyId(ranking.strategy_id);setSelectedScenarioId(ranking.scenario_id);const s=run.applicable_strategies.find(x=>x.strategy_id===ranking.strategy_id);setParameters(Object.fromEntries((s?.implementation_parameters??[]).map(p=>[p.name,p.default_value])));}} className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50">{selectedStrategyId===ranking.strategy_id&&selectedScenarioId===ranking.scenario_id?"Selected":"Select this architecture"}</button></article>)}</div></section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-3 text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p><ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">{run.recommendation.short_reasons.map((reason,i)=><li key={i}>{reason}</li>)}</ul><p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">Feasibility: {run.recommendation.feasibility_status}</p></section>
