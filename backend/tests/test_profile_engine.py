@@ -1,3 +1,5 @@
+import pytest
+
 from engines.profile.engine import ProfileEngine
 from engines.profile.constraints import ConstraintRules
 
@@ -64,6 +66,7 @@ def test_source_priority_confidence():
 def test_investor_priority_is_stored_but_does_not_change_constraint_kind():
     result = ProfileEngine().build(
         financial_state=financial_state(),
+        declared_constraints=[{"key": "max_loss_amount", "value": 100000, "kind": "hard"}],
         constraint_priorities=[{"key": "max_loss_amount", "rank": 1}],
     )
     constraint = next(item for item in result["constraints"] if item["key"] == "max_loss_amount")
@@ -83,6 +86,7 @@ def test_duplicate_priority_key_is_rejected():
     with pytest.raises(ValueError):
         ProfileEngine().build(
             financial_state=financial_state(),
+            declared_constraints=[{"key": "max_loss_amount", "value": 100000, "kind": "hard"}],
             constraint_priorities=[
                 {"key": "max_loss_amount", "rank": 1},
                 {"key": "max_loss_amount", "rank": 2},
@@ -94,6 +98,10 @@ def test_duplicate_priority_rank_is_rejected():
     with pytest.raises(ValueError):
         ProfileEngine().build(
             financial_state=financial_state(),
+            declared_constraints=[
+                {"key": "max_loss_amount", "value": 100000, "kind": "hard"},
+                {"key": "liquidity_priority", "value": "high", "kind": "soft"},
+            ],
             constraint_priorities=[
                 {"key": "max_loss_amount", "rank": 1},
                 {"key": "liquidity_priority", "rank": 1},

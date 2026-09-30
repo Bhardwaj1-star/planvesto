@@ -7,11 +7,18 @@ from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
+from rules.financial_metrics import ESSENTIAL_EXPENSE_TYPES, SHORT_TERM_LIABILITY_TYPES
+from rules.protection import (
+    calculate_required_insurance_cover,
+    is_health_insurance,
+    is_life_insurance,
+)
 
 logger = logging.getLogger(__name__)
 
-SHORT_TERM_LIABILITY_TYPES = {"Credit Card", "Personal Loan", "Consumer Loan", "Other"}
-ESSENTIAL_EXPENSE_TYPES = {"Housing", "Utilities", "Groceries", "Healthcare", "Insurance", "Education", "Debt Payments"}
+# Re-exported for backwards compatibility with tests and callers
+SHORT_TERM_LIABILITY_TYPES = SHORT_TERM_LIABILITY_TYPES
+ESSENTIAL_EXPENSE_TYPES = ESSENTIAL_EXPENSE_TYPES
 
 
 class MoneywheelService:
@@ -79,20 +86,16 @@ class MoneywheelService:
         total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
-            if str(p.get("policy_type") or "").strip().lower() in {
-                "term insurance", "term", "endowment", "whole life", "ulip", "money back"
-            }
+            if is_life_insurance(p.get("policy_type"))
         )
         total_health_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
-            if str(p.get("policy_type") or "").strip().lower() in {"health insurance", "health"}
+            if is_health_insurance(p.get("policy_type"))
         )
 
-        # Required cover baseline: 10 years of gross income plus outstanding liabilities.
-        # Existing assets are intentionally not netted off so insurance remains a pure protection signal.
         annual_income = float(financial_state.income_monthly.value or 0) * 12
         total_liabilities = float(financial_state.total_liabilities.value or 0)
-        required_insurance_cover = (annual_income * 10) + total_liabilities
+        required_insurance_cover = calculate_required_insurance_cover(annual_income, total_liabilities)
 
         goal_target_amount, current_goal_funding, future_goal_target, projected_goal_funding = self._goal_funding(planning_unit_id)
 

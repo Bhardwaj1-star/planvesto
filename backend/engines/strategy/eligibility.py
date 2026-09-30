@@ -4,14 +4,12 @@ from enum import Enum
 from typing import Any, List, Tuple
 from models.strategy import StrategyDefinition
 from models.defined_goal import DefinedGoal as GoalSnapshot
-from engines.rules.engine import GOAL_TYPE_ALIASES
+from rules.eligibility import ELIGIBILITY_FITS, EligibilityStatus
+from rules.goals import GOAL_TYPE_ALIASES
 
-class EligibilityStatus(str, Enum):
-    PASS = "pass"
-    CONDITIONAL = "conditional"
-    FAIL = "fail"
-
-ELIGIBILITY_FITS = ("cashflow_fit", "liquidity_fit", "debt_fit", "asset_resource_fit", "risk_capacity_fit", "goal_constraint_fit", "multi_goal_conflict_fit", "implementation_fit")
+# Re-exported for backwards compatibility with tests and callers
+EligibilityStatus = EligibilityStatus
+ELIGIBILITY_FITS = ELIGIBILITY_FITS
 
 @dataclass(frozen=True)
 class EligibilityFitResult:

@@ -7,30 +7,28 @@ from engines.constraints.models import (
     RatioConstraintAssessment,
 )
 from engines.orchestration.models import GoalEvaluationInput
-from rules.moneywheel import RULES, classify
+from rules.constraints import (
+    DEBT_TO_INCOME_CRITICAL_PERCENT,
+    DEBT_TO_INCOME_HEALTHY_PERCENT,
+    EMERGENCY_RESERVE_CRITICAL_MONTHS,
+    EMERGENCY_RESERVE_HEALTHY_MONTHS,
+    RULE_DEBT_BURDEN_EXCEEDED,
+    RULE_EMERGENCY_RESERVE_CRITICAL,
+    SAVINGS_RATIO_HEALTHY_PERCENT,
+    WARN_DEBT_BURDEN_ATTENTION,
+    WARN_EMERGENCY_RESERVE_ATTENTION,
+    WARN_SAVINGS_RATE_DEFICIT,
+)
 from rules.financial_state import cash_flow_ratio, required_safety_reserve_months, savings_investment_rate
+from rules.goals import DISCRETIONARY_GOAL_TYPES, ESSENTIAL_GOAL_TYPES, is_discretionary_goal, is_essential_goal
+from rules.moneywheel import RULES, classify
 
 
 class FinancialRatioConstraintEvaluator:
     """Evaluates financial ratios and checks goal priorities against approved business constraints."""
 
-    DISCRETIONARY_GOAL_TYPES = {
-        "vacation",
-        "travel",
-        "car",
-        "vehicle",
-        "luxury",
-        "others",
-        "other",
-    }
-
-    ESSENTIAL_GOAL_TYPES = {
-        "emergency_fund",
-        "emergency",
-        "contingency",
-        "debt_repayment",
-        "retirement",
-    }
+    DISCRETIONARY_GOAL_TYPES = DISCRETIONARY_GOAL_TYPES
+    ESSENTIAL_GOAL_TYPES = ESSENTIAL_GOAL_TYPES
 
     @staticmethod
     def _extract_metric(state: dict[str, Any], key: str) -> float | None:

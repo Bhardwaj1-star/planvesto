@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, Scenario, StrategyArchitecture, StrategyDefinition
-from engines.rules.engine import GOAL_TYPE_ALIASES
+from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_type
 from engines.strategy.eligibility import evaluate_eligibility, evaluate_eligibility_fits, EligibilityStatus
 
 @dataclass
@@ -37,8 +37,7 @@ class DecisionResult:
     constraints: list[str] = field(default_factory=list)
 
 def _canonical_goal_type(goal_type: str | None) -> str:
-    clean=(goal_type or "").strip().lower()
-    return GOAL_TYPE_ALIASES.get(clean, clean)
+    return canonical_goal_type(goal_type)
 
 def _empty(message: str) -> DecisionResult:
     return DecisionResult("", "", None, [], [], [], [message], message, "infeasible", [message])
