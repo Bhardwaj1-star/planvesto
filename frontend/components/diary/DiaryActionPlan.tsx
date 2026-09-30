@@ -10,18 +10,34 @@ export default function DiaryActionPlan() {
 
   useEffect(() => {
     let active = true;
-    void getPlanningUnitId()
-      .then((planningUnitId) => getActions(planningUnitId))
-      .then((items) => {
-        if (active) setActions(items.filter((item) => item.status !== "completed" && item.status !== "cancelled").slice(0, 3));
-      })
-      .catch(() => {
+
+    async function loadActions(): Promise<void> {
+      try {
+        const planningUnitId = getPlanningUnitId();
+        if (!planningUnitId) {
+          if (active) setActions([]);
+          return;
+        }
+
+        const items: ActionPlanItem[] = await getActions(planningUnitId);
+        if (active) {
+          setActions(
+            items
+              .filter((item: ActionPlanItem) => item.status !== "completed" && item.status !== "cancelled")
+              .slice(0, 3),
+          );
+        }
+      } catch {
         if (active) setActions([]);
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
-    return () => { active = false; };
+      }
+    }
+
+    void loadActions();
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -41,7 +57,7 @@ export default function DiaryActionPlan() {
         ) : actions.length === 0 ? (
           <div className="rounded-2xl border border-[#ebdccb] bg-white/60 p-4 text-xs text-slate-600">Nothing is waiting right now. Your plan is up to date.</div>
         ) : (
-          actions.map((action) => (
+          actions.map((action: ActionPlanItem) => (
             <div key={action.action_id ?? action.created_at + action.title} className="flex items-start gap-3 rounded-2xl border border-[#ebdccb] bg-white/70 p-4">
               <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#c8b79f] text-[10px] text-[#8c6d48]">○</span>
               <div className="min-w-0 flex-1">
