@@ -7,6 +7,7 @@ type Goal = { id: string; name: string };
 type Basket = { id: string; name: string; goalIds: string[] };
 
 const STORAGE_KEY = "planvesto:planning-baskets";
+const SELECTED_BASKET_KEY = "planvesto:selected-planning-basket";
 
 function BasketIcon() {
   return (
@@ -21,6 +22,7 @@ export default function PlanningBasketButton() {
   const [open, setOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [baskets, setBaskets] = useState<Basket[]>([]);
+  const [selectedBasketId, setSelectedBasketId] = useState("");
   const [name, setName] = useState("");
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
 
@@ -29,21 +31,38 @@ export default function PlanningBasketButton() {
     try {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
       if (Array.isArray(saved)) setBaskets(saved);
-    } catch { setBaskets([]); }
+      setSelectedBasketId(window.localStorage.getItem(SELECTED_BASKET_KEY) || "");
+    } catch {
+      setBaskets([]);
+      setSelectedBasketId("");
+    }
     void loadGoalPlannerData().then((data) => {
       setGoals((data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" })));
     }).catch(() => setGoals([]));
   }, [open]);
 
+  const selectBasket = (basket: Basket) => {
+    setSelectedBasketId(basket.id);
+    setSelectedGoalIds(basket.goalIds);
+    window.localStorage.setItem(SELECTED_BASKET_KEY, basket.id);
+    window.dispatchEvent(new CustomEvent("planvesto:planning-basket-selected", { detail: basket }));
+  };
+
   const createBasket = () => {
+    if (selectedGoalIds.length === 0) return;
+
+    const selectedNames = goals.filter((goal) => selectedGoalIds.includes(goal.id)).map((goal) => goal.name);
     const trimmed = name.trim();
-    if (!trimmed || selectedGoalIds.length === 0) return;
-    const basket: Basket = { id: crypto.randomUUID(), name: trimmed, goalIds: selectedGoalIds };
+    const basketName = trimmed || (selectedNames.length <= 2 ? selectedNames.join(" + ") : `${selectedNames[0]} + ${selectedNames.length - 1} more`);
+    const basket: Basket = { id: crypto.randomUUID(), name: basketName || "My Planning Basket", goalIds: selectedGoalIds };
     const next = [...baskets, basket];
+
     setBaskets(next);
+    setSelectedBasketId(basket.id);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(SELECTED_BASKET_KEY, basket.id);
+    window.dispatchEvent(new CustomEvent("planvesto:planning-basket-selected", { detail: basket }));
     setName("");
-    setSelectedGoalIds([]);
   };
 
   return (
@@ -73,9 +92,14 @@ export default function PlanningBasketButton() {
             <div className="mt-4 space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Your baskets</p>
               {baskets.map((basket) => (
-                <button key={basket.id} type="button" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-left hover:bg-slate-50">
+                <button
+                  key={basket.id}
+                  type="button"
+                  onClick={() => selectBasket(basket)}
+                  className={`w-full rounded-xl border px-3 py-2 text-left transition ${selectedBasketId === basket.id ? "border-teal-300 bg-teal-50" : "border-slate-200 hover:bg-slate-50"}`}
+                >
                   <span className="block text-sm font-bold text-slate-800">{basket.name}</span>
-                  <span className="text-xs text-slate-500">{basket.goalIds.length} goal{basket.goalIds.length === 1 ? "" : "s"}</span>
+                  <span className="text-xs text-slate-500">{basket.goalIds.length} goal{basket.goalIds.length === 1 ? "" : "s"}{selectedBasketId === basket.id ? " · Selected" : ""}</span>
                 </button>
               ))}
             </div>
@@ -83,7 +107,7 @@ export default function PlanningBasketButton() {
 
           <div className="mt-4 border-t border-slate-100 pt-4">
             <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Create new basket</p>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Family Security" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-400" />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Family Security (optional)" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-400" />
             <div className="mt-3 max-h-36 space-y-2 overflow-y-auto">
               {goals.map((goal) => (
                 <label key={goal.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50">
@@ -92,9 +116,15 @@ export default function PlanningBasketButton() {
                 </label>
               ))}
             </div>
-            <button type="button" onClick={createBasket} disabled={!name.trim() || selectedGoalIds.length === 0} className="mt-3 w-full rounded-xl bg-navy-900 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
-              Create Planning Basket
+            <button
+              type="button"
+              onClick={createBasket}
+              disabled={selectedGoalIds.length === 0}
+              className="mt-3 w-full rounded-xl bg-navy-900 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {name.trim() ? "Create Planning Basket" : "Create Basket from Selected Goals"}
             </button>
+            {selectedGoalIds.length > 0 && !name.trim() && <p className="mt-2 text-center text-[11px] text-slate-400">A name will be generated from the selected goals.</p>}
           </div>
         </div>
       )}
