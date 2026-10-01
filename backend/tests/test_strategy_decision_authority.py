@@ -192,3 +192,52 @@ def test_end_to_end_goal_strategy_report_pdf_pipeline():
     pdf_bytes = pdf_service.generate("pu-decision-e2e", "run-decision-e2e-123")
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF-")
+
+
+def test_technique_execution_is_decision_evidence():
+    """Executed techniques contribute implementation-readiness evidence to the decision."""
+    strat = StrategyDefinition(
+        strategy_id="strat-tech-evidence",
+        name="Technique Evidence Strategy",
+        tagline="Test",
+        description="Test",
+        strategy_family="Funding",
+        strategic_objective="Test",
+        core_mechanism="Test",
+        applicable_goal_types=["Child Education"],
+        applicable_goal_characteristics=["shortfall", "fixed_timeline"],
+        technique_ids=["tech-bucketing", "tech-laddering"],
+        library_version="1.0",
+        implementation_version="1.0",
+        active=True,
+    )
+    arch = StrategyArchitecture(
+        architecture_id="arch-tech-evidence",
+        primary_strategy_id=strat.strategy_id,
+        technique_ids=list(strat.technique_ids),
+        rationale=["Test"],
+        trade_offs=[],
+    )
+    scenario = Scenario(
+        scenario_id="scen-tech-evidence",
+        strategy_id=strat.strategy_id,
+        scenario_type="baseline",
+        scenario_name="Baseline",
+        assumptions={},
+        funding_structure={},
+        metrics={},
+    )
+    goal = _sample_goal()
+    decision = evaluate_decision(
+        strategies=[strat],
+        scenarios=[scenario],
+        architectures=[arch],
+        defined_goal=goal,
+        technique_outputs=[
+            {"technique_id": "tech-bucketing", "status": "calculated"},
+            {"technique_id": "tech-laddering", "status": "calculated"},
+        ],
+    )
+    evaluation = decision.evaluations[0]
+    assert evaluation.evidence["technique_execution"]["execution_score"] == 2.0
+    assert evaluation.total_decision_score > 0
