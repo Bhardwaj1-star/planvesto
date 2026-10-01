@@ -13,6 +13,8 @@ from services.strategy_version_service import StrategyVersionService
 from services.retirement_report_renderer import RetirementReportRenderer
 from engines.constraints.aggregator import ConstraintAggregator
 from engines.constraints.models import ConstraintSet
+from engines.risk_profiler.engine import RiskProfilerEngine
+from engines.orchestration.models import GoalEvaluationInput
 
 
 class StrategyService:
@@ -57,17 +59,88 @@ class StrategyService:
         rule_assessment,
         financial_context: dict,
         planning_unit_id: str,
+        defined_goal: DefinedGoal | None = None,
     ) -> ConstraintSet:
-        """Build a centralized ConstraintSet from all available constraint sources."""
+        """Build the authoritative canonical ConstraintSet consumed by StrategyEngine.
+
+        Domain ownership remains decentralized:
+        - RuleEngine -> goal diagnostics / hard goal gates
+        - MoneyWheel ratio evaluator -> financial-state constraints
+        - RiskProfilerEngine -> risk-capacity / risk-required / risk-tolerance constraints
+
+        The aggregator is the only normalization boundary downstream engines consume.
+        """
+        goal_inputs: list[GoalEvaluationInput] = []
+        if defined_goal is not None:
+            goal_inputs.append(
+                GoalEvaluationInput(
+                    goal_id=defined_goal.goal_id,
+                    goal_name=defined_goal.goal_name,
+                    goal_type=defined_goal.goal_type,
+                    client_priority=defined_goal.priority,
+                    target_month=defined_goal.target_month,
+                    target_year=defined_goal.target_year,
+                    today_cost=defined_goal.today_cost,
+                    future_target=defined_goal.future_target,
+                    funding_gap=defined_goal.funding_gap,
+                    required_monthly_contribution=defined_goal.required_monthly_contribution,
+                    flexibility=defined_goal.flexibility,
+                    defined_goal=defined_goal,
+                )
+            )
+
+        # Build RiskProfile from the same authoritative financial-state snapshot.
+        # No risk rule is invented here; RiskProfilerEngine owns the assessment.
+        risk_state = dict(financial_context or {})
+        income_monthly = self._metric_value(risk_state, "income_monthly")
+        if income_monthly is None:
+            annual_income = self._metric_value(risk_state, "annual_income")
+            if annual_income is not None:
+                risk_state["income_monthly"] = annual_income / 12.0
+        if self._metric_value(risk_state, "investable_surplus_monthly") is None:
+            surplus = self._metric_value(risk_state, "monthly_surplus")
+            if surplus is not None:
+                risk_state["investable_surplus_monthly"] = surplus
+        if self._metric_value(risk_state, "emi_burden_monthly") is None:
+            emi = self._metric_value(risk_state, "monthly_debt_payments")
+            if emi is not None:
+                risk_state["emi_burden_monthly"] = emi
+
+        assets = self.goal_repo.get_planning_unit_assets(planning_unit_id)
+        liabilities_total = self._metric_value(financial_context, "liabilities")
+        liabilities = []
+        if liabilities_total is not None and liabilities_total > 0:
+            liabilities = [{"value": liabilities_total, "outstanding": liabilities_total}]
+
+        risk_goals = [
+            {
+                "goal_id": g.goal_id,
+                "goal_name": g.goal_name,
+                "goal_type": g.goal_type,
+                "future_target": g.future_target,
+                "current_funding": g.projected_mapped_asset_value,
+                "time_horizon_years": g.duration_years,
+            }
+            for g in ([defined_goal] if defined_goal is not None else [])
+        ]
+        risk_profile = RiskProfilerEngine().build(
+            financial_state=risk_state,
+            assets=assets,
+            liabilities=liabilities,
+            goals=risk_goals,
+        )
+
         return self.constraint_aggregator.aggregate(
             rule_assessment=rule_assessment,
+            goals=goal_inputs,
             financial_context=financial_context,
+            risk_profile_constraints=risk_profile.constraints,
             planning_unit_id=planning_unit_id,
         )
 
     def _execute(self, defined_goal: DefinedGoal, priorities: InvestorPriorities, financial_context: dict, custom_scenarios=None, planning_unit_id: str = ""):
         rule_assessment = self._rule_assessment(defined_goal, financial_context)
-        constraint_set = self._build_constraint_set(rule_assessment, financial_context, planning_unit_id)
+        constraint_set = self._build_constraint_set(rule_assessment, financial_context, planning_unit_id, defined_goal)
         if constraint_set.has_hard_failures:
             raise HTTPException(
                 status_code=422,
