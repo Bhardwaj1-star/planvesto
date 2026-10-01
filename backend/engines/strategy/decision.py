@@ -13,6 +13,7 @@ from rules.strategy_decision import (
     evaluate_decision_score,
 )
 from engines.strategy.eligibility import evaluate_eligibility, evaluate_eligibility_fits, EligibilityStatus
+from engines.constraints.models import ConstraintSet
 
 @dataclass
 class ArchitectureEvaluation:
@@ -50,7 +51,7 @@ def _canonical_goal_type(goal_type: str | None) -> str:
 def _empty(message: str) -> DecisionResult:
     return DecisionResult("", "", None, [], [], [], [message], message, "infeasible", [message])
 
-def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None) -> DecisionResult:
+def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None, constraint_set: ConstraintSet | None = None) -> DecisionResult:
     if not strategies or not architectures: return _empty("No applicable strategy available for the current goal and constraints.")
     base={"duration_years":defined_goal.duration_years,"funding_status":defined_goal.funding_status,**(financial_context or {})}
     strat_lookup={s.strategy_id:s for s in strategies}; scen_lookup={}
@@ -63,7 +64,7 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
         context=dict(base)
         context["strategy_required_monthly_contribution"]=(baseline.metrics or {}).get("required_monthly_contribution",getattr(defined_goal,"required_monthly_contribution",None))
         fit=evaluate_eligibility_fits(primary,goal=defined_goal,financial_context=context)
-        gate_ok,gate_reasons=evaluate_eligibility(primary,defined_goal,financial_context=context,rule_assessment=rule_assessment)
+        gate_ok,gate_reasons=evaluate_eligibility(primary,defined_goal,financial_context=context,rule_assessment=rule_assessment,constraint_set=constraint_set)
         status=fit.status if gate_ok else EligibilityStatus.FAIL
         reasons=list(gate_reasons)+[r.reason for r in fit.failed_fits]
         if status==EligibilityStatus.CONDITIONAL: reasons.extend(fit.required_changes)
