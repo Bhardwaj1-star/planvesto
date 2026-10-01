@@ -212,13 +212,31 @@ class FinancialPlanService:
                     "goal_name": r.get("goal_name"),
                     "goal_type": r.get("goal_type"),
                     "target_amount": float(r.get("future_target") or r.get("today_cost") or 0.0),
+                    "today_cost": r.get("today_cost"),
                     "target_date": r.get("target_date"),
-                    "strategy_run_id": "",
+                    "strategy_run_id": next(
+                        (
+                            run.strategy_run_id
+                            for run in [self.strategy_repo.get_latest_run(planning_unit_id, r.get("goal_id"))]
+                            if run and run.strategy_run_id
+                        ),
+                        None,
+                    ),
+                    "strategy_id": r.get("strategy_id"),
                     "strategy_name": r.get("strategy_name") or "Recommended Strategy",
                     "recommended_strategy_name": r.get("strategy_name") or "Recommended Strategy",
+                    "monthly_required": float(r.get("required_monthly_contribution") or 0.0),
                     "monthly_allocation": float(r.get("allocated_monthly_contribution") or 0.0),
-                    "funding_gap": float(r.get("monthly_shortfall") or 0.0),
+                    "monthly_shortfall": float(r.get("monthly_shortfall") or 0.0),
+                    "funding_gap": float(r.get("funding_gap") or 0.0),
+                    "projected_mapped_asset_value": r.get("projected_mapped_asset_value"),
+                    "funding_status": r.get("funding_status"),
+                    "feasibility_status": r.get("feasibility_status"),
+                    "available_monthly_surplus": r.get("available_monthly_surplus"),
+                    "funding_strategies": r.get("funding_strategies", []),
                     "is_feasible": r.get("feasibility_status") == "feasible",
+                    "reasons": r.get("reasons", []),
+                    "notes": r.get("notes", []),
                 }
                 for r in rows
             ],
