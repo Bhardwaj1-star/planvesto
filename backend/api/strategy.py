@@ -4,7 +4,6 @@ from api.auth import authenticate_user, verify_goal_ownership, verify_planning_u
 from models.strategy import StrategyRun
 from schemas.strategy import CustomScenarioRequest, FinancialPlanBuildRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
 from services.strategy_service import StrategyService
-from services.retirement_report_pdf_service import RetirementReportPDFService
 from services.goal_report_service import GoalReportService
 from services.financial_plan_service import FinancialPlanService
 
@@ -101,5 +100,5 @@ def get_retirement_report(strategy_run_id: str, planning_unit_id: str = Query(..
 def download_retirement_report_pdf(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
-    pdf = RetirementReportPDFService().generate(planning_unit_id, strategy_run_id)
+    pdf = GoalReportService().generate_pdf(planning_unit_id, strategy_run_id)
     return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=retirement-planning-report-{strategy_run_id}.pdf"})
