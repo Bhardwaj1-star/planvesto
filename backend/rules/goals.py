@@ -8,6 +8,7 @@ GoalPriority = Literal["critical", "high", "medium", "low"]
 GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
     "education": "education",
+    "child education": "education",
     "marriage": "marriage",
     "dream home": "home purchase",
     "home": "home purchase",
