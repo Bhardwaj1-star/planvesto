@@ -156,6 +156,19 @@ def build_goal_funding_strategies(
     step_up_residual = max(0.0, gap - step_up_future)
     step_up_lumpsum = step_up_residual / ((1.0 + float(annual_return)) ** years)
     result.append({
+        "strategy_id": "lumpsum_plus_step_up_sip",
+        "strategy_name": "Lumpsum + Step-up SIP",
+        "strategy_type": "hybrid_step_up_funding",
+        "status": "feasible" if step_up is not None else "requires_upfront_capital",
+        "required_lumpsum": round_money(step_up_lumpsum),
+        "required_monthly_contribution": round_money(required_sip),
+        "starting_monthly_contribution": round_money(surplus),
+        "annual_step_up": round(step_up, 6) if step_up is not None else 1.0,
+        "remaining_gap": round_money(step_up_residual),
+        "reason": "Uses current surplus as the starting contribution and increases it annually; upfront capital covers any residual gap." if step_up is None else "Uses current surplus as the starting contribution and increases it annually.",
+    })
+
+    result.append({
         "strategy_id": "step_up_sip",
         "strategy_name": "Step-up SIP",
         "strategy_type": "step_up_sip",
