@@ -374,7 +374,248 @@ The following are still intentionally open and should be decided one at a time:
 - Exact PDF presentation rules.
 - Exact API/report contract details.
 
-## 15. Technical Components
+## 15. Client-Facing Report Architecture
+
+The current Summary Report contract is an **internal aggregation contract**. It must not be passed directly to the PDF renderer.
+
+The required architecture is:
+
+```
+Financial Data
+     ↓
+MoneyWheel / Risk Profiler / Goal Engine / Investment Engine
+     ↓
+Summary Financial Report Service
+     ↓
+SummaryReport
+     ↓
+Client Report Interpretation Layer
+     ↓
+ClientReport
+     ↓
+PDF Renderer
+     ↓
+Investor-facing Summary Financial Planning Report
+```
+
+### 15.1 SummaryReport vs ClientReport
+
+**SummaryReport** is an internal, structured aggregation of authoritative engine outputs.
+
+**ClientReport** is the investor-facing, presentation-ready interpretation of that data.
+
+The two contracts must remain separate.
+
+The ClientReport layer may:
+
+- select relevant facts;
+- group related facts;
+- convert technical outputs into plain-language explanations;
+- generate section narratives from authoritative facts/rules;
+- prioritize observations and actions;
+- determine whether a technical metric is decision-useful;
+- preserve provenance and source ownership;
+- omit irrelevant internal fields.
+
+The ClientReport layer must not:
+
+- recalculate financial metrics;
+- create new financial rules;
+- invent thresholds;
+- invent recommendations;
+- change authoritative engine outputs;
+- expose raw internal engine objects by default;
+- expose internal scores/metadata merely because they exist in the source model.
+
+### 15.2 Required ClientReport Sections
+
+The client-facing report must support the following narrative structure:
+
+1. **Where You Stand**
+   - personalized current financial position;
+   - material financial facts;
+   - relevant derived metrics only when decision-useful;
+   - concise investor takeaway.
+
+2. **Where You Want to Go**
+   - goals;
+   - target amount;
+   - timeline;
+   - current funding;
+   - funding gap / required contribution;
+   - feasibility/context;
+   - goal-specific takeaway.
+
+3. **What Stands Between You and Your Goals**
+   - the conditions materially affecting progress;
+   - goal relevance;
+   - impact;
+   - urgency;
+   - feasibility;
+   - cross-engine context where available.
+
+4. **What Needs to Change**
+   - condition;
+   - impact on the relevant goal/decision;
+   - required change;
+   - supporting evidence/source.
+
+5. **Goal Funding**
+   - current funding;
+   - required funding/contribution;
+   - funding gap;
+   - relevant assumptions/requirements;
+   - feasibility context.
+
+6. **Investment Position**
+   - portfolio-level allocation;
+   - sub-asset allocation when available and useful;
+   - goal-specific allocation/sleeves only when materially useful;
+   - explanation of the allocation's role in the financial path.
+
+7. **Your Financial Context**
+   - current situation;
+   - goals;
+   - required return where relevant;
+   - investment position;
+   - concise explanation of how these pieces interact.
+
+8. **Decision Points**
+   - decisions the investor needs to understand or make;
+   - decision context;
+   - relevant dependency or constraint.
+
+9. **Key Observations**
+   - cross-engine;
+   - decision-relevant;
+   - prioritized;
+   - non-redundant;
+   - evidence-backed.
+
+10. **Prioritized Actions**
+    - action;
+    - reason;
+    - affected goal/decision;
+    - priority;
+    - authoritative source;
+    - no unsupported implementation advice.
+
+11. **Your Financial Path**
+    - concise synthesis of the current position;
+    - destination;
+    - major constraints;
+    - funding/investment path;
+    - immediate priorities.
+
+### 15.3 Narrative Generation Rules
+
+The ClientReport must be generated from structured facts, not hardcoded investor-specific text.
+
+Narratives should follow:
+
+**Fact → Context → Impact → Required Change → Decision/Action**
+
+The system must be able to produce different narratives for different investors from the same report contract.
+
+Investor names, values, goals, gaps, timelines, allocation, observations, and actions must all be populated dynamically from the authenticated planning state and authoritative engine outputs.
+
+No Rahul-specific values, names, wording, thresholds, or conclusions may be embedded in production code.
+
+### 15.4 Dynamic Section Selection
+
+The report is not required to display every possible field.
+
+For each section, the interpretation layer should decide:
+
+- whether the section is applicable;
+- which facts are materially relevant;
+- which technical metrics add decision value;
+- what should be emphasized;
+- what can be omitted.
+
+A section may be reduced or marked incomplete when authoritative data is unavailable.
+
+The renderer must not make business decisions about relevance. Relevance and narrative selection belong to the ClientReport interpretation layer.
+
+### 15.5 Provenance
+
+Every material observation, action, and interpreted condition should preserve its authoritative source where practical.
+
+Examples:
+
+- MoneyWheel;
+- Risk Profiler;
+- Goal Engine;
+- Investment Engine.
+
+Provenance is for system traceability and auditability. Internal source names, scores, rule IDs, and implementation metadata should not automatically appear in the investor-facing PDF.
+
+### 15.6 No Raw Engine Dump
+
+The PDF renderer must not use generic serialization such as:
+
+- dumping a complete engine result dictionary/object;
+- printing raw ratio objects;
+- printing internal source/relevance/priority metadata as client content;
+- printing a generic risk-profile object;
+- printing arbitrary Investment Engine key/value pairs.
+
+The renderer should receive ClientReport content that is already selected, interpreted, and presentation-ready.
+
+### 15.7 ClientReport Contract Requirements
+
+The ClientReport model should support, at minimum:
+
+- report metadata;
+- investor identity/display information;
+- report date/version where available;
+- executive/current-position narrative;
+- dynamic financial snapshot;
+- goal summaries;
+- goal funding narratives;
+- financial conditions;
+- required changes;
+- investment position;
+- investor context;
+- decision points;
+- key observations;
+- prioritized actions;
+- financial path/conclusion;
+- missing-data notices;
+- provenance/audit metadata.
+
+The contract should distinguish:
+
+- **fact** — authoritative value/output;
+- **interpretation** — explanation of what the fact means in context;
+- **decision point** — decision arising from the current state;
+- **action** — supported next step;
+- **missing data** — unavailable input that limits assessment.
+
+### 15.8 Renderer Responsibility
+
+The PDF renderer is a presentation component only.
+
+It should:
+
+- receive ClientReport;
+- render the defined sections;
+- format numbers, dates, tables, and narratives;
+- handle pagination;
+- handle missing/partial sections gracefully;
+- produce a professional investor-facing PDF.
+
+It should not:
+
+- call financial engines;
+- calculate ratios;
+- infer feasibility;
+- create observations/actions;
+- decide priorities;
+- translate raw engine structures;
+- contain investor-specific business logic.
+
+## 16. Technical Components
 
 Planned backend components:
 
@@ -386,7 +627,7 @@ Planned backend components:
 
 Existing PDF/download infrastructure may be reused where appropriate, but the summary report must have its own clear contract.
 
-## 16. Proposed API Surface
+## 17. Proposed API Surface
 
 ### JSON
 
@@ -402,17 +643,27 @@ Returns the downloadable PDF.
 
 Exact route naming can be finalized during implementation.
 
-## 17. Definition of Done
+## 18. Definition of Done
 
 The Summary Financial Planning Report is ready when:
 
 1. The four authoritative engines provide the required inputs.
-2. A stable summary report contract exists.
-3. The report service consumes those four outputs.
-4. No report-layer financial calculations duplicate engine logic.
-5. Investor-facing interpretation follows the locked business rules.
-6. JSON report generation works.
-7. PDF generation works.
-8. PDF download works through an authenticated API.
-9. Tests cover normal, partial-data, missing-data, and failure scenarios.
-10. Multi-Goal Orchestration and Strategy Builder are not required for this report.
+2. A stable internal SummaryReport contract exists.
+3. The report service consumes those four outputs without duplicating engine calculations.
+4. A separate ClientReport interpretation contract exists.
+5. SummaryReport is transformed into ClientReport before PDF rendering.
+6. ClientReport contains the required investor-facing sections.
+7. Investor-specific content is generated dynamically from the planning state; no Rahul/example data is hardcoded.
+8. No report-layer financial calculations duplicate engine logic.
+9. No unsupported financial rules, thresholds, recommendations, or business meaning are invented by the interpretation layer.
+10. Raw engine objects are not dumped into the client-facing PDF.
+11. Observations and actions preserve authoritative provenance.
+12. Missing/partial data is represented explicitly and does not cause fabricated content.
+13. Technical metrics are shown only when decision-useful and in context.
+14. JSON report generation works.
+15. PDF generation works from ClientReport.
+16. PDF download works through an authenticated API.
+17. Renderer tests verify section rendering, pagination, formatting, and partial-data handling.
+18. Interpretation tests verify normal, partial-data, missing-data, and unsupported-rule scenarios.
+19. The same architecture can generate materially different reports for different investors from their actual planning state.
+20. Multi-Goal Orchestration and Strategy Builder are not required for this report.
