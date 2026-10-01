@@ -8,7 +8,8 @@ from engines.goal.funding_gap import (
     calculate_funding_return_assumption,
     calculate_required_monthly_contribution,
 )
-from engines.goal.target_calculator import DEFAULT_INFLATION_RATE, calculate_duration, calculate_future_target
+from engines.goal.target_calculator import DEFAULT_INFLATION_RATE, calculate_duration, calculate_future_target, calculate_retirement_corpus
+from rules.goals import canonical_goal_type
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
 from schemas.goals import GoalInput
 
@@ -86,11 +87,33 @@ class GoalEngine:
             [m.model_dump() for m in mapped_assets]
         )
 
-        future_target = calculate_future_target(
-            today_cost=today_cost,
-            inflation_rate=inflation_rate,
-            duration_years=duration_years,
-        )
+        dynamic_details = goal_input.dynamic_details or {}
+        if canonical_goal_type(goal_input.goal_type) == "retirement":
+            current_age_raw = dynamic_details.get("currentAge", dynamic_details.get("current_age"))
+            life_expectancy_raw = dynamic_details.get("lifeExpectancy", dynamic_details.get("life_expectancy"))
+            if current_age_raw is None or life_expectancy_raw is None:
+                raise ValueError(
+                    "Retirement planning requires currentAge and lifeExpectancy in dynamic_details"
+                )
+            current_age = float(current_age_raw)
+            life_expectancy = float(life_expectancy_raw)
+            retirement_return = 0.08
+            retirement_age, retirement_years, future_target = calculate_retirement_corpus(
+                current_monthly_expense=today_cost / 12.0,
+                inflation_rate=inflation_rate,
+                years_to_retirement=duration_years,
+                current_age=current_age,
+                life_expectancy=life_expectancy,
+                retirement_return=retirement_return,
+            )
+            funding_return = retirement_return
+        else:
+            future_target = calculate_future_target(
+                today_cost=today_cost,
+                inflation_rate=inflation_rate,
+                duration_years=duration_years,
+            )
+
         funding_gap, funding_status = calculate_funding_gap(
             future_target=future_target,
             projected_mapped_asset_value=total_projected_assets,
@@ -104,11 +127,14 @@ class GoalEngine:
         metadata = {
             "asset_count": len(mapped_assets),
             "calculation_source": "GoalEngine",
-            "funding_model": "target_gap_plus_monthly_contribution",
+            "funding_model": "retirement_corpus" if canonical_goal_type(goal_input.goal_type) == "retirement" else "target_gap_plus_monthly_contribution",
             "funding_return_assumption": funding_return,
             "required_monthly_contribution": required_monthly,
-            "dynamic_details": goal_input.dynamic_details or {},
+            "dynamic_details": dynamic_details,
         }
+        if canonical_goal_type(goal_input.goal_type) == "retirement":
+            metadata["retirement_age"] = retirement_age
+            metadata["retirement_years"] = retirement_years
 
         return DefinedGoal(
             goal_id=goal_input.goal_id or "",
