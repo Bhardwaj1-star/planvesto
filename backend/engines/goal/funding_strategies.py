@@ -152,6 +152,9 @@ def build_goal_funding_strategies(
     })
 
     step_up = _solve_step_up_for_target(gap, surplus, annual_return, years)
+    step_up_future = _future_value_growing_monthly(surplus, step_up, annual_return, years) if step_up is not None else _future_value_growing_monthly(surplus, 1.0, annual_return, years)
+    step_up_residual = max(0.0, gap - step_up_future)
+    step_up_lumpsum = step_up_residual / ((1.0 + float(annual_return)) ** years)
     result.append({
         "strategy_id": "step_up_sip",
         "strategy_name": "Step-up SIP",
