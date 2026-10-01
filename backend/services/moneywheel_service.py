@@ -7,7 +7,7 @@ from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
-from rules.financial_metrics import ESSENTIAL_EXPENSE_TYPES, SHORT_TERM_LIABILITY_TYPES
+from rules.financial_metrics import ESSENTIAL_EXPENSE_TYPES
 from rules.protection import (
     calculate_required_insurance_cover,
     is_health_insurance,
@@ -17,7 +17,6 @@ from rules.protection import (
 logger = logging.getLogger(__name__)
 
 # Re-exported for backwards compatibility with tests and callers
-SHORT_TERM_LIABILITY_TYPES = SHORT_TERM_LIABILITY_TYPES
 ESSENTIAL_EXPENSE_TYPES = ESSENTIAL_EXPENSE_TYPES
 
 
@@ -63,7 +62,6 @@ class MoneywheelService:
         planning_unit_id = financial_state.planning_unit_id
         expenses = self.data_repository.get_expenses(planning_unit_id)
         assets = self.data_repository.get_assets(planning_unit_id)
-        liabilities = self.data_repository.get_liabilities(planning_unit_id)
         policies = self.data_repository.get_insurance_policies(planning_unit_id)
 
         active_asset_types = self.data_repository.get_active_asset_types()
@@ -79,9 +77,6 @@ class MoneywheelService:
             financial_assets = self._sum_assets(
                 assets, "is_financial", classifications=active_asset_types, unmapped_accumulator=unmapped_asset_types
             )
-        if short_term_liabilities is None:
-            short_term_liabilities = self._sum_liabilities(liabilities, SHORT_TERM_LIABILITY_TYPES)
-
         total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
