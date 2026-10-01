@@ -95,6 +95,7 @@ class FinancialPlanService:
 
         rows: list[dict[str, Any]] = []
         for res in multi_plan.goals:
+            defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, res.goal_id)
             rows.append({
                 "goal_id": res.goal_id,
                 "goal_name": res.goal_name,
@@ -103,6 +104,10 @@ class FinancialPlanService:
                 "client_priority": res.client_priority,
                 "resolved_priority": res.resolved_priority,
                 "target_date": res.target_date,
+                "today_cost": getattr(defined_goal, "today_cost", None),
+                "future_target": getattr(defined_goal, "future_target", None),
+                "funding_gap": getattr(defined_goal, "funding_gap", None),
+                "projected_mapped_asset_value": getattr(defined_goal, "projected_mapped_asset_value", None),
                 "required_monthly_contribution": res.required_monthly_contribution,
                 "allocated_monthly_contribution": res.allocated_monthly_contribution,
                 "monthly_shortfall": res.shortfall,
@@ -110,6 +115,8 @@ class FinancialPlanService:
                 "strategy_id": res.recommended_strategy_id,
                 "strategy_name": res.recommended_strategy_name,
                 "feasibility_status": res.feasibility_status,
+                "available_monthly_surplus": getattr(defined_goal, "available_monthly_surplus", None),
+                "funding_strategies": getattr(defined_goal, "funding_strategies", []),
                 "override_applied": res.override_applied,
                 "override_reason": res.override_reason,
                 "reasons": res.reasons,
