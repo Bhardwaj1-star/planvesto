@@ -10,10 +10,11 @@ from engines.strategy.decision import evaluate_decision
 from engines.rules.engine import RuleEngine
 from engines.constraints.aggregator import ConstraintAggregator
 from engines.constraints.models import ConstraintSet
+from engines.technique.engine import TechniqueEngine
 
 
 class StrategyEngineResult:
-    def __init__(self, applicable_strategies, scenarios, priorities, comparison_matrix, rankings, recommendation, architectures, what_if_scenarios=None):
+    def __init__(self, applicable_strategies, scenarios, priorities, comparison_matrix, rankings, recommendation, architectures, what_if_scenarios=None, technique_outputs=None):
         self.applicable_strategies = applicable_strategies
         self.scenarios = scenarios
         self.priorities = priorities
@@ -22,6 +23,7 @@ class StrategyEngineResult:
         self.recommendation = recommendation
         self.architectures = architectures
         self.what_if_scenarios = what_if_scenarios or []
+        self.technique_outputs = technique_outputs or []
 
 
 class StrategyEngine:
@@ -102,7 +104,7 @@ class StrategyEngine:
                 recommended_strategy_id="", recommended_scenario_id="", short_reasons=["No Strategy Available"],
                 complete_reasoning="No strategy in the library is eligible for the current goal and available constraints.", feasibility_status="infeasible",
             )
-            return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [], [])
+            return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [], [], [])
 
         all_scenarios: list[Scenario] = []
         for strategy in strategies:
@@ -117,6 +119,19 @@ class StrategyEngine:
         strategy_context = self._decision_context(financial_context, constraint_set, rule_assessment)
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         architectures = compose_architectures(strategies, defined_goal, strategy_context)
+
+        # Execute canonical techniques after architecture composition. Strategy
+        # selection decides which techniques are applicable; TechniqueEngine
+        # calculates their deterministic implementation outputs.
+        technique_ids = [
+            technique_id
+            for architecture in architectures
+            for technique_id in architecture.technique_ids
+        ]
+        technique_outputs = [
+            result.model_dump()
+            for result in TechniqueEngine().execute_many(technique_ids, defined_goal)
+        ]
 
         decision_result = evaluate_decision(
             strategies=strategies,
@@ -151,4 +166,4 @@ class StrategyEngine:
             rule_diagnostics=strategy_context["rule_diagnostics"],
         )
 
-        return StrategyEngineResult(strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures, what_if_scenarios)
+        return StrategyEngineResult(strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures, what_if_scenarios, technique_outputs)
