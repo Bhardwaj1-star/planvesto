@@ -281,6 +281,14 @@ class GoalReportService:
             },
             "goal_calculation": goal_calculation,
             "feasibility": funding,
+            # Compatibility aliases retained for consumers of the earlier
+            # complete Goal Report contract.
+            "goal_funding": funding,
+            "goal_context": {
+                "priority": self._get(goal, "priority"),
+                "flexibility": self._get(goal, "flexibility"),
+                "status": self._get(goal, "status"),
+            },
             "mapped_assets": self._mapped_assets(goal),
             "investor_priorities": self._dump(self._get(run, "investor_priorities", {})),
             "strategy": {
@@ -381,6 +389,81 @@ class GoalReportService:
 
     def generate_pdf(self, planning_unit_id: str, strategy_run_id: str) -> bytes:
         report = self.build_report(planning_unit_id, strategy_run_id)
+
+        # Accept the earlier complete-report contract as well as the current
+        # canonical nested contract. This keeps the PDF endpoint backward
+        # compatible while the JSON contract remains canonical.
+        if "goal" not in report:
+            goal_name = report.get("goal_name") or "Financial Goal"
+            goal_type = report.get("goal_type")
+            goal_context = report.get("goal_context") or {}
+            goal_calculation = report.get("goal_calculation") or {}
+            funding = report.get("goal_funding") or report.get("feasibility") or {}
+            selected_strategy_id = report.get("selected_strategy_id")
+            strategy_data = report.get("strategy") or {}
+            architecture = strategy_data.get("architecture") or {}
+            report = {
+                "report_type": "goal_decision_report",
+                "report_version": str(report.get("report_version") or "1.0"),
+                "goal": {
+                    "id": report.get("goal_id"),
+                    "name": goal_name,
+                    "type": goal_type,
+                    "priority": goal_context.get("priority"),
+                    "flexibility": goal_context.get("flexibility"),
+                    "status": goal_context.get("status"),
+                    "defined_goal_version": report.get("defined_goal_version", 1),
+                    "target_month": goal_calculation.get("target_month"),
+                    "target_year": goal_calculation.get("target_year"),
+                    "duration_years": goal_calculation.get("duration_years"),
+                },
+                "financial_state": report.get("financial_state") or {},
+                "goal_calculation": goal_calculation,
+                "feasibility": funding,
+                "mapped_assets": report.get("mapped_assets") or [],
+                "investor_priorities": report.get("investor_priorities") or {},
+                "strategy": {
+                    "selected_strategy_id": selected_strategy_id,
+                    "selected_strategy_name": strategy_data.get("name") or selected_strategy_id,
+                    "selected_scenario_id": report.get("selected_scenario_id"),
+                    "selected_scenario": None,
+                    "architecture": architecture,
+                    "rationale": strategy_data.get("objective") or "",
+                    "short_reasons": (report.get("recommendation") or {}).get("short_reasons", []),
+                    "constraints": [],
+                    "technique_execution": report.get("technique_execution") or [],
+                },
+                "alternatives": report.get("alternatives") or [],
+                "scenarios": report.get("scenarios") or [],
+                "what_if_analysis": report.get("what_if_analysis") or [],
+                "trade_off_analysis": [
+                    {"trade_off": value}
+                    for value in (strategy_data.get("trade_offs") or [])
+                ],
+                "technique_execution": report.get("technique_execution") or [],
+                "assumptions": {
+                    "goal_assumptions": {
+                        "inflation_rate": goal_calculation.get("inflation_rate"),
+                        "funding_return_assumption": goal_calculation.get("funding_return_assumption"),
+                    },
+                    "scenario_assumptions": [],
+                },
+                "decision": {
+                    "status": "investor_decision_required",
+                    "selected_strategy_id": selected_strategy_id,
+                    "selected_scenario_id": report.get("selected_scenario_id"),
+                    "selected_architecture_id": architecture.get("architecture_id"),
+                    "implementation_parameters": {},
+                    "selection_timestamp": None,
+                },
+                "provenance": {
+                    "strategy_run_id": strategy_run_id,
+                    "run_version": report.get("run_version", 1),
+                    "status": report.get("status", "completed"),
+                    "defined_goal_version": report.get("defined_goal_version", 1),
+                },
+            }
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
@@ -486,7 +569,7 @@ class GoalReportService:
             story.append(Spacer(1, 6))
             story.append(Paragraph("Constraints: " + "; ".join(map(str, strategy["constraints"])), styles["BodyText"]))
 
-        self._section(story, "8. What-If Analysis", styles)
+        self._section(story, "9. What-If Analysis", styles)
         what_ifs = report["what_if_analysis"]
         if what_ifs:
             rows = [["Scenario", "Strategy", "Selected", "Funding / Changes", "Outcomes", "Trade-off"]]
@@ -503,13 +586,13 @@ class GoalReportService:
         else:
             story.append(Paragraph("No stored what-if scenarios are available.", styles["BodyText"]))
 
-        self._section(story, "9. Trade-offs", styles)
+        self._section(story, "10. Trade-offs", styles)
         for item in report["trade_off_analysis"]:
             story.append(Paragraph(f"• {item['trade_off']}", styles["BodyText"]))
         if not report["trade_off_analysis"]:
             story.append(Paragraph(self.MISSING, styles["BodyText"]))
 
-        self._section(story, "10. Alternatives", styles)
+        self._section(story, "11. Alternatives", styles)
         alternatives = report["alternatives"]
         if alternatives:
             rows = [["Strategy", "Scenario", "Eligible", "Score", "Dimensions", "Reasons"]]
@@ -526,7 +609,7 @@ class GoalReportService:
         else:
             story.append(Paragraph("No alternative strategies were recorded.", styles["BodyText"]))
 
-        self._section(story, "11. Assumptions & Evidence", styles)
+        self._section(story, "12. Assumptions & Evidence", styles)
         assumptions = report["assumptions"]
         story.append(self._table([
             ["Source", "Value"],
@@ -536,7 +619,7 @@ class GoalReportService:
             ["Investor priorities", str(report["investor_priorities"])],
         ], [180, 345]))
 
-        self._section(story, "12. Decision", styles)
+        self._section(story, "13. Decision", styles)
         decision = report["decision"]
         story.append(self._table([
             ["Decision item", "Current state"],
@@ -548,7 +631,7 @@ class GoalReportService:
             ["Selection timestamp", str(decision.get("selection_timestamp") or self.MISSING)],
         ], [210, 315]))
 
-        self._section(story, "13. Data Provenance", styles)
+        self._section(story, "14. Data Provenance", styles)
         story.append(self._table([
             ["Field", "Value"],
             ["Strategy run", str(report["provenance"]["strategy_run_id"])],
