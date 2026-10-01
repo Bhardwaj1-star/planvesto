@@ -46,6 +46,7 @@ class DefinedGoal(BaseModel):
     available_monthly_surplus: float | None = None
     monthly_contribution_surplus_gap: float | None = None
     feasibility_reason: str | None = None
+    funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
     version_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
 
