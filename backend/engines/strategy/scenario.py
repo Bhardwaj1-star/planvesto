@@ -2,6 +2,7 @@ import uuid
 from typing import Any
 from engines.goal.funding_gap import calculate_funding_return_assumption, calculate_required_monthly_contribution
 from engines.goal.target_calculator import calculate_future_target
+from engines.goal.funding_strategies import build_goal_funding_strategies
 from models.defined_goal import DefinedGoal
 from models.strategy import Scenario, StrategyDefinition
 
