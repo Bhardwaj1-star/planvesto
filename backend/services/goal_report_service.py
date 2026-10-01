@@ -115,6 +115,34 @@ class GoalReportService:
         rows = [["Item", "Value"]] + [[key.replace("_", " ").title(), str(value)] for key, value in calc.items() if value is not None]
         if len(rows) > 1:
             story.extend([Paragraph("Goal Calculation", styles["Heading2"]), self._table(rows), Spacer(1, 16)])
+        funding = report.get("goal_funding", {})
+        story.append(Paragraph("Goal Funding & Feasibility", styles["Heading2"]))
+        funding_rows = [["Item", "Value"]]
+        for key, value in funding.items():
+            if key == "funding_strategies":
+                continue
+            if value is not None:
+                funding_rows.append([key.replace("_", " ").title(), str(value)])
+        story.extend([self._table(funding_rows), Spacer(1, 16)])
+
+        funding_strategies = funding.get("funding_strategies", [])
+        if funding_strategies:
+            story.append(Paragraph("Funding Strategy Alternatives", styles["Heading2"]))
+            strategy_rows = [["Strategy", "Status", "Lumpsum", "Monthly", "Starting Monthly", "Step-up", "Remaining Gap"]]
+            for item in funding_strategies:
+                strategy_rows.append([
+                    str(item.get("strategy_name") or item.get("strategy_id") or "—"),
+                    str(item.get("status") or "—"),
+                    str(item.get("required_lumpsum") if item.get("required_lumpsum") is not None else "—"),
+                    str(item.get("required_monthly_contribution") if item.get("required_monthly_contribution") is not None else "—"),
+                    str(item.get("starting_monthly_contribution") if item.get("starting_monthly_contribution") is not None else "—"),
+                    str(item.get("annual_step_up") if item.get("annual_step_up") is not None else "—"),
+                    str(item.get("remaining_gap") if item.get("remaining_gap") is not None else "—"),
+                ])
+            table = Table(strategy_rows, colWidths=[100, 65, 65, 70, 80, 60, 70], repeatRows=1)
+            table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("PADDING", (0, 0), (-1, -1), 5)]))
+            story.extend([table, Spacer(1, 16)])
+
         mapped_assets = report.get("mapped_assets", [])
         if mapped_assets:
             story.append(Paragraph("Goal-Funding Assets", styles["Heading2"]))
