@@ -247,6 +247,18 @@ class FinancialPlanService:
                 "total_actions": len(action_items),
             },
             "trade_offs": multi_plan.trade_offs,
+            "constraints": [
+                entry
+                for audit in multi_plan.audit_trail
+                if audit.get("source") == "ConstraintAggregator"
+                for entry in (audit.get("canonical_constraint_set", {}).get("constraints") or [])
+            ],
+            "constraint_conflicts": [
+                entry
+                for audit in multi_plan.audit_trail
+                if audit.get("source") == "ConstraintAggregator"
+                for entry in (audit.get("canonical_constraint_set", {}).get("conflicts") or [])
+            ],
             "audit_trail": multi_plan.audit_trail,
             "planning_notes": multi_plan.planning_notes,
         }
