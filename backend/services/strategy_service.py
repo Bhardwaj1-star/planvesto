@@ -67,10 +67,23 @@ class StrategyService:
 
     def _execute(self, defined_goal: DefinedGoal, priorities: InvestorPriorities, financial_context: dict, custom_scenarios=None, planning_unit_id: str = ""):
         rule_assessment = self._rule_assessment(defined_goal, financial_context)
-        if not rule_assessment.eligible:
-            raise HTTPException(status_code=422, detail={"message": "Goal failed hard planning constraints.", "constraints": [r.__dict__ for r in rule_assessment.hard_constraints]})
         constraint_set = self._build_constraint_set(rule_assessment, financial_context, planning_unit_id)
-        return self.engine.execute(defined_goal=defined_goal, priorities=priorities, custom_scenarios=custom_scenarios, financial_context=financial_context, rule_assessment=rule_assessment), rule_assessment, constraint_set
+        if constraint_set.has_hard_failures:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Goal failed hard planning constraints.",
+                    "constraints": [c.model_dump() for c in constraint_set.hard_constraints],
+                },
+            )
+        return self.engine.execute(
+            defined_goal=defined_goal,
+            priorities=priorities,
+            custom_scenarios=custom_scenarios,
+            financial_context=financial_context,
+            rule_assessment=rule_assessment,
+            constraint_set=constraint_set,
+        ), rule_assessment, constraint_set
 
     def build_strategy(self, planning_unit_id: str, goal_id: str, priorities: InvestorPriorities | None = None) -> StrategyRun:
         defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
