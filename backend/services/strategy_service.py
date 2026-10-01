@@ -48,9 +48,10 @@ class StrategyService:
         expenses_annual = self._metric_value(state, "expenses_annual")
         surplus_monthly = self._metric_value(state, "investable_surplus_monthly")
         assets = self._metric_value(state, "total_assets")
+        financial_assets = self._metric_value(state, "financial_assets")
         liabilities = self._metric_value(state, "total_liabilities")
         net_worth = self._metric_value(state, "net_worth")
-        context.update({"annual_income": income_annual, "income": income_annual, "annual_expenses": expenses_annual, "expenses": expenses_annual, "monthly_surplus": surplus_monthly, "surplus": surplus_monthly, "financial_assets": assets, "assets": assets, "liabilities": liabilities, "net_worth": net_worth, "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0)})
+        context.update({"annual_income": income_annual, "income": income_annual, "annual_expenses": expenses_annual, "expenses": expenses_annual, "monthly_surplus": surplus_monthly, "surplus": surplus_monthly, "financial_assets": financial_assets, "assets": assets, "liabilities": liabilities, "net_worth": net_worth, "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0)})
         return context
 
     def _rule_assessment(self, defined_goal: DefinedGoal, financial_context: dict):
