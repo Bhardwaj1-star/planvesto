@@ -120,6 +120,7 @@ class StrategyArchitecture(BaseModel):
 class Scenario(BaseModel):
     scenario_id: str
     strategy_id: str
+    funding_strategy_id: str | None = None
     scenario_type: Literal["baseline", "modified", "custom"] = "baseline"
     scenario_name: str
     assumptions: dict[str, Any] = Field(default_factory=dict)
