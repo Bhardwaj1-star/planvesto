@@ -147,6 +147,57 @@ def adapt_ratio_assessment(assessment: RatioConstraintAssessment) -> list[Canoni
 
 
 # ---------------------------------------------------------------------------
+# 3. MoneywheelEngine result -> CanonicalConstraint
+# ---------------------------------------------------------------------------
+
+def adapt_moneywheel_result(result) -> list[CanonicalConstraint]:
+    """Preserve authoritative MoneyWheel outputs as canonical evidence.
+
+    MoneyWheel calculates the ratios/rules; explicit pass/fail policy remains
+    owned by the constraint evaluator, so diagnostic ratios do not become
+    blocking constraints merely because their status is critical.
+    """
+    constraints: list[CanonicalConstraint] = []
+    for ratio in getattr(result, "ratios", []) or []:
+        if not getattr(ratio, "available", True):
+            continue
+        constraints.append(CanonicalConstraint(
+            constraint_id=f"moneywheel-{ratio.key}",
+            rule_id=f"MONEYWHEEL_{ratio.key.upper()}",
+            domain="financial_ratio",
+            source="moneywheel",
+            source_engine="MoneywheelEngine",
+            severity="info",
+            role="explanatory_evidence",
+            kind="diagnostic",
+            passed=True,
+            message=ratio.explanation,
+            value=ratio.value,
+            unit=ratio.unit,
+            evidence={"status": ratio.status, "formula": ratio.formula},
+        ))
+    for rule in getattr(result, "rules", []) or []:
+        if not getattr(rule, "available", True):
+            continue
+        constraints.append(CanonicalConstraint(
+            constraint_id=f"moneywheel-rule-{rule.key}",
+            rule_id=f"MONEYWHEEL_{rule.key.upper()}",
+            domain="financial_ratio",
+            source="moneywheel",
+            source_engine="MoneywheelEngine",
+            severity="info",
+            role="explanatory_evidence",
+            kind="diagnostic",
+            passed=True,
+            message=rule.explanation,
+            value=rule.value,
+            unit=rule.unit,
+            evidence={"formula": rule.formula},
+        ))
+    return constraints
+
+
+# ---------------------------------------------------------------------------
 # 3. RiskProfilerEngine constraints (dict-based) -> CanonicalConstraint
 # ---------------------------------------------------------------------------
 
