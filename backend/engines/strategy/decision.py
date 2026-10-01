@@ -11,6 +11,7 @@ from rules.strategy_decision import (
     calculate_goal_fit_score,
     calculate_horizon_fit_score,
     evaluate_decision_score,
+    calculate_technique_execution_score,
 )
 from engines.strategy.eligibility import evaluate_eligibility, evaluate_eligibility_fits, EligibilityStatus
 from engines.constraints.models import ConstraintSet
@@ -52,7 +53,7 @@ def _canonical_goal_type(goal_type: str | None) -> str:
 def _empty(message: str) -> DecisionResult:
     return DecisionResult("", "", None, [], [], [], [message], message, "infeasible", [message])
 
-def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None, constraint_set: ConstraintSet | None = None) -> DecisionResult:
+def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None, constraint_set: ConstraintSet | None = None, technique_outputs: list[dict[str, Any]] | None = None) -> DecisionResult:
     if not strategies or not architectures: return _empty("No applicable strategy available for the current goal and constraints.")
     base={"duration_years":defined_goal.duration_years,"funding_status":defined_goal.funding_status,**(financial_context or {})}
     strat_lookup={s.strategy_id:s for s in strategies}
@@ -77,6 +78,7 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
             enumerate(variants),
             key=lambda pair: (_scenario_status_score(pair[1]), -pair[0]),
         )[1]
+    technique_by_id = {item.get("technique_id"): item for item in (technique_outputs or [])}
     evaluations=[]
     for arch in architectures:
         primary=strat_lookup.get(arch.primary_strategy_id)
@@ -111,6 +113,8 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
         funding_score = calculate_funding_fit_score(funding, context.get("total_liabilities", 0), primary.strategy_id)
         feasibility = calculate_feasibility_score(status)
         component = calculate_component_score(arch.rationale, arch.supporting_strategy_ids)
+        arch_techniques = [technique_by_id[tid] for tid in arch.technique_ids if tid in technique_by_id]
+        technique_score = calculate_technique_execution_score(arch_techniques)
         score = evaluate_decision_score(
             status=status,
             goal_fit_score=goal_fit,
@@ -118,6 +122,7 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
             funding_fit_score=funding_score,
             feasibility_score=feasibility,
             component_fit_score=component,
+            technique_execution_score=technique_score,
         )
         rationale=[] if status==EligibilityStatus.FAIL else [f"Goal-specific eligibility evaluated for {defined_goal.goal_name}."]
         if status==EligibilityStatus.CONDITIONAL: rationale.append("Strategy requires the listed changes before implementation.")
@@ -146,6 +151,11 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
             "eligibility_status":status.value,
             "fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results],
             "scenario_evaluations": scenario_evaluations,
+            "technique_execution": {
+                "technique_ids": list(arch.technique_ids),
+                "results": arch_techniques,
+                "execution_score": technique_score,
+            },
         }
         evaluations.append(ArchitectureEvaluation(
             arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,
