@@ -7,8 +7,8 @@ GoalPriority = Literal["critical", "high", "medium", "low"]
 
 GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
-    "education": "child education",
-    "marriage": "child marriage",
+    "education": "education",
+    "marriage": "marriage",
     "dream home": "home purchase",
     "home": "home purchase",
     "car": "vehicle",
@@ -39,7 +39,7 @@ ESSENTIAL_GOAL_TYPES: set[str] = {
 
 
 def canonical_goal_type(value: str | None) -> str:
-    """Normalize goal type strings by removing spacing and looking up aliases."""
+    """Normalize goal type strings without changing their business meaning."""
     clean = (value or "").strip().lower()
     clean = clean.replace(" / ", "/")
     return GOAL_TYPE_ALIASES.get(clean, clean)
