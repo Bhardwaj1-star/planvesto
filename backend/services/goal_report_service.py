@@ -11,6 +11,7 @@ from reportlab.lib import colors
 
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
+from data.financial_state_repository import FinancialStateSnapshotRepository
 
 
 class GoalReportService:
@@ -197,7 +198,6 @@ class GoalReportService:
                 }
             )
         return rows
-
     @classmethod
     def _trade_offs(cls, run: Any) -> list[dict[str, Any]]:
         architecture = cls._get(run, "selected_architecture")
@@ -397,8 +397,7 @@ class GoalReportService:
                 Paragraph(
                     f"Goal type: {self._label(goal.get('type'))} | "
                     f"Run: {report['provenance']['strategy_run_id']} | "
-                    f"Version: {report['provenance']['run_version']}",
-                    styles["BodyText"],
+                    f"Version: {report['provenance']['run_version']}",                    styles["BodyText"],
                 ),
                 Spacer(1, 12),
             ]
