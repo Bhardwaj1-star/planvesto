@@ -58,7 +58,6 @@ class MoneywheelService:
         *,
         essential_monthly_expenses: float | None = None,
         liquid_assets: float | None = None,
-        short_term_liabilities: float | None = None,
         financial_assets: float | None = None,
     ) -> MoneywheelResult:
         planning_unit_id = financial_state.planning_unit_id
@@ -117,15 +116,14 @@ class MoneywheelService:
             financial_state,
             essential_monthly_expenses=essential_monthly_expenses,
             liquid_assets=liquid_assets,
-            short_term_liabilities=short_term_liabilities,
             financial_assets=financial_assets,
-            existing_sum_assured=total_sum_assured,
-            required_insurance_cover=required_insurance_cover,
         )
         data.current_goal_funding = current_goal_funding
         data.goal_target_amount = goal_target_amount
         data.projected_goal_funding = projected_goal_funding
         data.future_goal_target = future_goal_target
+        data.existing_sum_assured = total_sum_assured
+        data.required_insurance_cover = required_insurance_cover
 
         debug_metadata = {
             "unmapped_asset_types": sorted(list(unmapped_asset_types)),
