@@ -24,8 +24,8 @@ class GoalService:
         return {r["asset_id"]: r for r in rows}
 
     def _enrich_retirement_context(self, request: GoalInput | GoalCalculateRequest) -> None:
-        if request.goal_type != "Retirement / Financial Freedom":
-            return
+        # Goal calculation is generic across all goal types; no goal type selects a specialized calculator.
+        return
         details = dict(request.dynamic_details or {})
         if details.get("currentAge") is not None or details.get("current_age") is not None:
             return
