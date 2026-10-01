@@ -61,7 +61,14 @@ class GoalService:
         This is a planning feasibility check, not a strategy or product decision.
         The financial-state snapshot is the source of the available surplus.
         """
-        row = self.financial_state_repository.get_latest(defined_goal.planning_unit_id, "family")
+        try:
+            row = self.financial_state_repository.get_latest(defined_goal.planning_unit_id, "family")
+        except Exception as exc:
+            logger.warning(
+                "Financial-state snapshot unavailable for goal feasibility: %s",
+                exc,
+            )
+            row = None
         state = row.get("financial_state") if row else None
         if hasattr(state, "model_dump"):
             state = state.model_dump()
