@@ -22,7 +22,7 @@ def validate_strategy_library(strategies: list[StrategyDefinition] | None = None
 
 
 def get_active_strategies() -> list[StrategyDefinition]:
-    return [strategy for strategy in STRATEGY_CATALOG if strategy.active]
+    return [strategy for strategy in CANONICAL_STRATEGIES if strategy.active]
 
 
 LEGACY_ALIASES: dict[str, str] = {
