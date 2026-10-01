@@ -41,6 +41,48 @@ def generate_baseline_scenarios(
     mapped = [m.model_dump() for m in defined_goal.mapped_assets]
     funding_return = calculate_funding_return_assumption(mapped)
 
+    if strategy.strategy_id == "strat-goal-funding":
+        variants = build_goal_funding_strategies(
+            funding_gap=defined_goal.funding_gap,
+            annual_return=funding_return,
+            duration_years=defined_goal.duration_years,
+            available_monthly_surplus=defined_goal.available_monthly_surplus,
+        )
+        return [
+            Scenario(
+                scenario_id=f"scen-{strategy.strategy_id}-{variant['strategy_id']}",
+                strategy_id=strategy.strategy_id,
+                funding_strategy_id=variant["strategy_id"],
+                scenario_type="baseline",
+                scenario_name=f"{strategy.name} — {variant['strategy_name']}",
+                assumptions={
+                    "inflation_rate": defined_goal.inflation_rate,
+                    "duration_years": defined_goal.duration_years,
+                    "market_condition": "Normalized Base Case",
+                },
+                funding_structure=variant,
+                metrics={
+                    "safety_score": strategy.baseline_safety_score,
+                    "liquidity_score": strategy.baseline_liquidity_score,
+                    "growth_score": strategy.baseline_growth_score,
+                    "flexibility_score": strategy.baseline_flexibility_score,
+                    "funding_status_context": defined_goal.funding_status,
+                    "funding_strategy_status": variant.get("status"),
+                    "funding_gap": variant.get("remaining_gap", defined_goal.funding_gap),
+                    "required_monthly_contribution": variant.get("required_monthly_contribution", 0.0),
+                    "required_lumpsum": variant.get("required_lumpsum", 0.0),
+                    "starting_monthly_contribution": variant.get("starting_monthly_contribution", 0.0),
+                    "annual_step_up": variant.get("annual_step_up", 0.0),
+                    "funding_return_assumption": round(funding_return, 6),
+                    "probability_of_success": None,
+                    "success_probability_method": "not_estimated",
+                },
+                trade_off_notes=variant.get("reason", ""),
+                is_investor_modified=False,
+            )
+            for variant in variants
+        ]
+
     standard_metrics = {
         "safety_score": strategy.baseline_safety_score,
         "liquidity_score": strategy.baseline_liquidity_score,
