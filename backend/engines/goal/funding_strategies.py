@@ -1,6 +1,14 @@
 from typing import Any
 
 from engines.calculation.engine import round_money
+from library.strategies.variants import get_canonical_strategy_variant
+
+
+def _variant(variant_id: str) -> dict[str, str]:
+    definition = get_canonical_strategy_variant(variant_id)
+    if definition is None:
+        raise ValueError(f"Unknown canonical strategy variant: {variant_id}")
+    return {"strategy_id": definition.variant_id, "strategy_name": definition.name, "strategy_type": definition.variant_type}
 
 
 def _future_value_lumpsum(amount: float, annual_return: float, years: float) -> float:
@@ -70,9 +78,7 @@ def build_goal_funding_strategies(
 
     if gap <= 0:
         return [{
-            "strategy_id": "existing_assets",
-            "strategy_name": "Existing Assets",
-            "strategy_type": "existing_asset_funding",
+            **_variant("existing_assets"),
             "status": "feasible",
             "required_lumpsum": 0.0,
             "required_monthly_contribution": 0.0,
@@ -85,9 +91,7 @@ def build_goal_funding_strategies(
     if years <= 0:
         lumpsum = round_money(gap)
         return [{
-            "strategy_id": "lumpsum",
-            "strategy_name": "Lumpsum",
-            "strategy_type": "lumpsum",
+            **_variant("lumpsum"),
             "status": "requires_upfront_capital",
             "required_lumpsum": lumpsum,
             "required_monthly_contribution": 0.0,
@@ -109,9 +113,7 @@ def build_goal_funding_strategies(
     sip_fit = required_sip <= surplus + 0.01
 
     result.append({
-        "strategy_id": "sip",
-        "strategy_name": "SIP",
-        "strategy_type": "sip",
+        **_variant("sip"),
         "status": "feasible" if sip_fit else "constrained",
         "required_lumpsum": 0.0,
         "required_monthly_contribution": round_money(required_sip),
@@ -139,9 +141,7 @@ def build_goal_funding_strategies(
     residual_after_sip = max(0.0, gap - sip_future)
     mixed_lumpsum = residual_after_sip / ((1.0 + float(annual_return)) ** years)
     result.append({
-        "strategy_id": "lumpsum_plus_sip",
-        "strategy_name": "Lumpsum + SIP",
-        "strategy_type": "hybrid_funding",
+        **_variant("lumpsum_plus_sip"),
         "status": "feasible" if residual_after_sip <= 0.01 else "requires_upfront_capital",
         "required_lumpsum": round_money(mixed_lumpsum),
         "required_monthly_contribution": round_money(surplus),
@@ -156,9 +156,7 @@ def build_goal_funding_strategies(
     step_up_residual = max(0.0, gap - step_up_future)
     step_up_lumpsum = step_up_residual / ((1.0 + float(annual_return)) ** years)
     result.append({
-        "strategy_id": "lumpsum_plus_step_up_sip",
-        "strategy_name": "Lumpsum + Step-up SIP",
-        "strategy_type": "hybrid_step_up_funding",
+        **_variant("lumpsum_plus_step_up_sip"),
         "status": "feasible" if step_up is not None else "requires_upfront_capital",
         "required_lumpsum": round_money(step_up_lumpsum),
         "required_monthly_contribution": round_money(required_sip),
@@ -169,9 +167,7 @@ def build_goal_funding_strategies(
     })
 
     result.append({
-        "strategy_id": "step_up_sip",
-        "strategy_name": "Step-up SIP",
-        "strategy_type": "step_up_sip",
+        **_variant("step_up_sip"),
         "status": "feasible" if step_up is not None else "constrained",
         "required_lumpsum": 0.0,
         "required_monthly_contribution": round_money(required_sip),
