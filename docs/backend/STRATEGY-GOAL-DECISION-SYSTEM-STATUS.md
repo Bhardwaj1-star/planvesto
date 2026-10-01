@@ -1153,7 +1153,7 @@ The individual goal report and consolidated financial plan should remain separat
 - GoalReportService
 - JSON report model/output
 - PDF report generation
-- 13-section report
+- 15-section report including Technique Execution Evidence
 - funding solutions
 - strategy architecture
 - alternatives
@@ -1173,6 +1173,10 @@ The individual goal report and consolidated financial plan should remain separat
 - goal report PDF
 - financial plan PDF
 - summary report routes
+
+### Technique Execution
+
+`backend/engines/technique/engine.py` is now the executable technique layer. All 10 canonical techniques have explicit handlers. Techniques that require unavailable domain inputs return `insufficient_inputs` rather than inventing data. Technique execution is persisted in existing `run_metadata` and contributes a bounded implementation-readiness evidence signal to decision evaluation.
 
 ### Tests
 
