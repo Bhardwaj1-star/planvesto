@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 InvestmentPlanningStatus = Literal["ready", "requires_review"]
 
 class InvestmentEngineInput(BaseModel):
-    risk_profile: dict[str, Any]
+    risk_profile: dict[str, Any] | Any
     financial_state: dict[str, Any] = Field(default_factory=dict)
     goals: list[dict[str, Any]] = Field(default_factory=list)
     current_portfolio: dict[str, Any] = Field(default_factory=dict)

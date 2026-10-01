@@ -37,6 +37,20 @@ class BehavioralRules:
         if not evidence:
             raise ValueError("Behavioral observations require evidence")
 
+        valid_from = observation.get("valid_from")
+        valid_until = observation.get("valid_until")
+        validity = observation.get("validity")
+        if not isinstance(validity, dict):
+            validity = {"valid_from": valid_from, "valid_until": valid_until, "status": "valid"}
+        else:
+            valid_from = valid_from or validity.get("valid_from")
+            valid_until = valid_until or validity.get("valid_until")
+
+        confidence = observation.get("confidence")
+        if confidence is None:
+            from engines.profile.constraints import ConstraintRules
+            confidence = ConstraintRules.confidence("observed_behavior", len(evidence))
+
         return {
             "key": observation["key"],
             "value": observation["value"],
@@ -45,9 +59,10 @@ class BehavioralRules:
             "source": "observed_behavior",
             "dimension": dimension,
             "evidence": evidence,
-            "confidence": observation.get("confidence"),
-            "valid_from": observation.get("valid_from"),
-            "valid_until": observation.get("valid_until"),
+            "confidence": confidence,
+            "validity": validity,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
             "downstream_use": PRODUCT_SELECTION_ONLY,
         }
 

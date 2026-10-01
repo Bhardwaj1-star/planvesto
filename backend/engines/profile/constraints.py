@@ -20,6 +20,17 @@ class ConstraintRules:
 
     @staticmethod
     def normalize(item: dict[str, Any], source: ConstraintSource) -> dict[str, Any]:
+        valid_from = item.get("valid_from")
+        valid_until = item.get("valid_until")
+        validity = item.get("validity")
+        if not isinstance(validity, dict):
+            validity = {"valid_from": valid_from, "valid_until": valid_until, "status": "valid"}
+        else:
+            valid_from = valid_from or validity.get("valid_from")
+            valid_until = valid_until or validity.get("valid_until")
+        confidence = item.get("confidence")
+        if confidence is None:
+            confidence = ConstraintRules.confidence(source, len(item.get("evidence", [])))
         return {
             "key": item["key"],
             "value": item["value"],
@@ -27,8 +38,10 @@ class ConstraintRules:
             "kind": item.get("kind", "soft"),
             "source": source,
             "evidence": item.get("evidence", []),
-            "valid_from": item.get("valid_from"),
-            "valid_until": item.get("valid_until"),
+            "confidence": confidence,
+            "validity": validity,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
         }
 
     @staticmethod
