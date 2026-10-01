@@ -146,7 +146,7 @@ class GoalReportService:
 
         context_rows = [
             ["Planning Item", "Plan"],
-            ["Goal Type", str(report.get("goal_type") or "Vacation / Travel")],
+            ["Goal Type", str(report.get("goal_type") or "Financial Goal")],
             ["Goal Priority", str(report["goal_context"].get("priority") or "Not available")],
             ["Goal Flexibility", str(report["goal_context"].get("flexibility") or "Not available")],
             ["Target Date", f"{report['goal_calculation'].get('target_month')}/{report['goal_calculation'].get('target_year')}"],
@@ -288,7 +288,7 @@ class GoalReportService:
         self._section(story, "11. Report Context", styles)
         story.append(Paragraph(
             "This report uses the same generic Goal Engine and Goal Funding architecture used "
-            "for other supported financial goals. Vacation is a goal type, not a separate calculation engine.",
+            "for other supported financial goals. The goal type is classification, not a separate calculation engine.",
             styles["BodyText"],
         ))
 
