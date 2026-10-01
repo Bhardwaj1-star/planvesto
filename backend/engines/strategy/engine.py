@@ -8,6 +8,8 @@ from engines.strategy.scenario import generate_baseline_scenarios
 from engines.strategy.composition import compose_architectures
 from engines.strategy.decision import evaluate_decision
 from engines.rules.engine import RuleEngine
+from engines.constraints.aggregator import ConstraintAggregator
+from engines.constraints.models import ConstraintSet
 
 
 class StrategyEngineResult:
@@ -23,8 +25,30 @@ class StrategyEngineResult:
 
 class StrategyEngine:
     @staticmethod
-    def _decision_context(financial_context: dict | None, rule_assessment=None) -> dict:
+    def _decision_context(financial_context: dict | None, constraint_set: ConstraintSet | None = None, rule_assessment=None) -> dict:
         context = dict(financial_context or {})
+        if constraint_set is not None:
+            constraints = constraint_set.constraints
+            context["canonical_constraints"] = [c.model_dump() for c in constraints]
+            context["constraint_conflicts"] = [c.model_dump() for c in constraint_set.conflicts]
+            context["rule_diagnostics"] = [
+                {
+                    "rule_id": c.rule_id,
+                    "passed": c.passed,
+                    "severity": c.severity,
+                    "message": c.message,
+                    "evidence": c.evidence,
+                    "role": c.role,
+                }
+                for c in constraints
+                if c.role in {"recommendation_only", "explanatory_evidence"}
+            ]
+            context["decision_roles"] = {
+                "eligibility": [c.rule_id for c in constraint_set.hard_constraints],
+                "ranking": [c.rule_id for c in constraints if c.role == "ranking_input"],
+                "recommendation": [c.rule_id for c in constraints if c.role in {"recommendation_only", "explanatory_evidence"}],
+            }
+            return context
         if rule_assessment is None:
             context["rule_diagnostics"] = []
             context["decision_roles"] = {"eligibility": [], "ranking": [], "recommendation": []}
@@ -56,15 +80,20 @@ class StrategyEngine:
         custom_scenarios: list[Scenario] | None = None,
         financial_context: dict | None = None,
         rule_assessment=None,
+        constraint_set: ConstraintSet | None = None,
     ) -> StrategyEngineResult:
         if priorities is None:
             raise ValueError("Investor priorities must be provided before strategy comparison and ranking.")
 
-        # The rule engine is authoritative for hard constraints and diagnostics.
-        # If the caller did not supply an assessment, build it here so the
-        # eligibility gate never runs with a silently missing rule assessment.
-        if rule_assessment is None:
-            rule_assessment = RuleEngine().assess(defined_goal, financial_context or {})
+        # Direct callers remain backward-compatible. Service-layer flows
+        # provide the centralized ConstraintSet explicitly.
+        if constraint_set is None:
+            if rule_assessment is None:
+                rule_assessment = RuleEngine().assess(defined_goal, financial_context or {})
+            constraint_set = ConstraintAggregator().aggregate(
+                rule_assessment=rule_assessment,
+                financial_context=financial_context or {},
+            )
 
         strategies = filter_applicable_strategies(defined_goal=defined_goal, financial_context=financial_context)
         if not strategies:
@@ -80,7 +109,7 @@ class StrategyEngine:
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
 
-        strategy_context = self._decision_context(financial_context, rule_assessment)
+        strategy_context = self._decision_context(financial_context, constraint_set, rule_assessment)
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
         architectures = compose_architectures(strategies, defined_goal, strategy_context)
 
@@ -92,6 +121,7 @@ class StrategyEngine:
             financial_context=financial_context,
             rule_assessment=rule_assessment,
             priorities=priorities,
+            constraint_set=constraint_set,
         )
 
         rankings = rank_scenarios(
@@ -102,6 +132,7 @@ class StrategyEngine:
             defined_goal=defined_goal,
             financial_context=financial_context,
             architectures=architectures,
+            constraint_set=constraint_set,
         )
 
         recommendation = generate_recommendation(
