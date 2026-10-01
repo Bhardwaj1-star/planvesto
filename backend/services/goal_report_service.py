@@ -95,10 +95,10 @@ class GoalReportService:
         return strategy_id
 
     @classmethod
-    def _scenario_rows(cls, run: Any) -> list[dict[str, Any]]:
+    def _scenario_rows(cls, run: Any, source: str = "scenarios") -> list[dict[str, Any]]:
         rows = []
         selected_id = cls._get(run, "selected_scenario_id")
-        for scenario in cls._get(run, "what_if_scenarios", []) or []:
+        for scenario in cls._get(run, source, []) or []:
             metrics = cls._get(scenario, "metrics", {}) or {}
             funding = cls._get(scenario, "funding_structure", {}) or {}
             rows.append(
@@ -192,7 +192,8 @@ class GoalReportService:
         selected_strategy_id = self._get(run, "selected_strategy_id") or recommendation.get(
             "recommended_strategy_id"
         )
-        scenarios = self._scenario_rows(run)
+        scenarios = self._scenario_rows(run, "scenarios")
+        what_if_scenarios = self._scenario_rows(run, "what_if_scenarios")
         selected_scenario = next((s for s in scenarios if s["is_selected"]), None)
 
         goal_calculation = {
@@ -255,7 +256,20 @@ class GoalReportService:
             },
             "alternatives": self._alternatives(run),
             "scenarios": scenarios,
-            "what_if_analysis": self._what_ifs(run),
+            "what_if_analysis": [
+                {
+                    "scenario_id": s["scenario_id"],
+                    "scenario": s["scenario_name"],
+                    "strategy": s["strategy_name"],
+                    "type": s["scenario_type"],
+                    "selected": False,
+                    "assumptions_changed": s["assumptions"],
+                    "funding_changes": s["funding_structure"],
+                    "outcomes": s["metrics"],
+                    "trade_off": s["trade_off_notes"],
+                }
+                for s in what_if_scenarios
+            ],
             "trade_off_analysis": self._trade_offs(run),
             "assumptions": {
                 "goal_assumptions": {
