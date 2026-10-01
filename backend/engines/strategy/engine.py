@@ -21,6 +21,7 @@ class StrategyEngineResult:
         self.rankings = rankings
         self.recommendation = recommendation
         self.architectures = architectures
+        self.what_if_scenarios = what_if_scenarios or []
 
 
 class StrategyEngine:
@@ -108,6 +109,10 @@ class StrategyEngine:
             all_scenarios.extend(generate_baseline_scenarios(strategy, defined_goal))
         if custom_scenarios:
             all_scenarios.extend(custom_scenarios)
+
+        what_if_scenarios: list[Scenario] = []
+        for strategy in strategies:
+            what_if_scenarios.extend(generate_what_if_scenarios(strategy, defined_goal))
 
         strategy_context = self._decision_context(financial_context, constraint_set, rule_assessment)
         comp_matrix = build_comparison_matrix(strategies, all_scenarios)
