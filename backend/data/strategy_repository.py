@@ -48,7 +48,12 @@ class StrategyRepository:
         return record["strategy_run_id"]
 
     def update_selection(self, planning_unit_id: str, strategy_run_id: str, selected_strategy_id: str, selected_scenario_id: str, selected_params: dict[str, Any], selected_architecture: StrategyArchitecture | None = None, selected_strategy_version_id: str | None = None, selected_strategy_version: int | None = None) -> None:
-        metadata = {"selected_architecture": selected_architecture.model_dump() if selected_architecture else None}
+        # Preserve existing metadata: it also stores architectures and what-if scenarios.
+        existing = self.db.table("strategy_runs").select("run_metadata").eq(
+            "planning_unit_id", planning_unit_id
+        ).eq("strategy_run_id", strategy_run_id).maybe_single().execute()
+        metadata = dict((existing.data or {}).get("run_metadata") or {}) if existing and existing.data else {}
+        metadata["selected_architecture"] = selected_architecture.model_dump() if selected_architecture else None
         if selected_strategy_version_id is not None:
             metadata["selected_strategy_version_id"] = selected_strategy_version_id
         if selected_strategy_version is not None:
