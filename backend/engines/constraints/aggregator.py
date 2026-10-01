@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 from engines.constraints.adapters import (
     adapt_ratio_assessment,
+    adapt_moneywheel_result,
     adapt_risk_profile_constraints,
     adapt_rule_assessment,
     adapt_strategy_constraints,
@@ -49,6 +50,7 @@ class ConstraintAggregator:
         goals: list[GoalEvaluationInput] | None = None,
         financial_context: dict[str, Any] | None = None,
         risk_profile_constraints: list[dict[str, Any]] | None = None,
+        moneywheel_result: Any | None = None,
         strategy_constraints: list[str] | None = None,
         strategy_id: str = "",
         planning_unit_id: str | None = None,
@@ -72,11 +74,15 @@ class ConstraintAggregator:
             )
             layers.append(adapt_ratio_assessment(ratio_assessment))
 
-        # 3. Risk Profiler constraints
+        # 3. Authoritative MoneyWheel result
+        if moneywheel_result is not None:
+            layers.append(adapt_moneywheel_result(moneywheel_result))
+
+        # 4. Risk Profiler constraints
         if risk_profile_constraints is not None:
             layers.append(adapt_risk_profile_constraints(risk_profile_constraints))
 
-        # 4. Strategy-level constraints
+        # 5. Strategy-level constraints
         if strategy_constraints is not None:
             layers.append(adapt_strategy_constraints(
                 strategy_constraints, strategy_id=strategy_id
