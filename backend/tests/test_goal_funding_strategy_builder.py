@@ -25,8 +25,8 @@ def test_goal_funding_strategy_becomes_strategy_builder_variants():
 
 
 def test_goal_funding_decision_evaluates_every_variant():
-    from engines.strategy.composition import compose_architectures
     from engines.strategy.decision import evaluate_decision
+    from models.strategy import StrategyArchitecture
 
     goal = DefinedGoal(
         goal_id="g1", planning_unit_id="pu1", goal_type="Education", goal_name="Education",
@@ -41,14 +41,10 @@ def test_goal_funding_decision_evaluates_every_variant():
         applicable_goal_types=["Education"], implementation_parameters=[],
     )
     scenarios = generate_baseline_scenarios(strategy, goal)
-    architectures = compose_architectures([strategy], goal, {
-        "investable_surplus_monthly": 25000,
-        "liquid_assets": 500000,
-        "required_liquidity": 100000,
-        "emi_burden_monthly": 0,
-        "implementation_status": True,
-        "higher_priority_goal_conflict": False,
-    })
+    architectures = [StrategyArchitecture(
+        architecture_id="arch-g1-goal-funding-core",
+        primary_strategy_id="strat-goal-funding",
+    )]
     result = evaluate_decision(
         strategies=[strategy],
         scenarios=scenarios,
