@@ -20,6 +20,8 @@ def generate_recommendation(
     architectures: list[StrategyArchitecture] | None = None,
     rule_diagnostics: list[dict] | None = None,
     decision_result: DecisionResult | None = None,
+    financial_context: dict | None = None,
+    technique_outputs: list[dict[str, Any]] | None = None,
 ) -> StrategyRecommendation:
     """Generate a goal-level strategy recommendation based on decision evidence.
 
@@ -39,8 +41,9 @@ def generate_recommendation(
                 scenarios=scenarios,
                 architectures=architectures,
                 defined_goal=defined_goal,
-                financial_context=None,
+                financial_context=financial_context,
                 priorities=priorities,
+                technique_outputs=technique_outputs,
             )
         elif ranked_items:
             # Fallback for mock/isolated calls with only ranked_items
