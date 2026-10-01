@@ -193,6 +193,10 @@ class GoalReportService:
             "recommended_strategy_id"
         )
         scenarios = self._scenario_rows(run, "scenarios")
+        run_metadata = self._get(run, "run_metadata", {}) or {}
+        technique_outputs = run_metadata.get("technique_outputs", []) if isinstance(run_metadata, dict) else []
+        if not technique_outputs:
+            technique_outputs = self._get(run, "technique_outputs", []) or []
         what_if_scenarios = self._scenario_rows(run, "what_if_scenarios")
         selected_scenario = next((s for s in scenarios if s["is_selected"]), None)
 
@@ -253,6 +257,7 @@ class GoalReportService:
                 "rationale": self._get(recommendation, "complete_reasoning", ""),
                 "short_reasons": self._get(recommendation, "short_reasons", []),
                 "constraints": self._get(recommendation, "constraints", []),
+                "technique_execution": technique_outputs,
             },
             "alternatives": self._alternatives(run),
             "scenarios": scenarios,
@@ -271,6 +276,7 @@ class GoalReportService:
                 for s in what_if_scenarios
             ],
             "trade_off_analysis": self._trade_offs(run),
+            "technique_execution": technique_outputs,
             "assumptions": {
                 "goal_assumptions": {
                     "inflation_rate": self._get(goal, "inflation_rate"),
@@ -425,7 +431,17 @@ class GoalReportService:
             ["Supporting strategies", str(strategy["architecture"].get("supporting_strategy_ids") or self.MISSING)],
         ], [210, 315]))
 
-        self._section(story, "7. Why This Strategy", styles)
+        self._section(story, "7. Technique Execution Evidence", styles)
+        technique_outputs = report.get("technique_execution") or []
+        if technique_outputs:
+            rows = [["Technique", "Status", "Warnings", "Outputs"]]
+            for item in technique_outputs:
+                rows.append([str(item.get("technique_id") or self.MISSING), self._label(item.get("status")), str(item.get("warnings") or ""), str(item.get("outputs") or "")])
+            story.append(self._table(rows, [105, 65, 115, 170]))
+        else:
+            story.append(Paragraph("No technique execution evidence was persisted for this run.", styles["BodyText"]))
+
+        self._section(story, "8. Why This Strategy", styles)
         for item in strategy.get("short_reasons") or []:
             story.append(Paragraph(f"• {item}", styles["BodyText"]))
         if strategy.get("rationale"):
