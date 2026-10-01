@@ -102,70 +102,195 @@ class GoalReportService:
         table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("PADDING", (0, 0), (-1, -1), 7)]))
         return table
 
+    @staticmethod
+    def _fmt(value: Any, prefix: str = "") -> str:
+        if value is None:
+            return "Not available"
+        if isinstance(value, float):
+            return f"{prefix}{value:,.2f}"
+        if isinstance(value, int):
+            return f"{prefix}{value:,}"
+        return f"{prefix}{value}"
+
+    @staticmethod
+    def _label(value: Any) -> str:
+        return str(value).replace("_", " ").replace("-", " ").title()
+
+    @staticmethod
+    def _section(story: list, title: str, styles: Any) -> None:
+        story.extend([Spacer(1, 8), Paragraph(title, styles["Heading2"])])
+
     def generate_pdf(self, planning_unit_id: str, strategy_run_id: str) -> bytes:
         report = self.build_report(planning_unit_id, strategy_run_id)
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=42, leftMargin=42, topMargin=42, bottomMargin=42)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=42,
+            leftMargin=42,
+            topMargin=42,
+            bottomMargin=42,
+        )
         styles = getSampleStyleSheet()
-        story = [Paragraph("Financial Goal Strategy Report", styles["Title"]), Paragraph(report["goal_name"], styles["Heading2"]), Paragraph(str(report.get("goal_type") or "Financial Goal"), styles["BodyText"]), Spacer(1, 12)]
-        details = report.get("goal_details", {})
-        if details:
-            story.extend([Paragraph("Goal Details", styles["Heading2"]), self._table([["Item", "Value"], *[[str(k), str(v)] for k, v in details.items()]]), Spacer(1, 16)])
-        calc = report["goal_calculation"]
-        rows = [["Item", "Value"]] + [[key.replace("_", " ").title(), str(value)] for key, value in calc.items() if value is not None]
-        if len(rows) > 1:
-            story.extend([Paragraph("Goal Calculation", styles["Heading2"]), self._table(rows), Spacer(1, 16)])
-        funding = report.get("goal_funding", {})
-        story.append(Paragraph("Goal Funding & Feasibility", styles["Heading2"]))
-        funding_rows = [["Item", "Value"]]
-        for key, value in funding.items():
-            if key == "funding_strategies":
-                continue
-            if value is not None:
-                funding_rows.append([key.replace("_", " ").title(), str(value)])
-        story.extend([self._table(funding_rows), Spacer(1, 16)])
+        story: list[Any] = []
 
-        funding_strategies = funding.get("funding_strategies", [])
+        story.extend([
+            Paragraph("Vacation / Travel Financial Plan", styles["Title"]),
+            Paragraph(report["goal_name"], styles["Heading2"]),
+            Paragraph(
+                "Client Financial Planning Report",
+                styles["BodyText"],
+            ),
+            Spacer(1, 16),
+        ])
+
+        context_rows = [
+            ["Planning Item", "Plan"],
+            ["Goal Type", str(report.get("goal_type") or "Vacation / Travel")],
+            ["Goal Priority", str(report["goal_context"].get("priority") or "Not available")],
+            ["Goal Flexibility", str(report["goal_context"].get("flexibility") or "Not available")],
+            ["Target Date", f"{report['goal_calculation'].get('target_month')}/{report['goal_calculation'].get('target_year')}"],
+            ["Planning Horizon", self._fmt(report["goal_calculation"].get("duration_years")) + " years"],
+        ]
+        self._section(story, "1. Your Vacation Goal", styles)
+        story.append(self._table(context_rows))
+
+        calc = report["goal_calculation"]
+        calculation_rows = [
+            ["Planning Item", "Amount / Assumption"],
+            ["Current Cost", self._fmt(calc.get("today_cost"), "₹")],
+            ["Inflation Assumption", self._fmt(calc.get("inflation_rate"))],
+            ["Future Target", self._fmt(calc.get("future_target"), "₹")],
+            ["Projected Mapped Assets", self._fmt(calc.get("projected_mapped_asset_value"), "₹")],
+            ["Funding Gap", self._fmt(calc.get("funding_gap"), "₹")],
+            ["Required Monthly Contribution", self._fmt(calc.get("required_monthly_contribution"), "₹")],
+            ["Funding Return Assumption", self._fmt(calc.get("funding_return_assumption"))],
+            ["Funding Status", str(calc.get("funding_status") or "Not available")],
+        ]
+        self._section(story, "2. How Your Vacation Goal Is Funded", styles)
+        story.append(self._table(calculation_rows))
+
+        mapped_assets = report.get("mapped_assets", [])
+        self._section(story, "3. Assets Assigned to the Vacation", styles)
+        if mapped_assets:
+            asset_rows = [["Asset", "Allocated", "Allocation %", "Expected Return", "Projected Value"]]
+            for asset in mapped_assets:
+                asset_rows.append([
+                    str(asset.get("asset_name") or "—"),
+                    self._fmt(asset.get("allocation"), "₹"),
+                    self._fmt(asset.get("allocation_percentage")),
+                    self._fmt(asset.get("expected_return")),
+                    self._fmt(asset.get("projected_value"), "₹"),
+                ])
+            table = Table(asset_rows, colWidths=[125, 85, 75, 90, 105], repeatRows=1)
+            table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("PADDING", (0, 0), (-1, -1), 5),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("No assets are currently mapped to this goal.", styles["BodyText"]))
+
+        funding = report["goal_funding"]
+        self._section(story, "4. Feasibility of the Vacation Goal", styles)
+        feasibility_rows = [
+            ["Feasibility Item", "Result"],
+            ["Feasibility Status", str(funding.get("feasibility_status") or "Unknown")],
+            ["Available Monthly Surplus", self._fmt(funding.get("available_monthly_surplus"), "₹")],
+            ["Required Monthly Contribution", self._fmt(funding.get("required_monthly_contribution"), "₹")],
+            ["Contribution Surplus Gap", self._fmt(funding.get("monthly_contribution_surplus_gap"), "₹")],
+            ["Reason", str(funding.get("feasibility_reason") or "Not available")],
+        ]
+        story.append(self._table(feasibility_rows))
+
+        self._section(story, "5. Funding Options", styles)
+        funding_strategies = funding.get("funding_strategies") or []
         if funding_strategies:
-            story.append(Paragraph("Funding Strategy Alternatives", styles["Heading2"]))
-            strategy_rows = [["Strategy", "Status", "Lumpsum", "Monthly", "Starting Monthly", "Step-up", "Remaining Gap"]]
+            strategy_rows = [[
+                "Funding Option", "Status", "Lumpsum", "Monthly",
+                "Starting Monthly", "Annual Step-up", "Remaining Gap"
+            ]]
             for item in funding_strategies:
                 strategy_rows.append([
                     str(item.get("strategy_name") or item.get("strategy_id") or "—"),
                     str(item.get("status") or "—"),
-                    str(item.get("required_lumpsum") if item.get("required_lumpsum") is not None else "—"),
-                    str(item.get("required_monthly_contribution") if item.get("required_monthly_contribution") is not None else "—"),
-                    str(item.get("starting_monthly_contribution") if item.get("starting_monthly_contribution") is not None else "—"),
-                    str(item.get("annual_step_up") if item.get("annual_step_up") is not None else "—"),
-                    str(item.get("remaining_gap") if item.get("remaining_gap") is not None else "—"),
+                    self._fmt(item.get("required_lumpsum"), "₹"),
+                    self._fmt(item.get("required_monthly_contribution"), "₹"),
+                    self._fmt(item.get("starting_monthly_contribution"), "₹"),
+                    self._fmt(item.get("annual_step_up")),
+                    self._fmt(item.get("remaining_gap"), "₹"),
                 ])
-            table = Table(strategy_rows, colWidths=[100, 65, 65, 70, 80, 60, 70], repeatRows=1)
-            table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("PADDING", (0, 0), (-1, -1), 5)]))
-            story.extend([table, Spacer(1, 16)])
+            table = Table(strategy_rows, colWidths=[95, 60, 65, 70, 80, 65, 65], repeatRows=1)
+            table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("PADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("No funding alternatives are available in the current plan.", styles["BodyText"]))
 
-        mapped_assets = report.get("mapped_assets", [])
-        if mapped_assets:
-            story.append(Paragraph("Goal-Funding Assets", styles["Heading2"]))
-            asset_rows = [["Asset", "Allocated", "Allocation %", "Expected Return", "Projected Value"]]
-            for asset in mapped_assets:
-                asset_rows.append([str(asset.get("asset_name") or "—"), str(asset.get("allocation") if asset.get("allocation") is not None else "—"), str(asset.get("allocation_percentage") if asset.get("allocation_percentage") is not None else "—"), str(asset.get("expected_return") if asset.get("expected_return") is not None else "—"), str(asset.get("projected_value") if asset.get("projected_value") is not None else "—")])
-            asset_table = Table(asset_rows, colWidths=[125, 85, 75, 90, 105], repeatRows=1)
-            asset_table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("PADDING", (0, 0), (-1, -1), 5)]))
-            story.extend([asset_table, Spacer(1, 16)])
+        self._section(story, "6. Selected Strategy", styles)
         strategy = report["strategy"]
-        story.append(Paragraph("Strategy", styles["Heading2"]))
         story.append(Paragraph(str(strategy.get("name") or "Not selected"), styles["Heading3"]))
-        if strategy.get("objective"): story.append(Paragraph(str(strategy["objective"]), styles["BodyText"]))
-        if strategy.get("trade_offs"):
-            story.extend([Spacer(1, 6), Paragraph("Trade-offs", styles["Heading3"])]); [story.append(Paragraph(f"• {trade_off}", styles["BodyText"])) for trade_off in strategy["trade_offs"]]
-        story.append(Spacer(1, 12))
-        story.append(Paragraph("Financial State", styles["Heading2"]))
+        if strategy.get("objective"):
+            story.append(Paragraph(str(strategy["objective"]), styles["BodyText"]))
+        story.append(Paragraph(
+            f"Selected Strategy ID: {report.get('selected_strategy_id') or 'Not selected'}",
+            styles["BodyText"],
+        ))
+
+        self._section(story, "7. Trade-offs", styles)
+        trade_offs = strategy.get("trade_offs") or []
+        if trade_offs:
+            for item in trade_offs:
+                story.append(Paragraph(f"• {item}", styles["BodyText"]))
+        else:
+            story.append(Paragraph("No strategy trade-offs were recorded.", styles["BodyText"]))
+
         financial = report["financial_state"]
-        story.append(self._table([["Item", "Value"], *[[k.replace("_", " ").title(), str(v) if v is not None else "Not available"] for k, v in financial.items()]]))
-        story.append(Spacer(1, 16))
-        rec = report["recommendation"]
-        story.append(Paragraph("Recommendation", styles["Heading2"]))
-        for reason in rec.get("short_reasons", []): story.append(Paragraph(f"• {reason}", styles["BodyText"]))
-        if rec.get("complete_reasoning"): story.extend([Spacer(1, 6), Paragraph(str(rec["complete_reasoning"]), styles["BodyText"])] )
+        self._section(story, "8. Your Financial Context", styles)
+        financial_rows = [
+            ["Financial Item", "Current Position"],
+            ["Annual Income", self._fmt(financial.get("annual_income"), "₹")],
+            ["Annual Expenses", self._fmt(financial.get("annual_expenses"), "₹")],
+            ["Monthly Surplus", self._fmt(financial.get("monthly_surplus"), "₹")],
+            ["Assets", str(financial.get("assets") if financial.get("assets") is not None else "Not available")],
+            ["Liabilities", str(financial.get("liabilities") if financial.get("liabilities") is not None else "Not available")],
+            ["Net Worth", self._fmt(financial.get("net_worth"), "₹")],
+        ]
+        story.append(self._table(financial_rows))
+
+        self._section(story, "9. Recommendation & Reasoning", styles)
+        recommendation = report["recommendation"]
+        reasons = recommendation.get("short_reasons") or []
+        if reasons:
+            for reason in reasons:
+                story.append(Paragraph(f"• {reason}", styles["BodyText"]))
+        else:
+            story.append(Paragraph("No short reasons were recorded.", styles["BodyText"]))
+        complete_reasoning = recommendation.get("complete_reasoning")
+        if complete_reasoning:
+            story.extend([Spacer(1, 6), Paragraph(str(complete_reasoning), styles["BodyText"])])
+
+        self._section(story, "10. Client Action Plan", styles)
+        story.append(Paragraph(
+            "The individual goal report records the selected strategy and funding path. "
+            "Goal-specific executable actions should be taken from the selected strategy/scenario.",
+            styles["BodyText"],
+        ))
+
+        self._section(story, "11. Report Context", styles)
+        story.append(Paragraph(
+            "This report uses the same generic Goal Engine and Goal Funding architecture used "
+            "for other supported financial goals. Vacation is a goal type, not a separate calculation engine.",
+            styles["BodyText"],
+        ))
+
         doc.build(story)
         return buffer.getvalue()
