@@ -31,6 +31,7 @@ class ArchitectureEvaluation:
     evidence: dict[str, Any]
     rationale: list[str]
     eligibility_status: str = "fail"
+    scenario_evaluations: list[dict[str, Any]] = field(default_factory=list)
 
 @dataclass
 class DecisionResult:
@@ -54,13 +55,41 @@ def _empty(message: str) -> DecisionResult:
 def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None, constraint_set: ConstraintSet | None = None) -> DecisionResult:
     if not strategies or not architectures: return _empty("No applicable strategy available for the current goal and constraints.")
     base={"duration_years":defined_goal.duration_years,"funding_status":defined_goal.funding_status,**(financial_context or {})}
-    strat_lookup={s.strategy_id:s for s in strategies}; scen_lookup={}
-    for s in scenarios:
-        if s.strategy_id not in scen_lookup or "standard" in s.scenario_id or "Recommended Baseline" in s.scenario_name: scen_lookup[s.strategy_id]=s
+    strat_lookup={s.strategy_id:s for s in strategies}
+    scenarios_by_strategy: dict[str, list[Scenario]] = {}
+    for scenario in scenarios:
+        scenarios_by_strategy.setdefault(scenario.strategy_id, []).append(scenario)
+
+    def _scenario_status_score(scenario: Scenario) -> float:
+        """Score funding-variant feasibility without inventing investor preferences."""
+        status = str((scenario.metrics or {}).get("funding_strategy_status", ""))
+        if status == "feasible":
+            return 15.0
+        if status == "requires_upfront_capital":
+            return 8.0
+        if status == "constrained":
+            return 0.0
+        return 5.0
+
+    def _select_goal_funding_variant(variants: list[Scenario]) -> Scenario:
+        """Select a transparent default after evaluating every funding variant."""
+        return max(
+            enumerate(variants),
+            key=lambda pair: (_scenario_status_score(pair[1]), -pair[0]),
+        )[1]
     evaluations=[]
     for arch in architectures:
-        primary=strat_lookup.get(arch.primary_strategy_id); baseline=scen_lookup.get(arch.primary_strategy_id)
-        if not primary or not baseline: continue
+        primary=strat_lookup.get(arch.primary_strategy_id)
+        candidate_scenarios=scenarios_by_strategy.get(arch.primary_strategy_id, [])
+        if not primary or not candidate_scenarios: continue
+        baseline = (
+            _select_goal_funding_variant(candidate_scenarios)
+            if primary.strategy_id == "strat-goal-funding"
+            else next(
+                (s for s in candidate_scenarios if "standard" in s.scenario_id or "Recommended Baseline" in s.scenario_name),
+                candidate_scenarios[0],
+            )
+        )
         context=dict(base)
         context["strategy_required_monthly_contribution"]=(baseline.metrics or {}).get("required_monthly_contribution",getattr(defined_goal,"required_monthly_contribution",None))
         fit=evaluate_eligibility_fits(primary,goal=defined_goal,financial_context=context)
@@ -92,7 +121,36 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
         )
         rationale=[] if status==EligibilityStatus.FAIL else [f"Goal-specific eligibility evaluated for {defined_goal.goal_name}."]
         if status==EligibilityStatus.CONDITIONAL: rationale.append("Strategy requires the listed changes before implementation.")
-        evaluations.append(ArchitectureEvaluation(arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,feasibility,component,score,{"eligibility_status":status.value,"fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results]},rationale,status.value))
+        scenario_evaluations: list[dict[str, Any]] = []
+        if primary.strategy_id == "strat-goal-funding":
+            for candidate in candidate_scenarios:
+                variant_status = str((candidate.metrics or {}).get("funding_strategy_status", ""))
+                scenario_evaluations.append({
+                    "scenario_id": candidate.scenario_id,
+                    "funding_strategy_id": candidate.funding_strategy_id,
+                    "scenario_name": candidate.scenario_name,
+                    "status": variant_status,
+                    "score": _scenario_status_score(candidate),
+                    "funding_gap": candidate.metrics.get("funding_gap"),
+                    "required_monthly_contribution": candidate.metrics.get("required_monthly_contribution"),
+                    "required_lumpsum": candidate.metrics.get("required_lumpsum"),
+                    "starting_monthly_contribution": candidate.metrics.get("starting_monthly_contribution"),
+                    "annual_step_up": candidate.metrics.get("annual_step_up"),
+                    "reason": candidate.trade_off_notes,
+                    "selected_as_default": candidate.scenario_id == baseline.scenario_id,
+                })
+            rationale.append(
+                "All Goal Funding variants were evaluated; feasibility status is authoritative and library order is used only for ties."
+            )
+        evidence={
+            "eligibility_status":status.value,
+            "fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results],
+            "scenario_evaluations": scenario_evaluations,
+        }
+        evaluations.append(ArchitectureEvaluation(
+            arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,
+            feasibility,component,score,evidence,rationale,status.value,scenario_evaluations
+        ))
     passes=[e for e in evaluations if e.eligibility_status=="pass"]; conditionals=[e for e in evaluations if e.eligibility_status=="conditional"]
     pool=passes or conditionals
     if not pool:
