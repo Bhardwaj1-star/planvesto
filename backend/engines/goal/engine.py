@@ -5,6 +5,7 @@ from engines.goal.asset_projection import calculate_asset_projection, get_defaul
 from engines.goal.funding_gap import calculate_funding_gap, calculate_funding_return_assumption, calculate_required_monthly_contribution
 from engines.goal.target_calculator import DEFAULT_INFLATION_RATE, calculate_duration, calculate_future_target, calculate_retirement_corpus
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
+from rules.goals import canonical_goal_type
 from schemas.goals import GoalInput
 
 
@@ -59,7 +60,7 @@ class GoalEngine:
         dynamic_details = goal_input.dynamic_details or {}
         specialized_data = goal_input.specialized_data or {}
         specialized_metadata: dict[str, Any] = {}
-        is_retirement = goal_input.goal_type == "Retirement / Financial Freedom"
+        is_retirement = canonical_goal_type(goal_input.goal_type) == "retirement"
         retirement_age = None
         retirement_years = None
 
