@@ -28,6 +28,7 @@ def rank_scenarios(
     financial_context: dict | None = None,
     architectures: list[StrategyArchitecture] | None = None,
     constraint_set: ConstraintSet | None = None,
+    technique_outputs: list[dict[str, Any]] | None = None,
 ) -> list[StrategyRankingItem]:
     if not strategies or not scenarios:
         return []
@@ -41,6 +42,7 @@ def rank_scenarios(
             financial_context=financial_context,
             priorities=priorities,
             constraint_set=constraint_set,
+            technique_outputs=technique_outputs,
         )
 
     norm_p = priorities.normalized() if priorities else InvestorPriorities().normalized()
