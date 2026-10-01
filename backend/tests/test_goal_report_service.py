@@ -70,6 +70,15 @@ def make_run():
         architecture=architecture,
     )
     return StrategyRun(
+        what_if_scenarios=[Scenario(
+            scenario_id="whatif-1",
+            strategy_id="strat-goal-funding",
+            scenario_type="custom",
+            scenario_name="What-if: Monthly contribution +10%",
+            funding_structure={"additional_monthly_contribution": 5000},
+            metrics={"remaining_gap": 1000},
+            trade_off_notes="Higher monthly burden.",
+        )],
         planning_unit_id="p1",
         goal_id="g1",
         defined_goal_id="dg1",
