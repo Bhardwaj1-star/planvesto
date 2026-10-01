@@ -142,7 +142,7 @@ class StrategyService:
                 gross_monthly_income=self._metric_value(financial_context, "annual_income") / 12.0
                 if self._metric_value(financial_context, "annual_income") is not None
                 else self._metric_value(financial_context, "monthly_income"),
-                monthly_surplus=self._metric_value(financial_context, "monthly_surplus"),
+                monthly_surplus=(self._metric_value(financial_context, "monthly_surplus") if (self._metric_value(financial_context, "monthly_surplus") is None or self._metric_value(financial_context, "monthly_surplus") >= 0) else None),
                 monthly_expenses=self._metric_value(financial_context, "annual_expenses") / 12.0
                 if self._metric_value(financial_context, "annual_expenses") is not None
                 else self._metric_value(financial_context, "monthly_expenses"),
@@ -156,7 +156,7 @@ class StrategyService:
                 goal_target_amount=defined_goal.future_target,
                 projected_goal_funding=defined_goal.projected_mapped_asset_value,
                 future_goal_target=defined_goal.future_target,
-                goal_duration_years=defined_goal.duration_years,
+                goal_duration_years=defined_goal.duration_years if defined_goal.duration_years > 0 else None,
             )
             moneywheel_result = MoneywheelEngine().build(moneywheel_input)
 
