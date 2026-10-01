@@ -180,6 +180,7 @@ class StrategyRun(BaseModel):
     status: str = "completed"
     applicable_strategies: list[StrategyDefinition] = Field(default_factory=list)
     scenarios: list[Scenario] = Field(default_factory=list)
+    what_if_scenarios: list[Scenario] = Field(default_factory=list)
     investor_priorities: InvestorPriorities = Field(default_factory=InvestorPriorities)
     comparison_matrix: dict[str, Any] = Field(default_factory=dict)
     rankings: list[StrategyRankingItem] = Field(default_factory=list)
