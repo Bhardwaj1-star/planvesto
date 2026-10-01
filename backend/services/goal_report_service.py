@@ -24,8 +24,6 @@ class GoalReportService:
     MISSING = "Not available"
 
     def __init__(self):
-        from services.strategy_service import StrategyService
-
         self.goal_repo = GoalRepository()
         self.strategy_repo = StrategyRepository()
         self.financial_state_repo = FinancialStateSnapshotRepository()
