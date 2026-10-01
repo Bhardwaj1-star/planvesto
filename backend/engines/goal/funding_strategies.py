@@ -124,9 +124,7 @@ def build_goal_funding_strategies(
     })
 
     result.append({
-        "strategy_id": "lumpsum",
-        "strategy_name": "Lumpsum",
-        "strategy_type": "lumpsum",
+        **_variant("lumpsum"),
         "status": "feasible" if required_lumpsum <= 0 else "requires_upfront_capital",
         "required_lumpsum": round_money(required_lumpsum),
         "required_monthly_contribution": 0.0,
