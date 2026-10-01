@@ -28,7 +28,7 @@ class GoalReportService:
 
         self.goal_repo = GoalRepository()
         self.strategy_repo = StrategyRepository()
-        self.strategy_service = StrategyService()
+        self.financial_state_repo = FinancialStateSnapshotRepository()
 
     def _load(self, planning_unit_id: str, strategy_run_id: str):
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
@@ -42,7 +42,44 @@ class GoalReportService:
         )
         if not goal:
             raise HTTPException(status_code=404, detail="Underlying goal not found")
-        context = self.strategy_service._financial_context(planning_unit_id, goal)
+        snapshot = self.financial_state_repo.get_latest(planning_unit_id, "family")
+        if not snapshot or not snapshot.get("financial_state"):
+            return run, goal, {}
+        state = snapshot["financial_state"]
+        if hasattr(state, "model_dump"):
+            state = state.model_dump()
+        elif not isinstance(state, dict):
+            return run, goal, {}
+
+        def metric_value(key: str):
+            value = state.get(key)
+            if isinstance(value, dict):
+                return value.get("value")
+            if hasattr(value, "value"):
+                return value.value
+            return value
+
+        context = dict(state)
+        income_annual = metric_value("income_annual")
+        expenses_annual = metric_value("expenses_annual")
+        surplus_monthly = metric_value("investable_surplus_monthly")
+        assets = metric_value("total_assets")
+        financial_assets = metric_value("financial_assets")
+        liabilities = metric_value("total_liabilities")
+        net_worth = metric_value("net_worth")
+        context.update({
+            "annual_income": income_annual,
+            "income": income_annual,
+            "annual_expenses": expenses_annual,
+            "expenses": expenses_annual,
+            "monthly_surplus": surplus_monthly,
+            "surplus": surplus_monthly,
+            "financial_assets": financial_assets,
+            "assets": assets,
+            "liabilities": liabilities,
+            "net_worth": net_worth,
+            "retirement_assets": getattr(goal, "projected_mapped_asset_value", 0.0),
+        })
         return run, goal, context
 
     @staticmethod
