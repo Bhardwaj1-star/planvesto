@@ -190,6 +190,6 @@ class GoalService:
                 defined_goal_id=r["defined_goal_id"], goal_id=r["goal_id"], version=r["version"], is_latest=r["is_latest"],
                 today_cost=float(r["today_cost"]), future_target=float(r["future_target"]),
                 projected_mapped_asset_value=float(r.get("projected_mapped_asset_value", 0.0)), funding_gap=float(r["funding_gap"]),
-                funding_status=r["funding_status"], feasibility_status=r.get("feasibility_status", "unknown"), feasibility_reason=r.get("feasibility_reason"), created_at=r["created_at"],
+                funding_status=r["funding_status"], feasibility_status=(r.get("version_metadata") or {}).get("goal_feasibility", {}).get("status", "unknown"), feasibility_reason=(r.get("version_metadata") or {}).get("goal_feasibility", {}).get("reason"), created_at=r["created_at"],
             ) for r in rows
         ]
