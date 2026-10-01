@@ -63,3 +63,44 @@ def test_unknown_technique_is_explicitly_not_implemented():
     result = TechniqueEngine().execute("tech-unknown", _goal())
     assert result.status == "not_implemented"
     assert result.warnings
+
+
+def test_remaining_allocation_techniques_are_executable():
+    engine = TechniqueEngine()
+    ids = [
+        "tech-laddering",
+        "tech-cashflow-matching",
+        "tech-asset-earmarking",
+        "tech-contribution-escalation",
+        "tech-goal-segmentation",
+        "tech-barbell",
+    ]
+    results = engine.execute_many(ids, _goal())
+    assert all(r.status == "calculated" for r in results)
+    assert {r.technique_id for r in results} == set(ids)
+
+
+def test_tax_sequencing_requires_explicit_tax_inputs():
+    result = TechniqueEngine().execute("tech-tax-efficient-sequencing", _goal())
+    assert result.status == "insufficient_inputs"
+
+
+def test_tax_loss_harvesting_requires_explicit_tax_lots():
+    result = TechniqueEngine().execute("tech-tax-loss-harvesting", _goal())
+    assert result.status == "insufficient_inputs"
+
+
+def test_tax_loss_harvesting_calculates_candidates_when_lots_exist():
+    result = TechniqueEngine().execute(
+        "tech-tax-loss-harvesting",
+        _goal(),
+        {
+            "tax_lots": [
+                {"lot_id": "lot-1", "cost_basis": 100000, "current_value": 90000},
+                {"lot_id": "lot-2", "cost_basis": 50000, "current_value": 55000},
+            ]
+        },
+    )
+    assert result.status == "calculated"
+    assert result.outputs["total_unrealised_loss"] == 10000
+    assert len(result.outputs["harvest_candidates"]) == 1
