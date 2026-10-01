@@ -18,6 +18,8 @@ FEASIBILITY_PASS_SCORE: float = 15.0
 FEASIBILITY_CONDITIONAL_SCORE: float = 8.0
 FEASIBILITY_FAIL_SCORE: float = 0.0
 
+TECHNIQUE_EXECUTION_MAX_SCORE: float = 10.0
+
 
 def calculate_goal_fit_score(
     canonical_goal_type: str,
@@ -104,6 +106,16 @@ def calculate_component_score(
     return score
 
 
+def calculate_technique_execution_score(technique_outputs: list[dict[str, Any]] | None) -> float:
+    """Score implementation readiness from executed technique outputs."""
+    outputs = technique_outputs or []
+    if not outputs:
+        return 0.0
+    points = {"calculated": 1.0, "insufficient_inputs": 0.5, "not_implemented": 0.0}
+    raw = sum(points.get(str(item.get("status")), 0.0) for item in outputs)
+    return round(min(TECHNIQUE_EXECUTION_MAX_SCORE, raw), 2)
+
+
 def evaluate_decision_score(
     *,
     status: EligibilityStatus | str,
@@ -112,12 +124,13 @@ def evaluate_decision_score(
     funding_fit_score: float,
     feasibility_score: float,
     component_fit_score: float,
+    technique_execution_score: float = 0.0,
 ) -> float:
     """Evaluate total decision score. Returns INFEASIBLE_DECISION_SCORE if eligibility failed."""
     val = status.value if hasattr(status, "value") else str(status)
     if val == "fail":
         return INFEASIBLE_DECISION_SCORE
     return round(
-        goal_fit_score + horizon_fit_score + funding_fit_score + feasibility_score + component_fit_score,
+        goal_fit_score + horizon_fit_score + funding_fit_score + feasibility_score + component_fit_score + technique_execution_score,
         2,
     )
