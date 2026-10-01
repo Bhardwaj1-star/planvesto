@@ -11,7 +11,6 @@ from reportlab.lib import colors
 
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
-from services.strategy_service import StrategyService
 
 
 class GoalReportService:
@@ -25,6 +24,8 @@ class GoalReportService:
     MISSING = "Not available"
 
     def __init__(self):
+        from services.strategy_service import StrategyService
+
         self.goal_repo = GoalRepository()
         self.strategy_repo = StrategyRepository()
         self.strategy_service = StrategyService()
