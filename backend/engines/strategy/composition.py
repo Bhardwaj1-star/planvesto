@@ -106,7 +106,7 @@ def compose_architectures(
             primary_strategy_id=primary.strategy_id,
             supporting_strategy_ids=[s.strategy_id for s in support],
             solution_ids=[s.solution_id for s in solutions],
-            technique_ids=primary.technique_ids[:3],
+            technique_ids=list(primary.technique_ids),
             rationale=rationale,
             trade_offs=primary.trade_offs[:2],
             feasibility_status="conditional" if missing or diagnostic_constraints or not solutions else "feasible",
