@@ -142,6 +142,7 @@ class StrategyEngine:
             rule_assessment=rule_assessment,
             priorities=priorities,
             constraint_set=constraint_set,
+            technique_outputs=technique_outputs,
         )
 
         rankings = rank_scenarios(
