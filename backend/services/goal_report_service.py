@@ -135,7 +135,7 @@ class GoalReportService:
         story: list[Any] = []
 
         story.extend([
-            Paragraph("Vacation / Travel Financial Plan", styles["Title"]),
+            Paragraph(f"{report.get('goal_type') or 'Financial'} Goal Plan", styles["Title"]),
             Paragraph(report["goal_name"], styles["Heading2"]),
             Paragraph(
                 "Client Financial Planning Report",
@@ -152,7 +152,7 @@ class GoalReportService:
             ["Target Date", f"{report['goal_calculation'].get('target_month')}/{report['goal_calculation'].get('target_year')}"],
             ["Planning Horizon", self._fmt(report["goal_calculation"].get("duration_years")) + " years"],
         ]
-        self._section(story, "1. Your Vacation Goal", styles)
+        self._section(story, f"1. Your {report.get('goal_type') or 'Financial'} Goal", styles)
         story.append(self._table(context_rows))
 
         calc = report["goal_calculation"]
@@ -167,11 +167,11 @@ class GoalReportService:
             ["Funding Return Assumption", self._fmt(calc.get("funding_return_assumption"))],
             ["Funding Status", str(calc.get("funding_status") or "Not available")],
         ]
-        self._section(story, "2. How Your Vacation Goal Is Funded", styles)
+        self._section(story, f"2. How Your {report.get('goal_type') or 'Financial'} Goal Is Funded", styles)
         story.append(self._table(calculation_rows))
 
         mapped_assets = report.get("mapped_assets", [])
-        self._section(story, "3. Assets Assigned to the Vacation", styles)
+        self._section(story, f"3. Assets Assigned to the {report.get('goal_type') or 'Goal'}", styles)
         if mapped_assets:
             asset_rows = [["Asset", "Allocated", "Allocation %", "Expected Return", "Projected Value"]]
             for asset in mapped_assets:
@@ -195,7 +195,7 @@ class GoalReportService:
             story.append(Paragraph("No assets are currently mapped to this goal.", styles["BodyText"]))
 
         funding = report["goal_funding"]
-        self._section(story, "4. Feasibility of the Vacation Goal", styles)
+        self._section(story, f"4. Feasibility of the {report.get('goal_type') or 'Financial'} Goal", styles)
         feasibility_rows = [
             ["Feasibility Item", "Result"],
             ["Feasibility Status", str(funding.get("feasibility_status") or "Unknown")],
