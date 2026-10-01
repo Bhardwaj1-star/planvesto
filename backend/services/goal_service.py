@@ -3,6 +3,7 @@ from datetime import date, datetime
 from typing import Any
 from fastapi import HTTPException
 from data.goal_repository import GoalRepository
+from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 class GoalService:
     def __init__(self):
         self.repository = GoalRepository()
+        self.financial_state_repository = FinancialStateSnapshotRepository()
         self.engine = GoalEngine()
 
     def _get_assets_lookup(self, planning_unit_id: str) -> dict[str, dict[str, Any]]:
@@ -58,10 +60,7 @@ class GoalService:
         This is a planning feasibility check, not a strategy or product decision.
         The financial-state snapshot is the source of the available surplus.
         """
-        snapshot = self.repository.db.table("financial_state_snapshots").select("financial_state").eq(
-            "planning_unit_id", defined_goal.planning_unit_id
-        ).eq("scope", "family").order("created_at", desc=True).limit(1).execute()
-        row = (snapshot.data or [None])[0]
+        row = self.financial_state_repository.get_latest(defined_goal.planning_unit_id, "family")
         state = row.get("financial_state") if row else None
         if hasattr(state, "model_dump"):
             state = state.model_dump()
@@ -142,7 +141,7 @@ class GoalService:
         else:
             is_material = self.repository.has_material_change(current_latest, request)
             if not is_material and current_latest.status == request.status and current_latest.priority == request.priority and current_latest.flexibility == request.flexibility:
-                return current_latest
+                return self._apply_feasibility(current_latest)
             new_version = current_latest.version + 1
 
         defined_goal = self.engine.calculate_defined_goal(
