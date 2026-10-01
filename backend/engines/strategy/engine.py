@@ -4,7 +4,7 @@ from engines.strategy.applicability import filter_applicable_strategies
 from engines.strategy.comparison import build_comparison_matrix
 from engines.strategy.ranking import rank_scenarios
 from engines.strategy.recommendation import generate_recommendation
-from engines.strategy.scenario import generate_baseline_scenarios
+from engines.strategy.scenario import generate_baseline_scenarios, generate_what_if_scenarios
 from engines.strategy.composition import compose_architectures
 from engines.strategy.decision import evaluate_decision
 from engines.rules.engine import RuleEngine
@@ -13,7 +13,7 @@ from engines.constraints.models import ConstraintSet
 
 
 class StrategyEngineResult:
-    def __init__(self, applicable_strategies, scenarios, priorities, comparison_matrix, rankings, recommendation, architectures):
+    def __init__(self, applicable_strategies, scenarios, priorities, comparison_matrix, rankings, recommendation, architectures, what_if_scenarios=None):
         self.applicable_strategies = applicable_strategies
         self.scenarios = scenarios
         self.priorities = priorities
@@ -102,7 +102,7 @@ class StrategyEngine:
                 recommended_strategy_id="", recommended_scenario_id="", short_reasons=["No Strategy Available"],
                 complete_reasoning="No strategy in the library is eligible for the current goal and available constraints.", feasibility_status="infeasible",
             )
-            return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [])
+            return StrategyEngineResult([], [], priorities, {"dimensions": [], "items": []}, [], empty_rec, [], [])
 
         all_scenarios: list[Scenario] = []
         for strategy in strategies:
@@ -151,4 +151,4 @@ class StrategyEngine:
             rule_diagnostics=strategy_context["rule_diagnostics"],
         )
 
-        return StrategyEngineResult(strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures)
+        return StrategyEngineResult(strategies, all_scenarios, priorities, comp_matrix, rankings, recommendation, architectures, what_if_scenarios)
