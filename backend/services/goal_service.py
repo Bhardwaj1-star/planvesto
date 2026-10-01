@@ -6,6 +6,7 @@ from data.goal_repository import GoalRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
+from engines.goal.funding_strategies import build_goal_funding_strategies
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
 from schemas.goals import GoalInput, GoalCalculateRequest
 
@@ -85,6 +86,13 @@ class GoalService:
 
         surplus = max(0.0, float(surplus))
         required = max(0.0, float(defined_goal.required_monthly_contribution))
+        funding_strategies = build_goal_funding_strategies(
+            funding_gap=defined_goal.funding_gap,
+            annual_return=defined_goal.funding_return_assumption,
+            duration_years=defined_goal.duration_years,
+            available_monthly_surplus=surplus,
+        )
+        defined_goal.funding_strategies = funding_strategies
         contribution_gap = round(required - surplus, 2)
         defined_goal.available_monthly_surplus = surplus
         defined_goal.monthly_contribution_surplus_gap = contribution_gap
@@ -110,6 +118,7 @@ class GoalService:
             "required_monthly_contribution": required,
             "monthly_contribution_surplus_gap": contribution_gap,
             "reason": reason,
+            "funding_strategies": funding_strategies,
         }
         return defined_goal
 
