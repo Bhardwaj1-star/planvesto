@@ -38,7 +38,7 @@ class MoneywheelRepository:
             "ratios": [r.model_dump(mode="json") for r in result.ratios],
             "financial_state_snapshot": financial_state_snapshot,
             "calculated_at": result.calculated_at,
-            "metadata": result.metadata,
+            "metadata": {**result.metadata, "rules": [rule.model_dump(mode="json") for rule in result.rules]},
         }
         response = self._execute(self.client.table(self.table).insert(payload).select("*"))
         rows = response.data
@@ -63,4 +63,5 @@ class MoneywheelRepository:
             .eq("planning_unit_id", planning_unit_id)
             .order("calculated_at", desc=True).limit(limit)
         )
-        return response.data or []
+        rows = response.data or []
+        return rows
