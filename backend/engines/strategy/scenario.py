@@ -64,9 +64,14 @@ def _funding_metrics(
     additional_monthly_contribution: float = 0.0,
     additional_lumpsum: float = 0.0,
     annual_step_up: float = 0.0,
+    base_resources: float | None = None,
 ) -> dict[str, float | None | str]:
     years = defined_goal.duration_years if duration_years is None else max(0.0, duration_years)
-    base_resources = max(0.0, float(defined_goal.projected_mapped_asset_value))
+    base_resources = (
+        max(0.0, float(defined_goal.projected_mapped_asset_value))
+        if base_resources is None
+        else max(0.0, float(base_resources))
+    )
     base_contribution = max(0.0, float(defined_goal.required_monthly_contribution or 0.0))
 
     contribution_fv = _future_value_monthly_contribution(
@@ -278,6 +283,22 @@ def generate_what_if_scenarios(
             )
         )
 
+    # 2. Goal-date sensitivity. Existing mapped assets are reprojected to the
+    # new horizon rather than reusing the original target-date projection.
+    current_mapped_value = sum(
+        max(0.0, float(item.get("allocated_amount", 0.0)))
+        for item in mapped
+    )
+    def projected_mapped_at(years: float) -> float:
+        if current_mapped_value <= 0:
+            return 0.0
+        projected = 0.0
+        for item in mapped:
+            amount = max(0.0, float(item.get("allocated_amount", 0.0)))
+            expected = float(item.get("expected_return", funding_return))
+            projected += amount * ((1.0 + expected) ** years)
+        return round(projected, 2)
+
     # 2. Goal-date sensitivity.
     for extra_years in (1.0, 3.0):
         years = base_years + extra_years
@@ -291,6 +312,7 @@ def generate_what_if_scenarios(
             target,
             funding_return,
             duration_years=years,
+            base_resources=projected_mapped_at(years),
         )
         scenarios.append(
             Scenario(
