@@ -110,6 +110,7 @@ class StrategyArchitecture(BaseModel):
     architecture_id: str
     primary_strategy_id: str
     supporting_strategy_ids: list[str] = Field(default_factory=list)
+    solution_ids: list[str] = Field(default_factory=list)
     technique_ids: list[str] = Field(default_factory=list)
     rationale: list[str] = Field(default_factory=list)
     trade_offs: list[str] = Field(default_factory=list)
