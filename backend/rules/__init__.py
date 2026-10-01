@@ -5,6 +5,7 @@ and decision constraints. Engines evaluate these rules; services coordinate work
 """
 
 from rules import action_plan
+from rules import canonical
 from rules import adaptation
 from rules import constraints
 from rules import eligibility
@@ -18,6 +19,7 @@ from rules import strategy_decision
 
 __all__ = [
     "action_plan",
+    "canonical",
     "adaptation",
     "constraints",
     "eligibility",
