@@ -93,19 +93,11 @@ def _funding_metrics(
 
     # Existing mapped resources are already projected by Goal Engine. To avoid
     # double-counting them, only incremental contributions/lumpsum are added here.
-    baseline_contribution_fv = _future_value_monthly_contribution(
-        base_contribution, annual_return, years
-    )
-    baseline_step_up_fv = (
-        _future_value_step_up(base_contribution, annual_step_up, annual_return, years)
-        if annual_step_up > 0
-        else 0.0
-    )
+    # Required contribution is not part of projected mapped assets. Therefore
+    # the scenario's full contribution stream is incremental funding.
     incremental_funding = max(
         0.0,
-        contribution_fv - baseline_contribution_fv
-        if annual_step_up <= 0
-        else step_up_fv - baseline_step_up_fv,
+        contribution_fv if annual_step_up <= 0 else step_up_fv,
     )
     projected_total = base_resources + incremental_funding + lumpsum_fv
     remaining_gap = round(float(target) - projected_total, 2)
