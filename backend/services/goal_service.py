@@ -43,10 +43,82 @@ class GoalService:
         details["currentAge"] = current_age
         request.dynamic_details = details
 
+    @staticmethod
+    def _metric_value(state: dict[str, Any], key: str):
+        value = state.get(key)
+        if isinstance(value, dict):
+            return value.get("value")
+        if hasattr(value, "value"):
+            return value.value
+        return value
+
+    def _apply_feasibility(self, defined_goal: DefinedGoal) -> DefinedGoal:
+        """Assess whether the goal's required contribution fits current surplus.
+
+        This is a planning feasibility check, not a strategy or product decision.
+        The financial-state snapshot is the source of the available surplus.
+        """
+        snapshot = self.repository.db.table("financial_state_snapshots").select("financial_state").eq(
+            "planning_unit_id", defined_goal.planning_unit_id
+        ).eq("scope", "family").order("created_at", desc=True).limit(1).execute()
+        row = (snapshot.data or [None])[0]
+        state = row.get("financial_state") if row else None
+        if hasattr(state, "model_dump"):
+            state = state.model_dump()
+        if not isinstance(state, dict):
+            defined_goal.feasibility_status = "unknown"
+            defined_goal.feasibility_reason = "Current financial surplus is unavailable."
+            defined_goal.version_metadata["goal_feasibility"] = {
+                "status": "unknown",
+                "reason": defined_goal.feasibility_reason,
+            }
+            return defined_goal
+
+        surplus = self._metric_value(state, "investable_surplus_monthly")
+        if surplus is None:
+            defined_goal.feasibility_status = "unknown"
+            defined_goal.feasibility_reason = "Monthly investable surplus is unavailable."
+            defined_goal.version_metadata["goal_feasibility"] = {
+                "status": "unknown",
+                "reason": defined_goal.feasibility_reason,
+            }
+            return defined_goal
+
+        surplus = max(0.0, float(surplus))
+        required = max(0.0, float(defined_goal.required_monthly_contribution))
+        contribution_gap = round(required - surplus, 2)
+        defined_goal.available_monthly_surplus = surplus
+        defined_goal.monthly_contribution_surplus_gap = contribution_gap
+
+        if defined_goal.funding_gap <= 0:
+            status = "feasible"
+            reason = "The mapped assets already cover the target-date requirement."
+        elif required <= surplus:
+            status = "feasible"
+            reason = "The required monthly contribution fits within the current investable surplus."
+        elif surplus > 0:
+            status = "constrained"
+            reason = "The goal requires a higher monthly contribution than the current investable surplus."
+        else:
+            status = "infeasible"
+            reason = "There is currently no investable monthly surplus available for the funding gap."
+
+        defined_goal.feasibility_status = status
+        defined_goal.feasibility_reason = reason
+        defined_goal.version_metadata["goal_feasibility"] = {
+            "status": status,
+            "available_monthly_surplus": surplus,
+            "required_monthly_contribution": required,
+            "monthly_contribution_surplus_gap": contribution_gap,
+            "reason": reason,
+        }
+        return defined_goal
+
     def calculate_preview(self, request: GoalCalculateRequest) -> DefinedGoal:
         self._enrich_retirement_context(request)
         assets_lookup = self._get_assets_lookup(request.planning_unit_id)
-        return self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
+        defined_goal = self.engine.calculate_defined_goal(goal_input=request, assets_lookup=assets_lookup, version=1, is_latest=True)
+        return self._apply_feasibility(defined_goal)
 
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
         self._enrich_retirement_context(request)
@@ -79,6 +151,7 @@ class GoalService:
             version=new_version,
             is_latest=True,
         )
+        defined_goal = self._apply_feasibility(defined_goal)
         def_id = self.repository.save_defined_goal_snapshot(defined_goal)
         defined_goal.defined_goal_id = def_id
 
@@ -118,6 +191,6 @@ class GoalService:
                 defined_goal_id=r["defined_goal_id"], goal_id=r["goal_id"], version=r["version"], is_latest=r["is_latest"],
                 today_cost=float(r["today_cost"]), future_target=float(r["future_target"]),
                 projected_mapped_asset_value=float(r.get("projected_mapped_asset_value", 0.0)), funding_gap=float(r["funding_gap"]),
-                funding_status=r["funding_status"], created_at=r["created_at"],
+                funding_status=r["funding_status"], feasibility_status=r.get("feasibility_status", "unknown"), feasibility_reason=r.get("feasibility_reason"), created_at=r["created_at"],
             ) for r in rows
         ]
