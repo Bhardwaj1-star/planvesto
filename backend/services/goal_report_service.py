@@ -98,7 +98,7 @@ class GoalReportService:
     def _scenario_rows(cls, run: Any) -> list[dict[str, Any]]:
         rows = []
         selected_id = cls._get(run, "selected_scenario_id")
-        for scenario in cls._get(run, "scenarios", []) or []:
+        for scenario in cls._get(run, "what_if_scenarios", []) or []:
             metrics = cls._get(scenario, "metrics", {}) or {}
             funding = cls._get(scenario, "funding_structure", {}) or {}
             rows.append(
