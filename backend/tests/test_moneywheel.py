@@ -77,7 +77,7 @@ def test_insurance_coverage_ratio_is_calculated():
 
 def test_insurance_ratio_is_unavailable_without_cover_inputs():
     result = MoneywheelEngine().build(_input(existing_sum_assured=None, required_insurance_cover=None))
-    ratio = next(r for r in result.ratios if r.key == "insurance_gap_ratio")
+    ratio = next(r for r in result.ratios if r.key == "insurance_coverage_ratio")
     assert ratio.value is None
     assert ratio.status == "unavailable"
     assert ratio.available is False
