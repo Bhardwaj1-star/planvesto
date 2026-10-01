@@ -14,7 +14,7 @@ import {
 } from "../../../lib/api/strategy";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 
-type Goal = { id: string; name: string; type?: string | null };
+type Goal = { id: string; name: string };
 
 export default function ReportsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -33,7 +33,6 @@ export default function ReportsPage() {
         const next = (data?.goals ?? []).map((g) => ({
           id: g.id,
           name: g.name || "Untitled Goal",
-          type: g.goalType ?? g.goal_type ?? null,
         }));
         if (active) {
           setGoals(next);
@@ -66,7 +65,7 @@ export default function ReportsPage() {
 
   const selectedGoal = useMemo(() => goals.find((goal) => goal.id === selectedGoalId), [goals, selectedGoalId]);
   const selectedRun = selectedGoalId ? runs[selectedGoalId] : null;
-  const isRetirement = /retirement|financial freedom/i.test((selectedGoal?.type || "") + " " + (selectedGoal?.name || ""));
+  const isRetirement = /retirement|financial freedom/i.test(selectedGoal?.name || "");
 
   const options = [
     {
