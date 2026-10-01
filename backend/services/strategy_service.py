@@ -15,6 +15,8 @@ from engines.constraints.aggregator import ConstraintAggregator
 from engines.constraints.models import ConstraintSet
 from engines.risk_profiler.engine import RiskProfilerEngine
 from engines.orchestration.models import GoalEvaluationInput
+from engines.moneywheel.engine import MoneywheelEngine
+from models.moneywheel import MoneywheelInput
 
 
 class StrategyService:
@@ -130,10 +132,38 @@ class StrategyService:
             goals=risk_goals,
         )
 
+        # MoneyWheel remains the authoritative financial-state diagnostic engine.
+        # Missing optional inputs stay missing; this layer does not invent them.
+        moneywheel_result = None
+        if defined_goal is not None:
+            moneywheel_input = MoneywheelInput(
+                planning_unit_id=planning_unit_id,
+                gross_monthly_income=self._metric_value(financial_context, "annual_income") / 12.0
+                if self._metric_value(financial_context, "annual_income") is not None
+                else self._metric_value(financial_context, "monthly_income"),
+                monthly_surplus=self._metric_value(financial_context, "monthly_surplus"),
+                monthly_expenses=self._metric_value(financial_context, "annual_expenses") / 12.0
+                if self._metric_value(financial_context, "annual_expenses") is not None
+                else self._metric_value(financial_context, "monthly_expenses"),
+                essential_monthly_expenses=self._metric_value(financial_context, "essential_monthly_expenses"),
+                liquid_assets=self._metric_value(financial_context, "liquid_assets"),
+                monthly_debt_payments=self._metric_value(financial_context, "monthly_debt_payments"),
+                total_assets=self._metric_value(financial_context, "assets"),
+                total_liabilities=self._metric_value(financial_context, "liabilities"),
+                financial_assets=self._metric_value(financial_context, "financial_assets"),
+                current_goal_funding=defined_goal.projected_mapped_asset_value,
+                goal_target_amount=defined_goal.future_target,
+                projected_goal_funding=defined_goal.projected_mapped_asset_value,
+                future_goal_target=defined_goal.future_target,
+                goal_duration_years=defined_goal.duration_years,
+            )
+            moneywheel_result = MoneywheelEngine().build(moneywheel_input)
+
         return self.constraint_aggregator.aggregate(
             rule_assessment=rule_assessment,
             goals=goal_inputs,
             financial_context=financial_context,
+            moneywheel_result=moneywheel_result,
             risk_profile_constraints=risk_profile.constraints,
             planning_unit_id=planning_unit_id,
         )
