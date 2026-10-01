@@ -70,9 +70,9 @@ class GoalEngine:
                 calculate_education_target as spec_education_target,
                 calculate_travel_schedule as spec_travel_schedule,
             )
-            kind = goal_input.goal_type.strip().lower()
+            kind = canonical_goal_type(goal_input.goal_type)
             ref = reference_date or date.today()
-            if kind in {"retirement", "retirement / financial freedom"}:
+            if kind == "retirement":
                 future_target, specialized_metadata = spec_retirement_corpus(
                     current_monthly_expense=float(specialized_data.get("current_monthly_expense", 0)),
                     current_age=float(specialized_data.get("current_age", 0)),
@@ -84,7 +84,7 @@ class GoalEngine:
                 )
                 duration_years = specialized_metadata["years_to_retirement"]
                 today_cost = float(specialized_data.get("current_monthly_expense", today_cost)) * 12
-            elif kind in {"education", "child education"}:
+            elif kind == "education":
                 future_target, duration_years = spec_education_target(
                     current_education_cost=float(specialized_data.get("current_education_cost", 0)),
                     child_current_age=float(specialized_data.get("child_age", 0)),
