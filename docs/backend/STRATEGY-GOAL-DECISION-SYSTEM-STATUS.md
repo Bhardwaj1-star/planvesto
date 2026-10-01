@@ -1846,3 +1846,14 @@ REPORT
 ```
 
 **This is the implementation direction to preserve going forward.**
+
+
+---
+
+# 49. Latest CI Closure Note
+
+CI run #616 reached the backend test suite after the canonical technique registry fix. The registry issue is resolved; the remaining failure was an import-time circular dependency between GoalReportService and StrategyService.
+
+The cycle has been fixed by moving the StrategyService import inside GoalReportService.__init__. No frontend, Supabase schema, migration, or business-rule changes were introduced.
+
+**Release gate:** fresh CI verification on the latest branch head is still required before declaring backend closure.
