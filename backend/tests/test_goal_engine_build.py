@@ -64,3 +64,10 @@ def test_goal_engine_normalizes_retirement_goal_type():
     assert goal.future_target > 0
     assert goal.version_metadata["funding_model"] == "retirement_corpus_plus_monthly_contribution"
     assert goal.version_metadata["retirement_years"] > 0
+
+
+def test_goal_type_normalization_keeps_education_and_marriage_generic():
+    from rules.goals import canonical_goal_type
+
+    assert canonical_goal_type("education") == "education"
+    assert canonical_goal_type("marriage") == "marriage"
