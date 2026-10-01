@@ -11,6 +11,8 @@ from models.strategy import InvestorPriorities, StrategyRun
 from schemas.strategy import CustomScenarioRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
 from services.strategy_version_service import StrategyVersionService
 from services.retirement_report_renderer import RetirementReportRenderer
+from engines.constraints.aggregator import ConstraintAggregator
+from engines.constraints.models import ConstraintSet
 
 
 class StrategyService:
@@ -20,6 +22,7 @@ class StrategyService:
         self.financial_state_repo = FinancialStateSnapshotRepository()
         self.engine = StrategyEngine()
         self.rule_engine = RuleEngine()
+        self.constraint_aggregator = ConstraintAggregator()
         self.strategy_version_service = StrategyVersionService(StrategyVersionRepository(self.strat_repo.db))
         self.report_renderer = RetirementReportRenderer()
 
@@ -49,11 +52,25 @@ class StrategyService:
     def _rule_assessment(self, defined_goal: DefinedGoal, financial_context: dict):
         return self.rule_engine.assess(defined_goal, financial_context)
 
-    def _execute(self, defined_goal: DefinedGoal, priorities: InvestorPriorities, financial_context: dict, custom_scenarios=None):
+    def _build_constraint_set(
+        self,
+        rule_assessment,
+        financial_context: dict,
+        planning_unit_id: str,
+    ) -> ConstraintSet:
+        """Build a centralized ConstraintSet from all available constraint sources."""
+        return self.constraint_aggregator.aggregate(
+            rule_assessment=rule_assessment,
+            financial_context=financial_context,
+            planning_unit_id=planning_unit_id,
+        )
+
+    def _execute(self, defined_goal: DefinedGoal, priorities: InvestorPriorities, financial_context: dict, custom_scenarios=None, planning_unit_id: str = ""):
         rule_assessment = self._rule_assessment(defined_goal, financial_context)
         if not rule_assessment.eligible:
             raise HTTPException(status_code=422, detail={"message": "Goal failed hard planning constraints.", "constraints": [r.__dict__ for r in rule_assessment.hard_constraints]})
-        return self.engine.execute(defined_goal=defined_goal, priorities=priorities, custom_scenarios=custom_scenarios, financial_context=financial_context, rule_assessment=rule_assessment), rule_assessment
+        constraint_set = self._build_constraint_set(rule_assessment, financial_context, planning_unit_id)
+        return self.engine.execute(defined_goal=defined_goal, priorities=priorities, custom_scenarios=custom_scenarios, financial_context=financial_context, rule_assessment=rule_assessment), rule_assessment, constraint_set
 
     def build_strategy(self, planning_unit_id: str, goal_id: str, priorities: InvestorPriorities | None = None) -> StrategyRun:
         defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
@@ -62,8 +79,8 @@ class StrategyService:
         if priorities is None: priorities = prev_run.investor_priorities if prev_run else None
         if priorities is None: raise HTTPException(status_code=400, detail="Investor priorities must be provided before strategy comparison and ranking.")
         financial_context = self._financial_context(planning_unit_id, defined_goal)
-        result, rule_assessment = self._execute(defined_goal, priorities, financial_context)
-        run = StrategyRun(planning_unit_id=planning_unit_id, goal_id=goal_id, defined_goal_id=defined_goal.defined_goal_id or "", defined_goal_version=defined_goal.version, run_version=(prev_run.run_version + 1) if prev_run else 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, run_metadata={"trigger": "manual_build", "financial_state_context_available": bool(financial_context), "rule_assessment": {"eligible": rule_assessment.eligible, "diagnostics": [r.__dict__ for r in rule_assessment.diagnostics], "hard_constraints": [r.__dict__ for r in rule_assessment.hard_constraints], "soft_constraints": [r.__dict__ for r in rule_assessment.soft_constraints]}})
+        result, rule_assessment, constraint_set = self._execute(defined_goal, priorities, financial_context, planning_unit_id=planning_unit_id)
+        run = StrategyRun(planning_unit_id=planning_unit_id, goal_id=goal_id, defined_goal_id=defined_goal.defined_goal_id or "", defined_goal_version=defined_goal.version, run_version=(prev_run.run_version + 1) if prev_run else 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, run_metadata={"trigger": "manual_build", "financial_state_context_available": bool(financial_context), "rule_assessment": {"eligible": rule_assessment.eligible, "diagnostics": [r.__dict__ for r in rule_assessment.diagnostics], "hard_constraints": [r.__dict__ for r in rule_assessment.hard_constraints], "soft_constraints": [r.__dict__ for r in rule_assessment.soft_constraints], "canonical_constraint_set": constraint_set.model_dump()}})
         run.strategy_run_id = self.strat_repo.save_run(run)
         return run
 
@@ -77,7 +94,7 @@ class StrategyService:
         custom = create_custom_scenario(matched_strat, defined_goal, request.scenario_name, request.assumptions, request.funding_structure)
         custom_scens = [s for s in run.scenarios if s.is_investor_modified] + [custom]
         financial_context = self._financial_context(request.planning_unit_id, defined_goal)
-        result, _ = self._execute(defined_goal, run.investor_priorities, financial_context, custom_scens)
+        result, _, _cs = self._execute(defined_goal, run.investor_priorities, financial_context, custom_scens, planning_unit_id=request.planning_unit_id)
         new_run = StrategyRun(planning_unit_id=run.planning_unit_id, goal_id=run.goal_id, defined_goal_id=run.defined_goal_id, defined_goal_version=run.defined_goal_version, run_version=run.run_version + 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id, selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version, selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture, run_metadata={"trigger": "custom_scenario_added"})
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
@@ -89,7 +106,7 @@ class StrategyService:
         if not defined_goal: raise HTTPException(status_code=404, detail="Underlying DefinedGoal snapshot not found")
         custom_scens = [s for s in run.scenarios if s.is_investor_modified]
         financial_context = self._financial_context(request.planning_unit_id, defined_goal)
-        result, _ = self._execute(defined_goal, request.priorities, financial_context, custom_scens)
+        result, _, _cs = self._execute(defined_goal, request.priorities, financial_context, custom_scens, planning_unit_id=request.planning_unit_id)
         new_run = StrategyRun(planning_unit_id=run.planning_unit_id, goal_id=run.goal_id, defined_goal_id=run.defined_goal_id, defined_goal_version=run.defined_goal_version, run_version=run.run_version + 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id, selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version, selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture, run_metadata={"trigger": "priorities_updated"})
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
@@ -130,7 +147,7 @@ class StrategyService:
         prev = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
         if not prev: return
         financial_context = self._financial_context(planning_unit_id, new_defined_goal)
-        result, _ = self._execute(new_defined_goal, prev.investor_priorities, financial_context, [s for s in prev.scenarios if s.is_investor_modified])
+        result, _, _cs = self._execute(new_defined_goal, prev.investor_priorities, financial_context, [s for s in prev.scenarios if s.is_investor_modified], planning_unit_id=planning_unit_id)
         selected_arch = None
         if prev.selected_architecture: selected_arch = next((a for a in result.architectures if a.architecture_id == prev.selected_architecture.architecture_id), None)
         elif prev.selected_strategy_id: selected_arch = next((a for a in result.architectures if a.primary_strategy_id == prev.selected_strategy_id), None)

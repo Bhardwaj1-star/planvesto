@@ -6,6 +6,8 @@ from fastapi import HTTPException
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from engines.constraints.evaluator import FinancialRatioConstraintEvaluator
+from engines.constraints.aggregator import ConstraintAggregator
+from engines.constraints.models import ConstraintSet
 from engines.orchestration.engine import MultiGoalOrchestrator
 from engines.orchestration.models import GoalEvaluationInput, MultiGoalPlanResult
 from models.strategy import InvestorPriorities
@@ -31,6 +33,7 @@ class MultiGoalPlanningService:
         self.goal_report_service = goal_report_service or GoalReportService()
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
         self.constraint_evaluator = constraint_evaluator or FinancialRatioConstraintEvaluator()
+        self.constraint_aggregator = ConstraintAggregator(ratio_evaluator=self.constraint_evaluator)
 
     def build_multi_goal_plan(
         self,
@@ -107,6 +110,12 @@ class MultiGoalPlanningService:
 
         # Evaluate financial health ratios and constraints
         assessment = self.constraint_evaluator.assess_constraints(inputs, financial_context)
+        # Build centralized canonical ConstraintSet
+        canonical_constraint_set = self.constraint_aggregator.aggregate(
+            goals=inputs,
+            financial_context=financial_context,
+            planning_unit_id=planning_unit_id,
+        )
         effective_overrides = dict(assessment.suggested_overrides)
         if rule_overrides:
             effective_overrides.update(rule_overrides)
@@ -126,5 +135,14 @@ class MultiGoalPlanningService:
             plan.planning_notes.append(f"Ratio Warning: {warning.message}")
         for hard in assessment.hard_constraints:
             plan.trade_offs.append(f"Ratio Constraint: {hard.message}")
+
+        # Attach the canonical constraint set to the plan's audit trail
+        plan.audit_trail.append({
+            "source": "ConstraintAggregator",
+            "canonical_constraint_set": canonical_constraint_set.model_dump(),
+            "constraint_count": len(canonical_constraint_set.constraints),
+            "conflict_count": len(canonical_constraint_set.conflicts),
+            "hard_failure_count": len(canonical_constraint_set.hard_constraints),
+        })
 
         return plan
