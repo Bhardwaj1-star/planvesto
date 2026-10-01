@@ -147,3 +147,7 @@ class MoneywheelEngine:
             key=key, name=rule["name"], value=round(value, 4), unit=rule["unit"],
             status=status, formula=rule["formula"], explanation=explanation,
         )
+
+
+# Backward-compatible public alias for legacy imports.
+MoneyWheelEngine = MoneywheelEngine
