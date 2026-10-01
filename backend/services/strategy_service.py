@@ -10,7 +10,7 @@ from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, StrategyRun
 from schemas.strategy import CustomScenarioRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
 from services.strategy_version_service import StrategyVersionService
-from services.retirement_report_renderer import RetirementReportRenderer
+from services.goal_report_service import GoalReportService
 from engines.constraints.aggregator import ConstraintAggregator
 from engines.constraints.models import ConstraintSet
 from engines.risk_profiler.engine import RiskProfilerEngine
@@ -28,7 +28,7 @@ class StrategyService:
         self.rule_engine = RuleEngine()
         self.constraint_aggregator = ConstraintAggregator()
         self.strategy_version_service = StrategyVersionService(StrategyVersionRepository(self.strat_repo.db))
-        self.report_renderer = RetirementReportRenderer()
+        self.report_service = GoalReportService()
 
     @staticmethod
     def _metric_value(state: dict, key: str):
@@ -212,7 +212,7 @@ class StrategyService:
         custom_scens = [s for s in run.scenarios if s.is_investor_modified] + [custom]
         financial_context = self._financial_context(request.planning_unit_id, defined_goal)
         result, _, _cs = self._execute(defined_goal, run.investor_priorities, financial_context, custom_scens, planning_unit_id=request.planning_unit_id)
-        new_run = StrategyRun(planning_unit_id=run.planning_unit_id, goal_id=run.goal_id, defined_goal_id=run.defined_goal_id, defined_goal_version=run.defined_goal_version, run_version=run.run_version + 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id, selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version, selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture, run_metadata={"trigger": "custom_scenario_added"})
+        new_run = StrategyRun(planning_unit_id=run.planning_unit_id, goal_id=run.goal_id, defined_goal_id=run.defined_goal_id, defined_goal_version=run.defined_goal_version, run_version=run.run_version + 1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, what_if_scenarios=result.what_if_scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, selected_strategy_id=run.selected_strategy_id, selected_scenario_id=run.selected_scenario_id, selected_strategy_version_id=run.selected_strategy_version_id, selected_strategy_version=run.selected_strategy_version, selected_implementation_parameters=run.selected_implementation_parameters, selected_architecture=run.selected_architecture, run_metadata={"trigger": "custom_scenario_added"})
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
 
@@ -252,13 +252,8 @@ class StrategyService:
     def get_run_history(self, planning_unit_id: str, goal_id: str): return self.strat_repo.get_run_history(planning_unit_id, goal_id)
 
     def get_retirement_report(self, planning_unit_id: str, strategy_run_id: str):
-        run = self.strat_repo.get_run_by_id(planning_unit_id, strategy_run_id)
-        if not run: raise HTTPException(status_code=404, detail="Strategy run not found")
-        defined_goal = self.goal_repo.get_defined_goal_by_version(planning_unit_id, run.goal_id, run.defined_goal_version) or self.goal_repo.get_latest_defined_goal(planning_unit_id, run.goal_id)
-        if not defined_goal: raise HTTPException(status_code=404, detail="Underlying DefinedGoal snapshot not found")
-        financial_context = self._financial_context(planning_unit_id, defined_goal)
-        assessment = self._rule_assessment(defined_goal, financial_context)
-        return self.report_renderer.render(defined_goal=defined_goal, financial_context=financial_context, rule_assessment=assessment, strategy_result=run).as_dict()
+        """Backward-compatible alias for the canonical goal decision report."""
+        return self.report_service.build_report(planning_unit_id, strategy_run_id)
 
     def on_defined_goal_updated(self, planning_unit_id: str, goal_id: str, new_defined_goal: DefinedGoal) -> None:
         prev = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
