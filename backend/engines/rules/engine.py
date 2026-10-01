@@ -171,6 +171,19 @@ class RuleEngine:
     @staticmethod
     def _metric_value(context: dict[str, Any], key: str) -> float | None:
         raw = context.get(key)
+        if raw is None:
+            aliases = {
+                "emergency_fund_coverage": ("emergency_coverage", "emergency_fund_months"),
+                "emergency_coverage": ("emergency_fund_coverage", "emergency_fund_months"),
+                "current_liquidity_ratio": ("liquid_asset_ratio", "current_liquidity"),
+                "liquid_asset_ratio": ("current_liquidity_ratio",),
+                "savings_rate": ("savings_ratio",),
+                "savings_ratio": ("savings_rate",),
+            }.get(key, ())
+            for alias in aliases:
+                if alias in context:
+                    raw = context[alias]
+                    break
         if isinstance(raw, dict):
             if not raw.get("available", True):
                 return None

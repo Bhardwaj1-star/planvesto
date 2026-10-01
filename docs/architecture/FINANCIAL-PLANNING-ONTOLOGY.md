@@ -88,6 +88,7 @@ MoneyWheelResult = Metrics + Diagnostics + Financial Situation + Financial Story
 | Component | Owns | Does not own |
 |---|---|---|
 | Financial State | Current financial reality | Recommendations |
+| Canonical Calculation Layer | Reusable derived financial facts & calculations | Domain decisions & diagnosis |
 | MoneyWheel | Financial diagnosis | Investment decisions |
 | Risk Profiler | Investment risk structure | Goal funding calculations |
 | Goal Engine | Goal requirement and feasibility | Portfolio construction |
@@ -98,13 +99,16 @@ MoneyWheelResult = Metrics + Diagnostics + Financial Situation + Financial Story
 | Report | Presentation | Decision logic |
 
 ## Implementation Rule
-Ontology → Engine Contract → Business Rules → Calculations → Engine Output → Cross-Engine Integration → Financial Plan → Report.
+Ontology → Engine Contract → Business Rules → Canonical Calculations (`backend/engines/calculation/canonical.py`) → Engine Output → Cross-Engine Integration → Financial Plan → Report.
 Lower-level implementation details must not silently redefine ontology boundaries.
 
-## Existing Repository Note
-The repository already contains MoneyWheel rules, but the rules engine still references legacy keys such as emergency_fund_coverage and current_liquidity_ratio while the current MoneyWheel definitions use the newer metric/coverage names. This is an implementation mismatch to resolve later; it does not change the locked ontology.
-No frontend redesign, database schema change, SQL migration, or git CLI operation is part of this document.
+> **Canonical Financial Facts / Calculation Layer is the single source of truth for reusable derived financial facts.**
+> See `docs/architecture/CANONICAL-CALCULATION-SYSTEM.md` for complete mathematical and contract specifications.
+
+## Implementation Architecture Note
+The canonical calculation layer is established in `backend/engines/calculation/canonical.py`. Legacy rule keys (`emergency_fund_coverage`, `current_liquidity_ratio`, `savings_ratio`, `liquid_asset_to_total_asset`) are supported via unambiguous backward-compatibility aliases in `backend/rules/moneywheel.py` and `backend/engines/rules/engine.py` while downstream engines consume authoritative canonical facts. No frontend redesign, database schema change, SQL migration, or git CLI operation is part of this system.
 
 ## Status
 MoneyWheel Ontology: LOCKED.
+Canonical Financial Calculation Layer: CANONICAL (v1.0.0).
 Next ontology component: Risk Profiler.

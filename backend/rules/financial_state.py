@@ -8,9 +8,8 @@ def cash_flow_ratio(expenses: float, income: float) -> float | None:
 
 
 def savings_investment_rate(investable_surplus: float, income: float) -> float | None:
-    if income == 0:
-        return None
-    return investable_surplus / income * 100
+    from engines.calculation.canonical import calculate_savings_rate
+    return calculate_savings_rate(investable_surplus, income)
 
 
 def required_safety_reserve_months(cash_flow_ratio_value: float) -> int:

@@ -2,6 +2,9 @@ from typing import Literal
 from engines.calculation.engine import round_money
 
 
+from engines.calculation.canonical import calculate_goal_funding_gap
+
+
 def calculate_funding_gap(
     future_target: float,
     projected_mapped_asset_value: float,
@@ -13,7 +16,9 @@ def calculate_funding_gap(
       == 0 -> On Track
       < 0 -> Overfunded
     """
-    gap = round_money(future_target - projected_mapped_asset_value)
+    gap = calculate_goal_funding_gap(future_target, projected_mapped_asset_value)
+    if gap is None:
+        gap = 0.0
     if abs(gap) < 0.01:
         return (0.0, "On Track")
     if gap > 0:

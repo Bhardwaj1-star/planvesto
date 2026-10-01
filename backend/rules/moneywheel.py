@@ -32,6 +32,19 @@ RULE_DEFINITIONS = {
     },
 }
 
+# Backward compatibility aliases and coverage thresholds for diagnostics / downstream callers
+RULES.update({
+    "emergency_fund_coverage": {"name": "Emergency Fund Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
+    "emergency_coverage": {"name": "Emergency Coverage", "unit": "months", "formula": "Liquid Assets / Essential Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
+    "expense_coverage": {"name": "Expense Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
+    "current_liquidity_ratio": {"name": "Current Liquidity Ratio", "unit": "x", "formula": "Liquid Assets / Short-Term Liabilities", "excellent": (1.5, None), "healthy": (1.0, 1.5), "attention": (0.75, 1.0), "critical": (None, 0.75)},
+    "savings_ratio": RULES["savings_rate"],
+    "expense_ratio": {"name": "Need Expense Ratio", "unit": "%", "formula": "Need Expenses / Gross Monthly Income × 100", "excellent": (None, 40.0), "healthy": (40.0, 50.0), "attention": (50.0, 60.0), "critical": (60.0, None)},
+    "liquid_asset_to_total_asset": RULES["liquid_asset_ratio"],
+    "solvency_ratio": {"name": "Solvency Ratio", "unit": "%", "formula": "(1 - Leverage Ratio) × 100", "excellent": (80.0, None), "healthy": (70.0, 80.0), "attention": (50.0, 70.0), "critical": (None, 50.0)},
+    "insurance_gap_ratio": RULES["insurance_coverage_ratio"],
+})
+
 
 def classify(key: str, value: float) -> Status:
     rule = RULES[key]

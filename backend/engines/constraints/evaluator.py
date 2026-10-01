@@ -77,9 +77,17 @@ class FinancialRatioConstraintEvaluator:
                 # If unspecified, estimate conservative liquid pool from assets
                 liquid_assets = 0.0
 
+        from engines.calculation.canonical import (
+            calculate_debt_to_income_ratio,
+            calculate_expense_coverage,
+            calculate_leverage_ratio,
+            calculate_savings_rate,
+        )
+
         # 1. Savings Ratio
-        if monthly_income > 0 and monthly_surplus is not None:
-            sav_val = round((monthly_surplus / monthly_income) * 100.0, 2)
+        sav_val = calculate_savings_rate(monthly_surplus, monthly_income)
+        if sav_val is not None:
+            sav_val = round(sav_val, 2)
             try:
                 status = classify("savings_ratio", sav_val)
             except ValueError:
@@ -95,8 +103,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 2. Emergency Fund Coverage
-        if monthly_expenses > 0:
-            cov_val = round(liquid_assets / monthly_expenses, 2)
+        cov_val = calculate_expense_coverage(liquid_assets, monthly_expenses)
+        if cov_val is not None:
+            cov_val = round(cov_val, 2)
             try:
                 status = classify("emergency_fund_coverage", cov_val)
             except ValueError:
@@ -112,8 +121,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 3. Debt to Income Ratio
-        if monthly_income > 0:
-            dti_val = round((monthly_emi / monthly_income) * 100.0, 2)
+        dti_val = calculate_debt_to_income_ratio(monthly_emi, monthly_income, as_percentage=True)
+        if dti_val is not None:
+            dti_val = round(dti_val, 2)
             try:
                 status = classify("debt_to_income_ratio", dti_val)
             except ValueError:
@@ -129,8 +139,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 4. Leverage Ratio
-        if total_assets > 0:
-            lev_val = round((total_liabilities / total_assets) * 100.0, 2)
+        lev_val = calculate_leverage_ratio(total_liabilities, total_assets)
+        if lev_val is not None:
+            lev_val = round(lev_val, 2)
             try:
                 status = classify("leverage_ratio", lev_val)
             except ValueError:
