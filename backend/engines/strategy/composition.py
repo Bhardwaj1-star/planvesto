@@ -1,6 +1,8 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyArchitecture, StrategyDefinition
 from engines.strategy.components.adapters import components_for_strategy
+from library.strategies.components import get_canonical_component
+from library.strategies.techniques_canonical import get_canonical_technique
 
 
 def compose_architectures(
@@ -40,6 +42,12 @@ def compose_architectures(
         support = [s for s in supporting if can_support(primary, s)]
         components = by_id[primary.strategy_id][1] + [c for s in support for c in by_id[s.strategy_id][1]]
         constraints = list(primary.constraints)
+        missing_components = [cid for cid in primary.component_ids if get_canonical_component(cid) is None]
+        missing_techniques = [tid for tid in primary.technique_ids if get_canonical_technique(tid) is None]
+        if missing_components:
+            constraints.append("Unknown canonical components: " + ", ".join(missing_components))
+        if missing_techniques:
+            constraints.append("Unknown canonical techniques: " + ", ".join(missing_techniques))
         missing = [x for x in primary.required_inputs if x not in context]
         if missing:
             constraints.append(f"Missing strategy inputs: {', '.join(missing)}")
