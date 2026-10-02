@@ -9,6 +9,8 @@ GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
     "financial freedom/passive income": "passive_income",
     "financial freedom": "passive_income",
+    "financial freedom/passive income": "passive_income",
+    "financial freedom": "passive_income",
     "education": "child education",
     "child education": "child education",
     "marriage": "marriage",
