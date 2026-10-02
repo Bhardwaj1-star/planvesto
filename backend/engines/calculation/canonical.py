@@ -64,6 +64,24 @@ class DerivedFact:
 # ==============================================================================
 
 
+def calculate_cash_flow_ratio(monthly_expenses: float | None, monthly_income: float | None) -> float | None:
+    """Cash Flow Ratio = (Monthly Expenses / Monthly Income) * 100.
+
+    Returns None if any input is None, monthly_income <= 0, or result is not finite.
+    """
+    if monthly_expenses is None or monthly_income is None:
+        return None
+    try:
+        expenses = float(monthly_expenses)
+        income = float(monthly_income)
+    except (TypeError, ValueError):
+        return None
+    if income <= 0:
+        return None
+    res = (expenses / income) * 100.0
+    return round(res, 4) if math.isfinite(res) else None
+
+
 def calculate_savings_rate(monthly_surplus: float | None, monthly_income: float | None) -> float | None:
     """Savings Rate = (Monthly Surplus / Monthly Income) * 100.
 
