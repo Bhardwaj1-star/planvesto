@@ -278,3 +278,26 @@ Without changing any frontend code, backend can immediately support both new and
 - [ ] `/investor/goal-report` loads cleanly without JavaScript console errors.
 - [ ] `/investor/action-plan` renders Financial Health Diagnostic Rules (`ratio_constraints`).
 - [ ] All 388+ backend pytest cases remain 100% passing.
+
+
+---
+
+## 6. QA Reconciliation — 2026-10-02
+
+The original mismatch matrix above is a historical audit snapshot. Code was re-audited against the current `main` branch.
+
+### Resolved in current code
+- **MM-01 / MM-02:** Goal Decision Report now exposes the frontend-compatible `goal_name`, `goal_details`, `strategy.name` and `strategy.objective` fields; the frontend also supports canonical aliases.
+- **MM-03:** Retirement Report is now a canonical redirect to the generic Goal Decision Report; the old `sections.map()` crash path no longer exists.
+- **MM-04:** Basket Report PDF client functions and Reports Center basket selection are now wired.
+- **MM-05:** `ratio_constraints` is now emitted directly by `FinancialPlanService.build_plan()`.
+- **MM-06:** Rich report modules are present in the current Goal Decision Report contract.
+
+### New contract defect found and fixed
+- **MM-08 — Moneywheel persisted-response shape:** `GET /api/moneywheel/latest/{planning_unit_id}` and `history` previously returned raw persistence rows while the frontend expected `MoneywheelResult`. The API now canonicalizes persisted rows into the same result contract used by `POST /calculate`.
+- **MM-09 — Orchestration scope enum:** frontend accepted/sent `household`, while backend accepts `family` or `individual`. Frontend type is now aligned to the backend contract.
+
+### Verification status
+- Static endpoint/contract audit completed for the registered backend routers and corresponding frontend API modules.
+- Regression coverage added for the Moneywheel persisted-response contract.
+- Full pytest/production smoke verification still requires the production environment/DB to be the same environment used by the deployed frontend/backend; the connected Supabase project is not proven to be that production database.
