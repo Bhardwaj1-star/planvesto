@@ -2,11 +2,23 @@
 
 > This is the single working reference for the business architecture and runtime planning flow. Architecture/code must not be changed based on assumptions outside this document; when a business rule is locked, update this document first.
 
-## 1. Canonical End-to-End Architecture
+## 1. Source Blueprint and Canonical End-to-End Architecture
 
-**Financial Data** → **Financial State** → **Goals** → **Goal Feasibility** → **Constraints** → **Strategy Engine** → **Scenarios** → **Comparison** → **Decision** → **Report** → **Investor Decision**
+The Financial Planning Engine System Blueprint is the architectural baseline for this backend. It defines a dynamic Financial Decision Engine that uses actual financial state, goals, existing portfolio and proposed actions to construct strategies, calculate consequences, test scenarios, compare trade-offs and support the investor's decision.
 
-This is the primary architecture. Individual modules and services may implement multiple stages internally, but they must not create a competing business flow.
+The source blueprint's full decision loop is:
+
+**Financial State** → **Goals** → **Constraints** → **Proposed Action / Problem** → **Strategy Engine** → **Calculation Engine** → **Scenario Engine** → **Probability / Uncertainty** → **Optimization Engine** → **Explainability** → **Investor Decision** → **Updated Financial State**
+
+For implementation, **Financial Data** is the source layer feeding Financial State, while **Goal Feasibility** is an explicit planning stage derived from goal requirements and available financial resources before strategy evaluation.
+
+Therefore the current implementation-level flow is:
+
+**Financial Data** → **Financial State** → **Goals** → **Goal Feasibility** → **Constraints** → **Proposed Action / Problem** → **Strategy Engine** → **Calculation** → **Scenarios** → **Probability / Uncertainty** → **Optimization / Comparison** → **Explainability** → **Decision Options** → **Investor Decision** → **Updated Financial State**
+
+A Report is a presentation/output layer around canonical decision outputs; it is not an additional decision engine.
+
+Individual modules and services may implement multiple stages internally, but they must not create a competing business flow.
 
 ### Stage 1 — Financial Data
 
@@ -58,7 +70,13 @@ Constraints can play different decision roles: eligibility/hard constraint, rank
 
 Constraints are supplied to the Strategy Engine; they do not independently make the final investor decision.
 
-### Stage 6 — Strategy Engine
+### Stage 6 — Proposed Action / Problem
+
+The blueprint explicitly asks: **What am I considering?** An investor-proposed action or financial problem is translated into a testable object. Examples include changing contribution, adding a lump sum, changing a goal date/target, deploying cash, prepaying debt, changing allocation, or combining actions.
+
+This is the decision context, not the strategy itself. The Strategy Engine generates the possible paths.
+
+### Stage 7 — Strategy Engine
 
 The Strategy Engine is the central goal-level strategy decision system.
 
@@ -70,7 +88,51 @@ The Strategy Engine may also execute deterministic technique outputs required by
 
 The Strategy Engine is the authoritative source for strategy evaluation and recommendation. Services may orchestrate calls to it, but must not duplicate its business logic.
 
-### Stage 7 — Scenarios
+### Stage 8 — Calculation Engine
+
+Calculation answers: **What does each strategy mathematically produce?** Reusable calculations quantify candidate strategies; reports and API handlers must not independently recreate them.
+
+Examples include future value, required contribution/return, debt interest saved and portfolio/goal projections.
+
+### Stage 9 — Scenario Engine
+
+Scenario analysis asks: **What if conditions change?** Scenarios include baseline/what-if/customized assumptions such as lower/base/higher return, contribution levels, step-up rates, dates and return/volatility paths.
+
+### Stage 10 — Probability / Uncertainty
+
+Where implemented, this layer estimates outcome ranges/uncertainty and remains conceptually distinct from deterministic scenario calculation.
+
+### Stage 11 — Optimization / Comparison
+
+Optimization occurs after multiple strategies are generated and evaluated. It does not mean maximizing return. Comparison considers goal fit, cash-flow fit, liquidity, debt, portfolio, risk, flexibility, outcome quality and trade-offs.
+
+### Stage 12 — Explainability
+
+Explainability exposes why outcomes differ, including assumptions, evidence, consequences and trade-offs. Reports present this evidence but must not become an independent decision authority.
+
+### Stage 13 — Decision Options / Decision Evaluation
+
+Decision evaluation determines how candidate strategies perform against goals, financial state, constraints, priorities and trade-offs. A recommendation remains decision support.
+
+**Strategy Recommendation ≠ Investor Decision.**
+
+### Stage 14 — Investor Decision
+
+The investor makes the final choice. The system may persist selected strategy/scenario/architecture/implementation parameters where supported.
+
+### Stage 15 — Updated Financial State
+
+After execution, the actual financial state becomes the next planning snapshot. The feedback loop is:
+
+**Decision → Execution / Updated Data → Updated Financial State → Replanning**
+
+### Stage 16 — Report
+
+Reports present canonical planning outputs. Individual-goal reporting follows:
+
+**Strategy Run → GoalReportService → Structured Goal Decision Report → PDF**
+
+### Stage 17 — Report Scope Boundary
 
 Scenarios represent alternative assumption/implementation states used to examine outcomes. The current engine supports baseline, what-if and investor-customized scenarios.
 
