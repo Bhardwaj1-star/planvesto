@@ -4,6 +4,8 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from main import app
 from models.orchestration import ModuleAvailability, PlanningContext, PlanningOrchestrationContext
+from models.orchestration import WorkflowNextAction, WorkflowPrerequisite
+from services.planning_orchestration_service import PlanningOrchestrationService
 
 client = TestClient(app)
 
@@ -222,3 +224,49 @@ class TestOrchestrationAuthorization:
         assert r.status_code == 200
         mock_pu.assert_called_once_with("pu-1", "user-1")
         assert r.json()["planning_unit_id"] == "pu-1"
+
+
+class TestWorkflowReadiness:
+    def test_ready_workflow_has_no_blockers_and_returns_to_process(self):
+        readiness = PlanningOrchestrationService.build_workflow_readiness(
+            process_route="/investor/goal-planner?goalId=goal-1",
+            prerequisites=[
+                WorkflowPrerequisite(
+                    key="financial_state",
+                    availability=ModuleAvailability(available=True),
+                )
+            ],
+        )
+
+        assert readiness.status == "ready"
+        assert readiness.blockers == []
+        assert readiness.next_action is None
+        assert readiness.return_to == "/investor/goal-planner?goalId=goal-1"
+
+    def test_blocked_workflow_exposes_reason_action_and_return_route(self):
+        readiness = PlanningOrchestrationService.build_workflow_readiness(
+            process_route="/investor/goal-planner?goalId=goal-1",
+            prerequisites=[
+                WorkflowPrerequisite(
+                    key="financial_state",
+                    availability=ModuleAvailability(
+                        available=False,
+                        reason="No Financial State snapshot exists for this planning context",
+                    ),
+                    next_action=WorkflowNextAction(
+                        label="Review Financial State",
+                        route="/investor/financial-state",
+                    ),
+                )
+            ],
+        )
+
+        assert readiness.status == "blocked"
+        assert len(readiness.blockers) == 1
+        assert readiness.blockers[0].reason == "No Financial State snapshot exists for this planning context"
+        assert readiness.next_action.route == "/investor/financial-state"
+        assert readiness.return_to == "/investor/goal-planner?goalId=goal-1"
+
+    def test_workflow_routes_must_be_local_paths(self):
+        with pytest.raises(ValueError):
+            WorkflowNextAction(label="External", route="https://example.com")

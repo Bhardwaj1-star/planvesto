@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { DashboardData, DashboardGoal, getDashboard } from "../../../lib/api/dashboard";
 import { subscribeToFinancialChanges } from "../../../lib/dashboard/realtime";
+import { getSafeRedirect } from "../../../lib/safe-redirect";
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const shortMoney = (value: number | null | undefined) => value == null ? "—" : money.format(value);
@@ -38,6 +40,7 @@ function GoalTimeline({ goals, onClick }: { goals: DashboardGoal[]; onClick: (go
 }
 
 export default function FinancialStatePage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,11 @@ export default function FinancialStatePage() {
       unsubscribe?.();
     };
   }, []);
+  useEffect(() => {
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    if (!returnTo || !data?.financial_state.investable_surplus_monthly.available) return;
+    router.replace(getSafeRedirect(returnTo, "/investor/goal-planner"));
+  }, [data, router]);
   const fs = data?.financial_state;
   const income = fs?.income_monthly.value ?? 0;
   const expenses = fs?.expenses_monthly.value ?? 0;

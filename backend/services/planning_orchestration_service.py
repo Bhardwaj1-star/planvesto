@@ -1,7 +1,14 @@
 from typing import Any
 
 from data.financial_state_repository import FinancialStateSnapshotRepository
-from models.orchestration import ModuleAvailability, PlanningContext, PlanningOrchestrationContext
+from models.orchestration import (
+    ModuleAvailability,
+    PlanningContext,
+    PlanningOrchestrationContext,
+    WorkflowBlocker,
+    WorkflowPrerequisite,
+    WorkflowReadiness,
+)
 
 
 class PlanningOrchestrationService:
@@ -14,6 +21,34 @@ class PlanningOrchestrationService:
 
     def __init__(self, financial_state_repository: Any | None = None):
         self.financial_state_repository = financial_state_repository or FinancialStateSnapshotRepository()
+
+    @staticmethod
+    def build_workflow_readiness(
+        process_route: str,
+        prerequisites: list[WorkflowPrerequisite],
+    ) -> WorkflowReadiness:
+        """Normalize server-evaluated prerequisites into a returnable workflow result."""
+        blockers = [
+            WorkflowBlocker(
+                key=prerequisite.key,
+                reason=prerequisite.availability.reason,
+                missing_data=prerequisite.missing_data,
+                next_action=prerequisite.next_action,
+            )
+            for prerequisite in prerequisites
+            if not prerequisite.availability.available
+        ]
+        next_action = next(
+            (blocker.next_action for blocker in blockers if blocker.next_action is not None),
+            None,
+        )
+        return WorkflowReadiness(
+            status="blocked" if blockers else "ready",
+            process_route=process_route,
+            blockers=blockers,
+            next_action=next_action,
+            return_to=process_route,
+        )
 
     def build_context(
         self,

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "tsx --test tests/goal-feasibility.test.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,9 +18,11 @@
   "devDependencies": {
     "@types/node": "26.4.0",
     "@types/react": "19.2.18",
+    "@types/react-dom": "^19.2.7",
     "autoprefixer": "^10.5.4",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { getSafeRedirect } from "../../lib/safe-redirect";
 import type { PersonalInformation } from "../../lib/onboarding/personal-information/model";
 import type { FamilyMember } from "../../lib/onboarding/family-dependents/types";
 import type { IncomeSource } from "../../lib/onboarding/income/types";
@@ -206,6 +207,15 @@ export function useOnboardingNavigation(step: number) {
     if (target && canAccess) router.push(`/investor/onboarding/${target.slug}`);
   }
 
+  function goNext() {
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    if (returnTo) {
+      router.replace(getSafeRedirect(returnTo, "/investor/financial-state"));
+      return;
+    }
+    goToStep(onboardingSteps[currentIndex + 1]?.number ?? currentStep, true);
+  }
+
   useEffect(() => {
     if (!pathname.startsWith("/investor/onboarding/") || currentIndex < 0) return;
     if (currentStep > maxAccessibleStep) {
@@ -226,7 +236,7 @@ export function useOnboardingNavigation(step: number) {
     completedSteps,
     completeStep,
     goToStep,
-    goNext: () => goToStep(onboardingSteps[currentIndex + 1]?.number ?? currentStep, true),
+    goNext,
     goPrevious: () => goToStep(onboardingSteps[currentIndex - 1]?.number ?? currentStep),
   };
 }

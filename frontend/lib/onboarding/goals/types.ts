@@ -1,3 +1,5 @@
+import type { WorkflowReadiness } from "../../api/orchestration";
+
 export const goalTypes = [
   "Retirement",
   "Financial Freedom / Passive Income",
@@ -196,6 +198,7 @@ export type DefinedGoal = {
   funding_gap: number;
   funding_status: FundingStatus;
   feasibility_status?: "feasible" | "constrained" | "infeasible" | "unknown";
+  workflow_readiness?: WorkflowReadiness | null;
   feasibility_reason?: string | null;
   available_monthly_surplus?: number | null;
   monthly_contribution_surplus_gap?: number | null;

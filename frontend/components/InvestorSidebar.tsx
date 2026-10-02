@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSafeRedirect } from "../lib/safe-redirect";
 
 type NavItem = { label: string; href: string; exact?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
@@ -53,9 +54,15 @@ export default function InvestorSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [workflowReturnTo, setWorkflowReturnTo] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(
     pathname?.startsWith("/investor/goal-history") || pathname?.startsWith("/investor/strategy-history") || false,
   );
+
+  useEffect(() => {
+    const requestedReturnTo = new URLSearchParams(window.location.search).get("returnTo");
+    setWorkflowReturnTo(requestedReturnTo ? getSafeRedirect(requestedReturnTo, "/investor/goal-planner") : null);
+  }, [pathname]);
 
   if (pathname?.startsWith("/investor/onboarding")) return null;
 
@@ -105,6 +112,7 @@ export default function InvestorSidebar() {
                 </div>
               </section>
             ))}
+            {workflowReturnTo && <Link href={workflowReturnTo} onClick={() => setIsMobileOpen(false)} className="mt-4 block rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-800">Return to planning →</Link>}
           </nav>
           <div className={`${isCollapsed ? "p-2" : "p-4"} border-t border-slate-200`}><Link href="/" onClick={() => setIsMobileOpen(false)} className={`${isCollapsed ? "justify-center px-2" : "px-3"} flex rounded-xl py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-navy-900`} title={isCollapsed ? "Back to Planvesto" : undefined}><span className={isCollapsed ? "sr-only" : undefined}>Back to Planvesto</span>{isCollapsed && <span aria-hidden="true">↩</span>}</Link></div>
         </div>

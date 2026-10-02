@@ -8,7 +8,15 @@ from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
 from engines.goal.funding_strategies import build_goal_funding_strategies
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
+from models.orchestration import ModuleAvailability, WorkflowNextAction, WorkflowPrerequisite
+from models.orchestration import (
+    ModuleAvailability,
+    WorkflowMissingData,
+    WorkflowNextAction,
+    WorkflowPrerequisite,
+)
 from schemas.goals import GoalInput, GoalCalculateRequest
+from services.planning_orchestration_service import PlanningOrchestrationService
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +63,65 @@ class GoalService:
             return value.value
         return value
 
+    @staticmethod
+    def _metric_available(state: dict[str, Any], key: str) -> bool:
+        metric = state.get(key)
+        if isinstance(metric, dict):
+            return metric.get("available", metric.get("value") is not None)
+        if hasattr(metric, "available"):
+            return metric.available
+        return metric is not None
+
+    @staticmethod
+    def _attach_workflow_readiness(
+        defined_goal: DefinedGoal,
+        available: bool,
+        missing_data: list[WorkflowMissingData] | None = None,
+    ) -> DefinedGoal:
+        reason = None if available else "Current financial surplus is unavailable."
+        prerequisite = WorkflowPrerequisite(
+            key="financial_state",
+            availability=ModuleAvailability(available=available, reason=reason),
+            missing_data=missing_data or [],
+            next_action=None if available else WorkflowNextAction(
+                label="Complete Financial State",
+                route="/investor/financial-state",
+            ),
+        )
+        readiness = PlanningOrchestrationService.build_workflow_readiness(
+            process_route="/investor/goal-planner",
+            prerequisites=[prerequisite],
+        )
+        defined_goal.workflow_readiness = readiness
+        defined_goal.version_metadata["workflow_readiness"] = readiness.model_dump(mode="json")
+        return defined_goal
+
+    @classmethod
+    def _missing_surplus_inputs(cls, state: dict[str, Any]) -> list[WorkflowMissingData]:
+        missing = []
+        if not cls._metric_available(state, "income_monthly"):
+            missing.append(WorkflowMissingData(
+                label="Income frequency",
+                route="/investor/onboarding/income",
+            ))
+        if not cls._metric_available(state, "expenses_monthly"):
+            missing.append(WorkflowMissingData(
+                label="Expense frequency",
+                route="/investor/onboarding/expenses",
+            ))
+        return missing or [WorkflowMissingData(label="Investable monthly surplus")]
+
+    def _ensure_workflow_readiness(self, defined_goal: DefinedGoal) -> DefinedGoal:
+        if defined_goal.workflow_readiness is not None:
+            return defined_goal
+        if defined_goal.feasibility_status == "unknown":
+            defined_goal.feasibility_reason = "Current financial surplus is unavailable."
+            defined_goal.version_metadata.setdefault("goal_feasibility", {}).update(
+                {"status": "unknown", "reason": defined_goal.feasibility_reason}
+            )
+            return self._attach_workflow_readiness(defined_goal, available=False)
+        return self._attach_workflow_readiness(defined_goal, available=True)
+
     def _apply_feasibility(self, defined_goal: DefinedGoal) -> DefinedGoal:
         """Assess whether the goal's required contribution fits current surplus.
 
@@ -79,17 +146,28 @@ class GoalService:
                 "status": "unknown",
                 "reason": defined_goal.feasibility_reason,
             }
-            return defined_goal
+            missing_data = [WorkflowMissingData(
+                label="Latest Financial State snapshot" if row is None else "Financial State data"
+            )]
+            return self._attach_workflow_readiness(
+                defined_goal,
+                available=False,
+                missing_data=missing_data,
+            )
 
         surplus = self._metric_value(state, "investable_surplus_monthly")
-        if surplus is None:
+        if surplus is None or not self._metric_available(state, "investable_surplus_monthly"):
             defined_goal.feasibility_status = "unknown"
-            defined_goal.feasibility_reason = "Monthly investable surplus is unavailable."
+            defined_goal.feasibility_reason = "Current financial surplus is unavailable."
             defined_goal.version_metadata["goal_feasibility"] = {
                 "status": "unknown",
                 "reason": defined_goal.feasibility_reason,
             }
-            return defined_goal
+            return self._attach_workflow_readiness(
+                defined_goal,
+                available=False,
+                missing_data=self._missing_surplus_inputs(state),
+            )
 
         surplus = max(0.0, float(surplus))
         required = max(0.0, float(defined_goal.required_monthly_contribution))
@@ -127,7 +205,7 @@ class GoalService:
             "reason": reason,
             "funding_strategies": funding_strategies,
         }
-        return defined_goal
+        return self._attach_workflow_readiness(defined_goal, available=True)
 
     def calculate_preview(self, request: GoalCalculateRequest) -> DefinedGoal:
         self._enrich_retirement_context(request)
@@ -191,13 +269,13 @@ class GoalService:
         goal = self.repository.get_latest_defined_goal(planning_unit_id, goal_id)
         if not goal:
             raise HTTPException(status_code=404, detail="DefinedGoal not found for this goal")
-        return goal
+        return self._apply_feasibility(goal)
 
     def get_defined_goal_version(self, planning_unit_id: str, goal_id: str, version: int) -> DefinedGoal:
         goal = self.repository.get_defined_goal_by_version(planning_unit_id, goal_id, version)
         if not goal:
             raise HTTPException(status_code=404, detail=f"DefinedGoal version {version} not found")
-        return goal
+        return self._ensure_workflow_readiness(goal)
 
     def get_version_history(self, planning_unit_id: str, goal_id: str) -> list[DefinedGoalVersionSummary]:
         rows = self.repository.get_all_defined_goal_versions(planning_unit_id, goal_id)

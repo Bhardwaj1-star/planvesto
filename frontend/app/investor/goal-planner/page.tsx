@@ -3,6 +3,7 @@
 import { useEffect, useState, useId } from "react";
 import Link from "next/link";
 import InvestorHeader from "../../../components/InvestorHeader";
+import GoalFeasibility from "../../../components/goals/GoalFeasibility";
 import { supabase } from "../../../lib/supabase";
 import { apiRequest, ApiError } from "../../../lib/api/client";
 import { formatINR, formatTargetMonthYear } from "../../../lib/onboarding/goals/goals";
@@ -197,29 +198,6 @@ function Metric({ label, value }: { label: string; value: number }) { return <di
 function GoalCard({ goal, cancelling, onEdit, onCancel }: { goal: DefinedGoal; cancelling: boolean; onEdit: () => void; onCancel: () => void }) { return <article className={`rounded-2xl border bg-white p-6 shadow-sm ${goal.funding_status === "Shortfall" ? "border-rose-200" : "border-slate-200"}`}><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2.5"><h3 className="text-xl font-extrabold text-navy-900">{goal.goal_name}</h3><span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">v{goal.version}</span><FundingStatusBadge status={goal.funding_status} /></div><p className="mt-1 text-sm text-slate-500">{goal.goal_type} · Target: {formatTargetMonthYear(goal.target_month, goal.target_year)} · {goal.duration_years} yrs</p></div><div className="flex items-center gap-2 text-sm font-bold"><Link href={`/investor/strategy-builder?goalId=${encodeURIComponent(goal.goal_id)}`} className="rounded-lg bg-navy-900 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">Plan Strategy →</Link><button type="button" onClick={onEdit} className="rounded-lg px-3 py-1.5 text-teal-700 hover:bg-teal-50">Edit</button><button type="button" disabled={cancelling} onClick={onCancel} className="rounded-lg px-3 py-1.5 text-slate-500 hover:bg-rose-50 disabled:opacity-50">{cancelling ? "Cancelling..." : "Cancel Goal"}</button></div></div><div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold"><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-800 border border-teal-200">Priority: {toUiPriorityLabel(goal.priority)}</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{goal.flexibility}</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Status: {goal.status}</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Inflation: {(goal.inflation_rate * 100).toFixed(1)}%</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{goal.mapped_assets.length} asset{goal.mapped_assets.length === 1 ? "" : "s"} mapped</span></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><Snapshot label="Today's Cost" value={formatINR(goal.today_cost)} /><Snapshot label="Future Target" value={formatINR(goal.future_target)} /><Snapshot label="Projected Assets" value={formatINR(goal.projected_mapped_asset_value)} /><Snapshot label="Funding Gap" value={formatINR(goal.funding_gap)} /></div><GoalFeasibility goal={goal} /></article>; }
 function Snapshot({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1 text-base font-extrabold text-navy-900">{value}</p></div>; }
 function FundingStatusBadge({ status }: { status: FundingStatus }) { const cls = status === "Shortfall" ? "border-rose-200 bg-rose-50 text-rose-700" : status === "On Track" ? "border-teal-200 bg-teal-50 text-teal-800" : "border-blue-200 bg-blue-50 text-blue-800"; return <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-black uppercase tracking-wider ${cls}`}>{status}</span>; }
-
-function GoalFeasibility({ goal }: { goal: DefinedGoal }) {
-  const status = goal.feasibility_status || "unknown";
-  const config = status === "feasible"
-    ? { label: "Feasible", cls: "border-teal-200 bg-teal-50 text-teal-800" }
-    : status === "constrained"
-      ? { label: "Constrained", cls: "border-amber-200 bg-amber-50 text-amber-800" }
-      : status === "infeasible"
-        ? { label: "Infeasible", cls: "border-rose-200 bg-rose-50 text-rose-800" }
-        : { label: "Unknown", cls: "border-slate-200 bg-slate-50 text-slate-700" };
-  return <div className={`mt-4 rounded-xl border p-3 ${config.cls}`}>
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <span className="text-xs font-black uppercase tracking-wider">Goal Feasibility</span>
-      <span className="rounded-md border border-current/20 px-2 py-0.5 text-xs font-black uppercase">{config.label}</span>
-    </div>
-    {goal.feasibility_reason && <p className="mt-1.5 text-xs font-semibold">{goal.feasibility_reason}</p>}
-    {goal.available_monthly_surplus != null && goal.required_monthly_contribution != null && (
-      <p className="mt-1.5 text-[11px] font-medium opacity-80">
-        Current surplus {formatINR(goal.available_monthly_surplus)} / month · Required {formatINR(goal.required_monthly_contribution)} / month
-      </p>
-    )}
-  </div>;
-}
 
 function GoalForm({ formData, liabilities, assets, formError, isSaving, isPreviewing, previewResult, updateForm, updateDynamic, onAddAsset, onRemoveAsset, onUpdateAsset, onCalculate, onSave, onCancel }: { formData: GoalFormData; liabilities: LiabilityRecord[]; assets: AssetRecord[]; formError: string | null; isSaving: boolean; isPreviewing: boolean; previewResult: DefinedGoal | null; updateForm: React.Dispatch<React.SetStateAction<GoalFormData>>; updateDynamic: (changes: Partial<DynamicDetails>) => void; onAddAsset: () => void; onRemoveAsset: (id: string) => void; onUpdateAsset: (id: string, changes: Partial<FormAssetMapping>) => void; onCalculate: () => void; onSave: () => void; onCancel: () => void }) {
   const type = formData.goal_type; const d = formData.dynamic_details; const special = isSpecialGoal(type); const selectedLiability = liabilities.find((l) => l.id === d.selectedLiabilityId);

@@ -10,6 +10,31 @@ export type FundingStatusType =
   | "requires_review";
 export type FeasibilityStatusType = "feasible" | "constrained" | "infeasible";
 
+export type WorkflowNextAction = {
+  label: string;
+  route: string;
+};
+
+export type WorkflowMissingData = {
+  label: string;
+  route: string | null;
+};
+
+export type WorkflowBlocker = {
+  key: string;
+  reason: string | null;
+  missing_data: WorkflowMissingData[];
+  next_action: WorkflowNextAction | null;
+};
+
+export type WorkflowReadiness = {
+  status: "ready" | "blocked";
+  process_route: string;
+  blockers: WorkflowBlocker[];
+  next_action: WorkflowNextAction | null;
+  return_to: string;
+};
+
 export interface GoalResolution {
   goal_id: string;
   goal_name: string;

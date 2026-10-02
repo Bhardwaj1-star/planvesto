@@ -1,5 +1,6 @@
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from models.orchestration import WorkflowReadiness
 
 
 class DefinedGoalAssetMapping(BaseModel):
@@ -43,12 +44,22 @@ class DefinedGoal(BaseModel):
     required_monthly_contribution: float = 0.0
     funding_return_assumption: float = 0.08
     feasibility_status: Literal["feasible", "constrained", "infeasible", "unknown"] = "unknown"
+    workflow_readiness: WorkflowReadiness | None = None
     available_monthly_surplus: float | None = None
     monthly_contribution_surplus_gap: float | None = None
     feasibility_reason: str | None = None
     funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
     version_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def hydrate_workflow_readiness(cls, value):
+        if isinstance(value, dict) and "workflow_readiness" not in value:
+            metadata = value.get("version_metadata") or {}
+            if isinstance(metadata, dict) and metadata.get("workflow_readiness"):
+                return {**value, "workflow_readiness": metadata["workflow_readiness"]}
+        return value
 
 
 class DefinedGoalVersionSummary(BaseModel):
