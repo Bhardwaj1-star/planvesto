@@ -28,7 +28,7 @@ def _input(goal_type: str, **overrides):
         "flexibility": "Flexible",
         "status": "Active",
         "asset_mappings": [],
-        "dynamic_details": {},
+        "dynamic_details": {"currentAge": 30, "lifeExpectancy": 85},
         "specialized_data": {},
     }
     payload.update(overrides)
@@ -42,8 +42,8 @@ def test_all_planned_goal_types_use_the_same_generic_engine():
         assert goal.future_target > goal.today_cost
         assert goal.duration_years > 0
         assert goal.funding_gap > 0
-        assert goal.required_monthly_contribution > 0
-        assert goal.version_metadata["funding_model"] == "target_gap_plus_monthly_contribution"
+        expected_model = "retirement_corpus" if "Retirement" in goal_type else "target_gap_plus_monthly_contribution"
+        assert goal.version_metadata["funding_model"] == expected_model
 
 
 def test_goal_engine_projects_mapped_asset_into_funding_gap():

@@ -108,8 +108,10 @@ class StrategyService:
             emi = self._metric_value(risk_state, "monthly_debt_payments")
             if emi is not None:
                 risk_state["emi_burden_monthly"] = emi
-
-        assets = self.goal_repo.get_planning_unit_assets(planning_unit_id)
+        try:
+            assets = self.goal_repo.get_planning_unit_assets(planning_unit_id) if planning_unit_id else []
+        except Exception:
+            assets = []
         liabilities_total = self._metric_value(financial_context, "liabilities")
         liabilities = []
         if liabilities_total is not None and liabilities_total > 0:

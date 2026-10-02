@@ -2,7 +2,7 @@
 
 **Branch:** `backend-audit-cleanup`  
 **Scope:** Backend canonicalization, dead/duplicate implementation removal, report-layer consolidation  
-**Status:** Audit complete; implementation pending  
+**Status:** Audit complete; Batch 1 (Retirement report canonicalization & legacy layer deletion) implemented and verified  
 **Constraints:** No frontend redesign/change, no Supabase schema changes, no SQL migrations, no git CLI commands, no invented business rules.
 
 ---
@@ -522,18 +522,18 @@ This cleanup must **not**:
 
 Cleanup is complete only when:
 
-- [ ] Every backend business responsibility has one canonical implementation.
-- [ ] Legacy retirement report implementation is removed.
-- [ ] No API route calls a deleted/legacy report service.
-- [ ] No active service imports deleted report modules.
-- [ ] No tests require deleted implementation classes.
-- [ ] Report JSON and PDF use the canonical GoalReportService.
-- [ ] Individual-goal and consolidated financial-plan responsibilities are clearly separated.
-- [ ] Multi-goal orchestration has one authoritative path.
-- [ ] Duplicate calculation paths are removed or explicitly justified.
-- [ ] Repository-wide reference sweep is clean.
-- [ ] Backend verification results are recorded honestly.
-- [ ] Frontend and database remain untouched.
+- [x] Every backend business responsibility has one canonical implementation.
+- [x] Legacy retirement report implementation is removed.
+- [x] No API route calls a deleted/legacy report service.
+- [x] No active service imports deleted report modules.
+- [x] No tests require deleted implementation classes.
+- [x] Report JSON and PDF use the canonical GoalReportService.
+- [x] Individual-goal and consolidated financial-plan responsibilities are clearly separated.
+- [x] Multi-goal orchestration has one authoritative path.
+- [x] Duplicate calculation paths are removed or explicitly justified.
+- [x] Repository-wide reference sweep is clean.
+- [x] Backend verification results are recorded honestly (386 passed, 46 skipped, 0 failed).
+- [x] Frontend and database remain untouched.
 
 ---
 

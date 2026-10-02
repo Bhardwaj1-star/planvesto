@@ -43,8 +43,11 @@ def test_complete_financial_plan_contains_goal_calculation_and_funding_options()
         ],
     )
 
+    strat_repo = MagicMock()
+    strat_repo.get_latest_run.return_value = None
     service = FinancialPlanService(
         goal_repo=goal_repo,
+        strategy_repo=strat_repo,
         multi_goal_service=multi_goal,
     )
     result = service.build_plan("pu-1")
