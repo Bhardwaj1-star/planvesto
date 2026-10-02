@@ -4,7 +4,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib import colors
 
-from backend.models.summary_report import SummaryReport
+from models.summary_report import SummaryReport
 
 class SummaryReportRenderer:
     """Render a SummaryReport to PDF.
