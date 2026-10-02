@@ -101,7 +101,7 @@ export interface PlanningOrchestrationRequest {
   investor_id?: string;
   goal_version_ids: string[];
   strategy_version_id?: string;
-  scope?: "household" | "individual";
+  scope?: "family" | "individual";
 }
 
 /**
