@@ -2,9 +2,9 @@ MISSING_INPUT = "MISSING INPUT — requires a business rule or database field."
 
 
 def cash_flow_ratio(expenses: float, income: float) -> float | None:
-    if income == 0:
-        return None
-    return expenses / income * 100
+    """Compatibility wrapper around the canonical cash-flow calculation."""
+    from engines.calculation.canonical import calculate_cash_flow_ratio
+    return calculate_cash_flow_ratio(expenses, income)
 
 
 def savings_investment_rate(investable_surplus: float, income: float) -> float | None:
