@@ -10,8 +10,8 @@ import { useTheme } from "./ThemeProvider";
 export function InvestorProfileMenu() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>("investor@planvesto.com");
-  const [userName, setUserName] = useState<string>("Investor");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
   const [completionPercentage, setCompletionPercentage] = useState<number>(0);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,10 +47,13 @@ export function InvestorProfileMenu() {
         if (onboarding.goals?.length > 0) completedCount++;
 
         const pct = Math.round((completedCount / 6) * 100);
-        setCompletionPercentage(pct > 0 ? pct : 35);
+        setCompletionPercentage(pct);
       } catch {
-        // Fallback default for demo/preview
-        setCompletionPercentage(85);
+        // No synthetic profile data: keep the UI at its real empty state.
+        if (!active) return;
+        setUserEmail("");
+        setUserName("");
+        setCompletionPercentage(0);
       }
     }
 
@@ -87,7 +90,7 @@ export function InvestorProfileMenu() {
     }
   };
 
-  const initials = userName
+  const initials = (userName || "Investor")
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
@@ -143,10 +146,10 @@ export function InvestorProfileMenu() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-extrabold text-slate-950">
-                  {userName}
+                  {userName || "Investor"}
                 </p>
                 <p className="truncate text-xs text-slate-500 font-medium">
-                  {userEmail}
+                  {userEmail || "Not available"}
                 </p>
               </div>
             </div>
