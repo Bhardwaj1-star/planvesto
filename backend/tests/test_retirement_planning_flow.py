@@ -22,8 +22,8 @@ def _sample_retirement_goal(planning_unit_id="pu-ret-1", goal_id="goal-ret-1"):
     return DefinedGoal(
         planning_unit_id=planning_unit_id,
         goal_id=goal_id,
-        goal_name="Retirement / Financial Freedom",
-        goal_type="Retirement / Financial Freedom",
+        goal_name="Retirement",
+        goal_type="Retirement",
         today_cost=600000.0,
         target_month=12,
         target_year=2040,
@@ -65,7 +65,7 @@ def _sample_strategy_run(planning_unit_id="pu-ret-1", goal_id="goal-ret-1", run_
         dependencies=[],
         required_inputs=["Monthly surplus"],
         applicable_goal_characteristics=["long_term"],
-        applicable_goal_types=["Retirement / Financial Freedom"],
+        applicable_goal_types=["Retirement"],
         technique_ids=["systematic-sip", "equity-glide-path"],
         strategic_levers=["Equity step-up"],
         compatible_strategy_ids=[],
@@ -224,7 +224,7 @@ class TestRetirementPlanningFlow:
 
         report = report_service.build_report("pu-ret-1", "run-ret-1")
         assert report["report_type"] == "goal_decision_report"
-        assert report["goal"]["type"] == "Retirement / Financial Freedom"
+        assert report["goal"]["type"] == "Retirement"
 
         # Check core canonical report sections
         expected_sections = [

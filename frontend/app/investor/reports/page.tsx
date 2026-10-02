@@ -82,8 +82,6 @@ export default function ReportsPage() {
 
   const selectedGoal = useMemo(() => goals.find((goal) => goal.id === selectedGoalId), [goals, selectedGoalId]);
   const selectedRun = selectedGoalId ? runs[selectedGoalId] : null;
-  const isRetirement = /retirement|financial freedom/i.test(selectedGoal?.name || "");
-
   const options = [
     {
       id: "complete-financial-plan",

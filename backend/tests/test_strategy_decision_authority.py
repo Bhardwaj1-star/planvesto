@@ -141,7 +141,7 @@ def test_ineligible_strategies_cannot_be_recommended():
 def test_recommendation_comes_from_new_decision_output():
     """Recommendation comes from the new decision output."""
     engine = StrategyEngine()
-    goal = _sample_goal(goal_type="Retirement / Financial Freedom", duration=15.0, shortfall=2000000.0)
+    goal = _sample_goal(goal_type="Retirement", duration=15.0, shortfall=2000000.0)
     priorities = InvestorPriorities(safety=0.25, liquidity=0.25, growth=0.25, flexibility=0.25)
     res = engine.execute(goal, priorities=priorities)
     rec = res.recommendation
@@ -156,7 +156,7 @@ def test_recommendation_comes_from_new_decision_output():
 def test_end_to_end_goal_strategy_report_pdf_pipeline():
     """Existing Goal -> Strategy Builder -> Strategy Result -> Retirement Report -> PDF flow remains intact."""
     engine = StrategyEngine()
-    goal = _sample_goal(goal_type="Retirement / Financial Freedom", duration=18.0, shortfall=3500000.0)
+    goal = _sample_goal(goal_type="Retirement", duration=18.0, shortfall=3500000.0)
     res = engine.execute(goal, priorities=InvestorPriorities())
     assert res.recommendation.recommended_strategy_id != ""
     assert len(res.rankings) > 0

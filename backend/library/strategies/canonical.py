@@ -20,8 +20,8 @@ def _years(name: str, label: str, default: int, minimum: int = 1, maximum: int =
 BASE = dict(library_version="2.0", implementation_version="2.0")
 
 GOAL_TYPES = [
-    "Retirement / Financial Freedom",
-    "Passive Income",
+    "Retirement",
+    "Financial Freedom / Passive Income",
     "Education",
     "Marriage",
     "Dream Home",

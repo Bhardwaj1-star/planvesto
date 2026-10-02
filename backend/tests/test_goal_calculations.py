@@ -185,8 +185,8 @@ class TestGoalEngineFull:
         inp = GoalInput(
             planning_unit_id="pu-123",
             goal_id="retirement-1",
-            goal_name="Retirement / Financial Freedom",
-            goal_type="Retirement / Financial Freedom",
+            goal_name="Retirement",
+            goal_type="Retirement",
             today_cost=1200000.0,
             target_month=1,
             target_year=2040,

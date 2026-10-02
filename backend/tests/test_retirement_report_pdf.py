@@ -72,7 +72,7 @@ def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
         planning_unit_id="pu-ret-canonical-1",
         goal_id="goal-ret-1",
         goal_name="Retirement Corpus Planning",
-        goal_type="Retirement / Financial Freedom",
+        goal_type="Retirement",
         today_cost=5000000.0,
         target_month=12,
         target_year=2045,
@@ -96,7 +96,7 @@ def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
 
     report = report_service.build_report("pu-ret-canonical-1", "run-ret-canonical-1")
     assert report["report_type"] == "goal_decision_report"
-    assert report["goal"]["type"] == "Retirement / Financial Freedom"
+    assert report["goal"]["type"] == "Retirement"
     assert report["strategy"]["selected_strategy_id"] == "strat-retirement-diversified"
 
     pdf_bytes = report_service.generate_pdf("pu-ret-canonical-1", "run-ret-canonical-1")

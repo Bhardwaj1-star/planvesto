@@ -7,7 +7,7 @@ from schemas.goals import GoalInput
 GOAL_TYPES = [
     "Vacation",
     "Home Purchase",
-    "Retirement / Financial Freedom",
+    "Retirement",
     "Child Education",
     "Marriage",
     "Vehicle",

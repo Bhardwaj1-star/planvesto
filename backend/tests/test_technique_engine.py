@@ -7,7 +7,7 @@ def _goal() -> DefinedGoal:
         defined_goal_id="dg-tech-001",
         goal_id="goal-tech-001",
         planning_unit_id="pu-tech-001",
-        goal_type="Retirement / Financial Freedom",
+        goal_type="Retirement",
         goal_name="Retirement",
         today_cost=10_000_000,
         inflation_rate=0.06,

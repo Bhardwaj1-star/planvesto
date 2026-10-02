@@ -18,7 +18,7 @@ export function validateGoal(goal: Goal): GoalErrors {
   if (!goal.goalType) errors.goalType = "Select a goal type.";
   if (goal.goalType === "Others") required(errors, "otherGoalName", details.otherGoalName, "Enter a name for this goal.");
 
-  const noTodayCost = goal.goalType === "Retirement / Financial Freedom" || goal.goalType === "Debt Repayment";
+  const noTodayCost = goal.goalType === "Retirement" || goal.goalType === "Financial Freedom / Passive Income" || goal.goalType === "Debt Repayment";
   if (!noTodayCost) {
     if (!goal.targetAmount) errors.targetAmount = "Enter today's cost.";
     else if (!Number.isFinite(targetAmount) || targetAmount <= 0) errors.targetAmount = "Enter an amount greater than zero.";
@@ -34,11 +34,11 @@ export function validateGoal(goal: Goal): GoalErrors {
   if (!goal.flexibility) errors.flexibility = "Select whether the goal is fixed or flexible.";
 
   switch (goal.goalType) {
-    case "Retirement / Financial Freedom":
+    case "Retirement":
       required(errors, "lifeExpectancy", details.lifeExpectancy, "Enter life expectancy.");
       required(errors, "desiredLifestyleMonthlyExpense", details.desiredLifestyleMonthlyExpense, "Enter the desired monthly expense.");
       break;
-    case "Passive Income":
+    case "Financial Freedom / Passive Income":
       required(errors, "desiredPassiveIncomeAmount", details.desiredPassiveIncomeAmount, "Enter the desired passive income amount.");
       break;
     case "Education":

@@ -96,9 +96,10 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
   }, [goal.goalType]);
 
   const isOther = goal.goalType === "Others";
-  const isRetirement = goal.goalType === "Retirement / Financial Freedom";
+  const isRetirement = goal.goalType === "Retirement";
+  const isFinancialFreedom = goal.goalType === "Financial Freedom / Passive Income";
   const isDebt = goal.goalType === "Debt Repayment";
-  const needsTodayCost = !isRetirement && !isDebt;
+  const needsTodayCost = !isRetirement && !isFinancialFreedom && !isDebt;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const saved = await onSave(event);
@@ -145,7 +146,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
             </>}
 
-            {goal.goalType === "Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
+            {goal.goalType === "Financial Freedom / Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
 
             {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
 
