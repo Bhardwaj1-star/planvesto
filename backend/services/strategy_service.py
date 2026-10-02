@@ -17,6 +17,8 @@ from engines.constraints.models import ConstraintSet
 from engines.risk_profiler.engine import RiskProfilerEngine
 from engines.orchestration.models import GoalEvaluationInput
 from engines.moneywheel.engine import MoneywheelEngine
+from services.moneywheel_service import MoneywheelService
+from data.financial_data import FinancialDataRepository
 from models.moneywheel import MoneywheelInput
 
 
@@ -52,7 +54,35 @@ class StrategyService:
         financial_assets = self._metric_value(state, "financial_assets")
         liabilities = self._metric_value(state, "total_liabilities")
         net_worth = self._metric_value(state, "net_worth")
-        context.update({"annual_income": income_annual, "income": income_annual, "annual_expenses": expenses_annual, "expenses": expenses_annual, "monthly_surplus": surplus_monthly, "surplus": surplus_monthly, "financial_assets": financial_assets, "assets": assets, "liabilities": liabilities, "net_worth": net_worth, "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0)})
+
+        # FinancialState is authoritative for state values; asset liquidity and
+        # financial classification remain owned by MoneywheelService.
+        try:
+            asset_rows = self.goal_repo.get_planning_unit_assets(planning_unit_id) if planning_unit_id else []
+            active_asset_types = FinancialDataRepository().get_active_asset_types()
+            liquid_assets = MoneywheelService._sum_assets(
+                asset_rows, "is_liquid", classifications=active_asset_types
+            )
+            financial_assets = MoneywheelService._sum_assets(
+                asset_rows, "is_financial", classifications=active_asset_types
+            )
+        except Exception:
+            liquid_assets = None
+
+        context.update({
+            "annual_income": income_annual,
+            "income": income_annual,
+            "annual_expenses": expenses_annual,
+            "expenses": expenses_annual,
+            "monthly_surplus": surplus_monthly,
+            "surplus": surplus_monthly,
+            "financial_assets": financial_assets,
+            "liquid_assets": liquid_assets,
+            "assets": assets,
+            "liabilities": liabilities,
+            "net_worth": net_worth,
+            "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0),
+        })
         return context
 
     def _rule_assessment(self, defined_goal: DefinedGoal, financial_context: dict):
