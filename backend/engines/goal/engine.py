@@ -9,7 +9,7 @@ from engines.goal.funding_gap import (
     calculate_required_monthly_contribution,
 )
 from engines.goal.target_calculator import DEFAULT_INFLATION_RATE, calculate_duration, calculate_future_target, calculate_retirement_corpus
-from rules.goals import canonical_goal_type
+from rules.goals import canonical_goal_name, canonical_goal_type
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
 from schemas.goals import GoalInput
 
@@ -25,6 +25,9 @@ class GoalEngine:
         is_latest: bool = True,
         reference_date: date | None = None,
     ) -> DefinedGoal:
+        canonical_type = canonical_goal_type(goal_input.goal_type)
+        canonical_name = canonical_goal_name(canonical_type, goal_input.goal_name)
+
         inflation_rate = (
             goal_input.inflation_rate
             if goal_input.inflation_rate is not None
@@ -88,7 +91,7 @@ class GoalEngine:
         )
 
         dynamic_details = goal_input.dynamic_details or {}
-        if canonical_goal_type(goal_input.goal_type) == "retirement":
+        if canonical_type == "retirement":
             current_age_raw = dynamic_details.get("currentAge", dynamic_details.get("current_age"))
             life_expectancy_raw = dynamic_details.get("lifeExpectancy", dynamic_details.get("life_expectancy"))
             if current_age_raw is None or life_expectancy_raw is None:
@@ -132,7 +135,7 @@ class GoalEngine:
             "required_monthly_contribution": required_monthly,
             "dynamic_details": dynamic_details,
         }
-        if canonical_goal_type(goal_input.goal_type) == "retirement":
+        if canonical_type == "retirement":
             metadata["retirement_age"] = retirement_age
             metadata["retirement_years"] = retirement_years
 
@@ -142,8 +145,8 @@ class GoalEngine:
             investor_id=goal_input.investor_id,
             version=version,
             is_latest=is_latest,
-            goal_type=goal_input.goal_type,
-            goal_name=goal_input.goal_name,
+            goal_type=canonical_type,
+            goal_name=canonical_name,
             today_cost=today_cost,
             inflation_rate=inflation_rate,
             inflation_source=inflation_source,
