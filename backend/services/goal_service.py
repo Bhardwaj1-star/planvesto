@@ -17,6 +17,7 @@ from models.orchestration import (
 from schemas.goals import GoalInput, GoalCalculateRequest
 from services.financial_state_service import FinancialStateService
 from services.planning_orchestration_service import PlanningOrchestrationService
+from rules.goals import canonical_goal_name, canonical_goal_type
 
 logger = logging.getLogger(__name__)
 
@@ -239,6 +240,13 @@ class GoalService:
 
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
         self._enrich_retirement_context(request)
+
+        # Normalize the goal identity before persistence so legacy
+        # "Retirement / Financial Freedom" records become Retirement,
+        # while "Financial Freedom / Passive Income" remains passive_income.
+        request.goal_type = canonical_goal_type(request.goal_type)
+        request.goal_name = canonical_goal_name(request.goal_type, request.goal_name)
+
         goal_id = self.repository.ensure_goal_record(
             planning_unit_id=request.planning_unit_id,
             goal_id=request.goal_id,
