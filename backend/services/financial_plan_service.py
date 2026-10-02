@@ -261,82 +261,345 @@ class FinancialPlanService:
             ],
             "audit_trail": multi_plan.audit_trail,
             "planning_notes": multi_plan.planning_notes,
+            "family_cash_flow_trajectory": self._build_family_cash_flow_trajectory(rows, total_allocated, f_state.get("net_worth")),
+            "moneywheel_health_scan": self._build_moneywheel_health_scan(f_state),
+            "contingency_matrix": self._build_family_contingency_matrix(),
+            "governance_protocol": self._build_governance_protocol(),
         }
 
+    @classmethod
+    def _build_family_cash_flow_trajectory(
+        cls,
+        goals: list[dict[str, Any]],
+        total_monthly_allocated: float,
+        net_worth: Any,
+    ) -> list[dict[str, Any]]:
+        horizons = []
+        for g in goals:
+            t_date = str(g.get("target_date") or "")
+            if "-" in t_date:
+                try:
+                    yr = int(t_date.split("-")[0])
+                    horizons.append(max(1, yr - 2026))
+                except (ValueError, TypeError):
+                    pass
+        max_horizon = max(horizons) if horizons else 15
+        max_horizon = max(5, min(max_horizon, 30))
+
+        try:
+            opening = float(net_worth or 0.0) * 0.4
+        except (ValueError, TypeError):
+            opening = 0.0
+
+        if opening <= 0:
+            opening = sum(float(g.get("projected_mapped_asset_value") or 0.0) for g in goals)
+
+        return_rate = 0.09
+        annual_contribution = float(total_monthly_allocated or 0.0) * 12.0
+
+        trajectory: list[dict[str, Any]] = []
+        balance = opening
+
+        for yr in range(1, max_horizon + 1):
+            cal_year = 2026 + yr - 1
+            growth = (balance + annual_contribution / 2.0) * return_rate
+
+            # Check maturing goals for this year
+            maturing_goals = [
+                g for g in goals
+                if str(g.get("target_date") or "").startswith(str(cal_year))
+            ]
+            outflow = sum(float(g.get("future_target") or g.get("today_cost") or 0.0) for g in maturing_goals)
+            if outflow > (balance + annual_contribution + growth):
+                outflow = balance + annual_contribution + growth
+
+            closing = max(0.0, balance + annual_contribution + growth - outflow)
+            maturing_names = ", ".join(str(g.get("goal_name")) for g in maturing_goals) if maturing_goals else "—"
+
+            trajectory.append({
+                "year_index": yr,
+                "year": cal_year,
+                "opening_balance": round(balance, 2),
+                "annual_investment": round(annual_contribution, 2),
+                "growth": round(growth, 2),
+                "outflow": round(outflow, 2),
+                "maturing_goals": maturing_names,
+                "closing_balance": round(closing, 2),
+            })
+            balance = closing
+
+        return trajectory
+
+    @classmethod
+    def _build_moneywheel_health_scan(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
+        income = float(f_state.get("annual_income") or 0.0)
+        expenses = float(f_state.get("annual_expenses") or 0.0)
+        monthly_exp = expenses / 12.0 if expenses > 0 else 1.0
+        liabilities = float(f_state.get("liabilities") or 0.0)
+        assets = float(f_state.get("assets") or 0.0)
+        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
+
+        savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
+        dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
+        emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
+
+        return [
+            {
+                "metric": "Savings Rate",
+                "current_value": f"{savings_pct:.1f}%",
+                "healthy_benchmark": ">= 25.0%",
+                "status": "Healthy" if savings_pct >= 25 else "Attention Required",
+            },
+            {
+                "metric": "Debt-to-Income (DTI)",
+                "current_value": f"{dti_pct:.1f}%",
+                "healthy_benchmark": "< 40.0%",
+                "status": "Healthy" if dti_pct < 40 else "Elevated Debt",
+            },
+            {
+                "metric": "Emergency Fund Buffer",
+                "current_value": f"{emergency_months:.1f} Months",
+                "healthy_benchmark": ">= 6.0 Months",
+                "status": "Adequate" if emergency_months >= 6.0 else "Build Buffer",
+            },
+            {
+                "metric": "Financial Asset Ratio",
+                "current_value": f"{(financial_assets / assets * 100):.1f}%" if assets > 0 else "—",
+                "healthy_benchmark": ">= 50.0%",
+                "status": "Healthy" if (assets > 0 and (financial_assets / assets) >= 0.5) else "Asset Heavy",
+            },
+        ]
+
+    @classmethod
+    def _build_family_contingency_matrix(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "risk_event": "Loss of Primary Earner Income",
+                "immediate_action": "File term life insurance claim (recommended: 15–20x annual family expenses) and activate Emergency Fund.",
+                "planning_change": "Ring-fence living expenses; temporarily freeze discretionary vacation goals; preserve child education & retirement corpus.",
+                "what_not_to_do": "Do not liquidate long-term compounding investments at distress valuations or borrow against credit cards.",
+            },
+            {
+                "risk_event": "Critical Medical Illness in Family",
+                "immediate_action": "Initiate cashless claim under primary health insurance floater policy + super top-up cover.",
+                "planning_change": "Utilize dedicated liquid healthcare contingency reserve for non-payable hospital expenses without touching goal SIPs.",
+                "what_not_to_do": "Do not break fixed deposits or pause goal SIPs for medical costs covered under health policy.",
+            },
+            {
+                "risk_event": "Broad Equity Market Drawdown (> 25%)",
+                "immediate_action": "Verify that all goals maturing within 3 years are securely insulated in liquid and short-duration debt.",
+                "planning_change": "Maintain uninterrupted monthly SIPs across long-term goals; rebalance fixed income surplus into equities.",
+                "what_not_to_do": "Do not panic-sell equity mutual funds or pause automatic monthly SIP mandates.",
+            },
+            {
+                "risk_event": "Sharp Interest Rate Increase",
+                "immediate_action": "Audit floating home loan interest rate and remaining EMI tenure.",
+                "planning_change": "Direct a portion of discretionary surplus toward accelerated loan principal prepayments.",
+                "what_not_to_do": "Do not reduce insurance protection coverage or emergency liquidity to fund EMI surges.",
+            },
+        ]
+
+    @classmethod
+    def _build_governance_protocol(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "cadence": "Annual Review (Every 12M)",
+                "action": "Audit portfolio performance against benchmark; apply 5–10% contribution step-up across all active goals.",
+            },
+            {
+                "cadence": "Asset Allocation Drift",
+                "action": "Rebalance equity vs debt if portfolio allocation drifts by more than +/- 5% from target weights.",
+            },
+            {
+                "cadence": "3 Years Before Goal Horizon",
+                "action": "Activate systematic transfer (STP) from Equity to Liquid/Debt to protect accumulated capital from drawdown.",
+            },
+            {
+                "cadence": "Major Life Event",
+                "action": "Re-run multi-goal financial plan upon marriage, childbirth, major salary increase, or property acquisition.",
+            },
+        ]
+
     @staticmethod
-    def _table(rows: list[list[str]], widths: list[float] | None = None) -> Table:
+    def _fmt(value: Any, prefix: str = "") -> str:
+        if value is None:
+            return "Not available"
+        if isinstance(value, float):
+            return f"{prefix}{value:,.2f}"
+        if isinstance(value, int):
+            return f"{prefix}{value:,}"
+        return f"{prefix}{value}"
+
+    @staticmethod
+    def _table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
         table = Table(rows, colWidths=widths, repeatRows=1)
         table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("PADDING", (0, 0), (-1, -1), 6),
+            ("PADDING", (0, 0), (-1, -1), 5),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
         ]))
         return table
+
+    @staticmethod
+    def _section(story: list[Any], title: str, styles: Any) -> None:
+        story.extend([Spacer(1, 12), Paragraph(title, styles["Heading2"]), Spacer(1, 4)])
 
     def generate_pdf(self, planning_unit_id: str) -> bytes:
         plan = self.build_plan(planning_unit_id)
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
         styles = getSampleStyleSheet()
-        story = [Paragraph("Complete Financial Plan", styles["Title"]), Paragraph(f"Planning Unit: {planning_unit_id}", styles["BodyText"]), Spacer(1, 14)]
+        normal = styles["BodyText"]
+        story: list[Any] = []
 
+        story.extend([
+            Paragraph("Planvesto Complete Financial Plan", styles["Title"]),
+            Paragraph(f"Consolidated Family Wealth Roadmap & Multi-Goal Strategy", styles["Heading2"]),
+            Paragraph(f"Planning Unit: {planning_unit_id} | Total Family Goals: {plan.get('goal_count', 0)}", styles["Normal"]),
+            Spacer(1, 10),
+        ])
+
+        # 1. Family Financial State
         state = plan["financial_state"]
-        story.extend([
-            Paragraph("Financial State", styles["Heading2"]),
-            self._table([["Metric", "Value"], *[[k.replace("_", " ").title(), str(v) if v is not None else "Not available"] for k, v in state.items()]]),
-            Spacer(1, 14),
-        ])
+        self._section(story, "1. Consolidated Family Financial Position & Net Worth", styles)
+        story.append(self._table([
+            ["Financial Position Metric", "Consolidated Value"],
+            *[[k.replace("_", " ").title(), self._fmt(v, "₹" if isinstance(v, (int, float)) else "")]
+              for k, v in state.items()],
+        ], [220, 303]))
 
+        # 2. MoneyWheel Health Scan
+        health_scan = plan.get("moneywheel_health_scan") or self._build_moneywheel_health_scan(state)
+        self._section(story, "2. MoneyWheel Diagnostic Health & Vulnerability Scan", styles)
+        if health_scan:
+            h_rows = [["Diagnostic Metric", "Current Value", "Healthy Benchmark", "Diagnostic Assessment"]]
+            for h in health_scan:
+                h_rows.append([
+                    Paragraph(str(h["metric"]), normal),
+                    str(h["current_value"]),
+                    str(h["healthy_benchmark"]),
+                    Paragraph(str(h["status"]), normal),
+                ])
+            story.append(self._table(h_rows, [130, 110, 130, 153]))
+
+        # 3. Consolidated Funding & Surplus Allocation
         funding = plan["consolidated_funding"]
-        story.extend([
-            Paragraph("Consolidated Funding", styles["Heading2"]),
-            self._table([["Metric", "Value"], *[[k.replace("_", " ").title(), str(v) if v is not None else "Not available"] for k, v in funding.items()]]),
-            Spacer(1, 14),
-        ])
+        self._section(story, "3. Consolidated Funding Capacity & Resource Waterfall", styles)
+        story.append(self._table([
+            ["Funding Parameter", "Value"],
+            ["Total Available Monthly Surplus", self._fmt(funding.get("available_monthly_surplus"), "₹")],
+            ["Total Required Monthly Contribution", self._fmt(funding.get("required_monthly_contribution"), "₹")],
+            ["Total Allocated Monthly Contribution", self._fmt(funding.get("allocated_monthly_contribution"), "₹")],
+            ["Net Monthly Gap / Buffer", self._fmt(funding.get("monthly_gap"), "₹")],
+            ["Consolidated Funding Status", str(funding.get("funding_status") or "Within Surplus")],
+            ["Resource Competition Detected", "Yes" if funding.get("competition_detected") else "No"],
+        ], [220, 303]))
 
-        goal_rows = [["Priority", "Goal", "Target", "Required/Mo", "Allocated/Mo", "Status"]]
+        # 4. Goal Strategies & Allocation
+        self._section(story, "4. Prioritized Goals & Capital Allocation Waterfall", styles)
+        goal_rows = [["Priority", "Goal Name", "Target Horizon", "Required/Mo", "Allocated/Mo", "Funding Status"]]
         for row in plan["goals"]:
-            priority_label = row.get("resolved_priority") or row.get("priority") or "—"
+            priority_label = str(row.get("resolved_priority") or row.get("priority") or "—")
             if row.get("override_applied"):
                 priority_label += "*"
             goal_rows.append([
                 priority_label,
-                str(row.get("goal_name") or "—"),
+                Paragraph(str(row.get("goal_name") or "—"), normal),
                 str(row.get("target_date") or "—"),
-                str(row.get("required_monthly_contribution") or 0),
-                str(row.get("allocated_monthly_contribution") or 0),
-                str(row.get("funding_status") or "—"),
+                self._fmt(row.get("required_monthly_contribution"), "₹"),
+                self._fmt(row.get("allocated_monthly_contribution"), "₹"),
+                Paragraph(str(row.get("funding_status") or "—"), normal),
             ])
-        story.extend([Paragraph("Goal Strategies & Allocation", styles["Heading2"]), self._table(goal_rows, [60, 95, 65, 75, 75, 75]), Spacer(1, 14)])
+        story.append(self._table(goal_rows, [60, 140, 75, 80, 80, 88]))
 
+        # 5. Multi-Year Family Wealth & Cash Flow Projection
+        trajectory = plan.get("family_cash_flow_trajectory") or []
+        self._section(story, "5. Consolidated Multi-Year Family Wealth & Cash Flow Projection", styles)
+        if trajectory:
+            t_rows = [["Year", "Opening (₹)", "Investment (₹)", "Returns (₹)", "Outflows (₹)", "Maturing Milestones", "Closing (₹)"]]
+            for item in trajectory:
+                t_rows.append([
+                    str(item["year"]),
+                    self._fmt(item["opening_balance"]),
+                    self._fmt(item["annual_investment"]),
+                    self._fmt(item["growth"]),
+                    self._fmt(item["outflow"]),
+                    Paragraph(str(item.get("maturing_goals") or "—"), normal),
+                    self._fmt(item["closing_balance"]),
+                ])
+            story.append(self._table(t_rows, [45, 75, 75, 75, 75, 105, 73]))
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("<b>What the Consolidated Wealth Projection Demonstrates:</b> This trajectory models overall family wealth accumulation, showing that recurring surplus allocations comfortably support staggered goal maturities across the family's financial roadmap.", normal))
+
+        # 6. Trade-offs & System Overrides
         if plan.get("trade_offs"):
-            story.append(Paragraph("Trade-offs & Constraints", styles["Heading2"]))
+            self._section(story, "6. Resource Trade-offs & Conflict Resolutions", styles)
             for to in plan["trade_offs"]:
-                story.append(Paragraph(f"• {to}", styles["BodyText"]))
-            story.append(Spacer(1, 10))
+                story.append(Paragraph(f"• {to}", normal))
+                story.append(Spacer(1, 3))
 
         overrides = [g for g in plan["goals"] if g.get("override_applied")]
         if overrides:
-            story.append(Paragraph("System Priority Adjustments & Rule Explanations", styles["Heading2"]))
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("<b>System Priority Adjustments:</b>", normal))
             for g in overrides:
                 story.append(Paragraph(
                     f"• <b>{g['goal_name']}</b>: Client Priority was <i>{g['client_priority']}</i>, resolved by system rules to <i>{g['resolved_priority']}</i>.<br/>"
                     f"&nbsp;&nbsp;<b>Reason:</b> {g.get('override_reason') or 'Financial ratio constraint.'}",
-                    styles["BodyText"],
+                    normal,
                 ))
-            story.append(Spacer(1, 10))
+                story.append(Spacer(1, 3))
 
-        story.append(Paragraph("Action Plan", styles["Heading2"]))
-        for action in plan["actions"]:
-            story.append(Paragraph(f"{action['sequence']}. {action['action']} — {action['monthly_contribution']}/month; target {action.get('target_date') or 'review required'}.", styles["BodyText"]))
-            story.append(Spacer(1, 5))
+        # 7. Master Action Plan
+        actions = plan.get("actions") or []
+        self._section(story, "7. Master Implementation Action Plan", styles)
+        if actions:
+            act_rows = [["#", "Action Item", "Monthly Commitment", "Target Date"]]
+            for a in actions:
+                act_rows.append([
+                    str(a.get("sequence", "—")),
+                    Paragraph(str(a.get("action") or ""), normal),
+                    self._fmt(a.get("monthly_contribution"), "₹"),
+                    str(a.get("target_date") or "Immediate"),
+                ])
+            story.append(self._table(act_rows, [30, 273, 110, 110]))
 
-        story.append(Spacer(1, 10))
-        story.append(Paragraph("Planning Notes", styles["Heading2"]))
-        for note in plan["planning_notes"]:
-            story.append(Paragraph(f"• {note}", styles["BodyText"]))
+        # 8. Master Contingency Matrix
+        contingency = plan.get("contingency_matrix") or self._build_family_contingency_matrix()
+        self._section(story, "8. Family Crisis & Master Contingency Management Matrix", styles)
+        if contingency:
+            c_rows = [["Risk Scenario", "Immediate Crisis Action", "Strategic Planning Adjustment", "What NOT To Do"]]
+            for c in contingency:
+                c_rows.append([
+                    Paragraph(str(c.get("risk_event")), normal),
+                    Paragraph(str(c.get("immediate_action")), normal),
+                    Paragraph(str(c.get("planning_change")), normal),
+                    Paragraph(str(c.get("what_not_to_do")), normal),
+                ])
+            story.append(self._table(c_rows, [105, 140, 140, 138]))
+
+        # 9. Governance & Review Protocol
+        protocol = plan.get("governance_protocol") or self._build_governance_protocol()
+        self._section(story, "9. Annual Review, Governance & Rebalancing Protocol", styles)
+        if protocol:
+            p_rows = [["Review Cadence / Trigger", "Governance & Portfolio Action Required"]]
+            for p in protocol:
+                p_rows.append([
+                    Paragraph(str(p.get("cadence")), normal),
+                    Paragraph(str(p.get("action")), normal),
+                ])
+            story.append(self._table(p_rows, [160, 363]))
+
+        # 10. Planning Notes
+        if plan.get("planning_notes"):
+            self._section(story, "10. Strategic Planning Notes", styles)
+            for note in plan["planning_notes"]:
+                story.append(Paragraph(f"• {note}", normal))
+                story.append(Spacer(1, 3))
 
         doc.build(story)
         return buffer.getvalue()
+

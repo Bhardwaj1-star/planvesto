@@ -217,6 +217,221 @@ class GoalReportService:
                 unique.append(value)
         return [{"trade_off": value} for value in unique]
 
+    @classmethod
+    def _build_cash_flow_trajectory(
+        cls,
+        goal: Any,
+        selected_scenario: dict[str, Any] | None,
+        mapped_assets: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        duration = cls._get(goal, "duration_years") or 5
+        try:
+            duration = int(duration)
+        except (ValueError, TypeError):
+            duration = 5
+        duration = max(1, min(duration, 35))
+
+        try:
+            target_year = int(cls._get(goal, "target_year") or 0)
+        except (ValueError, TypeError):
+            target_year = 0
+
+        start_year = (target_year - duration) if target_year > 2000 else 2026
+
+        return_rate = cls._get(goal, "funding_return_assumption")
+        try:
+            return_rate = float(return_rate) if return_rate is not None else 0.09
+        except (ValueError, TypeError):
+            return_rate = 0.09
+
+        monthly_req = cls._get(goal, "required_monthly_contribution")
+        try:
+            monthly_req = float(monthly_req) if monthly_req is not None else 0.0
+        except (ValueError, TypeError):
+            monthly_req = 0.0
+
+        if selected_scenario:
+            funding_structure = selected_scenario.get("funding_structure") or {}
+            scen_monthly = funding_structure.get("required_monthly_contribution") or funding_structure.get("starting_monthly_contribution")
+            if scen_monthly:
+                try:
+                    monthly_req = float(scen_monthly)
+                except (ValueError, TypeError):
+                    pass
+
+        opening_balance = sum(float(m.get("allocation") or 0.0) for m in mapped_assets if isinstance(m, dict))
+
+        future_target = cls._get(goal, "future_target") or cls._get(goal, "today_cost") or 0.0
+        try:
+            future_target = float(future_target)
+        except (ValueError, TypeError):
+            future_target = 0.0
+
+        trajectory: list[dict[str, Any]] = []
+        balance = opening_balance
+
+        for yr in range(1, duration + 1):
+            cal_year = start_year + yr - 1
+            annual_inv = monthly_req * 12.0
+            growth = (balance + annual_inv / 2.0) * return_rate
+            outflow = 0.0
+            if yr == duration:
+                outflow = min(balance + annual_inv + growth, future_target) if future_target > 0 else (balance + annual_inv + growth)
+            closing = max(0.0, balance + annual_inv + growth - outflow)
+            trajectory.append({
+                "year_index": yr,
+                "year": cal_year,
+                "opening_balance": round(balance, 2),
+                "annual_investment": round(annual_inv, 2),
+                "growth": round(growth, 2),
+                "outflow": round(outflow, 2),
+                "closing_balance": round(closing, 2),
+            })
+            balance = closing
+
+        return trajectory
+
+    @classmethod
+    def _build_product_architecture(cls, goal: Any) -> list[dict[str, Any]]:
+        duration = cls._get(goal, "duration_years") or 5
+        try:
+            duration = int(duration)
+        except (ValueError, TypeError):
+            duration = 5
+
+        if duration <= 3:
+            return [
+                {
+                    "bucket": "Bucket 1: Immediate Liquidity (0–1 Year)",
+                    "instruments": "Liquid Mutual Funds, High-Yield Savings, Overnight Funds",
+                    "allocation": "50%",
+                    "strategic_rule": "Capital preservation with immediate accessibility; zero equity exposure.",
+                },
+                {
+                    "bucket": "Bucket 2: Near-Term Preservation (1–3 Years)",
+                    "instruments": "Ultra-Short Duration Debt, Arbitrage Funds, Short-Term FDs",
+                    "allocation": "50%",
+                    "strategic_rule": "Protect principal against rate shifts and inflation; secure steady accrual.",
+                },
+            ]
+        elif duration <= 7:
+            return [
+                {
+                    "bucket": "Bucket 1: Liquidity & Safety (0–2 Years)",
+                    "instruments": "Liquid / Money Market Funds, Arbitrage Funds",
+                    "allocation": "25%",
+                    "strategic_rule": "Guaranteed liquidity buffer for near-term milestones; absolute capital safety.",
+                },
+                {
+                    "bucket": "Bucket 2: Fixed Income Stability (3–5 Years)",
+                    "instruments": "Corporate Bond Funds, Target Maturity Debt, Banking & PSU Debt",
+                    "allocation": "35%",
+                    "strategic_rule": "Predictable compounding cushion with minimal duration volatility.",
+                },
+                {
+                    "bucket": "Bucket 3: Growth Engine (5–7 Years)",
+                    "instruments": "Large-Cap Index Funds (Nifty 50), Balanced Advantage / Multi-Asset",
+                    "allocation": "40%",
+                    "strategic_rule": "Inflation-beating capital appreciation with dynamic downside protection.",
+                },
+            ]
+        else:
+            return [
+                {
+                    "bucket": "Bucket 1: Cash & Buffer (0–2 Years)",
+                    "instruments": "Liquid Funds, Overnight Funds, Short-term Arbitrage",
+                    "allocation": "15%",
+                    "strategic_rule": "Emergency transition reserve; ring-fenced from market volatility.",
+                },
+                {
+                    "bucket": "Bucket 2: Core Stability (3–7 Years)",
+                    "instruments": "Target Maturity Debt, High-Quality Corporate Bonds, Conservative Hybrid",
+                    "allocation": "25%",
+                    "strategic_rule": "Steady yield compounding; acts as rebalancing buffer during market swings.",
+                },
+                {
+                    "bucket": "Bucket 3: Wealth Compounding (7+ Years)",
+                    "instruments": "Broad-Market Equity Index (Nifty 50, Nifty Midcap 150), Flexi-Cap Funds",
+                    "allocation": "60%",
+                    "strategic_rule": "Primary growth driver designed to outpace education/lifestyle inflation.",
+                },
+            ]
+
+    @classmethod
+    def _build_contribution_rules(cls, goal: Any) -> list[str]:
+        return [
+            "1. Priority Automation: Automate monthly SIP on salary date via NACH/e-mandate before any discretionary lifestyle spending.",
+            "2. Annual Step-Up Discipline: Increase monthly contributions by 5% to 10% annually with salary increments to accelerate goal achievement.",
+            "3. Ring-Fenced Earmarking: Keep goal-mapped assets segregated; never liquidate or pledge for unrelated lifestyle or consumption expenses.",
+            "4. Glidepath De-Risking Window: Systematically transition from Growth (Bucket 3) to Liquid (Bucket 1) starting 36 months before target maturity.",
+            "5. Emergency Shield Priority: Maintain a separate 6-month family emergency buffer so ongoing goal contributions are never interrupted during market shocks.",
+        ]
+
+    @classmethod
+    def _build_action_plan_timeline(cls, goal: Any) -> list[dict[str, Any]]:
+        duration = cls._get(goal, "duration_years") or 5
+        try:
+            duration = int(duration)
+        except (ValueError, TypeError):
+            duration = 5
+
+        de_risk_yr = max(1, duration - 3)
+        return [
+            {
+                "timeline": "Immediate (Month 1)",
+                "action": "Set up monthly SIP auto-debits; allocate existing earmarked assets; verify KYC and portfolio tagging.",
+                "owner": "Investor / Advisor",
+                "milestone": "Capital deployment activated",
+            },
+            {
+                "timeline": "Every 12 Months",
+                "action": "Review portfolio performance vs benchmark; implement annual step-up (+5% to +10%); rebalance if asset mix drifts > 5%.",
+                "owner": "Investor",
+                "milestone": "Annual discipline & rebalancing",
+            },
+            {
+                "timeline": f"Year {de_risk_yr} (3 Years to Maturity)",
+                "action": "Activate systematic de-risking (STP) from Equity to Liquid/Short-term Debt to protect accumulated corpus.",
+                "owner": "Investor / System",
+                "milestone": "Capital preservation locked in",
+            },
+            {
+                "timeline": f"Year {duration} (Goal Horizon)",
+                "action": "Redeem required goal target smoothly from Bucket 1 (Liquid) with zero market timing or drawdown penalty.",
+                "owner": "Investor",
+                "milestone": "Goal successfully funded",
+            },
+        ]
+
+    @classmethod
+    def _build_contingency_matrix(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "risk_event": "Equity Market Crash (> 20%)",
+                "immediate_action": "Maintain SIP auto-debits uninterrupted; accumulate units at lower valuation.",
+                "planning_change": "Rebalance fixed income gains into target equity allocation if drift exceeds 5%.",
+                "what_not_to_do": "Do not panic-sell equity or pause ongoing monthly SIP investments.",
+            },
+            {
+                "risk_event": "Income Interruption / Job Loss",
+                "immediate_action": "Draw on the independent 6-month Emergency Fund for core living expenses.",
+                "planning_change": "Temporarily pause annual step-up; maintain baseline contribution or switch to minimum viable tier.",
+                "what_not_to_do": "Do not liquidate compounding long-term goal assets prematurely.",
+            },
+            {
+                "risk_event": "Goal Target Cost Overrun (+15–20%)",
+                "immediate_action": "Run sensitivity analysis under the updated future target assumption.",
+                "planning_change": "Increase monthly contribution rate or extend goal horizon by 6 to 12 months.",
+                "what_not_to_do": "Do not take high-interest unsecured loans or bridge debt.",
+            },
+            {
+                "risk_event": "Inflation Higher Than Expected",
+                "immediate_action": "Recalculate future purchasing power target with updated inflation rate.",
+                "planning_change": "Increase annual step-up rate from 5% to 10% to preserve real corpus value.",
+                "what_not_to_do": "Do not divert entire corpus into high-risk speculative assets.",
+            },
+        ]
+
     def build_report(self, planning_unit_id: str, strategy_run_id: str) -> dict[str, Any]:
         run, goal, context = self._load(planning_unit_id, strategy_run_id)
         recommendation = self._dump(self._get(run, "recommendation", {})) or {}
@@ -256,6 +471,13 @@ class GoalReportService:
             )
         }
 
+        mapped_assets = self._mapped_assets(goal)
+        cash_flow_trajectory = self._build_cash_flow_trajectory(goal, selected_scenario, mapped_assets)
+        product_architecture = self._build_product_architecture(goal)
+        contribution_rules = self._build_contribution_rules(goal)
+        action_plan_timeline = self._build_action_plan_timeline(goal)
+        contingency_matrix = self._build_contingency_matrix()
+
         report = {
             "report_type": "goal_decision_report",
             "report_version": "1.0",
@@ -281,6 +503,7 @@ class GoalReportService:
             },
             "goal_calculation": goal_calculation,
             "feasibility": funding,
+            "funding_solutions": funding.get("funding_strategies") or [],
             # Compatibility aliases retained for consumers of the earlier
             # complete Goal Report contract.
             "goal_funding": funding,
@@ -289,7 +512,7 @@ class GoalReportService:
                 "flexibility": self._get(goal, "flexibility"),
                 "status": self._get(goal, "status"),
             },
-            "mapped_assets": self._mapped_assets(goal),
+            "mapped_assets": mapped_assets,
             "investor_priorities": self._dump(self._get(run, "investor_priorities", {})),
             "strategy": {
                 "selected_strategy_id": selected_strategy_id,
@@ -344,6 +567,11 @@ class GoalReportService:
                 "status": self._get(run, "status"),
                 "defined_goal_version": self._get(run, "defined_goal_version"),
             },
+            "cash_flow_trajectory": cash_flow_trajectory,
+            "product_architecture": product_architecture,
+            "contribution_rules": contribution_rules,
+            "action_plan_timeline": action_plan_timeline,
+            "contingency_matrix": contingency_matrix,
         }
         return report
 
@@ -362,7 +590,7 @@ class GoalReportService:
         return str(value).replace("_", " ").replace("-", " ").title()
 
     @staticmethod
-    def _table(rows: list[list[str]], widths: list[float] | None = None) -> Table:
+    def _table(rows: list[list[Any]], widths: list[float] | None = None) -> Table:
         table = Table(rows, colWidths=widths, repeatRows=1)
         table.setStyle(
             TableStyle(
@@ -371,7 +599,8 @@ class GoalReportService:
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("PADDING", (0, 0), (-1, -1), 6),
+                    ("PADDING", (0, 0), (-1, -1), 5),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
                 ]
             )
         )
@@ -379,7 +608,7 @@ class GoalReportService:
 
     @staticmethod
     def _section(story: list[Any], title: str, styles: Any) -> None:
-        story.extend([Spacer(1, 10), Paragraph(title, styles["Heading2"])])
+        story.extend([Spacer(1, 12), Paragraph(title, styles["Heading2"]), Spacer(1, 4)])
 
     def _kv_rows(self, mapping: dict[str, Any], prefix: str = "") -> list[list[str]]:
         return [
@@ -390,9 +619,7 @@ class GoalReportService:
     def generate_pdf(self, planning_unit_id: str, strategy_run_id: str) -> bytes:
         report = self.build_report(planning_unit_id, strategy_run_id)
 
-        # Accept the earlier complete-report contract as well as the current
-        # canonical nested contract. This keeps the PDF endpoint backward
-        # compatible while the JSON contract remains canonical.
+        # Accept backward compatible report shapes
         if "goal" not in report:
             goal_name = report.get("goal_name") or "Financial Goal"
             goal_type = report.get("goal_type")
@@ -462,6 +689,11 @@ class GoalReportService:
                     "status": report.get("status", "completed"),
                     "defined_goal_version": report.get("defined_goal_version", 1),
                 },
+                "cash_flow_trajectory": report.get("cash_flow_trajectory") or self._build_cash_flow_trajectory(goal_calculation, None, report.get("mapped_assets") or []),
+                "product_architecture": report.get("product_architecture") or self._build_product_architecture(goal_calculation),
+                "contribution_rules": report.get("contribution_rules") or self._build_contribution_rules(goal_calculation),
+                "action_plan_timeline": report.get("action_plan_timeline") or self._build_action_plan_timeline(goal_calculation),
+                "contingency_matrix": report.get("contingency_matrix") or self._build_contingency_matrix(),
             }
 
         buffer = BytesIO()
@@ -469,64 +701,65 @@ class GoalReportService:
             buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
         )
         styles = getSampleStyleSheet()
+        normal = styles["BodyText"]
         story: list[Any] = []
 
         goal = report["goal"]
         strategy = report["strategy"]
         story.extend(
             [
-                Paragraph("Planvesto Financial Decision Report", styles["Title"]),
+                Paragraph("Planvesto Actionable Financial Decision Report", styles["Title"]),
                 Paragraph(str(goal["name"]), styles["Heading2"]),
                 Paragraph(
-                    f"Goal type: {self._label(goal.get('type'))} | "
-                    f"Run: {report['provenance']['strategy_run_id']} | "
-                    f"Version: {report['provenance']['run_version']}",                    styles["BodyText"],
+                    f"Goal Type: {self._label(goal.get('type'))} | "
+                    f"Strategy: {strategy.get('selected_strategy_name') or 'Goal Funding'} | "
+                    f"Run ID: {report['provenance']['strategy_run_id']}",
+                    styles["Normal"],
                 ),
-                Spacer(1, 12),
+                Spacer(1, 10),
             ]
         )
 
+        # 1. Executive Summary
         sections = [
-            ("1. Executive Summary", [
-                ["Item", "Value"],
-                ["Goal", str(goal["name"])],
-                ["Goal status", self._label(goal.get("status"))],
-                ["Funding status", self._label(report["goal_calculation"].get("funding_status"))],
-                ["Feasibility", self._label(report["feasibility"].get("feasibility_status"))],
-                ["Funding gap", self._fmt(report["goal_calculation"].get("funding_gap"), "₹")],
-                ["Required monthly contribution", self._fmt(report["goal_calculation"].get("required_monthly_contribution"), "₹")],
-                ["Selected strategy", str(strategy.get("selected_strategy_name") or self.MISSING)],
-                ["Decision status", self._label(report["decision"]["status"])],
+            ("1. Executive Summary & Problem Setup", [
+                ["Field", "Value"],
+                ["Goal Name", str(goal["name"])],
+                ["Target Date / Horizon", f"{goal.get('target_year') or '—'} ({goal.get('duration_years') or '—'} Years)"],
+                ["Today's Estimated Cost", self._fmt(report["goal_calculation"].get("today_cost"), "₹")],
+                ["Inflation Rate", f"{float(report['goal_calculation'].get('inflation_rate') or 0.0) * 100:.1f}%" if report["goal_calculation"].get("inflation_rate") is not None else self.MISSING],
+                ["Future Target Amount", self._fmt(report["goal_calculation"].get("future_target"), "₹")],
+                ["Mapped Existing Assets", self._fmt(report["goal_calculation"].get("projected_mapped_asset_value"), "₹")],
+                ["Net Funding Gap", self._fmt(report["goal_calculation"].get("funding_gap"), "₹")],
+                ["Required Monthly SIP", self._fmt(report["goal_calculation"].get("required_monthly_contribution"), "₹")],
+                ["Feasibility Assessment", self._label(report["feasibility"].get("feasibility_status"))],
+                ["Selected Strategic Architecture", str(strategy.get("selected_strategy_name") or self.MISSING)],
             ]),
-            ("2. Financial Position", [
-                ["Metric", "Current"],
+            ("2. Financial Position & Capacity Snapshot", [
+                ["Financial Metric", "Value"],
                 *[[self._label(k), self._fmt(v, "₹" if isinstance(v, (int, float)) else "")]
                   for k, v in report["financial_state"].items()],
             ]),
-            ("3. Goal & Calculation", [
-                ["Calculation", "Value"],
-                *[[self._label(k), self._fmt(v, "₹" if k in {"today_cost", "future_target", "funding_gap", "required_monthly_contribution", "projected_mapped_asset_value"} else "")]
-                  for k, v in report["goal_calculation"].items()],
-            ]),
-            ("4. Feasibility & Funding Options", [
+            ("3. Goal Feasibility & Surplus Capacity Analysis", [
                 ["Metric", "Value"],
-                ["Feasibility status", self._label(report["feasibility"].get("feasibility_status"))],
-                ["Reason", str(report["feasibility"].get("feasibility_reason") or self.MISSING)],
-                ["Available monthly surplus", self._fmt(report["feasibility"].get("available_monthly_surplus"), "₹")],
-                ["Contribution surplus gap", self._fmt(report["feasibility"].get("monthly_contribution_surplus_gap"), "₹")],
+                ["Feasibility Status", self._label(report["feasibility"].get("feasibility_status"))],
+                ["Feasibility Diagnostic Reason", str(report["feasibility"].get("feasibility_reason") or self.MISSING)],
+                ["Available Monthly Surplus", self._fmt(report["feasibility"].get("available_monthly_surplus"), "₹")],
+                ["Contribution Surplus Gap", self._fmt(report["feasibility"].get("monthly_contribution_surplus_gap"), "₹")],
             ]),
         ]
         for title, rows in sections:
             self._section(story, title, styles)
-            story.append(self._table(rows, [210, 315]))
+            story.append(self._table(rows, [200, 323]))
 
-        funding_strategies = report["feasibility"].get("funding_strategies") or []
-        self._section(story, "5. Funding Solutions", styles)
+        # 4. Funding Solutions
+        funding_strategies = report.get("funding_solutions") or report["feasibility"].get("funding_strategies") or []
+        self._section(story, "4. Goal Funding Solutions Comparison", styles)
         if funding_strategies:
             rows = [["Solution", "Status", "Lumpsum", "Monthly", "Starting", "Step-up", "Remaining Gap"]]
             for item in funding_strategies:
                 rows.append([
-                    str(item.get("strategy_name") or item.get("strategy_id") or self.MISSING),
+                    Paragraph(str(item.get("strategy_name") or item.get("strategy_id") or self.MISSING), normal),
                     self._label(item.get("status")),
                     self._fmt(item.get("required_lumpsum"), "₹"),
                     self._fmt(item.get("required_monthly_contribution"), "₹"),
@@ -534,112 +767,155 @@ class GoalReportService:
                     self._fmt(item.get("annual_step_up")),
                     self._fmt(item.get("remaining_gap"), "₹"),
                 ])
-            story.append(self._table(rows, [92, 62, 65, 65, 70, 55, 70]))
+            story.append(self._table(rows, [90, 65, 75, 75, 75, 65, 78]))
         else:
-            story.append(Paragraph(self.MISSING, styles["BodyText"]))
+            story.append(Paragraph(self.MISSING, normal))
 
-        self._section(story, "6. Strategy & Architecture", styles)
-        story.append(self._table([
-            ["Element", "Output"],
-            ["Selected strategy", str(strategy.get("selected_strategy_name") or self.MISSING)],
-            ["Selected scenario", str((strategy.get("selected_scenario") or {}).get("scenario_name") or self.MISSING)],
-            ["Architecture", str(strategy["architecture"].get("architecture_id") or self.MISSING)],
-            ["Solutions", str(strategy["architecture"].get("solution_ids") or self.MISSING)],
-            ["Techniques", str(strategy["architecture"].get("technique_ids") or self.MISSING)],
-            ["Supporting strategies", str(strategy["architecture"].get("supporting_strategy_ids") or self.MISSING)],
-        ], [210, 315]))
-
-        self._section(story, "7. Technique Execution Evidence", styles)
-        technique_outputs = report.get("technique_execution") or []
-        if technique_outputs:
-            rows = [["Technique", "Status", "Warnings", "Outputs"]]
-            for item in technique_outputs:
-                rows.append([str(item.get("technique_id") or self.MISSING), self._label(item.get("status")), str(item.get("warnings") or ""), str(item.get("outputs") or "")])
-            story.append(self._table(rows, [105, 65, 115, 170]))
-        else:
-            story.append(Paragraph("No technique execution evidence was persisted for this run.", styles["BodyText"]))
-
-        self._section(story, "8. Why This Strategy", styles)
-        for item in strategy.get("short_reasons") or []:
-            story.append(Paragraph(f"• {item}", styles["BodyText"]))
-        if strategy.get("rationale"):
-            story.append(Spacer(1, 6))
-            story.append(Paragraph(str(strategy["rationale"]), styles["BodyText"]))
-        if strategy.get("constraints"):
-            story.append(Spacer(1, 6))
-            story.append(Paragraph("Constraints: " + "; ".join(map(str, strategy["constraints"])), styles["BodyText"]))
-
-        self._section(story, "9. What-If Analysis", styles)
-        what_ifs = report["what_if_analysis"]
-        if what_ifs:
-            rows = [["Scenario", "Strategy", "Selected", "Funding / Changes", "Outcomes", "Trade-off"]]
-            for item in what_ifs:
+        # 5. Product & Bucket Architecture
+        product_arch = report.get("product_architecture") or self._build_product_architecture(report["goal_calculation"])
+        self._section(story, "5. Strategic Product & Bucket Architecture", styles)
+        if product_arch:
+            rows = [["Bucket / Horizon", "Recommended Instruments", "Allocation", "Strategic Role & Transition Rule"]]
+            for b in product_arch:
                 rows.append([
-                    str(item["scenario"]),
-                    str(item["strategy"]),
-                    "Yes" if item["selected"] else "No",
-                    str(item["funding_changes"]),
-                    str(item["outcomes"]),
-                    str(item["trade_off"]),
+                    Paragraph(str(b.get("bucket")), normal),
+                    Paragraph(str(b.get("instruments")), normal),
+                    str(b.get("allocation")),
+                    Paragraph(str(b.get("strategic_rule")), normal),
                 ])
-            story.append(self._table(rows, [85, 75, 45, 105, 105, 110]))
+            story.append(self._table(rows, [120, 155, 60, 188]))
         else:
-            story.append(Paragraph("No stored what-if scenarios are available.", styles["BodyText"]))
+            story.append(Paragraph(self.MISSING, normal))
 
-        self._section(story, "10. Trade-offs", styles)
-        for item in report["trade_off_analysis"]:
-            story.append(Paragraph(f"• {item['trade_off']}", styles["BodyText"]))
-        if not report["trade_off_analysis"]:
-            story.append(Paragraph(self.MISSING, styles["BodyText"]))
+        # 6. Multi-Year Cash Flow Trajectory
+        trajectory = report.get("cash_flow_trajectory") or self._build_cash_flow_trajectory(report["goal_calculation"], strategy.get("selected_scenario"), report.get("mapped_assets") or [])
+        self._section(story, "6. Multi-Year Cash Flow Trajectory Projection", styles)
+        if trajectory:
+            t_rows = [["Year", "Opening (₹)", "Investment (₹)", "Returns (₹)", "Outflows (₹)", "Closing (₹)"]]
+            for item in trajectory:
+                t_rows.append([
+                    str(item["year"]),
+                    self._fmt(item["opening_balance"]),
+                    self._fmt(item["annual_investment"]),
+                    self._fmt(item["growth"]),
+                    self._fmt(item["outflow"]),
+                    self._fmt(item["closing_balance"]),
+                ])
+            story.append(self._table(t_rows, [50, 95, 95, 95, 95, 93]))
+            story.append(Spacer(1, 6))
+            story.append(Paragraph("<b>What the Cashflow Tells You:</b> This projection models the capital accumulation path under disciplined contributions and expected asset returns, culminating in seamless goal redemption at the target horizon without forced liquidations.", normal))
+        else:
+            story.append(Paragraph(self.MISSING, normal))
 
-        self._section(story, "11. Alternatives", styles)
-        alternatives = report["alternatives"]
+        # 7. Deterministic What-If Decision Matrix
+        what_ifs = report.get("what_if_analysis") or []
+        self._section(story, "7. Deterministic What-If Decision Matrix", styles)
+        if what_ifs:
+            w_rows = [["Scenario", "Changed Parameters", "Funding Impact", "Outcomes", "Trade-Off"]]
+            for item in what_ifs:
+                w_rows.append([
+                    Paragraph(str(item["scenario"]), normal),
+                    Paragraph(str(item.get("assumptions_changed") or "—"), normal),
+                    Paragraph(str(item.get("funding_changes") or "—"), normal),
+                    Paragraph(str(item.get("outcomes") or "—"), normal),
+                    Paragraph(str(item.get("trade_off") or "—"), normal),
+                ])
+            story.append(self._table(w_rows, [95, 105, 105, 105, 113]))
+        else:
+            story.append(Paragraph("No stored what-if scenarios are available.", normal))
+
+        # 8. 5 Actionable Contribution Rules
+        rules = report.get("contribution_rules") or self._build_contribution_rules(report["goal_calculation"])
+        self._section(story, "8. Actionable Contribution & Portfolio Rules", styles)
+        for r in rules:
+            story.append(Paragraph(f"• {r}", normal))
+            story.append(Spacer(1, 3))
+
+        # 9. Implementation Action Plan Timeline
+        timeline = report.get("action_plan_timeline") or self._build_action_plan_timeline(report["goal_calculation"])
+        self._section(story, "9. Implementation Action Plan Timeline", styles)
+        if timeline:
+            time_rows = [["Timeline Window", "Action Step", "Execution Owner", "Key Milestone"]]
+            for t in timeline:
+                time_rows.append([
+                    Paragraph(str(t.get("timeline")), normal),
+                    Paragraph(str(t.get("action")), normal),
+                    str(t.get("owner")),
+                    Paragraph(str(t.get("milestone")), normal),
+                ])
+            story.append(self._table(time_rows, [90, 223, 90, 120]))
+
+        # 10. Contingency Matrix
+        contingency = report.get("contingency_matrix") or self._build_contingency_matrix()
+        self._section(story, "10. Contingency & Risk Management Matrix", styles)
+        if contingency:
+            c_rows = [["Risk Event", "Immediate Action", "Planning Adjustment", "What NOT To Do"]]
+            for c in contingency:
+                c_rows.append([
+                    Paragraph(str(c.get("risk_event")), normal),
+                    Paragraph(str(c.get("immediate_action")), normal),
+                    Paragraph(str(c.get("planning_change")), normal),
+                    Paragraph(str(c.get("what_not_to_do")), normal),
+                ])
+            story.append(self._table(c_rows, [100, 140, 140, 143]))
+
+        # 11. Alternatives
+        alternatives = report.get("alternatives") or []
+        self._section(story, "11. Evaluated Strategy Alternatives", styles)
         if alternatives:
-            rows = [["Strategy", "Scenario", "Eligible", "Score", "Dimensions", "Reasons"]]
+            a_rows = [["Strategy", "Scenario", "Eligible", "Score", "Dimension Scores", "Rationale / Reason"]]
             for item in alternatives:
-                rows.append([
-                    str(item["strategy_name"]),
-                    str(item["scenario_name"]),
+                a_rows.append([
+                    Paragraph(str(item["strategy_name"]), normal),
+                    Paragraph(str(item["scenario_name"]), normal),
                     str(item["eligible"]),
                     self._fmt(item["composite_score"]),
-                    str(item["dimension_scores"]),
-                    str(item["reasons"]),
+                    Paragraph(str(item["dimension_scores"]), normal),
+                    Paragraph(str(item["reasons"]), normal),
                 ])
-            story.append(self._table(rows, [90, 85, 45, 55, 100, 105]))
+            story.append(self._table(a_rows, [90, 85, 45, 45, 120, 138]))
         else:
-            story.append(Paragraph("No alternative strategies were recorded.", styles["BodyText"]))
+            story.append(Paragraph("No alternative strategies were recorded.", normal))
 
-        self._section(story, "12. Assumptions & Evidence", styles)
-        assumptions = report["assumptions"]
-        story.append(self._table([
-            ["Source", "Value"],
-            ["Goal assumptions", str(assumptions["goal_assumptions"])],
-            ["Scenario assumptions", str(assumptions["scenario_assumptions"])],
-            ["Mapped assets", str(report["mapped_assets"])],
-            ["Investor priorities", str(report["investor_priorities"])],
-        ], [180, 345]))
+        # 12. Technique Execution Evidence
+        technique_outputs = report.get("technique_execution") or []
+        self._section(story, "12. Technique Execution Evidence", styles)
+        if technique_outputs:
+            tech_rows = [["Technique ID", "Status", "Warnings", "Deterministic Outputs"]]
+            for item in technique_outputs:
+                tech_rows.append([
+                    str(item.get("technique_id") or self.MISSING),
+                    self._label(item.get("status")),
+                    Paragraph(str(item.get("warnings") or "None"), normal),
+                    Paragraph(str(item.get("outputs") or "—"), normal),
+                ])
+            story.append(self._table(tech_rows, [105, 65, 115, 238]))
+        else:
+            story.append(Paragraph("No technique execution evidence was persisted for this run.", normal))
 
-        self._section(story, "13. Decision", styles)
+        # 13. Client Decision & Selection View
+        self._section(story, "13. Client Decision View & Implementation Checklist", styles)
         decision = report["decision"]
         story.append(self._table([
-            ["Decision item", "Current state"],
-            ["Status", self._label(decision["status"])],
-            ["Selected strategy", str(decision.get("selected_strategy_id") or self.MISSING)],
-            ["Selected scenario", str(decision.get("selected_scenario_id") or self.MISSING)],
-            ["Selected architecture", str(decision.get("selected_architecture_id") or self.MISSING)],
-            ["Implementation parameters", str(decision.get("implementation_parameters") or self.MISSING)],
-            ["Selection timestamp", str(decision.get("selection_timestamp") or self.MISSING)],
-        ], [210, 315]))
+            ["Decision Component", "Selected State"],
+            ["Sign-Off Status", self._label(decision["status"])],
+            ["Selected Strategy", str(decision.get("selected_strategy_id") or strategy.get("selected_strategy_name") or self.MISSING)],
+            ["Selected Scenario", str(decision.get("selected_scenario_id") or (strategy.get("selected_scenario") or {}).get("scenario_name") or self.MISSING)],
+            ["Selected Architecture", str(decision.get("selected_architecture_id") or strategy.get("architecture", {}).get("architecture_id") or self.MISSING)],
+            ["Implementation Parameters", str(decision.get("implementation_parameters") or self.MISSING)],
+            ["Selection Timestamp", str(decision.get("selection_timestamp") or "Awaiting Final Confirmation")],
+        ], [180, 343]))
 
-        self._section(story, "14. Data Provenance", styles)
+        # 14. Data Provenance
+        self._section(story, "14. Data Provenance & Traceability", styles)
         story.append(self._table([
-            ["Field", "Value"],
-            ["Strategy run", str(report["provenance"]["strategy_run_id"])],
-            ["Run version", str(report["provenance"]["run_version"])],
-            ["Defined Goal version", str(report["provenance"]["defined_goal_version"])],
-            ["Run status", str(report["provenance"]["status"])],
-            ["Report version", str(report["report_version"])],
-        ], [210, 315]))
+            ["Metadata Item", "Value"],
+            ["Strategy Run ID", str(report["provenance"]["strategy_run_id"])],
+            ["Run Version", str(report["provenance"]["run_version"])],
+            ["Defined Goal Version", str(report["provenance"]["defined_goal_version"])],
+            ["Run Status", str(report["provenance"]["status"])],
+            ["Report Version", str(report["report_version"])],
+        ], [180, 343]))
 
         doc.build(story)
-        return buffer.getvalue()
+        return buffer.getvalue()
