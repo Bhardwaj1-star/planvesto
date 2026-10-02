@@ -44,8 +44,8 @@ ESSENTIAL_GOAL_TYPES: set[str] = {
 
 def canonical_goal_type(value: str | None) -> str:
     """Normalize goal type strings without changing their business meaning."""
-    clean = (value or "").strip().lower()
-    clean = clean.replace(" / ", "/")
+    clean = " ".join((value or "").strip().lower().split())
+    clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
     return GOAL_TYPE_ALIASES.get(clean, clean)
 
 
