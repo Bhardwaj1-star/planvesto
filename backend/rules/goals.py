@@ -20,6 +20,19 @@ GOAL_PRIORITY_ALIASES: dict[str, GoalPriority] = {
     "discretionary": "low",
 }
 
+CANONICAL_GOAL_NAMES: dict[str, str] = {
+    "retirement": "Retirement",
+    "passive_income": "Financial Freedom / Passive Income",
+    "child education": "Education",
+    "marriage": "Marriage",
+    "home purchase": "Dream Home",
+    "vehicle": "Vehicle",
+    "travel": "Vacation",
+    "other": "Others",
+}
+
+# Legacy aliases are accepted only for backwards compatibility. They do not
+# define new goal identities; current canonical identities remain distinct.
 GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
     "financial freedom/passive income": "passive_income",
@@ -62,6 +75,12 @@ def canonical_goal_type(value: str | None) -> str:
     clean = " ".join((value or "").strip().lower().split())
     clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
     return GOAL_TYPE_ALIASES.get(clean, clean)
+
+
+def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
+    """Return the canonical user-facing name for a canonical goal type."""
+    canonical = canonical_goal_type(goal_type)
+    return CANONICAL_GOAL_NAMES.get(canonical, fallback or str(goal_type or "").strip())
 
 
 def canonical_goal_priority(value: str | None) -> GoalPriority:
