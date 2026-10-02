@@ -388,10 +388,11 @@ class TestFinancialStateEngine:
 # ═══════════════════════════════════════════════
 
 class TestMissingDataHandling:
-    def test_empty_income_returns_zero_available(self):
+    def test_empty_income_is_unavailable(self):
         result = _build()
         assert result.income_monthly.value == 0.0
-        assert result.income_monthly.available is True
+        assert result.income_monthly.available is False
+        assert result.investable_surplus_monthly.available is False
 
     def test_unavailable_income_frequency(self):
         result = _build(

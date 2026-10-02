@@ -16,6 +16,7 @@ from models.orchestration import (
     WorkflowPrerequisite,
 )
 from schemas.goals import GoalInput, GoalCalculateRequest
+from services.financial_state_service import FinancialStateService
 from services.planning_orchestration_service import PlanningOrchestrationService
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,20 @@ class GoalService:
             )
             row = None
         state = row.get("financial_state") if row else None
+        if row is None:
+            try:
+                financial_state_service = getattr(self, "financial_state_service", None)
+                if financial_state_service is None:
+                    financial_state_service = FinancialStateService()
+                state = financial_state_service.build(
+                    defined_goal.planning_unit_id,
+                    scope="family",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Unable to build Financial State for goal feasibility: %s",
+                    exc,
+                )
         if hasattr(state, "model_dump"):
             state = state.model_dump()
         if not isinstance(state, dict):
@@ -145,6 +160,11 @@ class GoalService:
             defined_goal.version_metadata["goal_feasibility"] = {
                 "status": "unknown",
                 "reason": defined_goal.feasibility_reason,
+                "missing_prerequisite": {"key": "financial_state", "label": "Financial State"},
+                "next_action": {
+                    "label": "Complete Financial State",
+                    "route": "/investor/financial-state",
+                },
             }
             missing_data = [WorkflowMissingData(
                 label="Latest Financial State snapshot" if row is None else "Financial State data"
@@ -162,6 +182,11 @@ class GoalService:
             defined_goal.version_metadata["goal_feasibility"] = {
                 "status": "unknown",
                 "reason": defined_goal.feasibility_reason,
+                "missing_prerequisite": {"key": "financial_state", "label": "Investable monthly surplus"},
+                "next_action": {
+                    "label": "Complete Financial State",
+                    "route": "/investor/financial-state",
+                },
             }
             return self._attach_workflow_readiness(
                 defined_goal,

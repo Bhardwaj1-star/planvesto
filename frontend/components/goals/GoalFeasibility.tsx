@@ -24,7 +24,8 @@ export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
       : status === "infeasible"
         ? { label: "Infeasible", cls: "border-rose-200 bg-rose-50 text-rose-800" }
         : { label: "Unknown", cls: "border-slate-200 bg-slate-50 text-slate-700" };
-  const nextAction = goal.workflow_readiness?.next_action;
+  const nextAction = goal.workflow_readiness?.next_action
+    ?? goal.workflow_readiness?.blockers.find((blocker) => blocker.next_action)?.next_action;
   const returnTo = goal.workflow_readiness?.return_to;
   const missingData = goal.workflow_readiness?.blockers.flatMap((blocker) => blocker.missing_data) ?? [];
   const financialStateReturn = withReturnTo("/investor/financial-state", returnTo);

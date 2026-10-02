@@ -68,7 +68,7 @@ class FinancialStateEngine:
         selected = rows if scope == "family" else [r for r in rows if r.get("investor_id") == investor_id]
         monthly = annual = 0.0
         breakdown = defaultdict(float)
-        available = True
+        available = bool(selected)
         for r in selected:
             amount = float(r.get("amount") or 0)
             m = monthly_amount(amount, str(r.get("frequency") or ""))
@@ -88,7 +88,7 @@ class FinancialStateEngine:
                 if p.get("investor_id") == investor_id:
                     factors[p.get("expense_id")] = float(p.get("participation_percentage") or 100) / 100
         selected = rows if scope == "family" else [r for r in rows if r.get("expense_id") in factors]
-        monthly = 0.0; breakdown = defaultdict(float); available = True
+        monthly = 0.0; breakdown = defaultdict(float); available = bool(selected)
         for r in selected:
             m = monthly_amount(float(r.get("amount") or 0), str(r.get("frequency") or ""))
             if m is None:

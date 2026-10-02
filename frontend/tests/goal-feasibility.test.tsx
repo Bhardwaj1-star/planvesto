@@ -23,10 +23,7 @@ test("unknown feasibility presents the backend reason and Financial State action
             route: "/investor/financial-state",
           },
         }],
-        next_action: {
-          label: "Complete Financial State",
-          route: "/investor/financial-state",
-        },
+        next_action: null,
         return_to: "/investor/goal-planner",
       },
     },
