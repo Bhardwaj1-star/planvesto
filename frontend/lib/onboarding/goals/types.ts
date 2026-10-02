@@ -195,6 +195,10 @@ export type DefinedGoal = {
   projected_mapped_asset_value: number;
   funding_gap: number;
   funding_status: FundingStatus;
+  feasibility_status?: "feasible" | "constrained" | "infeasible" | "unknown";
+  feasibility_reason?: string | null;
+  available_monthly_surplus?: number | null;
+  monthly_contribution_surplus_gap?: number | null;
   required_monthly_contribution: number;
   funding_return_assumption?: number;
   version_metadata?: Record<string, unknown>;
