@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getSafeRedirect } from "../lib/safe-redirect";
+import { getPlanningUnitId } from "../lib/planning-unit";
 
 export function useLoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,6 +19,18 @@ export function useLoginForm() {
 
     if (error) {
       setErrorMessage(error.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      await getPlanningUnitId();
+    } catch (workspaceError) {
+      setErrorMessage(
+        workspaceError instanceof Error
+          ? "Login succeeded, but your financial workspace could not be initialized: " + workspaceError.message
+          : "Login succeeded, but your financial workspace could not be initialized.",
+      );
       setIsSubmitting(false);
       return;
     }
