@@ -18,7 +18,7 @@ class GoalCase:
 
 
 GOAL_CASES = (
-    GoalCase("retirement", "Retirement / Financial Freedom", 15, "Flexible", "High"),
+    GoalCase("retirement", "Retirement", 15, "Flexible", "High"),
     GoalCase("education", "Education", 8, "Fixed", "High"),
     GoalCase("home", "Dream Home", 6, "Fixed", "Medium"),
 )
