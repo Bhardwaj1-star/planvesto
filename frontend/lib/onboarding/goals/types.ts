@@ -1,6 +1,6 @@
 export const goalTypes = [
-  "Retirement / Financial Freedom",
-  "Passive Income",
+  "Retirement",
+  "Financial Freedom / Passive Income",
   "Education",
   "Marriage",
   "Dream Home",
