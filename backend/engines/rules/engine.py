@@ -4,7 +4,7 @@ from typing import Any
 
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
-from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_type
+from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_priority, canonical_goal_type
 from rules.moneywheel import RULES
 
 
@@ -145,7 +145,7 @@ class StrategyRuleEngine:
             "long_term": defined_goal.duration_years >= 7,
             "fixed_timeline": defined_goal.flexibility.lower() == "fixed",
             "flexible_timeline": defined_goal.flexibility.lower() != "fixed",
-            "high_priority": defined_goal.priority.lower() in {"critical", "high"},
+            "high_priority": canonical_goal_priority(defined_goal.priority) in {"critical", "high"},
         }
         characteristics = tuple(c.strip().lower() for c in strategy.applicable_goal_characteristics)
         matched = tuple(c for c in characteristics if signals.get(c, False))
