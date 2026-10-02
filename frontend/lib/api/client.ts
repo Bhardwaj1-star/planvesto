@@ -36,7 +36,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly detail: string | null,
+    public readonly detail: ApiErrorDetail,
     public readonly rawDetail: ApiErrorDetail = null,
   ) {
     super(message);
@@ -113,7 +113,7 @@ export async function apiRequest<T>(
           ? (body as { detail: unknown }).detail
           : null;
       const detail = formatApiErrorDetail(rawDetail, `Request failed with status ${response.status}.`);
-      throw new ApiError(detail, response.status, detail, rawDetail);
+      throw new ApiError(detail, response.status, rawDetail, rawDetail);
     }
 
     return body as T;
@@ -162,7 +162,7 @@ export async function apiRequestBlob(
       } catch {
         // Non-JSON server error
       }
-      throw new ApiError(detail, response.status, detail, rawDetail);
+      throw new ApiError(detail, response.status, rawDetail, rawDetail);
     }
 
     return await response.blob();
