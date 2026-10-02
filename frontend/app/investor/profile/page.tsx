@@ -13,7 +13,7 @@ function ProfileContent() {
   const [activeTab, setActiveTab] = useState<"account" | "financial">(initialTab);
 
   const { personalInformation, incomeSources, expenses, assets, liabilities, goals } = useOnboardingStore();
-  const [userEmail, setUserEmail] = useState<string>("investor@planvesto.com");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
@@ -87,7 +87,7 @@ function ProfileContent() {
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                  {userEmail}
+                  {userEmail || "Not available"}
                 </p>
                 {personalInformation.occupation && (
                   <p className="text-xs text-slate-600 mt-1">
