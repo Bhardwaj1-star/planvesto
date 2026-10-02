@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from api.auth import authenticate_user, verify_action_ownership, verify_planning_unit_ownership, verify_strategy_version_ownership
 from data.action_plan_repository import ActionPlanRepository
+from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.strategy_repository import StrategyRepository
 from models.action_plan import ActionPlanItem, ActionDecisionRecord
 from schemas.action_plan import ActionCompletionRequest, ActionCreateRequest, ActionDecisionRequest, ActionDecisionResponse
@@ -12,7 +13,10 @@ router = APIRouter(prefix="/api/action-plan", tags=["Action Plan"])
 
 
 def _service():
-    return ActionPlanService(ActionPlanRepository(StrategyRepository().db))
+    return ActionPlanService(
+        ActionPlanRepository(StrategyRepository().db),
+        FinancialStateSnapshotRepository(),
+    )
 
 
 @router.get("/actions", response_model=list[ActionPlanItem])
