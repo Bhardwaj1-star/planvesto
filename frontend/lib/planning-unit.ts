@@ -18,15 +18,21 @@ function isUuid(value: string) {
 export async function getPlanningUnitId(): Promise<string> {
   const user = await getAuthenticatedUser();
   if (planningUnitPromise && planningUnitUserId === user.id) return planningUnitPromise;
+
   planningUnitUserId = user.id;
   planningUnitPromise = (async (): Promise<string> => {
-    const storedId = typeof window !== "undefined" ? window.localStorage.getItem(planningUnitStorageKey) : null;
+    const storedId = typeof window !== "undefined"
+      ? window.localStorage.getItem(planningUnitStorageKey)
+      : null;
+
     const { data: userUnits, error: unitsError } = await supabase
       .from("planning_units")
       .select("planning_unit_id")
       .eq("user_id", user.id)
       .order("planning_unit_id", { ascending: true });
+
     if (unitsError) throw unitsError;
+
     const unitIds = (userUnits || []).map((unit) => unit.planning_unit_id);
     let chosenId: string | null = null;
 
@@ -42,7 +48,9 @@ export async function getPlanningUnitId(): Promise<string> {
         .order("planning_unit_id", { ascending: true })
         .limit(1)
         .maybeSingle();
+
       if (investorError) throw investorError;
+
       if (investor?.planning_unit_id) {
         chosenId = investor.planning_unit_id;
       } else if (!chosenId) {
@@ -56,14 +64,16 @@ export async function getPlanningUnitId(): Promise<string> {
         .insert({ user_id: user.id })
         .select("planning_unit_id")
         .single();
+
       if (newUnitError) throw newUnitError;
       chosenId = newUnit.planning_unit_id;
     }
 
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(planningUnitStorageKey, chosenId!);
+      window.localStorage.setItem(planningUnitStorageKey, chosenId);
     }
-    return chosenId!;
+
+    return chosenId;
   })();
 
   try {
