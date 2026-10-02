@@ -1,6 +1,14 @@
 """Authoritative constraint definitions and policy thresholds."""
 from __future__ import annotations
 
+# Canonical priority ordering used across multi-goal planning.
+PRIORITY_RANKS: dict[str, int] = {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 3,
+}
+
 # Rule IDs
 RULE_EMERGENCY_RESERVE_CRITICAL = "RULE_EMERGENCY_RESERVE_CRITICAL"
 WARN_EMERGENCY_RESERVE_ATTENTION = "WARN_EMERGENCY_RESERVE_ATTENTION"
