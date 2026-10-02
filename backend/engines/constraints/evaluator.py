@@ -178,7 +178,7 @@ class FinancialRatioConstraintEvaluator:
                 # Critical emergency reserve deficit: any discretionary goal prioritized above emergency is constrained
                 has_emergency_goal = any(g.goal_type in ("emergency_fund", "emergency", "contingency") for g in goals)
                 for g in goals:
-                    is_discretionary = g.goal_type.lower() in self.DISCRETIONARY_GOAL_TYPES
+                    is_discretionary = is_discretionary_goal(g.goal_type)
                     if is_discretionary and g.client_priority in ("critical", "high"):
                         c = ConstraintCheckResult(
                             rule_id="RULE_EMERGENCY_RESERVE_CRITICAL",
@@ -216,7 +216,7 @@ class FinancialRatioConstraintEvaluator:
         if dti_ratio:
             if dti_ratio.status == "critical":
                 for g in goals:
-                    if g.goal_type.lower() in self.DISCRETIONARY_GOAL_TYPES and g.client_priority in ("critical", "high"):
+                    if is_discretionary_goal(g.goal_type) and g.client_priority in ("critical", "high"):
                         c = ConstraintCheckResult(
                             rule_id="RULE_DEBT_BURDEN_EXCEEDED",
                             goal_id=g.goal_id,
