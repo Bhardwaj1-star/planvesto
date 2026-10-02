@@ -239,7 +239,7 @@ class StrategyService:
         if not scenario: raise HTTPException(status_code=400, detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.")
         if scenario.strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="Selected scenario does not match selected strategy.")
         architecture = next((a for a in run.architectures if a.architecture_id == request.selected_architecture_id), None) if request.selected_architecture_id else next((a for a in run.architectures if a.primary_strategy_id == request.selected_strategy_id), None)
-        if architecture is None: raise HTTPException(status_code=400, detail="A valid strategy architecture is required for selection.")
+        if architecture is None or architecture.primary_strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="A valid strategy architecture matching the selected strategy is required for selection.")
         try: version = self.strategy_version_service.create_version(planning_unit_id=request.planning_unit_id, strategy_id=request.selected_strategy_id, parameters=request.selected_implementation_parameters, source="library", status="draft")
         except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from exc
         self.strat_repo.update_selection(request.planning_unit_id, request.strategy_run_id, request.selected_strategy_id, request.selected_scenario_id, version.implementation_parameters, architecture, version.strategy_version_id, version.version)
