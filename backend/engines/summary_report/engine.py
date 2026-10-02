@@ -6,11 +6,11 @@ from typing import List
 # or call the engine classes directly.
 from engines.risk_profiler.engine import RiskProfilerEngine
 from engines.risk_profiler.engine import build_risk_profile
-from backend.engines.risk_profiler.models import RiskProfile
-from backend.engines.goal.engine import GoalEngine
-from backend.engines.investment.engine import InvestmentEngine
-from backend.engines.moneywheel.engine import MoneyWheelEngine
-from backend.models.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
+from engines.risk_profiler.models import RiskProfile
+from engines.goal.engine import GoalEngine
+from engines.investment.engine import InvestmentEngine
+from engines.moneywheel.engine import MoneyWheelEngine
+from models.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
 
 logger = logging.getLogger(__name__)
 
