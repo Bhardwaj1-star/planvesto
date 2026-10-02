@@ -69,6 +69,10 @@ export async function getPlanningUnitId(): Promise<string> {
       chosenId = newUnit.planning_unit_id;
     }
 
+    if (!chosenId) {
+      throw new Error("Planning workspace could not be initialized.");
+    }
+
     if (typeof window !== "undefined") {
       window.localStorage.setItem(planningUnitStorageKey, chosenId);
     }
