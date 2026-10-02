@@ -79,11 +79,12 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok) {
-      const detail =
+      const rawDetail =
         typeof body === "object" && body !== null && "detail" in body
-          ? String((body as { detail: unknown }).detail)
-          : `Request failed with status ${response.status}.`;
-      throw new ApiError(detail, response.status, detail);
+          ? (body as { detail: unknown }).detail
+          : null;
+      const detail = formatApiErrorDetail(rawDetail, `Request failed with status ${response.status}.`);
+      throw new ApiError(detail, response.status, detail, rawDetail);
     }
 
     return body as T;
@@ -122,15 +123,17 @@ export async function apiRequestBlob(
 
     if (!response.ok) {
       let detail = `Request failed with status ${response.status}.`;
+      let rawDetail: ApiErrorDetail = null;
       try {
         const body = await response.json();
         if (typeof body === "object" && body !== null && "detail" in body) {
-          detail = String((body as { detail: unknown }).detail);
+          rawDetail = (body as { detail: unknown }).detail;
+          detail = formatApiErrorDetail(rawDetail, detail);
         }
       } catch {
         // Non-JSON server error
       }
-      throw new ApiError(detail, response.status, detail);
+      throw new ApiError(detail, response.status, detail, rawDetail);
     }
 
     return await response.blob();
