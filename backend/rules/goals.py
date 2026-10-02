@@ -31,10 +31,9 @@ CANONICAL_GOAL_NAMES: dict[str, str] = {
     "other": "Others",
 }
 
-# Legacy aliases are accepted only for backwards compatibility. They do not
-# define new goal identities; current canonical identities remain distinct.
+# Only non-ambiguous legacy aliases remain here. Retirement and passive income
+# are permanently distinct canonical goal identities.
 GOAL_TYPE_ALIASES: dict[str, str] = {
-    "retirement/financial freedom": "retirement",
     "financial freedom/passive income": "passive_income",
     "financial freedom": "passive_income",
     "education": "child education",
