@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 from rules.eligibility import EligibilityStatus
+from rules.goals import canonical_goal_priority
 
 # Decision Scoring Benchmarks & Weights
 INFEASIBLE_DECISION_SCORE: float = -1000.0
@@ -51,7 +52,7 @@ def calculate_goal_fit_score(
     if flexibility == "Fixed" and "fixed_timeline" in chars:
         score += CHARACTERISTIC_MATCH_SCORE
 
-    if priority in ("Critical", "High") and "high_priority" in chars:
+    if canonical_goal_priority(priority) in {"critical", "high"} and "high_priority" in chars:
         score += CHARACTERISTIC_MATCH_SCORE
 
     return score
