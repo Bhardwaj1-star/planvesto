@@ -22,7 +22,7 @@ def _sample_retirement_goal(planning_unit_id="pu-ret-1", goal_id="goal-ret-1"):
     return DefinedGoal(
         planning_unit_id=planning_unit_id,
         goal_id=goal_id,
-        goal_name="Retirement / Financial Freedom",
+        goal_name="Retirement",
         goal_type="Retirement / Financial Freedom",
         today_cost=600000.0,
         target_month=12,
