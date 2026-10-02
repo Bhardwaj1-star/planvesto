@@ -15,7 +15,6 @@ jobs:
   deploy-frontend:
     name: Deploy frontend to Vercel
     if: >-
-      secrets.VERCEL_TOKEN != '' &&
       vars.VERCEL_ORG_ID != '' &&
       vars.VERCEL_PROJECT_ID != '' &&
       (github.event_name == 'workflow_dispatch' ||
