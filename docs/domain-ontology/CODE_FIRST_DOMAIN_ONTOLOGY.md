@@ -297,7 +297,7 @@ Multiple DefinedGoals (competing for surplus)
 
 | Goal Concept | Canonical Normalized Key (`rules/goals.py`) | Legacy / Strategy Alias | Category (`rules/goals.py`) | Priority Rank (`rules/multi_goal.py`) | Priority Rank (`engines/orchestration`) |
 |---|---|---|---|---|---|
-| **Retirement / Financial Freedom** | `retirement` | `retirement` | **Essential** | 1 (`critical`) / 2 (`high`) | 0 (`critical`) / 1 (`high`) |
+| **Retirement** | `retirement` | `retirement` | **Essential** | 1 (`critical`) / 2 (`high`) | 0 (`critical`) / 1 (`high`) |
 | **Education** | `child education` | `Child Education` | Discretionary / Essential* | 2 (`high`) / 3 (`medium`) | 1 (`high`) / 2 (`medium`) |
 | **Marriage** | `child marriage` | `Child Marriage` | Discretionary | 3 (`medium`) | 2 (`medium`) |
 | **Dream Home** | `home purchase` | `Home Purchase` | Discretionary | 2 (`high`) / 3 (`medium`) | 1 (`high`) / 2 (`medium`) |
@@ -306,11 +306,11 @@ Multiple DefinedGoals (competing for surplus)
 | **Wealth Creation** | `wealth_creation` | `Wealth Creation` | Discretionary | 3 (`medium`) | 2 (`medium`) |
 | **Debt Repayment** | `other` *(Code conflict)* | `debt_repayment` *(Docs)* | **Essential** | 1 (`critical`) | 0 (`critical`) |
 | **Emergency Fund** | `emergency_fund` | `contingency` | **Essential** | 1 (`critical`) | 0 (`critical`) |
-| **Passive Income** | `other` *(Code conflict)* | `passive_income` *(Docs)* | Discretionary | 3 (`medium`) | 2 (`medium`) |
+| **Financial Freedom / Passive Income** | `passive_income` | `passive_income` | Discretionary | 3 (`medium`) | 2 (`medium`) |
 | **Philanthropy** | `other` *(Code conflict)* | `philanthropy` *(Docs)* | Discretionary | 4 (`low`) | 3 (`low`) |
 | **Other** | `other` | `Other` | Discretionary | 3 (`medium`) / 4 (`low`) | 2 (`medium`) / 3 (`low`) |
 
-> *Taxonomy Inconsistency Finding:* In `backend/rules/goals.py` (L18-L20), `passive income`, `debt repayment`, and `philanthropy` are mapped to `"other"` in `GOAL_TYPE_ALIASES`, directly conflicting with `docs/strategy-system-business-rules-correction-spec.md` (Section 2) which mandates that `Passive Income`, `Debt Repayment`, and `Philanthropy` must NOT be collapsed into `other`.
+> *Taxonomy Inconsistency Finding:* The goal taxonomy now preserves `Financial Freedom / Passive Income` as `passive_income`; legacy `Retirement / Financial Freedom` remains accepted as a compatibility alias for `retirement`.
 
 ---
 
