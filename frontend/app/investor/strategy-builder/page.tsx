@@ -22,6 +22,12 @@ function formatINR(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
+function resolveArchitectureId(run: StrategyRun | null, strategyId: string) {
+  if (!run) return "";
+  return run.architectures.find((architecture) => architecture.primary_strategy_id === strategyId)?.architecture_id
+    ?? run.recommendation.architecture?.architecture_id
+    ?? "";
+}
 
 export default function InvestorStrategyBuilderPage() {
   const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
@@ -91,9 +97,10 @@ export default function InvestorStrategyBuilderPage() {
         if (!active) return;
         setGoalPreview(preview);
         setRun(latest);
-        setSelectedStrategyId(latest?.selected_strategy_id ?? latest?.recommendation.recommended_strategy_id ?? "");
+        const restoredStrategyId = latest?.selected_strategy_id ?? latest?.recommendation.recommended_strategy_id ?? "";
+        setSelectedStrategyId(restoredStrategyId);
         setSelectedScenarioId(latest?.selected_scenario_id ?? latest?.recommendation.recommended_scenario_id ?? "");
-        setSelectedArchitectureId(latest?.selected_architecture?.architecture_id ?? latest?.recommendation.architecture?.architecture_id ?? "");
+        setSelectedArchitectureId(resolveArchitectureId(latest, restoredStrategyId));
         setParameters(latest?.selected_implementation_parameters ?? {});
         setHistory(latest ? await getStrategyRunHistory(planningUnitId, selectedGoalId) : []);
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Strategy Builder."); }
@@ -118,9 +125,10 @@ export default function InvestorStrategyBuilderPage() {
     try {
       const next = await operation();
       setRun(next);
-      setSelectedStrategyId(next.selected_strategy_id ?? next.recommendation.recommended_strategy_id ?? "");
+      const nextStrategyId = next.selected_strategy_id ?? next.recommendation.recommended_strategy_id ?? "";
+      setSelectedStrategyId(nextStrategyId);
       setSelectedScenarioId(next.selected_scenario_id ?? next.recommendation.recommended_scenario_id ?? "");
-      setSelectedArchitectureId(next.selected_architecture?.architecture_id ?? next.recommendation.architecture?.architecture_id ?? "");
+      setSelectedArchitectureId(resolveArchitectureId(next, nextStrategyId));
       setParameters(next.selected_implementation_parameters ?? {});
       const planningUnitId = getPlanningUnitId();
       if (planningUnitId && selectedGoalId) setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
@@ -129,7 +137,17 @@ export default function InvestorStrategyBuilderPage() {
   };
 
   const handleBuild = () => { const planningUnitId = getPlanningUnitId(); if (planningUnitId && selectedGoalId) void execute(() => buildStrategy(planningUnitId, selectedGoalId)); };
-  const handleSelect = () => { const planningUnitId = getPlanningUnitId(); if (planningUnitId && run?.strategy_run_id && selectedStrategyId && selectedScenarioId) void execute(() => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters, selectedArchitectureId || undefined)); };
+  const handleSelect = () => {
+    const planningUnitId = getPlanningUnitId();
+    if (!planningUnitId || !run?.strategy_run_id || !selectedStrategyId || !selectedScenarioId) return;
+    const architecture = run.architectures.find((item) => item.architecture_id === selectedArchitectureId && item.primary_strategy_id === selectedStrategyId)
+      ?? run.architectures.find((item) => item.primary_strategy_id === selectedStrategyId);
+    if (!architecture) {
+      setError("A matching strategy architecture is unavailable.");
+      return;
+    }
+    void execute(() => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters, architecture.architecture_id));
+  };
 
   if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-6xl space-y-6"><div className="h-9 w-64 animate-pulse rounded-xl bg-slate-200"/><div className="h-96 animate-pulse rounded-3xl bg-white"/></div></main>;
   if (!goals.length) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center"><h1 className="text-2xl font-extrabold">No goals available</h1><Link href="/investor/goal-planner" className="mt-6 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white">Open Goal Planner</Link></div></main>;
