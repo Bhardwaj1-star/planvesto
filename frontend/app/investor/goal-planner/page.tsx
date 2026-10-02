@@ -182,7 +182,7 @@ export default function GoalPlannerPage() {
   async function handleSaveGoal() {
     setFormError(null); const payload = buildGoalInputPayload(); if (!payload) return;
     try { setIsSaving(true); const saved = await apiRequest<DefinedGoal>("/api/goals", { method: "POST", body: JSON.stringify(payload) }); setLastSavedGoalId(saved.goal_id); setGoals((prev) => { const i = prev.findIndex((g) => g.goal_id === saved.goal_id); if (i < 0) return [...prev, saved]; const next = [...prev]; next[i] = saved; return next; }); setSuccessMessage(formData.goal_id ? `Goal "${saved.goal_name}" updated successfully (v${saved.version}).` : `Goal "${saved.goal_name}" created successfully (v${saved.version}).`); handleCancelForm(); }
-    catch (e) { setFormError(e instanceof ApiError ? e.detail || "Failed to save goal." : e instanceof Error ? e.message : "Unable to save goal."); } finally { setIsSaving(false); }
+    catch (e) { setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Unable to save goal."); } finally { setIsSaving(false); }
   }
   async function handleCancelGoal(goal: DefinedGoal) {
     if (!window.confirm(`Are you sure you want to mark "${goal.goal_name}" as Cancelled?`)) return;
