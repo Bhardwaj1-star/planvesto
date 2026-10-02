@@ -310,7 +310,6 @@ Multiple DefinedGoals (competing for surplus)
 | **Philanthropy** | `other` *(Code conflict)* | `philanthropy` *(Docs)* | Discretionary | 4 (`low`) | 3 (`low`) |
 | **Other** | `other` | `Other` | Discretionary | 3 (`medium`) / 4 (`low`) | 2 (`medium`) / 3 (`low`) |
 
-> *Taxonomy Inconsistency Finding:* The goal taxonomy now preserves `Financial Freedom / Passive Income` as `passive_income`; legacy `Retirement / Financial Freedom` remains accepted as a compatibility alias for `retirement`.
 
 ---
 
