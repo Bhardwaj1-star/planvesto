@@ -19,83 +19,96 @@ Cleanup must remove code that is no longer part of the current architecture with
 
 ---
 
-## 2. Canonical Architecture
+## 2. Source Blueprint — Required Decision Architecture
 
-The canonical end-to-end planning architecture is:
+The Financial Planning Engine System Blueprint is the architectural baseline for this cleanup.
 
-Financial Data → Financial State → Goals → Goal Feasibility → Constraints → Strategy Engine → Scenarios → Comparison → Decision → Report → Investor Decision
+The source blueprint defines this full decision-support loop:
 
-This is the primary business architecture. Individual modules may implement multiple stages internally, but no service, report layer or compatibility route may create a competing business flow.
+**Financial State → Goals → Constraints → Proposed Action / Problem → Strategy Engine → Calculation Engine → Scenario Engine → Probability / Uncertainty → Optimization Engine → Explainability → Investor Decision → Updated Financial State**
 
-### Stage ownership
+For the current backend implementation, **Financial Data** is the source layer feeding Financial State, while **Goal Feasibility** is an explicit planning stage derived from goal requirements and available financial resources before strategy evaluation.
 
-1. **Financial Data**
-   - Raw investor/family financial inputs.
-   - Source information only; not a financial decision.
+Therefore the implementation-level flow is:
 
-2. **Financial State**
-   - Normalized/calculated financial reality.
-   - Net worth, assets, liabilities, cash-flow/surplus, ratios and other deterministic state metrics.
-   - Canonical domain: FinancialStateEngine + FinancialStateService + FinancialState persistence.
+**Financial Data → Financial State → Goals → Goal Feasibility → Constraints → Proposed Action / Problem → Strategy Engine → Calculation → Scenarios → Probability / Uncertainty → Optimization / Comparison → Explainability → Decision Options → Investor Decision → Updated Financial State**
 
-3. **Goals**
-   - Versioned DefinedGoal objects representing the investor's objectives.
-   - Goal definition is separate from strategy selection.
+A report is a presentation/output layer around canonical decision outputs. It is not an additional business-decision engine.
 
-4. **Goal Feasibility**
-   - Quantifies what the goal requires and what financial resources are available.
-   - Evidence includes future target, mapped resources, funding gap/surplus, required contribution and funding status.
-   - This is a first-class planning stage, not merely report presentation.
-   - Goal Feasibility must remain distinct from Strategy Feasibility.
+### Blueprint responsibilities
 
-5. **Constraints**
-   - RuleEngine + ConstraintAggregator + ConstraintSet.
-   - Carries hard constraints, ranking inputs, recommendation evidence and explanatory evidence into strategy evaluation.
+| Responsibility | Required role |
+|---|---|
+| Financial Data | Raw investor/family financial reality |
+| Financial State | Normalized/calculated current financial reality |
+| Goals | Desired future outcomes and flexibility |
+| Goal Feasibility | Funding requirement, gap/surplus and required contribution evidence |
+| Constraints | What can/cannot change |
+| Proposed Action / Problem | What the investor is considering / problem to test |
+| Strategy Engine | Generate possible financial paths |
+| Calculation Engine | Quantify consequences |
+| Scenario Engine | Stress-test strategy outcomes |
+| Probability / Uncertainty | Estimate outcome ranges where appropriate |
+| Optimization Engine | Compare fit and trade-offs |
+| Explainability | Explain why outcomes differ |
+| Investor Decision | Investor's final choice |
+| Updated Financial State | New reality after action; next planning snapshot |
 
-6. **Strategy Engine**
-   - Central goal-level strategy decision system.
-   - Internal flow:
-     Applicability → Eligible Strategy Set → Scenario Generation → Comparison → Architecture Composition → Decision Evaluation → Ranking → Recommendation.
-   - Strategy services may orchestrate this engine but must not duplicate its business logic.
+### Strategy Engine contract
 
-7. **Scenarios**
-   - Baseline, what-if and investor-customized scenarios.
+The Strategy Engine is the strategy-building layer, not merely a downstream solution label.
 
-8. **Comparison**
-   - Canonical comparison matrix across candidate strategies/scenarios.
+It can generate contribution, goal, capital-deployment, debt, portfolio, cash-flow, combination and withdrawal strategies. Rules and constraints reduce the search space; combinations must not be generated blindly.
 
-9. **Decision**
-   - Decision Evaluation uses goal fit, financial-state fit, horizon, funding/feasibility evidence, constraints, priorities, trade-offs and architecture/technique evidence.
-   - Ranking/recommendation must derive from canonical decision output.
+Current canonical internal flow:
 
-10. **Report**
-    - Individual goal: StrategyRun → GoalReportService → structured report → PDF.
-    - Consolidated plan: multiple goal results + cross-goal allocation/conflicts → consolidated financial plan/report.
-    - Reports consume canonical outputs and must not become an alternative calculation/strategy/decision path.
+**Applicability → Eligible Strategy Set → Scenario Generation → Comparison → Architecture Composition → Decision Evaluation → Ranking → Recommendation**
 
-11. **Investor Decision**
-    - Investor selects/persists strategy, scenario, architecture and implementation parameters.
-    - System recommendation is decision support; it is not the investor's final decision.
+No service may become a second strategy-generation or decision authority.
 
-### Goal Feasibility vs Strategy Feasibility
+### Goal Feasibility
 
-These must not be collapsed during cleanup.
+The blueprint's Goal Engine responsibilities require the system to derive, where mathematically possible, horizon, funding gap, required return and required contribution/funding requirement before alternative strategies are evaluated.
+
+Goal Feasibility must remain distinct from Strategy Feasibility.
 
 **Goal Feasibility:** Can the defined financial objective be funded under the investor's current/projected financial resources?
 
-**Strategy Feasibility:** Is this particular strategy architecture viable/appropriate for this goal under the financial state and constraints?
+**Strategy Feasibility:** Is this specific strategy architecture viable/appropriate under the financial state and constraints?
 
-The Strategy Engine currently represents strategy feasibility through architecture/decision evidence and statuses such as feasible, conditional and infeasible.
+Eligibility Fit is evidence, not the final investor decision. Conditional strategies may be adapted and re-checked.
+
+### Calculation / Scenario / Optimization / Explainability boundaries
+
+**Calculation** answers what each strategy mathematically produces. Reusable calculations must not be duplicated in services, APIs or reports.
+
+**Scenario** asks what happens when assumptions/conditions change, including return, contribution, step-up, date, repayment or volatility variations.
+
+**Probability / Uncertainty** is conceptually distinct from deterministic scenario calculation. If this capability is not implemented on a path, record it as a gap rather than inventing a substitute.
+
+**Optimization / Comparison** occurs after strategies are generated and evaluated. It compares goal fit, cash-flow, liquidity, debt, portfolio, risk, flexibility, outcome quality and trade-offs. It is not synonymous with maximizing return.
+
+**Explainability** exposes assumptions, evidence, consequences and trade-offs. Report formatting may present this information, but reports must not independently recreate decision logic.
+
+### Report architecture
+
+Individual Goal Decision Report:
+
+**Strategy Run → GoalReportService → Structured Goal Decision Report → PDF**
+
+Consolidated Financial Plan / Multi-Goal Report:
+
+**Per-goal results → Cross-Goal Allocation / Conflict Resolution → Consolidated Financial Plan → Report**
+
+The two report scopes may compose one another but must not duplicate underlying business logic.
 
 ### Multi-Goal orchestration
 
-Multi-Goal is a cross-goal orchestration layer, not a replacement for the goal-level Strategy Engine.
-
 For multiple goals:
 
-Financial State → Goals → Goal Feasibility → Constraints → Strategy Engine per goal → Cross-Goal Orchestration → Resource Allocation / Conflict Resolution → Consolidated Financial Plan → Report → Investor Decision
+**Financial State → Goals → Goal Feasibility → Constraints → Strategy Engine per goal → Cross-Goal Orchestration → Resource Allocation / Conflict Resolution → Consolidated Financial Plan → Report → Investor Decision → Updated Financial State**
 
-The multi-goal layer owns cross-goal prioritisation, shared-resource competition, allocation, conflicts and consolidated plan assembly. It must not duplicate individual-goal strategy evaluation.
+The Multi-Goal layer owns prioritisation, shared-resource competition, allocation, liquidity/resource conflicts, cross-goal trade-offs and consolidated plan assembly. It must not duplicate individual-goal Strategy Engine logic.
 
 ### Canonical implementation map
 
@@ -106,32 +119,25 @@ The multi-goal layer owns cross-goal prioritisation, shared-resource competition
 | Goal definition/calculation | DefinedGoal / Goal domain |
 | Goal feasibility evidence | Goal calculation + funding/feasibility outputs |
 | Constraint evaluation | RuleEngine + ConstraintAggregator |
-| Strategy applicability | Strategy Engine |
+| Proposed action/problem | Action / decision-context layer |
+| Strategy applicability/generation | Strategy Engine |
 | Scenario generation | Strategy Engine scenario module |
-| Comparison | Strategy Engine comparison module |
+| Mathematical calculation | Calculation / strategy calculation layer |
+| Probability / uncertainty | Probability / uncertainty layer where implemented |
+| Strategy comparison | Strategy Engine comparison module |
 | Architecture composition | Strategy Engine composition module |
 | Decision evaluation | Strategy Engine decision module |
 | Ranking/recommendation | Strategy Engine ranking + recommendation modules |
+| Explainability/evidence | Canonical decision/report evidence outputs |
 | Individual-goal report | GoalReportService |
 | Cross-goal orchestration | Multi-Goal Orchestration layer |
 | Consolidated financial plan | FinancialPlanService / consolidated-plan layer |
 | Investor selection | Strategy selection/persistence flow |
+| Updated-state feedback | Financial-state update / next planning cycle |
 
-### Cleanup implication
+### Blueprint-to-code rule
 
-The cleanup target is not simply “one report service”. It is:
-
-**One architectural responsibility → one canonical implementation → one authoritative data flow.**
-
-Classify implementations as:
-
-- **CANONICAL** — authoritative implementation
-- **COMPATIBILITY** — active consumer alias delegating to canonical
-- **LEGACY** — obsolete duplicate implementation
-- **DEAD** — no active architectural/runtime role
-- **DOMAIN LOGIC** — legitimate goal/domain-specific behavior
-
-Only confirmed LEGACY and DEAD implementations should be deleted.
+Where a source-blueprint capability is not implemented in code, classify it as an **implementation gap**. Do not silently claim completion and do not invent a new business rule during cleanup.
 
 ## 3. Confirmed Legacy Retirement Report Layer
 
