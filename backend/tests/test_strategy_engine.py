@@ -226,3 +226,12 @@ class TestGenericMultiGoalArchitecture:
         arch_ids = [a.architecture_id for a in res.architectures]
         assert res.recommendation.architecture.architecture_id in arch_ids
         assert not hasattr(res, "retirement_report")
+
+
+def test_strategy_engine_accepts_ui_goal_priority_important():
+    """Legacy/UI goal priority labels are normalized at the orchestration boundary."""
+    goal = _make_goal(goal_type="Education", funding_status="Shortfall")
+    goal.priority = "Important"
+    result = StrategyEngine().execute(goal, priorities=InvestorPriorities())
+    assert result.recommendation is not None
+    assert result.recommendation.recommended_strategy_id != ""
