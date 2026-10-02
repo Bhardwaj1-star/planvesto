@@ -73,3 +73,5 @@ def test_retirement_and_passive_income_have_distinct_canonical_identities():
     assert canonical_goal_type("Retirement") == "retirement"
     assert canonical_goal_type("Financial Freedom / Passive Income") == "passive_income"
     assert canonical_goal_name("passive_income") == "Financial Freedom / Passive Income"
+    assert canonical_goal_type("Retirement/Financial Freedom") == "retirement"
+    assert canonical_goal_name("Retirement/Financial Freedom") == "Retirement"
