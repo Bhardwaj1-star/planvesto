@@ -204,7 +204,24 @@ export type DefinedGoal = {
   monthly_contribution_surplus_gap?: number | null;
   required_monthly_contribution: number;
   funding_return_assumption?: number;
+  funding_strategies?: FundingStrategyEvaluation[];
   version_metadata?: Record<string, unknown>;
   created_at?: string | null;
   target_amount?: number;
+};
+
+export type FundingStrategyEvaluation = {
+  strategy_id: string;
+  strategy_name: string;
+  strategy_type: string;
+  description: string;
+  status: string;
+  required_lumpsum: number;
+  required_monthly_contribution: number;
+  starting_monthly_contribution: number;
+  annual_step_up: number | null;
+  remaining_gap: number;
+  reason: string;
+  constraints: string[];
+  trade_offs: string[];
 };

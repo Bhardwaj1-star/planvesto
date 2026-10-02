@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import type { DefinedGoal } from "../onboarding/goals/types";
 
 export type GoalSummary = {
   goal_id: string;
@@ -28,7 +29,7 @@ export function getGoals(planningUnitId: string) {
 }
 
 export function getLatestDefinedGoal(planningUnitId: string, goalId: string) {
-  return apiRequest<Record<string, unknown>>(`/api/goals/${encodeURIComponent(goalId)}/defined/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+  return apiRequest<DefinedGoal>(`/api/goals/${encodeURIComponent(goalId)}/defined/latest?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
 
 export function getDefinedGoalVersions(planningUnitId: string, goalId: string) {

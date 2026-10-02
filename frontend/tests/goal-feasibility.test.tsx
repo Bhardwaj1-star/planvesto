@@ -8,6 +8,7 @@ import { withReturnTo } from "../lib/workflow-navigation";
 test("unknown feasibility presents the backend reason and Financial State action", () => {
   const markup = renderToStaticMarkup(createElement(GoalFeasibility, {
     goal: {
+      goal_id: "goal-1",
       feasibility_status: "unknown",
       feasibility_reason: "Current financial surplus is unavailable.",
       required_monthly_contribution: 0,
@@ -33,14 +34,17 @@ test("unknown feasibility presents the backend reason and Financial State action
   assert.match(markup, /Current financial surplus is unavailable\./);
   assert.match(markup, /Missing data/);
   assert.match(markup, /Income frequency/);
-  assert.match(markup, /href="\/investor\/financial-state\?returnTo=%2Finvestor%2Fgoal-planner"/);
-  assert.match(markup, /href="\/investor\/onboarding\/income\?returnTo=%2Finvestor%2Ffinancial-state%3FreturnTo%3D%252Finvestor%252Fgoal-planner"/);
+  assert.match(markup, /href="\/investor\/financial-state\?returnTo=%2Finvestor%2Fgoal-planner%2Fgoal-1%2Ffeasibility"/);
+  assert.match(markup, /href="\/investor\/onboarding\/income\?returnTo=%2Finvestor%2Fgoal-planner%2Fgoal-1%2Ffeasibility"/);
+  assert.match(markup, /Complete information &amp; check feasibility/);
+  assert.match(markup, /href="\/investor\/goal-planner\/goal-1\/feasibility"/);
   assert.match(markup, /Complete Financial State/);
 });
 
 test("feasible goals do not show a prerequisite action", () => {
   const markup = renderToStaticMarkup(createElement(GoalFeasibility, {
     goal: {
+      goal_id: "goal-1",
       feasibility_status: "feasible",
       feasibility_reason: "The required monthly contribution fits within the current investable surplus.",
       required_monthly_contribution: 0,
@@ -55,6 +59,7 @@ test("feasible goals do not show a prerequisite action", () => {
   }));
 
   assert.match(markup, />Feasible</);
+  assert.match(markup, /View funding analysis/);
   assert.doesNotMatch(markup, /Complete Financial State/);
 });
 

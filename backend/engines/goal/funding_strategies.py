@@ -1,6 +1,7 @@
 from typing import Any
 
 from engines.calculation.engine import round_money
+from library.strategies.canonical import get_canonical_strategy
 from library.strategies.variants import get_canonical_strategy_variant
 
 
@@ -8,7 +9,22 @@ def _variant(variant_id: str) -> dict[str, str]:
     definition = get_canonical_strategy_variant(variant_id)
     if definition is None:
         raise ValueError(f"Unknown canonical strategy variant: {variant_id}")
-    return {"strategy_id": definition.variant_id, "strategy_name": definition.name, "strategy_type": definition.variant_type}
+    strategy = get_canonical_strategy(definition.strategy_id)
+    return {
+        "strategy_id": definition.variant_id,
+        "strategy_name": definition.name,
+        "strategy_type": definition.variant_type,
+        "description": definition.description,
+        "trade_offs": strategy.trade_offs if strategy else [],
+    }
+
+
+def _finalize_evaluations(evaluations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    for evaluation in evaluations:
+        evaluation["constraints"] = (
+            [] if evaluation["status"] == "feasible" else [evaluation["reason"]]
+        )
+    return evaluations
 
 
 def _future_value_lumpsum(amount: float, annual_return: float, years: float) -> float:
@@ -77,7 +93,7 @@ def build_goal_funding_strategies(
     result: list[dict[str, Any]] = []
 
     if gap <= 0:
-        return [{
+        return _finalize_evaluations([{
             **_variant("existing_assets"),
             "status": "feasible",
             "required_lumpsum": 0.0,
@@ -86,11 +102,11 @@ def build_goal_funding_strategies(
             "annual_step_up": 0.0,
             "remaining_gap": 0.0,
             "reason": "Existing mapped assets already cover the target-date funding requirement.",
-        }]
+        }])
 
     if years <= 0:
         lumpsum = round_money(gap)
-        return [{
+        return _finalize_evaluations([{
             **_variant("lumpsum"),
             "status": "requires_upfront_capital",
             "required_lumpsum": lumpsum,
@@ -99,7 +115,7 @@ def build_goal_funding_strategies(
             "annual_step_up": 0.0,
             "remaining_gap": 0.0,
             "reason": "The target date is immediate, so a future monthly contribution is not applicable.",
-        }]
+        }])
 
     monthly_rate = float(annual_return) / 12.0
     if abs(monthly_rate) < 1e-12:
@@ -119,7 +135,10 @@ def build_goal_funding_strategies(
         "required_monthly_contribution": round_money(required_sip),
         "starting_monthly_contribution": round_money(required_sip),
         "annual_step_up": 0.0,
-        "remaining_gap": 0.0,
+        "remaining_gap": round_money(max(
+            0.0,
+            gap - _future_value_growing_monthly(surplus, 0.0, annual_return, years),
+        )),
         "reason": "Required SIP fits current monthly surplus." if sip_fit else "Required SIP exceeds current monthly surplus.",
     })
 
@@ -175,4 +194,4 @@ def build_goal_funding_strategies(
         "reason": "Starts within current surplus and increases the contribution annually." if step_up is not None else "Even a 100% annual step-up from the current surplus does not close the gap within the goal horizon.",
     })
 
-    return result
+    return _finalize_evaluations(result)

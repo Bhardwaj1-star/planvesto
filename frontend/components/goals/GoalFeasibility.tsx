@@ -7,6 +7,7 @@ import type { DefinedGoal } from "../../lib/onboarding/goals/types";
 type GoalFeasibilityProps = {
   goal: Pick<
     DefinedGoal,
+    | "goal_id"
     | "feasibility_status"
     | "feasibility_reason"
     | "available_monthly_surplus"
@@ -17,6 +18,7 @@ type GoalFeasibilityProps = {
 
 export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
   const status = goal.feasibility_status || "unknown";
+  const workspaceRoute = `/investor/goal-planner/${encodeURIComponent(goal.goal_id)}/feasibility`;
   const config = status === "feasible"
     ? { label: "Feasible", cls: "border-teal-200 bg-teal-50 text-teal-800" }
     : status === "constrained"
@@ -26,9 +28,8 @@ export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
         : { label: "Unknown", cls: "border-slate-200 bg-slate-50 text-slate-700" };
   const nextAction = goal.workflow_readiness?.next_action
     ?? goal.workflow_readiness?.blockers.find((blocker) => blocker.next_action)?.next_action;
-  const returnTo = goal.workflow_readiness?.return_to;
+  const returnTo = workspaceRoute;
   const missingData = goal.workflow_readiness?.blockers.flatMap((blocker) => blocker.missing_data) ?? [];
-  const financialStateReturn = withReturnTo("/investor/financial-state", returnTo);
 
   return <div className={`mt-4 rounded-xl border p-3 ${config.cls}`}>
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -48,7 +49,7 @@ export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
           {missingData.map((item) => (
             <li key={item.label}>
               {item.route
-                ? <Link href={withReturnTo(item.route, financialStateReturn)} className="font-semibold underline underline-offset-2">{item.label}</Link>
+                ? <Link href={withReturnTo(item.route, returnTo)} className="font-semibold underline underline-offset-2">{item.label}</Link>
                 : item.label}
             </li>
           ))}
@@ -60,5 +61,8 @@ export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
         {nextAction.label} <span aria-hidden="true">→</span>
       </Link>
     )}
+    <Link href={workspaceRoute} className="mt-3 inline-flex items-center gap-1 text-xs font-black underline underline-offset-2">
+      {status === "unknown" ? "Complete information & check feasibility →" : "View funding analysis →"}
+    </Link>
   </div>;
 }

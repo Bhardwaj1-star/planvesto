@@ -62,7 +62,7 @@ def test_missing_financial_state_keeps_feasibility_unknown_and_exposes_action():
     assert goal.workflow_readiness.next_action.route == "/investor/financial-state"
     assert goal.version_metadata["goal_feasibility"]["missing_prerequisite"]["key"] == "financial_state"
     assert goal.version_metadata["goal_feasibility"]["next_action"]["route"] == "/investor/financial-state"
-    assert goal.workflow_readiness.return_to == "/investor/goal-planner"
+    assert goal.workflow_readiness.return_to == "/investor/goal-planner/goal-1/feasibility"
     assert goal.funding_status == "Shortfall"
     assert goal.funding_gap == 50000
 
@@ -183,3 +183,56 @@ def test_latest_goal_rechecks_feasibility_against_latest_financial_state():
 
     assert latest.feasibility_status == "feasible"
     assert latest.workflow_readiness.status == "ready"
+
+
+def test_missing_data_refresh_recalculates_feasibility_and_funding_strategies():
+    goal = _defined_goal()
+    snapshot_repository = _SnapshotRepository({
+        "financial_state": {
+            "income_monthly": {"value": None, "available": False},
+            "expenses_monthly": {"value": None, "available": False},
+            "investable_surplus_monthly": {"value": None, "available": False},
+        }
+    })
+    service = _service(snapshot_repository.row)
+    service.financial_state_repository = snapshot_repository
+    service.repository = type("GoalRepositoryStub", (), {
+        "get_latest_defined_goal": lambda self, planning_unit_id, goal_id: goal,
+    })()
+
+    incomplete = service._apply_feasibility(goal)
+
+    assert incomplete.feasibility_status == "unknown"
+    assert [item.route for item in incomplete.workflow_readiness.blockers[0].missing_data] == [
+        "/investor/onboarding/income",
+        "/investor/onboarding/expenses",
+    ]
+    assert incomplete.workflow_readiness.return_to == "/investor/goal-planner/goal-1/feasibility"
+
+    class RefreshingFinancialStateService:
+        def build(self, planning_unit_id, scope):
+            snapshot_repository.row = {
+                "financial_state": {
+                    "income_monthly": {"value": 50000, "available": True},
+                    "expenses_monthly": {"value": 30000, "available": True},
+                    "investable_surplus_monthly": {"value": 20000, "available": True},
+                }
+            }
+            return snapshot_repository.row["financial_state"]
+
+    service.financial_state_service = RefreshingFinancialStateService()
+    service.financial_state_service.build("planning-unit-1", "family")
+    refreshed = service.get_latest_defined_goal("planning-unit-1", "goal-1")
+
+    assert refreshed.feasibility_status == "feasible"
+    assert refreshed.workflow_readiness.status == "ready"
+    assert refreshed.available_monthly_surplus == 20000
+    assert {item["strategy_id"] for item in refreshed.funding_strategies} >= {
+        "sip",
+        "lumpsum",
+        "lumpsum_plus_sip",
+    }
+    sip = next(item for item in refreshed.funding_strategies if item["strategy_id"] == "sip")
+    assert sip["description"]
+    assert sip["trade_offs"]
+    assert sip["constraints"] == []

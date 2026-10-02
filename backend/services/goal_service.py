@@ -8,7 +8,6 @@ from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
 from engines.goal.funding_strategies import build_goal_funding_strategies
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
-from models.orchestration import ModuleAvailability, WorkflowNextAction, WorkflowPrerequisite
 from models.orchestration import (
     ModuleAvailability,
     WorkflowMissingData,
@@ -90,7 +89,7 @@ class GoalService:
             ),
         )
         readiness = PlanningOrchestrationService.build_workflow_readiness(
-            process_route="/investor/goal-planner",
+            process_route=f"/investor/goal-planner/{defined_goal.goal_id}/feasibility",
             prerequisites=[prerequisite],
         )
         defined_goal.workflow_readiness = readiness

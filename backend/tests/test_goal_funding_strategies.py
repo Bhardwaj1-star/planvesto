@@ -39,3 +39,19 @@ def test_existing_assets_covering_gap_returns_no_additional_funding_need():
     )
     assert result[0]["strategy_id"] == "existing_assets"
     assert result[0]["required_monthly_contribution"] == 0.0
+
+
+def test_constrained_sip_exposes_remaining_gap_and_canonical_tradeoffs():
+    result = build_goal_funding_strategies(
+        funding_gap=600000,
+        annual_return=0.08,
+        duration_years=5,
+        available_monthly_surplus=1000,
+    )
+
+    sip = next(item for item in result if item["strategy_id"] == "sip")
+    assert sip["status"] == "constrained"
+    assert sip["remaining_gap"] > 0
+    assert sip["constraints"] == [sip["reason"]]
+    assert sip["description"]
+    assert sip["trade_offs"]
