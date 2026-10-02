@@ -4,7 +4,7 @@ from typing import List
 # Placeholder imports – actual engine modules provide these functions
 # In a real implementation these would query the corresponding services
 # or call the engine classes directly.
-from backend.engines.risk_profiler.engine import RiskProfilerEngine
+from engines.risk_profiler.engine import RiskProfilerEngine
 from backend.engines.risk_profiler.engine import build_risk_profile
 from backend.engines.risk_profiler.models import RiskProfile
 from backend.engines.goal.engine import GoalEngine
