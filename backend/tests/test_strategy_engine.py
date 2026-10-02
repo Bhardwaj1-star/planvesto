@@ -29,6 +29,12 @@ def _make_goal(goal_type="Child Education", funding_gap=500000.0, funding_status
 
 class TestStrategyApplicability:
     def test_applicability_by_goal_type(self):
+    def test_financial_freedom_passive_income_goal_maps_to_goal_funding(self):
+        goal = _make_goal(goal_type="Financial Freedom / Passive Income")
+        strats = filter_applicable_strategies(defined_goal=goal)
+        ids = {s.strategy_id for s in strats}
+        assert "strat-goal-funding" in ids
+
         strats = filter_applicable_strategies("Child Education")
         assert len(strats) >= 2
         ids = [s.strategy_id for s in strats]
