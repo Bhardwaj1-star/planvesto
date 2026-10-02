@@ -1,13 +1,14 @@
 from models.strategy import StrategyDefinition
-from library.strategies.catalog import STRATEGY_CATALOG
+from library.strategies.canonical import CANONICAL_STRATEGIES
 
 
-LIBRARY_VERSION = "2.0"
+CANONICAL_STRATEGY_SET_VERSION = "2.0"
+LIBRARY_VERSION = CANONICAL_STRATEGY_SET_VERSION
 
 
 def validate_strategy_library(strategies: list[StrategyDefinition] | None = None) -> None:
     """Validate the complete Strategy Library at load time."""
-    catalog = strategies if strategies is not None else STRATEGY_CATALOG
+    catalog = strategies if strategies is not None else CANONICAL_STRATEGIES
     ids = [strategy.strategy_id for strategy in catalog]
     if len(ids) != len(set(ids)):
         raise ValueError("Strategy Library contains duplicate strategy_id values")
@@ -21,7 +22,7 @@ def validate_strategy_library(strategies: list[StrategyDefinition] | None = None
 
 
 def get_active_strategies() -> list[StrategyDefinition]:
-    return [strategy for strategy in STRATEGY_CATALOG if strategy.active]
+    return [strategy for strategy in CANONICAL_STRATEGIES if strategy.active]
 
 
 LEGACY_ALIASES: dict[str, str] = {

@@ -27,7 +27,7 @@ class StrategyRepository:
 
     def save_run(self, run: StrategyRun) -> str:
         self.db.table("strategy_runs").update({"is_latest": False}).eq("planning_unit_id", run.planning_unit_id).eq("goal_id", run.goal_id).eq("is_latest", True).execute()
-        metadata = {**run.run_metadata, "architectures": [a.model_dump() for a in run.architectures], "selected_architecture": run.selected_architecture.model_dump() if run.selected_architecture else None}
+        metadata = {**run.run_metadata, "architectures": [a.model_dump() for a in run.architectures], "selected_architecture": run.selected_architecture.model_dump() if run.selected_architecture else None, "what_if_scenarios": [s.model_dump() for s in run.what_if_scenarios]}
         payload = {
             "planning_unit_id": run.planning_unit_id, "goal_id": run.goal_id, "defined_goal_id": run.defined_goal_id, "defined_goal_version": run.defined_goal_version,
             "run_version": run.run_version, "is_latest": True, "status": run.status, "investor_priorities": run.investor_priorities.model_dump(),
@@ -48,7 +48,12 @@ class StrategyRepository:
         return record["strategy_run_id"]
 
     def update_selection(self, planning_unit_id: str, strategy_run_id: str, selected_strategy_id: str, selected_scenario_id: str, selected_params: dict[str, Any], selected_architecture: StrategyArchitecture | None = None, selected_strategy_version_id: str | None = None, selected_strategy_version: int | None = None) -> None:
-        metadata = {"selected_architecture": selected_architecture.model_dump() if selected_architecture else None}
+        # Preserve existing metadata: it also stores architectures and what-if scenarios.
+        existing = self.db.table("strategy_runs").select("run_metadata").eq(
+            "planning_unit_id", planning_unit_id
+        ).eq("strategy_run_id", strategy_run_id).maybe_single().execute()
+        metadata = dict((existing.data or {}).get("run_metadata") or {}) if existing and existing.data else {}
+        metadata["selected_architecture"] = selected_architecture.model_dump() if selected_architecture else None
         if selected_strategy_version_id is not None:
             metadata["selected_strategy_version_id"] = selected_strategy_version_id
         if selected_strategy_version is not None:
@@ -77,6 +82,6 @@ class StrategyRepository:
             rankings=rankings, recommendation=rec, architectures=architectures, selected_strategy_id=row.get("selected_strategy_id"), selected_scenario_id=row.get("selected_scenario_id"),
             selected_strategy_version_id=row.get("selected_strategy_version_id") or metadata.get("selected_strategy_version_id"),
             selected_strategy_version=row.get("selected_strategy_version") if row.get("selected_strategy_version") is not None else metadata.get("selected_strategy_version"),
-            selected_implementation_parameters=row.get("selected_implementation_parameters") or {}, selected_architecture=StrategyArchitecture(**selected_architecture) if selected_architecture else None,
+            what_if_scenarios=[Scenario(**sc) for sc in metadata.get("what_if_scenarios", [])], selected_implementation_parameters=row.get("selected_implementation_parameters") or {}, selected_architecture=StrategyArchitecture(**selected_architecture) if selected_architecture else None,
             selection_timestamp=row.get("selection_timestamp"), run_metadata=metadata, created_at=row.get("created_at"),
         )

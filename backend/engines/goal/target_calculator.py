@@ -1,4 +1,4 @@
-﻿from datetime import date
+from datetime import date
 from engines.calculation.engine import round_money
 
 DEFAULT_INFLATION_RATE = 0.06
@@ -22,10 +22,9 @@ def calculate_future_target(
     inflation_rate: float,
     duration_years: float,
 ) -> float:
-    if today_cost <= 0:
-        return 0.0
-    val = today_cost * ((1.0 + inflation_rate) ** duration_years)
-    return round_money(val)
+    from engines.calculation.canonical import calculate_goal_future_target
+    val = calculate_goal_future_target(today_cost, inflation_rate, duration_years)
+    return val if val is not None else 0.0
 
 
 def calculate_retirement_corpus(

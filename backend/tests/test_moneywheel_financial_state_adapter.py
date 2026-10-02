@@ -32,12 +32,11 @@ def test_adapter_maps_existing_financial_state_fields():
         make_state(),
         essential_monthly_expenses=30000,
         liquid_assets=250000,
-        short_term_liabilities=100000,
         financial_assets=700000,
     )
 
     assert data.gross_monthly_income == 100000
-    assert data.savings == 50000
+    assert data.monthly_surplus == 50000
     assert data.monthly_expenses == 40000
     assert data.monthly_debt_payments == 10000
     assert data.total_assets == 1000000
@@ -51,5 +50,4 @@ def test_adapter_does_not_infer_classification_dependent_fields():
 
     assert data.essential_monthly_expenses is None
     assert data.liquid_assets is None
-    assert data.short_term_liabilities is None
     assert data.financial_assets is None

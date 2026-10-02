@@ -203,12 +203,12 @@ class TestStrategyRunLifecycle:
             strategy_run_id="run-1", planning_unit_id="pu-1", goal_id="g-1", defined_goal_id="dg-1", defined_goal_version=1, run_version=1,
             investor_priorities=InvestorPriorities(safety=0.7, liquidity=0.1, growth=0.1, flexibility=0.1),
             selected_strategy_id="strat-goal-funding",
-            selected_scenario_id="scen-strat-goal-funding-baseline-standard",
+            selected_scenario_id="scen-strat-goal-funding-sip",
             selected_implementation_parameters={"existing_asset_utilisation_pct": 50},
             selection_timestamp="2026-09-09T10:00:00Z",
             recommendation=StrategyRecommendation(
                 recommended_strategy_id="strat-goal-funding",
-                recommended_scenario_id="scen-strat-goal-funding-baseline-standard",
+                recommended_scenario_id="scen-strat-goal-funding-sip",
             ),
         )
         strat_repo_mock.get_latest_run.return_value = prev_run
@@ -221,7 +221,7 @@ class TestStrategyRunLifecycle:
         assert saved_run.defined_goal_version == 2
         assert saved_run.status == "recalculated"
         assert saved_run.selected_strategy_id == "strat-goal-funding"
-        assert saved_run.selected_scenario_id == "scen-strat-goal-funding-baseline-standard"
+        assert saved_run.selected_scenario_id == "scen-strat-goal-funding-sip"
         assert saved_run.selected_implementation_parameters == {"existing_asset_utilisation_pct": 50}
         assert saved_run.selection_timestamp == "2026-09-09T10:00:00Z"
 

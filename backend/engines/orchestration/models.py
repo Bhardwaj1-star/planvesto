@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 GoalPriorityLevel = Literal["critical", "high", "medium", "low"]
 FundingStatusType = Literal["fully_funded", "partially_funded", "unfunded", "within_surplus", "surplus_shortfall", "requires_review"]
@@ -24,6 +24,13 @@ class GoalEvaluationInput(BaseModel):
     is_essential: bool = False
     defined_goal: Any = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("client_priority", mode="before")
+    @classmethod
+    def normalize_client_priority(cls, value):
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
 
 
 class GoalResolution(BaseModel):

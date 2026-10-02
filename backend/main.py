@@ -14,6 +14,7 @@ from api.basket_report import router as basket_report_router
 from api.diary import router as diary_router
 from api.profile import router as profile_router
 from api.insurance import router as insurance_router
+from api.summary_report import router as summary_report_router  # Added Summary Report router
 from config.settings import CORS_ALLOWED_ORIGINS
 
 app = FastAPI(title="Planvesto Backend", version="2.0.0")
@@ -38,6 +39,7 @@ app.include_router(basket_report_router)
 app.include_router(diary_router)
 app.include_router(profile_router)
 app.include_router(insurance_router)
+app.include_router(summary_report_router)  # Added Summary Report router
 
 @app.get("/")
 def root():

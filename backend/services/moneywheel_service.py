@@ -7,11 +7,17 @@ from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
 from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
+from rules.financial_metrics import ESSENTIAL_EXPENSE_TYPES
+from rules.protection import (
+    calculate_required_insurance_cover,
+    is_health_insurance,
+    is_life_insurance,
+)
 
 logger = logging.getLogger(__name__)
 
-SHORT_TERM_LIABILITY_TYPES = {"Credit Card", "Personal Loan", "Consumer Loan", "Other"}
-ESSENTIAL_EXPENSE_TYPES = {"Housing", "Utilities", "Groceries", "Healthcare", "Insurance", "Education", "Debt Payments"}
+# Re-exported for backwards compatibility with tests and callers
+ESSENTIAL_EXPENSE_TYPES = ESSENTIAL_EXPENSE_TYPES
 
 
 class MoneywheelService:
@@ -51,13 +57,11 @@ class MoneywheelService:
         *,
         essential_monthly_expenses: float | None = None,
         liquid_assets: float | None = None,
-        short_term_liabilities: float | None = None,
         financial_assets: float | None = None,
     ) -> MoneywheelResult:
         planning_unit_id = financial_state.planning_unit_id
         expenses = self.data_repository.get_expenses(planning_unit_id)
         assets = self.data_repository.get_assets(planning_unit_id)
-        liabilities = self.data_repository.get_liabilities(planning_unit_id)
         policies = self.data_repository.get_insurance_policies(planning_unit_id)
 
         active_asset_types = self.data_repository.get_active_asset_types()
@@ -73,26 +77,19 @@ class MoneywheelService:
             financial_assets = self._sum_assets(
                 assets, "is_financial", classifications=active_asset_types, unmapped_accumulator=unmapped_asset_types
             )
-        if short_term_liabilities is None:
-            short_term_liabilities = self._sum_liabilities(liabilities, SHORT_TERM_LIABILITY_TYPES)
-
         total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
-            if str(p.get("policy_type") or "").strip().lower() in {
-                "term insurance", "term", "endowment", "whole life", "ulip", "money back"
-            }
+            if is_life_insurance(p.get("policy_type"))
         )
         total_health_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
-            if str(p.get("policy_type") or "").strip().lower() in {"health insurance", "health"}
+            if is_health_insurance(p.get("policy_type"))
         )
 
-        # Required cover baseline: 10 years of gross income plus outstanding liabilities.
-        # Existing assets are intentionally not netted off so insurance remains a pure protection signal.
         annual_income = float(financial_state.income_monthly.value or 0) * 12
         total_liabilities = float(financial_state.total_liabilities.value or 0)
-        required_insurance_cover = (annual_income * 10) + total_liabilities
+        required_insurance_cover = calculate_required_insurance_cover(annual_income, total_liabilities)
 
         goal_target_amount, current_goal_funding, future_goal_target, projected_goal_funding = self._goal_funding(planning_unit_id)
 
@@ -114,15 +111,14 @@ class MoneywheelService:
             financial_state,
             essential_monthly_expenses=essential_monthly_expenses,
             liquid_assets=liquid_assets,
-            short_term_liabilities=short_term_liabilities,
             financial_assets=financial_assets,
-            existing_sum_assured=total_sum_assured,
-            required_insurance_cover=required_insurance_cover,
         )
         data.current_goal_funding = current_goal_funding
         data.goal_target_amount = goal_target_amount
         data.projected_goal_funding = projected_goal_funding
         data.future_goal_target = future_goal_target
+        data.existing_sum_assured = total_sum_assured
+        data.required_insurance_cover = required_insurance_cover
 
         debug_metadata = {
             "unmapped_asset_types": sorted(list(unmapped_asset_types)),

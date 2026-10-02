@@ -6,11 +6,10 @@ def _input(**overrides):
     values = dict(
         planning_unit_id="pu-1",
         gross_monthly_income=100000,
-        savings=30000,
-        essential_monthly_expenses=35000,
+        monthly_surplus=30000,
         monthly_expenses=50000,
+        essential_monthly_expenses=35000,
         liquid_assets=500000,
-        short_term_liabilities=250000,
         monthly_debt_payments=20000,
         total_assets=2000000,
         total_liabilities=400000,
@@ -21,34 +20,32 @@ def _input(**overrides):
         goal_target_amount=1000000,
         projected_goal_funding=900000,
         future_goal_target=1000000,
+        goal_duration_years=10,
     )
     values.update(overrides)
     return MoneywheelInput(**values)
 
 
-def test_all_twelve_ratios_are_returned():
+def test_final_nine_ratios_are_returned():
     result = MoneywheelEngine().build(_input())
-    assert len(result.ratios) == 12
+    assert len(result.ratios) == 9
     assert all(r.available for r in result.ratios)
     assert [r.key for r in result.ratios] == [
-        "savings_ratio",
-        "expense_ratio",
-        "emergency_fund_coverage",
-        "current_liquidity_ratio",
+        "savings_rate",
+        "liquid_asset_ratio",
         "debt_to_income_ratio",
         "leverage_ratio",
-        "liquid_asset_to_total_asset",
-        "solvency_ratio",
         "financial_asset_ratio",
-        "insurance_gap_ratio",
+        "insurance_coverage_ratio",
         "goal_funding_ratio",
         "future_funding_ratio",
+        "required_rate_of_return",
     ]
 
 
 def test_zero_is_a_valid_ratio_value():
-    result = MoneywheelEngine().build(_input(savings=0))
-    ratio = next(r for r in result.ratios if r.key == "savings_ratio")
+    result = MoneywheelEngine().build(_input(monthly_surplus=0))
+    ratio = next(r for r in result.ratios if r.key == "savings_rate")
     assert ratio.value == 0
     assert ratio.status == "critical"
     assert ratio.available is True
@@ -57,30 +54,22 @@ def test_zero_is_a_valid_ratio_value():
 def test_excellent_status_is_supported():
     result = MoneywheelEngine().build(_input())
     statuses = {r.key: r.status for r in result.ratios}
-    assert statuses["savings_ratio"] == "excellent"
+    assert statuses["savings_rate"] == "excellent"
     assert statuses["debt_to_income_ratio"] == "healthy"
 
 
 def test_missing_input_is_not_treated_as_zero():
     result = MoneywheelEngine().build(_input(liquid_assets=None))
-    for key in ("emergency_fund_coverage", "current_liquidity_ratio", "liquid_asset_to_total_asset"):
+    for key in ("liquid_asset_ratio",):
         ratio = next(r for r in result.ratios if r.key == key)
         assert ratio.value is None
         assert ratio.status == "unavailable"
         assert ratio.available is False
 
 
-def test_solvency_is_one_minus_leverage():
-    result = MoneywheelEngine().build(_input(total_assets=1000000, total_liabilities=300000))
-    leverage = next(r for r in result.ratios if r.key == "leverage_ratio")
-    solvency = next(r for r in result.ratios if r.key == "solvency_ratio")
-    assert leverage.value == 30.0
-    assert solvency.value == 70.0
-
-
 def test_insurance_coverage_ratio_is_calculated():
     result = MoneywheelEngine().build(_input(existing_sum_assured=8000000, required_insurance_cover=10000000))
-    ratio = next(r for r in result.ratios if r.key == "insurance_gap_ratio")
+    ratio = next(r for r in result.ratios if r.key == "insurance_coverage_ratio")
     assert ratio.value == 80.0
     assert ratio.status == "excellent"
     assert ratio.available is True
@@ -88,7 +77,7 @@ def test_insurance_coverage_ratio_is_calculated():
 
 def test_insurance_ratio_is_unavailable_without_cover_inputs():
     result = MoneywheelEngine().build(_input(existing_sum_assured=None, required_insurance_cover=None))
-    ratio = next(r for r in result.ratios if r.key == "insurance_gap_ratio")
+    ratio = next(r for r in result.ratios if r.key == "insurance_coverage_ratio")
     assert ratio.value is None
     assert ratio.status == "unavailable"
     assert ratio.available is False
@@ -112,24 +101,44 @@ def test_future_funding_ratio_is_calculated():
 
 def test_goal_ratios_are_unavailable_without_goal_inputs():
     result = MoneywheelEngine().build(_input(current_goal_funding=None, goal_target_amount=None, projected_goal_funding=None, future_goal_target=None))
-    for key in ("goal_funding_ratio", "future_funding_ratio"):
+    for key in ("goal_funding_ratio", "future_funding_ratio", "required_rate_of_return"):
         ratio = next(r for r in result.ratios if r.key == key)
         assert ratio.value is None
         assert ratio.status == "unavailable"
         assert ratio.available is False
 
 
+def test_required_rate_of_return_is_calculated():
+    result = MoneywheelEngine().build(_input(current_goal_funding=500000, future_goal_target=1000000, goal_duration_years=10))
+    ratio = next(r for r in result.ratios if r.key == "required_rate_of_return")
+    assert round(ratio.value, 4) == round(((1000000 / 500000) ** (1 / 10) - 1) * 100, 4)
+    assert ratio.available is True
+
+
+def test_coverage_rules_are_separate_from_ratios():
+    result = MoneywheelEngine().build(_input())
+    assert [rule.key for rule in result.rules] == ["expense_coverage", "emergency_coverage"]
+    assert result.rules[0].value == 10.0
+    assert result.rules[1].value == round(500000 / 35000, 4)
+    assert len(result.ratios) == 9
+
+
+def test_required_rate_of_return_is_unavailable_without_duration():
+    result = MoneywheelEngine().build(_input(goal_duration_years=None))
+    ratio = next(r for r in result.ratios if r.key == "required_rate_of_return")
+    assert ratio.value is None
+    assert ratio.status == "unavailable"
+    assert ratio.available is False
+
+
 def test_ratio_denominator_zero_is_unavailable():
     zero_denominator_cases = {
-        "savings_ratio": {"gross_monthly_income": 0},
-        "expense_ratio": {"gross_monthly_income": 0},
-        "emergency_fund_coverage": {"monthly_expenses": 0},
-        "current_liquidity_ratio": {"short_term_liabilities": 0},
+        "savings_rate": {"gross_monthly_income": 0},
+        "liquid_asset_ratio": {"total_assets": 0},
         "debt_to_income_ratio": {"gross_monthly_income": 0},
         "leverage_ratio": {"total_assets": 0},
-        "liquid_asset_to_total_asset": {"total_assets": 0},
         "financial_asset_ratio": {"total_assets": 0},
-        "insurance_gap_ratio": {"required_insurance_cover": 0},
+        "insurance_coverage_ratio": {"required_insurance_cover": 0},
         "goal_funding_ratio": {"goal_target_amount": 0},
         "future_funding_ratio": {"future_goal_target": 0},
     }
@@ -214,11 +223,10 @@ def test_post_moneywheel_calculate_success():
             json={
                 "planning_unit_id": "pu-1",
                 "gross_monthly_income": 100000,
-                "savings": 30000,
-                "essential_monthly_expenses": 35000,
+                "monthly_surplus": 30000,
                 "monthly_expenses": 50000,
+                "essential_monthly_expenses": 35000,
                 "liquid_assets": 500000,
-                "short_term_liabilities": 250000,
                 "monthly_debt_payments": 20000,
                 "total_assets": 2000000,
                 "total_liabilities": 400000,
@@ -231,5 +239,5 @@ def test_post_moneywheel_calculate_success():
         assert response.status_code == 200
         data = response.json()
         assert "result" in data
-        assert len(data["result"]["ratios"]) == 12
+        assert len(data["result"]["ratios"]) == 9
         assert data["result"]["metadata"]

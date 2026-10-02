@@ -110,6 +110,7 @@ class StrategyArchitecture(BaseModel):
     architecture_id: str
     primary_strategy_id: str
     supporting_strategy_ids: list[str] = Field(default_factory=list)
+    solution_ids: list[str] = Field(default_factory=list)
     technique_ids: list[str] = Field(default_factory=list)
     rationale: list[str] = Field(default_factory=list)
     trade_offs: list[str] = Field(default_factory=list)
@@ -120,6 +121,7 @@ class StrategyArchitecture(BaseModel):
 class Scenario(BaseModel):
     scenario_id: str
     strategy_id: str
+    funding_strategy_id: str | None = None
     scenario_type: Literal["baseline", "modified", "custom"] = "baseline"
     scenario_name: str
     assumptions: dict[str, Any] = Field(default_factory=dict)
@@ -178,6 +180,7 @@ class StrategyRun(BaseModel):
     status: str = "completed"
     applicable_strategies: list[StrategyDefinition] = Field(default_factory=list)
     scenarios: list[Scenario] = Field(default_factory=list)
+    what_if_scenarios: list[Scenario] = Field(default_factory=list)
     investor_priorities: InvestorPriorities = Field(default_factory=InvestorPriorities)
     comparison_matrix: dict[str, Any] = Field(default_factory=dict)
     rankings: list[StrategyRankingItem] = Field(default_factory=list)

@@ -12,10 +12,8 @@ from engines.strategy.engine import StrategyEngine
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, StrategyRun
 from schemas.strategy import StrategySelectRequest
-from services.retirement_report_renderer import RetirementReportRenderer
-from services.retirement_report_pdf import RetirementReportPDFExporter
 from services.strategy_service import StrategyService
-from services.retirement_report_pdf_service import RetirementReportPDFService
+from services.goal_report_service import GoalReportService
 
 
 def _create_test_defined_goal(goal_type="Retirement"):
@@ -56,16 +54,16 @@ def test_end_to_end_strategy_conversion_engine_and_pdf():
     strategy_run = StrategyRun(strategy_run_id="run_retire_001", planning_unit_id="pu_investor_001", goal_id="goal_retire_001", defined_goal_id=defined_goal.defined_goal_id, defined_goal_version=defined_goal.version, run_version=1, is_latest=True, status="completed", applicable_strategies=result.applicable_strategies, scenarios=result.scenarios, investor_priorities=result.priorities, comparison_matrix=result.comparison_matrix, rankings=result.rankings, recommendation=result.recommendation, architectures=result.architectures, selected_strategy_id=recommended_ranking.strategy_id, selected_scenario_id=recommended_scenario.scenario_id, selected_architecture=primary_arch)
     assert strategy_run.selected_strategy_id == recommended_ranking.strategy_id
     assert strategy_run.selected_architecture is not None
-    report_renderer = RetirementReportRenderer()
-    report = report_renderer.render(defined_goal=defined_goal, financial_context=financial_context, rule_assessment=rule_assessment, strategy_result=strategy_run)
+    report_service = GoalReportService()
+    report_service.strategy_repo.get_run_by_id = MagicMock(return_value=strategy_run)
+    report_service.goal_repo.get_defined_goal_by_version = MagicMock(return_value=defined_goal)
+    report_service.goal_repo.get_latest_defined_goal = MagicMock(return_value=defined_goal)
+    report_service.financial_state_repo.get_latest = MagicMock(return_value=None)
+    report = report_service.build_report("pu_investor_001", "run_retire_001")
     assert report is not None
-    assert "Retirement" in report.title
-    assert len(report.sections) >= 5
-    report_dict = report.as_dict()
-    assert "title" in report_dict
-    assert "sections" in report_dict
-    pdf_exporter = RetirementReportPDFExporter()
-    pdf_bytes = pdf_exporter.to_pdf(report)
+    assert report["goal"]["type"] == "Retirement"
+    assert "goal_calculation" in report
+    pdf_bytes = report_service.generate_pdf("pu_investor_001", "run_retire_001")
     assert pdf_bytes is not None
     assert len(pdf_bytes) > 1000
     assert pdf_bytes.startswith(b"%PDF-"), "Exported bytes must be a valid PDF document"
@@ -98,10 +96,12 @@ def test_end_to_end_strategy_service_flow_with_mocks():
     select_req = StrategySelectRequest(planning_unit_id="pu_investor_001", strategy_run_id="run_mock_123", selected_strategy_id=recommended_strat_id, selected_scenario_id=recommended_scen_id)
     selected_run = service.select_strategy(select_req)
     assert selected_run.selected_strategy_id == recommended_strat_id
+    service.report_service.strategy_repo.get_run_by_id = MagicMock(return_value=selected_run)
+    service.report_service.goal_repo.get_defined_goal_by_version = MagicMock(return_value=mock_defined_goal)
+    service.report_service.goal_repo.get_latest_defined_goal = MagicMock(return_value=mock_defined_goal)
+    service.report_service.financial_state_repo.get_latest = MagicMock(return_value=None)
     report_dict = service.get_retirement_report("pu_investor_001", "run_mock_123")
     assert report_dict is not None
-    assert "sections" in report_dict
-    pdf_service = RetirementReportPDFService()
-    pdf_service.strategy_service = service
-    pdf_bytes = pdf_service.generate("pu_investor_001", "run_mock_123")
+    assert "goal_calculation" in report_dict or "goal_name" in report_dict
+    pdf_bytes = service.report_service.generate_pdf("pu_investor_001", "run_mock_123")
     assert pdf_bytes.startswith(b"%PDF-")

@@ -16,6 +16,7 @@ from models.strategy import (
 )
 from engines.strategy.decision import DecisionResult, evaluate_decision
 from engines.strategy.eligibility import evaluate_eligibility
+from engines.constraints.models import ConstraintSet
 
 
 def rank_scenarios(
@@ -26,6 +27,8 @@ def rank_scenarios(
     defined_goal: DefinedGoal | None = None,
     financial_context: dict | None = None,
     architectures: list[StrategyArchitecture] | None = None,
+    constraint_set: ConstraintSet | None = None,
+    technique_outputs: list[dict[str, Any]] | None = None,
 ) -> list[StrategyRankingItem]:
     if not strategies or not scenarios:
         return []
@@ -38,6 +41,8 @@ def rank_scenarios(
             defined_goal=defined_goal,
             financial_context=financial_context,
             priorities=priorities,
+            constraint_set=constraint_set,
+            technique_outputs=technique_outputs,
         )
 
     norm_p = priorities.normalized() if priorities else InvestorPriorities().normalized()
@@ -64,6 +69,7 @@ def rank_scenarios(
             strat,
             defined_goal,
             financial_context=financial_context,
+            constraint_set=constraint_set,
         )
         if not eligible:
             scored_items.append({

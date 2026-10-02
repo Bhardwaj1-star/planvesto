@@ -4,6 +4,7 @@ from data.strategy_version_repository import StrategyVersionRepository
 from library.strategies.registry import get_strategy_by_id
 from library.strategies.techniques import get_technique_by_id
 from models.action_plan import ActionPlanItem
+from rules.action_plan import build_action_specs
 from services.financial_state_service import FinancialStateService
 
 
@@ -53,25 +54,12 @@ class StrategyActionGenerator:
             if (item.planned_impact or {}).get("generation_key")
         }
 
-        specs: list[tuple[str, str, str]] = []
         primary = definitions[0] if definitions else strategy
-        specs.append((
-            f"Implement {primary.name}",
-            f"Execute the approved {primary.name} strategy architecture for this goal. Core mechanism: {primary.core_mechanism}",
-            "high",
-        ))
-        for supporting in definitions[1:]:
-            specs.append((
-                f"Implement supporting strategy: {supporting.name}",
-                f"Apply the supporting {supporting.name} component defined by the approved strategy architecture. Strategic objective: {supporting.strategic_objective}",
-                "medium",
-            ))
-        for technique in techniques:
-            specs.append((
-                f"Apply {technique.name}",
-                f"Apply this implementation technique as part of the approved strategy: {technique.description} Purpose: {technique.purpose}",
-                "medium",
-            ))
+        specs = build_action_specs(
+            primary_strategy=primary,
+            supporting_strategies=definitions[1:],
+            techniques=techniques,
+        )
 
         generated: list[ActionPlanItem] = []
         for index, (title, description, priority) in enumerate(specs, start=1):

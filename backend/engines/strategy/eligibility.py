@@ -4,14 +4,13 @@ from enum import Enum
 from typing import Any, List, Tuple
 from models.strategy import StrategyDefinition
 from models.defined_goal import DefinedGoal as GoalSnapshot
-from engines.rules.engine import GOAL_TYPE_ALIASES
+from rules.eligibility import ELIGIBILITY_FITS, EligibilityStatus
+from rules.goals import GOAL_TYPE_ALIASES
+from engines.constraints.models import ConstraintSet
 
-class EligibilityStatus(str, Enum):
-    PASS = "pass"
-    CONDITIONAL = "conditional"
-    FAIL = "fail"
-
-ELIGIBILITY_FITS = ("cashflow_fit", "liquidity_fit", "debt_fit", "asset_resource_fit", "risk_capacity_fit", "goal_constraint_fit", "multi_goal_conflict_fit", "implementation_fit")
+# Re-exported for backwards compatibility with tests and callers
+EligibilityStatus = EligibilityStatus
+ELIGIBILITY_FITS = ELIGIBILITY_FITS
 
 @dataclass(frozen=True)
 class EligibilityFitResult:
@@ -128,12 +127,15 @@ def evaluate_eligibility_fits(strategy: StrategyDefinition, *, goal: GoalSnapsho
     else: results.append(_fit(EligibilityStatus.FAIL,"implementation_fit","Strategy cannot be practically implemented"))
     return EligibilityAssessment(tuple(results))
 
-def evaluate_eligibility(strategy: StrategyDefinition, goal: GoalSnapshot | None, state: Any | None = None, financial_context: dict[str, Any] | None = None, rule_assessment: Any | None = None) -> Tuple[bool,List[str]]:
+def evaluate_eligibility(strategy: StrategyDefinition, goal: GoalSnapshot | None, state: Any | None = None, financial_context: dict[str, Any] | None = None, rule_assessment: Any | None = None, constraint_set: ConstraintSet | None = None) -> Tuple[bool,List[str]]:
     context=dict(financial_context or {})
     if goal is None: return True,[]
     _,_,goal_reasons=_goal_gate(strategy,goal,context)
     reasons=list(goal_reasons)
-    if rule_assessment is not None:
+    if constraint_set is not None:
+        for constraint in constraint_set.hard_constraints:
+            reasons.append(constraint.message)
+    elif rule_assessment is not None:
         for r in getattr(rule_assessment,"hard_constraints",()):
             if not r.passed: reasons.append(r.message)
     return not reasons,reasons

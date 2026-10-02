@@ -38,9 +38,117 @@ export type ReportSection={id:string;title:string;description?:string;columns?:s
 export type RetirementReportData={title:string;sections:ReportSection[]};
 export function getRetirementReport(planningUnitId:string,strategyRunId:string):Promise<RetirementReportData>{return apiRequest<RetirementReportData>(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/retirement-report?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
 export function downloadRetirementReportPdf(planningUnitId:string,strategyRunId:string):Promise<Blob>{return apiRequestBlob(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/retirement-report.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
-export type GoalStrategyReport={report_type:string;goal_id:string;goal_name:string;goal_type?:string|null;goal_details:Record<string,unknown>;mapped_assets?:Array<{asset_name?:string;allocation?:number;allocation_percentage?:number;expected_return?:number;projected_value?:number}>;strategy_run_id:string;strategy:{name?:string|null;objective?:string|null;trade_offs:string[]};recommendation:Record<string,unknown>;selected_strategy_id?:string|null;approval_status?:string|null;goal_calculation:Record<string,unknown>;financial_state:Record<string,unknown>;};
+export type CashFlowTrajectoryItem = {
+  year_index: number;
+  year: number;
+  opening_balance: number;
+  annual_contribution: number;
+  growth: number;
+  closing_balance: number;
+  inflation_adjusted_target?: number;
+};
+
+export type ProductBucketItem = {
+  bucket_id: string;
+  bucket_name: string;
+  role: string;
+  horizon_years: number;
+  allocation_pct: number;
+  instruments: string[];
+  rationale: string;
+};
+
+export type ContributionRuleItem = {
+  rule_id: string;
+  name: string;
+  trigger: string;
+  execution: string;
+};
+
+export type ActionTimelineItem = {
+  timeline: string;
+  action: string;
+  owner: string;
+  milestone: string;
+};
+
+export type ContingencyItem = {
+  risk_event: string;
+  immediate_action: string;
+  planning_change: string;
+  what_not_to_do: string;
+};
+
+export type GoalStrategyReport = {
+  report_type: string;
+  goal_id?: string;
+  goal_name?: string;
+  goal_type?: string | null;
+  goal?: {
+    id: string;
+    name: string;
+    type?: string | null;
+    priority?: string | null;
+    flexibility?: string | null;
+    status?: string | null;
+    duration_years?: number | null;
+    target_year?: number | null;
+    target_month?: number | null;
+  };
+  goal_details?: Record<string, unknown>;
+  mapped_assets?: Array<{
+    asset_name?: string;
+    allocation?: number;
+    allocation_percentage?: number;
+    expected_return?: number;
+    projected_value?: number;
+  }>;
+  strategy_run_id: string;
+  strategy: {
+    name?: string | null;
+    objective?: string | null;
+    selected_strategy_id?: string | null;
+    selected_strategy_name?: string | null;
+    rationale?: string | null;
+    trade_offs?: string[];
+    architecture?: Record<string, unknown>;
+  };
+  recommendation?: Record<string, unknown>;
+  selected_strategy_id?: string | null;
+  approval_status?: string | null;
+  goal_calculation: Record<string, unknown>;
+  financial_state: Record<string, unknown>;
+  cash_flow_trajectory?: CashFlowTrajectoryItem[];
+  product_architecture?: ProductBucketItem[];
+  contribution_rules?: ContributionRuleItem[];
+  action_plan_timeline?: ActionTimelineItem[];
+  contingency_matrix?: ContingencyItem[];
+};
+
 export function getGoalStrategyReport(planningUnitId:string,strategyRunId:string):Promise<GoalStrategyReport>{return apiRequest<GoalStrategyReport>(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/report?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
 export function downloadGoalStrategyReportPdf(planningUnitId:string,strategyRunId:string):Promise<Blob>{return apiRequestBlob(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/report.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
+
+export function buildBasketReport(planningUnitId: string, goalIds: string[], basketName?: string): Promise<Record<string, unknown>> {
+  return apiRequest<Record<string, unknown>>("/api/basket-report", {
+    method: "POST",
+    body: JSON.stringify({
+      planning_unit_id: planningUnitId,
+      goal_ids: goalIds,
+      basket_name: basketName,
+    }),
+  });
+}
+
+export function downloadBasketReportPdf(planningUnitId: string, goalIds: string[], basketName?: string): Promise<Blob> {
+  return apiRequestBlob("/api/basket-report/pdf", {
+    method: "POST",
+    body: JSON.stringify({
+      planning_unit_id: planningUnitId,
+      goal_ids: goalIds,
+      basket_name: basketName,
+    }),
+  });
+}
 
 export type RatioConstraintEvaluation = {
   rule_id: string;

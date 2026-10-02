@@ -1,6 +1,5 @@
 from models.strategy import StrategyDefinition
-from .definitions import register_default_components
-from .registry import get_component
+from library.strategies.components import get_canonical_component
 
 
 def component_ids_for_strategy(strategy: StrategyDefinition) -> tuple[str, ...]:
@@ -9,11 +8,10 @@ def component_ids_for_strategy(strategy: StrategyDefinition) -> tuple[str, ...]:
 
 
 def components_for_strategy(strategy: StrategyDefinition):
-    register_default_components()
     return [
         component
         for component_id in component_ids_for_strategy(strategy)
-        if (component := get_component(component_id)) is not None
+        if (component := get_canonical_component(component_id)) is not None
     ]
 
 

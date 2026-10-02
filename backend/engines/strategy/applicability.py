@@ -1,6 +1,6 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
-from library.strategies.registry import get_active_strategies
+from library.strategies.canonical import get_canonical_strategies
 from engines.rules.engine import StrategyRuleEngine
 from engines.strategy.components.definitions import register_default_components
 
@@ -27,7 +27,7 @@ def filter_applicable_strategies(
         return []
 
     applicable: list[StrategyDefinition] = []
-    for strategy in get_active_strategies():
+    for strategy in get_canonical_strategies():
         evaluation = _rule_engine.evaluate(
             strategy=strategy,
             goal_type=goal_type,

@@ -42,6 +42,11 @@ class DefinedGoal(BaseModel):
     funding_status: Literal["Shortfall", "On Track", "Overfunded"]
     required_monthly_contribution: float = 0.0
     funding_return_assumption: float = 0.08
+    feasibility_status: Literal["feasible", "constrained", "infeasible", "unknown"] = "unknown"
+    available_monthly_surplus: float | None = None
+    monthly_contribution_surplus_gap: float | None = None
+    feasibility_reason: str | None = None
+    funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
     version_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
 
@@ -56,4 +61,6 @@ class DefinedGoalVersionSummary(BaseModel):
     projected_mapped_asset_value: float
     funding_gap: float
     funding_status: str
+    feasibility_status: str = "unknown"
+    feasibility_reason: str | None = None
     created_at: str

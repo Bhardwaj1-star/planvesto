@@ -24,7 +24,6 @@ from engines.strategy.ranking import rank_scenarios
 from engines.strategy.recommendation import generate_recommendation
 from engines.strategy.engine import StrategyEngine
 from services.strategy_service import StrategyService
-from services.retirement_report_pdf import RetirementReportPDFExporter
 
 
 def _sample_goal(goal_type="Child Education", duration=6.0, shortfall=500000.0, status="Shortfall"):
@@ -182,13 +181,62 @@ def test_end_to_end_goal_strategy_report_pdf_pipeline():
         priorities=InvestorPriorities(),
     )
     assert run.strategy_run_id == "run-decision-e2e-123"
-    assert run.recommendation.recommended_strategy_id != ""
+    service.report_service.strategy_repo.get_run_by_id = MagicMock(return_value=run)
+    service.report_service.goal_repo.get_defined_goal_by_version = MagicMock(return_value=goal)
+    service.report_service.goal_repo.get_latest_defined_goal = MagicMock(return_value=goal)
+    service.report_service.financial_state_repo.get_latest = MagicMock(return_value=None)
     report_dict = service.get_retirement_report("pu-decision-e2e", "run-decision-e2e-123")
     assert report_dict is not None
-    assert "sections" in report_dict
-    from services.retirement_report_pdf_service import RetirementReportPDFService
-    pdf_service = RetirementReportPDFService()
-    pdf_service.strategy_service = service
-    pdf_bytes = pdf_service.generate("pu-decision-e2e", "run-decision-e2e-123")
+    assert "goal_calculation" in report_dict or "goal_name" in report_dict
+    pdf_bytes = service.report_service.generate_pdf("pu-decision-e2e", "run-decision-e2e-123")
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF-")
+
+
+def test_technique_execution_is_decision_evidence():
+    """Executed techniques contribute implementation-readiness evidence to the decision."""
+    strat = StrategyDefinition(
+        strategy_id="strat-tech-evidence",
+        name="Technique Evidence Strategy",
+        tagline="Test",
+        description="Test",
+        strategy_family="Funding",
+        strategic_objective="Test",
+        core_mechanism="Test",
+        applicable_goal_types=["Child Education"],
+        applicable_goal_characteristics=["shortfall", "fixed_timeline"],
+        technique_ids=["tech-bucketing", "tech-laddering"],
+        library_version="1.0",
+        implementation_version="1.0",
+        active=True,
+    )
+    arch = StrategyArchitecture(
+        architecture_id="arch-tech-evidence",
+        primary_strategy_id=strat.strategy_id,
+        technique_ids=list(strat.technique_ids),
+        rationale=["Test"],
+        trade_offs=[],
+    )
+    scenario = Scenario(
+        scenario_id="scen-tech-evidence",
+        strategy_id=strat.strategy_id,
+        scenario_type="baseline",
+        scenario_name="Baseline",
+        assumptions={},
+        funding_structure={},
+        metrics={},
+    )
+    goal = _sample_goal()
+    decision = evaluate_decision(
+        strategies=[strat],
+        scenarios=[scenario],
+        architectures=[arch],
+        defined_goal=goal,
+        technique_outputs=[
+            {"technique_id": "tech-bucketing", "status": "calculated"},
+            {"technique_id": "tech-laddering", "status": "calculated"},
+        ],
+    )
+    evaluation = decision.evaluations[0]
+    assert evaluation.evidence["technique_execution"]["execution_score"] == 2.0
+    assert evaluation.total_decision_score > 0

@@ -7,30 +7,28 @@ from engines.constraints.models import (
     RatioConstraintAssessment,
 )
 from engines.orchestration.models import GoalEvaluationInput
-from rules.moneywheel import RULES, classify
+from rules.constraints import (
+    DEBT_TO_INCOME_CRITICAL_PERCENT,
+    DEBT_TO_INCOME_HEALTHY_PERCENT,
+    EMERGENCY_RESERVE_CRITICAL_MONTHS,
+    EMERGENCY_RESERVE_HEALTHY_MONTHS,
+    RULE_DEBT_BURDEN_EXCEEDED,
+    RULE_EMERGENCY_RESERVE_CRITICAL,
+    SAVINGS_RATIO_HEALTHY_PERCENT,
+    WARN_DEBT_BURDEN_ATTENTION,
+    WARN_EMERGENCY_RESERVE_ATTENTION,
+    WARN_SAVINGS_RATE_DEFICIT,
+)
 from rules.financial_state import cash_flow_ratio, required_safety_reserve_months, savings_investment_rate
+from rules.goals import DISCRETIONARY_GOAL_TYPES, ESSENTIAL_GOAL_TYPES, is_discretionary_goal, is_essential_goal
+from rules.moneywheel import RULES, classify
 
 
 class FinancialRatioConstraintEvaluator:
     """Evaluates financial ratios and checks goal priorities against approved business constraints."""
 
-    DISCRETIONARY_GOAL_TYPES = {
-        "vacation",
-        "travel",
-        "car",
-        "vehicle",
-        "luxury",
-        "others",
-        "other",
-    }
-
-    ESSENTIAL_GOAL_TYPES = {
-        "emergency_fund",
-        "emergency",
-        "contingency",
-        "debt_repayment",
-        "retirement",
-    }
+    DISCRETIONARY_GOAL_TYPES = DISCRETIONARY_GOAL_TYPES
+    ESSENTIAL_GOAL_TYPES = ESSENTIAL_GOAL_TYPES
 
     @staticmethod
     def _extract_metric(state: dict[str, Any], key: str) -> float | None:
@@ -79,9 +77,17 @@ class FinancialRatioConstraintEvaluator:
                 # If unspecified, estimate conservative liquid pool from assets
                 liquid_assets = 0.0
 
+        from engines.calculation.canonical import (
+            calculate_debt_to_income_ratio,
+            calculate_expense_coverage,
+            calculate_leverage_ratio,
+            calculate_savings_rate,
+        )
+
         # 1. Savings Ratio
-        if monthly_income > 0 and monthly_surplus is not None:
-            sav_val = round((monthly_surplus / monthly_income) * 100.0, 2)
+        sav_val = calculate_savings_rate(monthly_surplus, monthly_income)
+        if sav_val is not None:
+            sav_val = round(sav_val, 2)
             try:
                 status = classify("savings_ratio", sav_val)
             except ValueError:
@@ -97,8 +103,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 2. Emergency Fund Coverage
-        if monthly_expenses > 0:
-            cov_val = round(liquid_assets / monthly_expenses, 2)
+        cov_val = calculate_expense_coverage(liquid_assets, monthly_expenses)
+        if cov_val is not None:
+            cov_val = round(cov_val, 2)
             try:
                 status = classify("emergency_fund_coverage", cov_val)
             except ValueError:
@@ -114,8 +121,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 3. Debt to Income Ratio
-        if monthly_income > 0:
-            dti_val = round((monthly_emi / monthly_income) * 100.0, 2)
+        dti_val = calculate_debt_to_income_ratio(monthly_emi, monthly_income, as_percentage=True)
+        if dti_val is not None:
+            dti_val = round(dti_val, 2)
             try:
                 status = classify("debt_to_income_ratio", dti_val)
             except ValueError:
@@ -131,8 +139,9 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         # 4. Leverage Ratio
-        if total_assets > 0:
-            lev_val = round((total_liabilities / total_assets) * 100.0, 2)
+        lev_val = calculate_leverage_ratio(total_liabilities, total_assets)
+        if lev_val is not None:
+            lev_val = round(lev_val, 2)
             try:
                 status = classify("leverage_ratio", lev_val)
             except ValueError:

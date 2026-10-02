@@ -3,8 +3,18 @@ from dataclasses import dataclass, field
 from typing import Any
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, Scenario, StrategyArchitecture, StrategyDefinition
-from engines.rules.engine import GOAL_TYPE_ALIASES
+from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_type
+from rules.strategy_decision import (
+    calculate_component_score,
+    calculate_feasibility_score,
+    calculate_funding_fit_score,
+    calculate_goal_fit_score,
+    calculate_horizon_fit_score,
+    evaluate_decision_score,
+    calculate_technique_execution_score,
+)
 from engines.strategy.eligibility import evaluate_eligibility, evaluate_eligibility_fits, EligibilityStatus
+from engines.constraints.models import ConstraintSet
 
 @dataclass
 class ArchitectureEvaluation:
@@ -22,6 +32,7 @@ class ArchitectureEvaluation:
     evidence: dict[str, Any]
     rationale: list[str]
     eligibility_status: str = "fail"
+    scenario_evaluations: list[dict[str, Any]] = field(default_factory=list)
 
 @dataclass
 class DecisionResult:
@@ -37,43 +48,119 @@ class DecisionResult:
     constraints: list[str] = field(default_factory=list)
 
 def _canonical_goal_type(goal_type: str | None) -> str:
-    clean=(goal_type or "").strip().lower()
-    return GOAL_TYPE_ALIASES.get(clean, clean)
+    return canonical_goal_type(goal_type)
 
 def _empty(message: str) -> DecisionResult:
     return DecisionResult("", "", None, [], [], [], [message], message, "infeasible", [message])
 
-def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None) -> DecisionResult:
+def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scenario], architectures: list[StrategyArchitecture], defined_goal: DefinedGoal, financial_context: dict | None = None, rule_assessment: Any | None = None, priorities: InvestorPriorities | None = None, constraint_set: ConstraintSet | None = None, technique_outputs: list[dict[str, Any]] | None = None) -> DecisionResult:
     if not strategies or not architectures: return _empty("No applicable strategy available for the current goal and constraints.")
     base={"duration_years":defined_goal.duration_years,"funding_status":defined_goal.funding_status,**(financial_context or {})}
-    strat_lookup={s.strategy_id:s for s in strategies}; scen_lookup={}
-    for s in scenarios:
-        if s.strategy_id not in scen_lookup or "standard" in s.scenario_id or "Recommended Baseline" in s.scenario_name: scen_lookup[s.strategy_id]=s
+    strat_lookup={s.strategy_id:s for s in strategies}
+    scenarios_by_strategy: dict[str, list[Scenario]] = {}
+    for scenario in scenarios:
+        scenarios_by_strategy.setdefault(scenario.strategy_id, []).append(scenario)
+
+    def _scenario_status_score(scenario: Scenario) -> float:
+        """Score funding-variant feasibility without inventing investor preferences."""
+        status = str((scenario.metrics or {}).get("funding_strategy_status", ""))
+        if status == "feasible":
+            return 15.0
+        if status == "requires_upfront_capital":
+            return 8.0
+        if status == "constrained":
+            return 0.0
+        return 5.0
+
+    def _select_goal_funding_variant(variants: list[Scenario]) -> Scenario:
+        """Select a transparent default after evaluating every funding variant."""
+        return max(
+            enumerate(variants),
+            key=lambda pair: (_scenario_status_score(pair[1]), -pair[0]),
+        )[1]
+    technique_by_id = {item.get("technique_id"): item for item in (technique_outputs or [])}
     evaluations=[]
     for arch in architectures:
-        primary=strat_lookup.get(arch.primary_strategy_id); baseline=scen_lookup.get(arch.primary_strategy_id)
-        if not primary or not baseline: continue
+        primary=strat_lookup.get(arch.primary_strategy_id)
+        candidate_scenarios=scenarios_by_strategy.get(arch.primary_strategy_id, [])
+        if not primary or not candidate_scenarios: continue
+        baseline = (
+            _select_goal_funding_variant(candidate_scenarios)
+            if primary.strategy_id == "strat-goal-funding"
+            else next(
+                (s for s in candidate_scenarios if "standard" in s.scenario_id or "Recommended Baseline" in s.scenario_name),
+                candidate_scenarios[0],
+            )
+        )
         context=dict(base)
         context["strategy_required_monthly_contribution"]=(baseline.metrics or {}).get("required_monthly_contribution",getattr(defined_goal,"required_monthly_contribution",None))
         fit=evaluate_eligibility_fits(primary,goal=defined_goal,financial_context=context)
-        gate_ok,gate_reasons=evaluate_eligibility(primary,defined_goal,financial_context=context,rule_assessment=rule_assessment)
+        gate_ok,gate_reasons=evaluate_eligibility(primary,defined_goal,financial_context=context,rule_assessment=rule_assessment,constraint_set=constraint_set)
         status=fit.status if gate_ok else EligibilityStatus.FAIL
         reasons=list(gate_reasons)+[r.reason for r in fit.failed_fits]
         if status==EligibilityStatus.CONDITIONAL: reasons.extend(fit.required_changes)
-        canonical=_canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"; chars=set(primary.applicable_goal_characteristics)
-        goal_fit=25.0 if canonical in [t.strip().lower() for t in primary.applicable_goal_types] else 10.0 if "other" in [t.strip().lower() for t in primary.applicable_goal_types] else 0.0
-        goal_fit+=5.0 if (funding.lower() in chars or funding.lower().replace(" ","_") in chars) else 0.0
-        goal_fit+=5.0 if duration>=7 and "long_term" in chars else 5.0 if duration<=5 and "near_term" in chars else 0.0
-        goal_fit+=5.0 if defined_goal.flexibility=="Fixed" and "fixed_timeline" in chars else 0.0
-        goal_fit+=5.0 if defined_goal.priority in ("Critical","High") and "high_priority" in chars else 0.0
-        horizon=30.0 if (duration>=10 and primary.strategy_id in ("strat-dynamic-accumulation","strat-calibrated-growth")) or (4<=duration<10 and primary.strategy_id in ("strat-calibrated-growth","strat-high-liquidity-flex")) or (duration<4 and primary.strategy_id in ("strat-cap-preservation","strat-high-liquidity-flex")) else 15.0
-        funding_score=25.0 if funding=="Shortfall" and context.get("total_liabilities",0)>0 and primary.strategy_id=="strat-debt-reduction" else 25.0 if funding=="On Track" and primary.strategy_id in ("strat-high-liquidity-flex","strat-cap-preservation") else 20.0 if funding=="Shortfall" and primary.strategy_id in ("strat-calibrated-growth","strat-dynamic-accumulation") else 15.0
-        feasibility=15.0 if status==EligibilityStatus.PASS else 8.0 if status==EligibilityStatus.CONDITIONAL else 0.0
-        component=10.0 if any("activated by component metadata" in r for r in arch.rationale) else 0.0; component+=5.0 if arch.supporting_strategy_ids else 0.0
-        score=round(goal_fit+horizon+funding_score+feasibility+component,2) if status!=EligibilityStatus.FAIL else -1000.0
+        canonical=_canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"
+        goal_fit = calculate_goal_fit_score(
+            canonical_goal_type=canonical,
+            applicable_types=primary.applicable_goal_types,
+            applicable_characteristics=primary.applicable_goal_characteristics,
+            duration_years=duration,
+            funding_status=funding,
+            flexibility=defined_goal.flexibility,
+            priority=defined_goal.priority,
+        )
+        horizon = calculate_horizon_fit_score(duration, primary.strategy_id)
+        funding_score = calculate_funding_fit_score(funding, context.get("total_liabilities", 0), primary.strategy_id)
+        feasibility = calculate_feasibility_score(status)
+        component = calculate_component_score(arch.rationale, arch.supporting_strategy_ids)
+        arch_techniques = [technique_by_id[tid] for tid in arch.technique_ids if tid in technique_by_id]
+        technique_score = calculate_technique_execution_score(arch_techniques)
+        score = evaluate_decision_score(
+            status=status,
+            goal_fit_score=goal_fit,
+            horizon_fit_score=horizon,
+            funding_fit_score=funding_score,
+            feasibility_score=feasibility,
+            component_fit_score=component,
+            technique_execution_score=technique_score,
+        )
         rationale=[] if status==EligibilityStatus.FAIL else [f"Goal-specific eligibility evaluated for {defined_goal.goal_name}."]
         if status==EligibilityStatus.CONDITIONAL: rationale.append("Strategy requires the listed changes before implementation.")
-        evaluations.append(ArchitectureEvaluation(arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,feasibility,component,score,{"eligibility_status":status.value,"fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results]},rationale,status.value))
+        scenario_evaluations: list[dict[str, Any]] = []
+        if primary.strategy_id == "strat-goal-funding":
+            for candidate in candidate_scenarios:
+                variant_status = str((candidate.metrics or {}).get("funding_strategy_status", ""))
+                scenario_evaluations.append({
+                    "scenario_id": candidate.scenario_id,
+                    "funding_strategy_id": candidate.funding_strategy_id,
+                    "scenario_name": candidate.scenario_name,
+                    "status": variant_status,
+                    "score": _scenario_status_score(candidate),
+                    "funding_gap": candidate.metrics.get("funding_gap"),
+                    "required_monthly_contribution": candidate.metrics.get("required_monthly_contribution"),
+                    "required_lumpsum": candidate.metrics.get("required_lumpsum"),
+                    "starting_monthly_contribution": candidate.metrics.get("starting_monthly_contribution"),
+                    "annual_step_up": candidate.metrics.get("annual_step_up"),
+                    "reason": candidate.trade_off_notes,
+                    "selected_as_default": candidate.scenario_id == baseline.scenario_id,
+                })
+            rationale.append(
+                "All Goal Funding variants were evaluated; feasibility status is authoritative and library order is used only for ties."
+            )
+        evidence={
+            "eligibility_status":status.value,
+            "fit_results":[{"fit":r.fit,"status":r.status.value,"reason":r.reason,"required_changes":list(r.required_changes)} for r in fit.results],
+            "scenario_evaluations": scenario_evaluations,
+            "technique_execution": {
+                "technique_ids": list(arch.technique_ids),
+                "results": arch_techniques,
+                "execution_score": technique_score,
+            },
+        }
+        evaluations.append(ArchitectureEvaluation(
+            arch,primary,baseline,status!=EligibilityStatus.FAIL,reasons,goal_fit,horizon,funding_score,
+            feasibility,component,score,evidence,rationale,status.value,scenario_evaluations
+        ))
     passes=[e for e in evaluations if e.eligibility_status=="pass"]; conditionals=[e for e in evaluations if e.eligibility_status=="conditional"]
     pool=passes or conditionals
     if not pool:
