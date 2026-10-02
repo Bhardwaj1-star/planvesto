@@ -1,6 +1,6 @@
 import logging
 from engines.summary_report.engine import SummaryReportEngine
-from backend.models.summary_report import SummaryReport
+from models.summary_report import SummaryReport
 
 logger = logging.getLogger(__name__)
 
