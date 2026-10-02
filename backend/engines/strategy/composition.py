@@ -4,6 +4,7 @@ from engines.strategy.components.adapters import components_for_strategy
 from library.strategies.components import get_canonical_component
 from library.strategies.techniques_canonical import get_canonical_technique
 from library.strategies.solution_matrix import get_strategy_solutions
+from rules.goals import canonical_goal_priority
 
 
 def compose_architectures(
@@ -15,6 +16,7 @@ def compose_architectures(
     context = {
         "duration_years": defined_goal.duration_years,
         "funding_status": defined_goal.funding_status,
+        "priority": canonical_goal_priority(defined_goal.priority).title(),
         **(financial_context or {}),
     }
     diagnostics = context.get("rule_diagnostics", [])
