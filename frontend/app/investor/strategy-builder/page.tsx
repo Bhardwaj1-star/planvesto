@@ -8,6 +8,7 @@ import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { apiRequest } from "../../../lib/api/client";
 import { buildStrategy, getLatestStrategyRun, getStrategyRunHistory, getPlanningUnitId, selectStrategy, type StrategyRun } from "../../../lib/api/strategy";
+import { getLatestDefinedGoal } from "../../../lib/api/goals";
 import type { DefinedGoal } from "../../../lib/onboarding/goals/types";
 
 type PlanningBasket = { id: string; name: string; goalIds: string[] };
@@ -54,7 +55,19 @@ export default function InvestorStrategyBuilderPage() {
       try {
         const data = await loadGoalPlannerData();
         if (!active) return;
-        const nextGoals = (data?.goals ?? []).map((goal) => ({ id: goal.id, name: goal.name || "Untitled Goal" }));
+        const planningUnitId = getPlanningUnitId();
+        if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+        const canonicalGoals = await Promise.all(
+          (data?.goals ?? []).map(async (goal) => {
+            try {
+              const defined = await getLatestDefinedGoal(planningUnitId, goal.id);
+              return { id: defined.goal_id, name: defined.goal_name || defined.goal_type || "Untitled Goal" };
+            } catch {
+              return null;
+            }
+          }),
+        );
+        const nextGoals = canonicalGoals.filter((goal): goal is { id: string; name: string } => Boolean(goal));
         setGoals(nextGoals);
         try {
           const saved = JSON.parse(window.localStorage.getItem(BASKET_STORAGE_KEY) || "[]");
