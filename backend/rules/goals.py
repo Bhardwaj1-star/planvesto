@@ -5,6 +5,21 @@ from typing import Literal
 
 GoalPriority = Literal["critical", "high", "medium", "low"]
 
+GOAL_PRIORITY_ALIASES: dict[str, GoalPriority] = {
+    "critical": "critical",
+    "must-have": "critical",
+    "must have": "critical",
+    "high": "high",
+    "important": "high",
+    "medium": "medium",
+    "moderate": "medium",
+    "aspirational": "medium",
+    "low": "low",
+    "nice-to-have": "low",
+    "nice to have": "low",
+    "discretionary": "low",
+}
+
 GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
     "financial freedom/passive income": "passive_income",
@@ -47,6 +62,12 @@ def canonical_goal_type(value: str | None) -> str:
     clean = " ".join((value or "").strip().lower().split())
     clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
     return GOAL_TYPE_ALIASES.get(clean, clean)
+
+
+def canonical_goal_priority(value: str | None) -> GoalPriority:
+    """Normalize UI/storage goal-priority vocabulary to the canonical backend contract."""
+    clean = " ".join((value or "").strip().lower().split())
+    return GOAL_PRIORITY_ALIASES.get(clean, "medium")
 
 
 def is_discretionary_goal(goal_type: str | None) -> bool:
