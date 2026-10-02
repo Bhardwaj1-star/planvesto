@@ -73,7 +73,9 @@ def canonical_goal_type(value: str | None) -> str:
     """Normalize goal type strings without changing their business meaning."""
     clean = " ".join((value or "").strip().lower().split())
     clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
-    return GOAL_TYPE_ALIASES.get(clean, clean)
+    if clean.startswith("retirement/"):
+      return "retirement"
+  return GOAL_TYPE_ALIASES.get(clean, clean)
 
 
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
