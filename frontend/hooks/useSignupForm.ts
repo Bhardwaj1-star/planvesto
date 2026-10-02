@@ -1,6 +1,7 @@
 ﻿import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { getSafeRedirect } from "../lib/safe-redirect";
+import { getPlanningUnitId } from "../lib/planning-unit";
 
 export function useSignupForm() {
   useEffect(() => {
@@ -109,7 +110,14 @@ export function useSignupForm() {
       successMessage?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
       const redirectTo = getSafeRedirect(new URLSearchParams(window.location.search).get("redirectTo"));
-      if (data.session) window.location.assign(redirectTo);
+      if (data.session) {
+        try {
+          await getPlanningUnitId();
+          window.location.assign(redirectTo);
+        } catch (workspaceError) {
+          alert(workspaceError instanceof Error ? workspaceError.message : "Planning workspace could not be initialized.");
+        }
+      }
     };
 
     signupForm.addEventListener("submit", handler);
