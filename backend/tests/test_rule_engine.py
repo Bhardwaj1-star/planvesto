@@ -1,6 +1,7 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
 from engines.rules.engine import StrategyRuleEngine
+from rules.goals import canonical_goal_name, canonical_goal_type
 
 
 def _goal(**overrides):
@@ -71,3 +72,11 @@ def test_rule_engine_does_not_use_financial_context_as_component_activation():
     )
     assert result.eligible is True
     assert result.missing_inputs == ()
+
+
+def test_retirement_and_passive_income_have_distinct_canonical_identities():
+    assert canonical_goal_type("Retirement") == "retirement"
+    assert canonical_goal_type("Financial Freedom / Passive Income") == "passive_income"
+    assert canonical_goal_type("Retirement / Financial Freedom") == "retirement"
+    assert canonical_goal_name("retirement", "Retirement / Financial Freedom") == "Retirement"
+    assert canonical_goal_name("passive_income") == "Financial Freedom / Passive Income"
