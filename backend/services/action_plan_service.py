@@ -3,6 +3,7 @@ from typing import Any
 from models.action_plan import ActionDecisionRecord, ActionImpactPreview, ActionPlanItem
 from models.financial_state import FinancialState
 from engines.action_plan.impact_engine import ActionImpactEngine
+from data.financial_state_repository import FinancialStateSnapshotRepository
 
 
 class ActionPlanService:
@@ -10,8 +11,9 @@ class ActionPlanService:
 
     _EDITABLE_FIELDS = {"title", "description", "priority", "deadline", "planned_impact"}
 
-    def __init__(self, repository):
+    def __init__(self, repository, snapshot_repository: FinancialStateSnapshotRepository | None = None):
         self.repository = repository
+        self.snapshot_repository = snapshot_repository
         self.impact_engine = ActionImpactEngine()
 
     def build_action(
@@ -116,10 +118,20 @@ class ActionPlanService:
         projected = FinancialState.model_validate(projected_state)
         actual = FinancialState.model_validate(actual_state)
         comparison = self.impact_engine.compare(projected, actual)
+        actual_payload = actual.model_dump(mode="json")
         actual_impact = {
-            "financial_state": actual.model_dump(mode="json"),
+            "financial_state": actual_payload,
             "variance_analysis": comparison,
         }
+        # Action completion is a state transition: persist the authoritative actual
+        # Financial State so later planning reads the completed action outcome.
+        if self.snapshot_repository is not None:
+            self.snapshot_repository.save_snapshot(
+                planning_unit_id=action.planning_unit_id,
+                scope="family",
+                investor_id=None,
+                financial_state=actual_payload,
+            )
         updated = self.repository.update_action(
             action.planning_unit_id,
             action.action_id,
