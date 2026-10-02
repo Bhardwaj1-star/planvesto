@@ -4,11 +4,40 @@ import { supabase } from "../supabase";
  * Structured error for API responses with non-ok status codes.
  * Extends `Error` so existing `catch` blocks that check `.message` remain compatible.
  */
+type ApiErrorDetail = unknown;
+
+function formatApiErrorDetail(detail: ApiErrorDetail, fallback: string): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (detail && typeof detail === "object") {
+    const value = detail as Record<string, unknown>;
+    const message = typeof value.message === "string" ? value.message.trim() : "";
+    const constraints = Array.isArray(value.constraints)
+      ? value.constraints
+          .map((constraint) => {
+            if (!constraint || typeof constraint !== "object") return null;
+            const item = constraint as Record<string, unknown>;
+            return typeof item.message === "string" ? item.message.trim() : null;
+          })
+          .filter((item): item is string => Boolean(item))
+      : [];
+    const readable = [message, ...constraints].filter(Boolean).join(" ");
+    if (readable) return readable;
+    try {
+      const serialized = JSON.stringify(detail);
+      if (serialized && serialized !== "{}") return serialized;
+    } catch {
+      // Keep the HTTP fallback below.
+    }
+  }
+  return fallback;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly detail: string | null,
+    public readonly rawDetail: ApiErrorDetail = null,
   ) {
     super(message);
     this.name = "ApiError";
