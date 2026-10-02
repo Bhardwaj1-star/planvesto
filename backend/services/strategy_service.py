@@ -254,8 +254,111 @@ class StrategyService:
     def get_run_history(self, planning_unit_id: str, goal_id: str): return self.strat_repo.get_run_history(planning_unit_id, goal_id)
 
     def get_retirement_report(self, planning_unit_id: str, strategy_run_id: str):
-        """Backward-compatible alias for the canonical goal decision report."""
-        return self.report_service.build_report(planning_unit_id, strategy_run_id)
+        """Backward-compatible adapter that provides the legacy sections array
+        while retaining all canonical goal decision report data."""
+        report = self.report_service.build_report(planning_unit_id, strategy_run_id)
+
+        goal = report.get("goal", {})
+        strategy = report.get("strategy", {})
+        calc = report.get("goal_calculation", {})
+        trajectory = report.get("cash_flow_trajectory", [])
+        architecture = report.get("product_architecture", [])
+        timeline = report.get("action_plan_timeline", [])
+        contingency = report.get("contingency_matrix", [])
+
+        sections = [
+            {
+                "id": "retirement_summary",
+                "title": "Retirement Target & Profile",
+                "description": f"Retirement goal parameters for {goal.get('name', 'Retirement')}",
+                "narratives": {
+                    "Goal Name": goal.get("name", "Retirement"),
+                    "Target Horizon": f"{goal.get('duration_years', 0)} years (Target: {goal.get('target_year', 'N/A')})",
+                    "Future Corpus Target": f"₹{calc.get('future_target', 0):,.0f}" if calc.get('future_target') else "N/A",
+                    "Required Monthly Contribution": f"₹{calc.get('required_monthly_contribution', 0):,.0f}" if calc.get('required_monthly_contribution') else "N/A",
+                },
+            },
+            {
+                "id": "strategy_recommendation",
+                "title": "Recommended Strategy & Rationale",
+                "description": strategy.get("selected_strategy_name") or strategy.get("name") or "Recommended Strategy",
+                "narratives": {
+                    "Strategy Name": strategy.get("selected_strategy_name") or strategy.get("name") or "Strategy",
+                    "Rationale": strategy.get("rationale") or "Multi-bucket accumulation and systematic de-risking.",
+                },
+            },
+        ]
+
+        if architecture:
+            sections.append({
+                "id": "product_architecture",
+                "title": "3-Bucket Product Architecture",
+                "description": "Systematic bucket partitioning across Liquidity, Core Compounder, and Satellite Growth.",
+                "columns": ["Bucket Name", "Allocation %", "Target Instruments", "Purpose"],
+                "rows": [
+                    [
+                        b.get("bucket_name", ""),
+                        f"{b.get('allocation_pct', 0)}%",
+                        ", ".join(b.get("instruments", [])) if isinstance(b.get("instruments"), list) else str(b.get("instruments", "")),
+                        b.get("role", ""),
+                    ]
+                    for b in architecture
+                ],
+            })
+
+        if trajectory:
+            sections.append({
+                "id": "cash_flow_trajectory",
+                "title": "Multi-Year Cash Flow & Wealth Trajectory",
+                "description": "Year-by-year projected accumulation with annual contributions and compounding growth.",
+                "columns": ["Year", "Opening Balance", "Annual Contribution", "Projected Growth", "Closing Balance"],
+                "rows": [
+                    [
+                        str(t.get("year", t.get("year_index", ""))),
+                        f"₹{t.get('opening_balance', 0):,.0f}",
+                        f"₹{t.get('annual_contribution', 0):,.0f}",
+                        f"₹{t.get('growth', 0):,.0f}",
+                        f"₹{t.get('closing_balance', 0):,.0f}",
+                    ]
+                    for t in trajectory
+                ],
+            })
+
+        if timeline:
+            sections.append({
+                "id": "action_timeline",
+                "title": "Implementation Roadmap & Milestones",
+                "columns": ["Timeline", "Action Item", "Owner", "Key Milestone"],
+                "rows": [
+                    [
+                        m.get("timeline", ""),
+                        m.get("action", ""),
+                        m.get("owner", ""),
+                        m.get("milestone", ""),
+                    ]
+                    for m in timeline
+                ],
+            })
+
+        if contingency:
+            sections.append({
+                "id": "contingency_matrix",
+                "title": "Contingency & Stress Defense Matrix",
+                "columns": ["Stress Event", "Immediate Action", "Planning Change", "What NOT To Do"],
+                "rows": [
+                    [
+                        c.get("risk_event", ""),
+                        c.get("immediate_action", ""),
+                        c.get("planning_change", ""),
+                        c.get("what_not_to_do", ""),
+                    ]
+                    for c in contingency
+                ],
+            })
+
+        report["title"] = f"Retirement Planning Report - {goal.get('name', 'Retirement')}"
+        report["sections"] = sections
+        return report
 
     def on_defined_goal_updated(self, planning_unit_id: str, goal_id: str, new_defined_goal: DefinedGoal) -> None:
         prev = self.strat_repo.get_latest_run(planning_unit_id, goal_id)

@@ -92,15 +92,24 @@ export default function PlanningBasketButton() {
             <div className="mt-4 space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Your baskets</p>
               {baskets.map((basket) => (
-                <button
-                  key={basket.id}
-                  type="button"
-                  onClick={() => selectBasket(basket)}
-                  className={`w-full rounded-xl border px-3 py-2 text-left transition ${selectedBasketId === basket.id ? "border-teal-300 bg-teal-50" : "border-slate-200 hover:bg-slate-50"}`}
-                >
-                  <span className="block text-sm font-bold text-slate-800">{basket.name}</span>
-                  <span className="text-xs text-slate-500">{basket.goalIds.length} goal{basket.goalIds.length === 1 ? "" : "s"}{selectedBasketId === basket.id ? " · Selected" : ""}</span>
-                </button>
+                <div key={basket.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => selectBasket(basket)}
+                    className={`w-full rounded-xl border px-3 py-2 text-left transition ${selectedBasketId === basket.id ? "border-teal-300 bg-teal-50" : "border-slate-200 hover:bg-slate-50"}`}
+                  >
+                    <span className="block text-sm font-bold text-slate-800">{basket.name}</span>
+                    <span className="text-xs text-slate-500">{basket.goalIds.length} goal{basket.goalIds.length === 1 ? "" : "s"}{selectedBasketId === basket.id ? " · Selected" : ""}</span>
+                  </button>
+                  {selectedBasketId === basket.id && basket.goalIds.length >= 2 && (
+                    <a
+                      href="/investor/reports"
+                      className="block text-center text-xs font-bold text-teal-700 hover:text-teal-800 py-1"
+                    >
+                      View Basket Decision Report in Reports →
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
           )}

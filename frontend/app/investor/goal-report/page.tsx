@@ -71,12 +71,14 @@ export default function GoalReportPage() {
     setWorking(true); setError(null);
     try {
       const planningUnitId = getPlanningUnitId();
-      if (!planningUnitId) throw new Error("Planning unit is not available.");
-      const blob = await downloadGoalStrategyReportPdf(planningUnitId, report.strategy_run_id);
+      if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+      const runId = report.strategy_run_id;
+      if (!runId) throw new Error("Strategy run ID is not available.");
+      const blob = await downloadGoalStrategyReportPdf(planningUnitId, runId);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `goal-strategy-report-${report.strategy_run_id}.pdf`;
+      anchor.download = `goal-strategy-report-${runId}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -94,8 +96,8 @@ export default function GoalReportPage() {
     <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
       <InvestorHeader
         eyebrow="Planvesto Report"
-        title={report?.goal_name ?? "Goal Report"}
-        description={report ? `${report.goal_type ?? "Financial"} goal report generated from the selected Strategy Run and Financial State.` : "Goal report"}
+        title={report?.goal_name ?? report?.goal?.name ?? "Goal Report"}
+        description={report ? `${report.goal_type ?? report.goal?.type ?? "Financial"} goal report generated from the selected Strategy Run and Financial State.` : "Goal report"}
       >
         <div className="flex flex-wrap items-center gap-2">
           {selectedGoalId && (
@@ -162,8 +164,8 @@ export default function GoalReportPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Strategy Result</p>
-                  <h2 className="mt-2 text-2xl font-extrabold">{report.strategy.name ?? "Strategy not selected"}</h2>
-                  <p className="mt-1 text-sm text-slate-500">{report.strategy.objective ?? "Goal-specific strategy recommendation"}</p>
+                  <h2 className="mt-2 text-2xl font-extrabold">{report.strategy.name ?? report.strategy.selected_strategy_name ?? "Strategy not selected"}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{report.strategy.objective ?? report.strategy.rationale ?? "Goal-specific strategy recommendation"}</p>
                 </div>
                 <button
                   onClick={() => void download()}
@@ -175,7 +177,7 @@ export default function GoalReportPage() {
               </div>
             </section>
 
-            {Object.keys(report.goal_details).length > 0 && (
+            {report.goal_details && typeof report.goal_details === 'object' && Object.keys(report.goal_details).length > 0 && (
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-bold">Goal Details</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -185,6 +187,68 @@ export default function GoalReportPage() {
                       <p className="mt-1 font-extrabold">{value == null ? "—" : String(value)}</p>
                     </div>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {/* 3-Bucket Product Architecture */}
+            {report.product_architecture && report.product_architecture.length > 0 && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-navy-900">3-Bucket Product Architecture</h2>
+                <p className="mt-1 text-xs text-slate-500">Asset allocation partitioned across time horizon and volatility tolerances.</p>
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {report.product_architecture.map((bucket, idx) => (
+                    <div key={idx} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-teal-700">{bucket.role || "Bucket"}</span>
+                        <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-extrabold text-teal-800">
+                          {bucket.allocation_pct}%
+                        </span>
+                      </div>
+                      <h3 className="mt-2 font-bold text-slate-900">{bucket.bucket_name}</h3>
+                      <p className="mt-1 text-xs text-slate-500">Horizon: {bucket.horizon_years} years</p>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {(bucket.instruments || []).map((inst, i) => (
+                          <span key={i} className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200">
+                            {inst}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-slate-600">{bucket.rationale}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Multi-Year Cash Flow Trajectory */}
+            {report.cash_flow_trajectory && report.cash_flow_trajectory.length > 0 && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-navy-900">Multi-Year Cash Flow Trajectory</h2>
+                <p className="mt-1 text-xs text-slate-500">Year-by-year projected wealth trajectory with annual contributions and compounding.</p>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <th className="px-4 py-3">Year</th>
+                        <th className="px-4 py-3">Opening Balance</th>
+                        <th className="px-4 py-3">Annual Contribution</th>
+                        <th className="px-4 py-3">Projected Growth</th>
+                        <th className="px-4 py-3">Closing Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {report.cash_flow_trajectory.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-3 font-semibold text-slate-900">{row.year || `Yr ${row.year_index}`}</td>
+                          <td className="px-4 py-3 text-slate-600">₹{Math.round(row.opening_balance).toLocaleString("en-IN")}</td>
+                          <td className="px-4 py-3 text-teal-700 font-semibold">₹{Math.round(row.annual_contribution).toLocaleString("en-IN")}</td>
+                          <td className="px-4 py-3 text-slate-600">₹{Math.round(row.growth).toLocaleString("en-IN")}</td>
+                          <td className="px-4 py-3 font-bold text-slate-900">₹{Math.round(row.closing_balance).toLocaleString("en-IN")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             )}
@@ -252,10 +316,48 @@ export default function GoalReportPage() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold">Recommendation</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{String(report.recommendation.complete_reasoning ?? "")}</p>
-            </section>
+            {/* Action Plan Timeline */}
+            {report.action_plan_timeline && report.action_plan_timeline.length > 0 && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-navy-900">Implementation Roadmap &amp; Milestones</h2>
+                <div className="mt-4 space-y-3">
+                  {report.action_plan_timeline.map((item, idx) => (
+                    <div key={idx} className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <span className="rounded-md bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-800">{item.timeline}</span>
+                        <h4 className="mt-1 font-bold text-slate-900">{item.action}</h4>
+                        <p className="text-xs text-slate-500">Milestone: {item.milestone}</p>
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold text-slate-400">Owner: {item.owner}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Contingency & Stress Matrix */}
+            {report.contingency_matrix && report.contingency_matrix.length > 0 && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-navy-900">Contingency &amp; Stress Defense Matrix</h2>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {report.contingency_matrix.map((c, idx) => (
+                    <div key={idx} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <h4 className="font-bold text-slate-900">{c.risk_event}</h4>
+                      <p className="mt-2 text-xs text-slate-600"><b className="text-teal-700">Immediate Action:</b> {c.immediate_action}</p>
+                      <p className="mt-1 text-xs text-slate-600"><b className="text-navy-900">Planning Change:</b> {c.planning_change}</p>
+                      <p className="mt-1 text-xs text-red-600"><b className="text-red-700">What NOT to do:</b> {c.what_not_to_do}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {report.recommendation && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold">Recommendation</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{String(report.recommendation.complete_reasoning ?? report.strategy.rationale ?? "")}</p>
+              </section>
+            )}
           </>
         )}
       </div>

@@ -517,15 +517,19 @@ class GoalReportService:
             "strategy": {
                 "selected_strategy_id": selected_strategy_id,
                 "selected_strategy_name": self._strategy_name(run, selected_strategy_id),
+                "name": self._strategy_name(run, selected_strategy_id),
                 "selected_scenario_id": self._get(run, "selected_scenario_id")
                 or recommendation.get("recommended_scenario_id"),
                 "selected_scenario": selected_scenario,
                 "architecture": architecture,
                 "rationale": self._get(recommendation, "complete_reasoning", ""),
+                "objective": self._get(recommendation, "complete_reasoning", "") or self._strategy_name(run, selected_strategy_id),
                 "short_reasons": self._get(recommendation, "short_reasons", []),
                 "constraints": self._get(recommendation, "constraints", []),
                 "technique_execution": technique_outputs,
+                "trade_offs": [t["trade_off"] for t in self._trade_offs(run) if "trade_off" in t],
             },
+            "recommendation": recommendation,
             "alternatives": self._alternatives(run),
             "scenarios": scenarios,
             "what_if_analysis": [
@@ -572,6 +576,19 @@ class GoalReportService:
             "contribution_rules": contribution_rules,
             "action_plan_timeline": action_plan_timeline,
             "contingency_matrix": contingency_matrix,
+            # Top-level backward compatibility aliases for frontend
+            "goal_id": self._get(run, "goal_id"),
+            "goal_name": self._goal_label(goal),
+            "goal_type": self._get(goal, "goal_type"),
+            "strategy_run_id": strategy_run_id,
+            "goal_details": {
+                "Target Amount": f"₹{goal_calculation.get('future_target') or goal_calculation.get('today_cost') or 0:,.0f}",
+                "Time Horizon": f"{self._get(goal, 'duration_years') or 0} years",
+                "Priority": str(self._get(goal, "priority") or "medium").title(),
+                "Target Year": str(self._get(goal, "target_year") or "N/A"),
+                "Funding Gap": f"₹{goal_calculation.get('funding_gap') or 0:,.0f}",
+                "Required Monthly Contribution": f"₹{goal_calculation.get('required_monthly_contribution') or 0:,.0f}",
+            },
         }
         return report
 

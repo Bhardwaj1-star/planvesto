@@ -338,16 +338,8 @@ export default function ActionPlanPage() {
                           href={`/investor/goal-report?goalId=${encodeURIComponent(alloc.goal_id)}`}
                           className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
                         >
-                          Goal Report →
+                          Goal Decision Report →
                         </Link>
-                        {isRetirement && (
-                          <Link
-                            href="/investor/retirement-report"
-                            className="rounded-xl bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-800"
-                          >
-                            Retirement Report →
-                          </Link>
-                        )}
                       </div>
                     </article>
                   );

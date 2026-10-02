@@ -260,7 +260,7 @@ class FinancialPlanService:
                 for entry in (audit.get("canonical_constraint_set", {}).get("conflicts") or [])
             ],
             "audit_trail": multi_plan.audit_trail,
-            "planning_notes": multi_plan.planning_notes,
+            "ratio_constraints": self._build_ratio_constraints(f_state),
             "family_cash_flow_trajectory": self._build_family_cash_flow_trajectory(rows, total_allocated, f_state.get("net_worth")),
             "moneywheel_health_scan": self._build_moneywheel_health_scan(f_state),
             "contingency_matrix": self._build_family_contingency_matrix(),
@@ -367,6 +367,67 @@ class FinancialPlanService:
                 "current_value": f"{(financial_assets / assets * 100):.1f}%" if assets > 0 else "—",
                 "healthy_benchmark": ">= 50.0%",
                 "status": "Healthy" if (assets > 0 and (financial_assets / assets) >= 0.5) else "Asset Heavy",
+            },
+        ]
+
+    @classmethod
+    def _build_ratio_constraints(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
+        income = float(f_state.get("annual_income") or 0.0)
+        expenses = float(f_state.get("annual_expenses") or 0.0)
+        monthly_exp = expenses / 12.0 if expenses > 0 else 1.0
+        liabilities = float(f_state.get("liabilities") or 0.0)
+        assets = float(f_state.get("assets") or 0.0)
+        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
+
+        savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
+        dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
+        emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
+        fin_asset_pct = (financial_assets / assets * 100.0) if assets > 0 else 50.0
+
+        return [
+            {
+                "rule_id": "RULE-SAVINGS-RATE",
+                "rule_name": "Savings Rate Guardrail",
+                "category": "foundation",
+                "current_ratio": round(savings_pct, 1),
+                "target_threshold": 25.0,
+                "condition": ">= 25.0%",
+                "status": "pass" if savings_pct >= 25 else ("conditional" if savings_pct >= 15 else "fail"),
+                "reason": "Measures the percentage of gross income directed towards savings and goal investments.",
+                "corrective_action": "Optimize discretionary expenditures to direct at least 25% of annual income into goals." if savings_pct < 25 else None,
+            },
+            {
+                "rule_id": "RULE-DTI-RATIO",
+                "rule_name": "Debt-to-Income (DTI) Limit",
+                "category": "debt",
+                "current_ratio": round(dti_pct, 1),
+                "target_threshold": 40.0,
+                "condition": "< 40.0%",
+                "status": "pass" if dti_pct < 40 else "fail",
+                "reason": "Ensures that annual debt obligations remain manageable relative to earning capacity.",
+                "corrective_action": "Accelerate debt prepayment to bring leverage below 40% before expanding aggressive goals." if dti_pct >= 40 else None,
+            },
+            {
+                "rule_id": "RULE-EMERGENCY-BUFFER",
+                "rule_name": "Emergency Liquidity Buffer",
+                "category": "liquidity",
+                "current_ratio": round(emergency_months, 1),
+                "target_threshold": 6.0,
+                "condition": ">= 6.0 Months",
+                "status": "pass" if emergency_months >= 6.0 else "conditional",
+                "reason": "Protects against premature goal liquidation during unexpected family income interruptions.",
+                "corrective_action": "Maintain 6 months of mandatory living expenses in liquid fixed deposits or overnight funds." if emergency_months < 6.0 else None,
+            },
+            {
+                "rule_id": "RULE-FINANCIAL-ASSETS",
+                "rule_name": "Liquid Financial Asset Mix",
+                "category": "asset_allocation",
+                "current_ratio": round(fin_asset_pct, 1),
+                "target_threshold": 50.0,
+                "condition": ">= 50.0%",
+                "status": "pass" if fin_asset_pct >= 50.0 else "conditional",
+                "reason": "Prevents over-concentration of family net worth in illiquid physical real estate or gold.",
+                "corrective_action": "Direct upcoming surplus flows into diversified financial market instruments." if fin_asset_pct < 50.0 else None,
             },
         ]
 

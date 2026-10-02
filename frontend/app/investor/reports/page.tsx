@@ -10,14 +10,19 @@ import {
   downloadGoalStrategyReportPdf,
   downloadCompleteFinancialPlanPdf,
   downloadRetirementReportPdf,
+  downloadBasketReportPdf,
   type StrategyRun,
 } from "../../../lib/api/strategy";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 
 type Goal = { id: string; name: string };
+type Basket = { id: string; name: string; goalIds: string[] };
 
 export default function ReportsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [baskets, setBaskets] = useState<Basket[]>([]);
+  const [selectedBasketId, setSelectedBasketId] = useState("");
+  const [customBasketGoalIds, setCustomBasketGoalIds] = useState<string[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
   const [selectedReport, setSelectedReport] = useState("complete-financial-plan");
   const [runs, setRuns] = useState<Record<string, StrategyRun | null>>({});
@@ -37,6 +42,18 @@ export default function ReportsPage() {
         if (active) {
           setGoals(next);
           setSelectedGoalId(next[0]?.id ?? "");
+          if (next.length >= 2) {
+            setCustomBasketGoalIds([next[0].id, next[1].id]);
+          }
+        }
+        try {
+          const savedBaskets = JSON.parse(window.localStorage.getItem("planvesto:planning-baskets") || "[]");
+          if (Array.isArray(savedBaskets) && savedBaskets.length > 0 && active) {
+            setBaskets(savedBaskets);
+            setSelectedBasketId(savedBaskets[0].id);
+          }
+        } catch {
+          // ignore local storage errors
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load goals.");
@@ -76,18 +93,18 @@ export default function ReportsPage() {
       reason: "",
     },
     {
-      id: "goal-strategy-report",
-      title: "Individual Goal Report",
-      description: "Complete strategy, calculation, feasibility and funding report for one selected goal.",
-      available: Boolean(selectedRun?.strategy_run_id),
-      reason: "Build a Strategy Run for this goal first.",
+      id: "basket-goal-report",
+      title: "Goal Basket Decision Report",
+      description: "Bundled multi-goal strategy for 2–3 grouped goals with priority laddering and shared pool allocation.",
+      available: goals.length >= 2,
+      reason: goals.length < 2 ? "Requires at least 2 active goals to bundle a basket." : "",
     },
     {
-      id: "retirement-report",
-      title: "Retirement Report",
-      description: "Retirement-specific report for a completed retirement Strategy Run.",
-      available: Boolean(isRetirement && selectedRun?.strategy_run_id),
-      reason: isRetirement ? "Build a Strategy Run for the retirement goal first." : "Only available for a retirement goal.",
+      id: "goal-strategy-report",
+      title: "Individual Goal Report",
+      description: "Complete strategy, calculation, feasibility and funding report for any selected goal (Retirement, Education, Home, etc.).",
+      available: Boolean(selectedRun?.strategy_run_id),
+      reason: "Build a Strategy Run for this goal first.",
     },
   ];
 
@@ -104,6 +121,12 @@ export default function ReportsPage() {
       if (selectedReport === "complete-financial-plan") {
         blob = await downloadCompleteFinancialPlanPdf(planningUnitId);
         filename = "complete-financial-plan.pdf";
+      } else if (selectedReport === "basket-goal-report") {
+        const basket = baskets.find((b) => b.id === selectedBasketId);
+        const goalIds = basket ? basket.goalIds : (customBasketGoalIds.length >= 2 ? customBasketGoalIds : goals.slice(0, 3).map((g) => g.id));
+        if (goalIds.length < 2) throw new Error("Please select at least 2 goals to generate a Basket Report.");
+        blob = await downloadBasketReportPdf(planningUnitId, goalIds, basket?.name || "Goal Basket Planning Report");
+        filename = "goal-basket-report.pdf";
       } else {
         if (!selectedRun?.strategy_run_id) throw new Error("No completed Strategy Run is available for this goal.");
         if (selectedReport === "goal-strategy-report") {
@@ -163,7 +186,50 @@ export default function ReportsPage() {
           </div>
         </section>
 
-        {selectedReport !== "complete-financial-plan" && (
+        {selectedReport === "basket-goal-report" && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-base font-bold text-navy-900">Choose Goals for Basket Report</h3>
+            <p className="mt-1 text-xs text-slate-500">Select 2 to 3 goals to bundle into a combined decision report.</p>
+            {baskets.length > 0 && (
+              <div className="mt-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Saved Basket</span>
+                <select
+                  value={selectedBasketId}
+                  onChange={(e) => setSelectedBasketId(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold"
+                >
+                  {baskets.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.goalIds.length} goals)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="mt-4 space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Or Select Individual Goals:</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {goals.map((goal) => (
+                  <label key={goal.id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 hover:bg-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={customBasketGoalIds.includes(goal.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCustomBasketGoalIds((curr) => [...curr, goal.id]);
+                        } else {
+                          setCustomBasketGoalIds((curr) => curr.filter((id) => id !== goal.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span className="text-sm font-semibold text-slate-800">{goal.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {selectedReport !== "complete-financial-plan" && selectedReport !== "basket-goal-report" && (
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <label className="block max-w-xl">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Goal</span>
@@ -175,7 +241,7 @@ export default function ReportsPage() {
           </section>
         )}
 
-        {selectedReport !== "complete-financial-plan" && !selectedRun?.strategy_run_id && (
+        {selectedReport !== "complete-financial-plan" && selectedReport !== "basket-goal-report" && !selectedRun?.strategy_run_id && (
           <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <h3 className="font-bold">Report is not available yet</h3>
             <p className="mt-2 text-sm text-slate-500">Build the Strategy Run for the selected goal first.</p>
@@ -188,9 +254,24 @@ export default function ReportsPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-teal-700">Selected Report</p>
               <h2 className="mt-1 text-xl font-extrabold">{options.find((option) => option.id === selectedReport)?.title}</h2>
-              <p className="mt-1 text-sm text-slate-500">{selectedReport === "complete-financial-plan" ? "All goals" : selectedGoal?.name || "Select a goal"}</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {selectedReport === "complete-financial-plan"
+                  ? "All goals"
+                  : selectedReport === "basket-goal-report"
+                  ? "2–3 grouped goals"
+                  : selectedGoal?.name || "Select a goal"}
+              </p>
             </div>
-            <button type="button" onClick={() => void download()} disabled={working || (selectedReport !== "complete-financial-plan" && !selectedRun?.strategy_run_id)}
+            <button
+              type="button"
+              onClick={() => void download()}
+              disabled={
+                working ||
+                (selectedReport !== "complete-financial-plan" &&
+                  selectedReport !== "basket-goal-report" &&
+                  !selectedRun?.strategy_run_id) ||
+                (selectedReport === "basket-goal-report" && customBasketGoalIds.length < 2 && !selectedBasketId)
+              }
               className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {working ? "Generating…" : "Download PDF"}
             </button>

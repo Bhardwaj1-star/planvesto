@@ -24,7 +24,13 @@ const navigation: NavGroup[] = [
   },
   { label: "Decide", items: [{ label: "Strategy Builder", href: "/investor/strategy-builder" }] },
   { label: "Implement", items: [{ label: "Action Plan", href: "/investor/action-plan" }] },
-  { label: "Reports", items: [{ label: "Reports", href: "/investor/reports" }] },
+  {
+    label: "Reports",
+    items: [
+      { label: "Reports Center", href: "/investor/reports" },
+      { label: "Goal Reports", href: "/investor/goal-report" },
+    ],
+  },
   {
     label: "Review",
     items: [
