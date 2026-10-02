@@ -66,6 +66,18 @@ class StrategyRepository:
         }
         self.db.table("strategy_runs").update(payload).eq("planning_unit_id", planning_unit_id).eq("strategy_run_id", strategy_run_id).execute()
 
+    def update_architectures(self, planning_unit_id: str, strategy_run_id: str, architectures: list[StrategyArchitecture], selected_architecture: StrategyArchitecture | None = None) -> None:
+        existing = self.db.table("strategy_runs").select("run_metadata").eq(
+            "planning_unit_id", planning_unit_id
+        ).eq("strategy_run_id", strategy_run_id).maybe_single().execute()
+        metadata = dict((existing.data or {}).get("run_metadata") or {}) if existing and existing.data else {}
+        metadata["architectures"] = [architecture.model_dump() for architecture in architectures]
+        if selected_architecture is not None:
+            metadata["selected_architecture"] = selected_architecture.model_dump()
+        self.db.table("strategy_runs").update({"run_metadata": metadata}).eq(
+            "planning_unit_id", planning_unit_id
+        ).eq("strategy_run_id", strategy_run_id).execute()
+
     def _hydrate_run(self, row: dict[str, Any]) -> StrategyRun:
         priorities = InvestorPriorities(**(row.get("investor_priorities") or {}))
         applicable = [StrategyDefinition(**s) for s in (row.get("applicable_strategies") or [])]

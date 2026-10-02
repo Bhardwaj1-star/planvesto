@@ -40,6 +40,20 @@ def _assessment():
     )
 
 
+def test_education_rankings_each_have_a_matching_architecture():
+    goal = _goal()
+    goal.goal_type = "Education"
+    result = StrategyEngine().execute(goal, priorities=InvestorPriorities())
+
+    architecture_strategy_ids = {architecture.primary_strategy_id for architecture in result.architectures}
+    assert result.rankings
+    assert {ranking.strategy_id for ranking in result.rankings} <= architecture_strategy_ids
+    assert all(
+        architecture.primary_strategy_id in {strategy.strategy_id for strategy in result.applicable_strategies}
+        for architecture in result.architectures
+    )
+
+
 def test_strategy_builder_contract_carries_rules_into_recommendation():
     result = StrategyEngine().execute(
         defined_goal=_goal(),
@@ -51,6 +65,9 @@ def test_strategy_builder_contract_carries_rules_into_recommendation():
     assert result.applicable_strategies
     assert result.scenarios
     assert result.rankings
+    architecture_strategy_ids = {architecture.primary_strategy_id for architecture in result.architectures}
+    assert {ranking.strategy_id for ranking in result.rankings} <= architecture_strategy_ids
+    assert all(architecture.primary_strategy_id in {strategy.strategy_id for strategy in result.applicable_strategies} for architecture in result.architectures)
     assert result.recommendation.recommended_strategy_id == result.rankings[0].strategy_id
     assert any("Emergency reserve coverage is healthy." in reason for reason in result.recommendation.short_reasons)
     assert result.recommendation.architecture is not None

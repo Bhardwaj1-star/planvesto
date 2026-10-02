@@ -2,6 +2,7 @@ import logging
 import pytest
 from unittest.mock import MagicMock, patch
 from fastapi import HTTPException
+from data.strategy_repository import StrategyRepository
 from models.defined_goal import DefinedGoal
 from models.strategy import (
     InvestorPriorities,
@@ -13,6 +14,7 @@ from models.strategy import (
 )
 from schemas.goals import GoalInput
 from schemas.strategy import StrategySelectRequest
+from engines.strategy.engine import StrategyEngine
 from services.goal_service import GoalService
 from services.strategy_service import StrategyService
 
@@ -39,6 +41,121 @@ def _dummy_defined_goal(version=1, target=1000000.0):
 
 
 class TestStrategyRunLifecycle:
+    @patch("services.strategy_service.StrategyRepository")
+    def test_fresh_education_run_has_architecture_for_every_ranking(self, MockStratRepo):
+        education_goal = _dummy_defined_goal()
+        education_goal.goal_type = "Education"
+        service = StrategyService()
+        service.goal_repo.get_latest_defined_goal = MagicMock(return_value=education_goal)
+        service.goal_repo.get_planning_unit_assets = MagicMock(return_value=[])
+        service.financial_state_repo.get_latest = MagicMock(return_value=None)
+        service.strat_repo.get_latest_run.return_value = None
+        service.strat_repo.save_run.side_effect = lambda run: "run-education-fresh"
+
+        run = service.build_strategy(
+            "pu-test-run", "g-test-run", priorities=InvestorPriorities()
+        )
+
+        architecture_strategy_ids = {architecture.primary_strategy_id for architecture in run.architectures}
+        assert {ranking.strategy_id for ranking in run.rankings} <= architecture_strategy_ids
+        assert all(
+            architecture.primary_strategy_id in {strategy.strategy_id for strategy in run.applicable_strategies}
+            for architecture in run.architectures
+        )
+
+    @patch("services.strategy_service.StrategyRepository")
+    def test_latest_run_restores_and_persists_missing_education_architectures(self, MockStratRepo):
+        education_goal = _dummy_defined_goal()
+        education_goal.goal_type = "Education"
+        result = StrategyEngine().execute(
+            education_goal, priorities=InvestorPriorities()
+        )
+        selected_strategy_id = result.rankings[-1].strategy_id
+        selected_scenario = next(
+            scenario for scenario in result.scenarios
+            if scenario.strategy_id == selected_strategy_id
+        )
+        run = StrategyRun(
+            strategy_run_id="run-education-legacy",
+            planning_unit_id="pu-test-run",
+            goal_id="g-test-run",
+            defined_goal_id="dg-test-run",
+            defined_goal_version=1,
+            applicable_strategies=result.applicable_strategies,
+            scenarios=result.scenarios,
+            rankings=result.rankings,
+            recommendation=result.recommendation,
+            architectures=[],
+            selected_strategy_id=selected_strategy_id,
+            selected_scenario_id=selected_scenario.scenario_id,
+        )
+        repo = MockStratRepo.return_value
+        service = StrategyService()
+        service.strat_repo = repo
+        service.goal_repo = MagicMock()
+        service.goal_repo.get_defined_goal_by_version.return_value = education_goal
+        service._financial_context = MagicMock(return_value={})
+        repo.get_latest_run.return_value = run
+
+        restored = service.get_latest_run("pu-test-run", "g-test-run")
+
+        linked_strategy_ids = {architecture.primary_strategy_id for architecture in restored.architectures}
+        assert {ranking.strategy_id for ranking in restored.rankings} <= linked_strategy_ids
+        assert restored.selected_architecture is not None
+        assert restored.selected_architecture.primary_strategy_id == selected_strategy_id
+        repo.update_architectures.assert_called_once()
+        persisted_architectures = repo.update_architectures.call_args.args[2]
+        assert {architecture.primary_strategy_id for architecture in persisted_architectures} == linked_strategy_ids
+
+        service.strat_repo.get_run_by_id.return_value = restored
+        service.strategy_version_service.create_version = MagicMock(
+            return_value=MagicMock(
+                strategy_version_id="strategy-version-education",
+                version=1,
+                implementation_parameters={},
+            )
+        )
+        selected = service.select_strategy(StrategySelectRequest(
+            planning_unit_id="pu-test-run",
+            strategy_run_id="run-education-legacy",
+            selected_strategy_id=selected_strategy_id,
+            selected_scenario_id=selected_scenario.scenario_id,
+            selected_architecture_id=restored.selected_architecture.architecture_id,
+        ))
+        assert selected.selected_architecture.primary_strategy_id == selected_strategy_id
+        repo.update_selection.assert_called_once()
+
+        row = {
+            "strategy_run_id": selected.strategy_run_id,
+            "planning_unit_id": selected.planning_unit_id,
+            "goal_id": selected.goal_id,
+            "defined_goal_id": selected.defined_goal_id,
+            "defined_goal_version": selected.defined_goal_version,
+            "run_version": selected.run_version,
+            "is_latest": selected.is_latest,
+            "status": selected.status,
+            "investor_priorities": selected.investor_priorities.model_dump(),
+            "applicable_strategies": [strategy.model_dump() for strategy in selected.applicable_strategies],
+            "scenarios": [scenario.model_dump() for scenario in selected.scenarios],
+            "selected_strategy_id": selected.selected_strategy_id,
+            "selected_scenario_id": selected.selected_scenario_id,
+            "selected_strategy_version_id": selected.selected_strategy_version_id,
+            "selected_strategy_version": selected.selected_strategy_version,
+            "selected_implementation_parameters": selected.selected_implementation_parameters,
+            "selection_timestamp": selected.selection_timestamp,
+            "comparison_snapshot": selected.comparison_matrix,
+            "ranking_snapshot": [ranking.model_dump() for ranking in selected.rankings],
+            "recommendation": selected.recommendation.model_dump(),
+            "run_metadata": {
+                "architectures": [architecture.model_dump() for architecture in persisted_architectures],
+                "selected_architecture": selected.selected_architecture.model_dump(),
+            },
+        }
+        hydrated = StrategyRepository.__new__(StrategyRepository)._hydrate_run(row)
+        assert hydrated.selected_strategy_id == selected_strategy_id
+        assert hydrated.selected_architecture.primary_strategy_id == selected_strategy_id
+        assert any(architecture.primary_strategy_id == selected_strategy_id for architecture in hydrated.architectures)
+
     # ── 1. Mandatory Priorities ──────────────────────────────────────────────
     @patch("services.strategy_service.GoalRepository")
     @patch("services.strategy_service.StrategyRepository")

@@ -4,6 +4,7 @@ from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from engines.strategy.engine import StrategyEngine
+from engines.strategy.composition import compose_architectures
 from engines.strategy.scenario import create_custom_scenario
 from engines.rules.engine import RuleEngine
 from models.defined_goal import DefinedGoal
@@ -191,6 +192,72 @@ class StrategyService:
             constraint_set=constraint_set,
         ), rule_assessment, constraint_set
 
+    def _ensure_run_architectures(self, run: StrategyRun) -> StrategyRun:
+        strategy_ids = {strategy.strategy_id for strategy in run.applicable_strategies}
+        if not strategy_ids:
+            return run
+
+        existing_architectures = [
+            architecture for architecture in run.architectures
+            if architecture.primary_strategy_id in strategy_ids
+        ]
+        covered_strategy_ids = {architecture.primary_strategy_id for architecture in existing_architectures}
+        missing_strategy_ids = strategy_ids - covered_strategy_ids
+        architectures = list(existing_architectures)
+
+        if missing_strategy_ids:
+            defined_goal = self.goal_repo.get_defined_goal_by_version(
+                run.planning_unit_id, run.goal_id, run.defined_goal_version
+            )
+            if not defined_goal:
+                raise HTTPException(status_code=409, detail="Strategy architectures are missing and the DefinedGoal snapshot is unavailable.")
+            rebuilt = compose_architectures(
+                run.applicable_strategies,
+                defined_goal,
+                self._financial_context(run.planning_unit_id, defined_goal),
+            )
+            rebuilt_by_strategy = {}
+            for architecture in rebuilt:
+                rebuilt_by_strategy.setdefault(architecture.primary_strategy_id, architecture)
+            architectures.extend(
+                rebuilt_by_strategy[strategy_id]
+                for strategy_id in sorted(missing_strategy_ids)
+                if strategy_id in rebuilt_by_strategy
+            )
+            still_missing = missing_strategy_ids - {architecture.primary_strategy_id for architecture in architectures}
+            if still_missing:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Unable to restore strategy architectures for: {', '.join(sorted(still_missing))}.",
+                )
+
+        selected_architecture = run.selected_architecture
+        if run.selected_strategy_id:
+            selected_architecture = next(
+                (
+                    architecture for architecture in architectures
+                    if architecture.primary_strategy_id == run.selected_strategy_id
+                    and run.selected_architecture is not None
+                    and architecture.architecture_id == run.selected_architecture.architecture_id
+                ),
+                next(
+                    (architecture for architecture in architectures if architecture.primary_strategy_id == run.selected_strategy_id),
+                    None,
+                ),
+            )
+
+        changed = architectures != run.architectures or selected_architecture != run.selected_architecture
+        run.architectures = architectures
+        run.selected_architecture = selected_architecture
+        if changed and run.strategy_run_id:
+            self.strat_repo.update_architectures(
+                run.planning_unit_id,
+                run.strategy_run_id,
+                architectures,
+                selected_architecture,
+            )
+        return run
+
     def build_strategy(self, planning_unit_id: str, goal_id: str, priorities: InvestorPriorities | None = None) -> StrategyRun:
         defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
         if not defined_goal: raise HTTPException(status_code=404, detail="No DefinedGoal found for this goal. Please complete Goal Planning first.")
@@ -238,6 +305,7 @@ class StrategyService:
         scenario = next((s for s in run.scenarios if s.scenario_id == request.selected_scenario_id), None)
         if not scenario: raise HTTPException(status_code=400, detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.")
         if scenario.strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="Selected scenario does not match selected strategy.")
+        run = self._ensure_run_architectures(run)
         architecture = next((a for a in run.architectures if a.architecture_id == request.selected_architecture_id), None) if request.selected_architecture_id else next((a for a in run.architectures if a.primary_strategy_id == request.selected_strategy_id), None)
         if architecture is None or architecture.primary_strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="A valid strategy architecture matching the selected strategy is required for selection.")
         try: version = self.strategy_version_service.create_version(planning_unit_id=request.planning_unit_id, strategy_id=request.selected_strategy_id, parameters=request.selected_implementation_parameters, source="library", status="draft")
@@ -249,7 +317,7 @@ class StrategyService:
     def get_latest_run(self, planning_unit_id: str, goal_id: str) -> StrategyRun:
         run = self.strat_repo.get_latest_run(planning_unit_id, goal_id)
         if not run: raise HTTPException(status_code=404, detail="No strategy run found for this goal")
-        return run
+        return self._ensure_run_architectures(run)
 
     def get_run_history(self, planning_unit_id: str, goal_id: str): return self.strat_repo.get_run_history(planning_unit_id, goal_id)
 
