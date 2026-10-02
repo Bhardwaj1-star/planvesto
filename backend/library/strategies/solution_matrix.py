@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from library.strategies.canonical import get_canonical_strategy
 from library.strategies.variants import get_canonical_strategy_variants
 from library.strategies.techniques_canonical import get_canonical_technique
+from rules.goals import canonical_goal_type
 
 
 @dataclass(frozen=True)
@@ -92,7 +93,11 @@ def get_strategy_solutions(
     if strategy_id is not None:
         solutions = [s for s in solutions if s.strategy_id == strategy_id]
     if goal_type is not None:
-        solutions = [s for s in solutions if goal_type in s.goal_types]
+        canonical = canonical_goal_type(goal_type)
+        solutions = [
+            s for s in solutions
+            if canonical in {canonical_goal_type(value) for value in s.goal_types}
+        ]
     return solutions
 
 
