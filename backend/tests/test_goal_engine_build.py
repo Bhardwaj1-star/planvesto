@@ -64,3 +64,26 @@ def test_goal_engine_projects_mapped_asset_into_funding_gap():
     assert len(goal.mapped_assets) == 1
     assert goal.projected_mapped_asset_value > 100000
     assert goal.funding_return_assumption == 0.08
+
+
+def test_goal_engine_keeps_passive_income_distinct_from_retirement():
+    goal = GoalEngine().calculate_defined_goal(
+        _input("Financial Freedom / Passive Income"),
+        {},
+    )
+    assert goal.goal_type == "passive_income"
+    assert goal.goal_name == "Financial Freedom / Passive Income"
+    assert goal.version_metadata["funding_model"] == "target_gap_plus_monthly_contribution"
+
+
+def test_goal_engine_canonicalizes_legacy_retirement_financial_freedom_label():
+    goal = GoalEngine().calculate_defined_goal(
+        _input(
+            "Retirement / Financial Freedom",
+            dynamic_details={"currentAge": 30, "lifeExpectancy": 85},
+        ),
+        {},
+    )
+    assert goal.goal_type == "retirement"
+    assert goal.goal_name == "Retirement"
+    assert goal.version_metadata["funding_model"] == "retirement_corpus"
