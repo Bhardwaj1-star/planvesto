@@ -7,6 +7,8 @@ GoalPriority = Literal["critical", "high", "medium", "low"]
 
 GOAL_TYPE_ALIASES: dict[str, str] = {
     "retirement/financial freedom": "retirement",
+    "financial freedom/passive income": "passive_income",
+    "financial freedom": "passive_income",
     "education": "child education",
     "child education": "child education",
     "marriage": "marriage",
@@ -15,7 +17,7 @@ GOAL_TYPE_ALIASES: dict[str, str] = {
     "car": "vehicle",
     "vacation": "travel",
     "others": "other",
-    "passive income": "other",
+    "passive income": "passive_income",
     "debt repayment": "other",
     "philanthropy": "other",
 }
@@ -28,6 +30,7 @@ DISCRETIONARY_GOAL_TYPES: set[str] = {
     "luxury",
     "others",
     "other",
+    "passive_income",
 }
 
 ESSENTIAL_GOAL_TYPES: set[str] = {
