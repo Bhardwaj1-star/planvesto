@@ -21,23 +21,117 @@ Cleanup must remove code that is no longer part of the current architecture with
 
 ## 2. Canonical Architecture
 
-The target backend flow is:
+The canonical end-to-end planning architecture is:
 
-`Financial Data → Financial State → Goals → Constraints → Strategy Engine → Scenarios → Comparison → Decision → Report → Investor Decision`
+Financial Data → Financial State → Goals → Goal Feasibility → Constraints → Strategy Engine → Scenarios → Comparison → Decision → Report → Investor Decision
 
-For goal reporting the canonical path is:
+This is the primary business architecture. Individual modules may implement multiple stages internally, but no service, report layer or compatibility route may create a competing business flow.
 
-`StrategyRun → GoalReportService → JSON / PDF`
+### Stage ownership
 
-Therefore:
+1. **Financial Data**
+   - Raw investor/family financial inputs.
+   - Source information only; not a financial decision.
 
-- `GoalReportService` is the canonical individual-goal report authority.
-- A goal type must not receive a separate report implementation merely because it is retirement.
-- PDF generation must consume the canonical report representation.
-- Compatibility routes may remain temporarily where the frontend still consumes them, but they must delegate to the canonical implementation.
-- Specialized legacy renderers/exporters must not remain as parallel authorities.
+2. **Financial State**
+   - Normalized/calculated financial reality.
+   - Net worth, assets, liabilities, cash-flow/surplus, ratios and other deterministic state metrics.
+   - Canonical domain: FinancialStateEngine + FinancialStateService + FinancialState persistence.
 
----
+3. **Goals**
+   - Versioned DefinedGoal objects representing the investor's objectives.
+   - Goal definition is separate from strategy selection.
+
+4. **Goal Feasibility**
+   - Quantifies what the goal requires and what financial resources are available.
+   - Evidence includes future target, mapped resources, funding gap/surplus, required contribution and funding status.
+   - This is a first-class planning stage, not merely report presentation.
+   - Goal Feasibility must remain distinct from Strategy Feasibility.
+
+5. **Constraints**
+   - RuleEngine + ConstraintAggregator + ConstraintSet.
+   - Carries hard constraints, ranking inputs, recommendation evidence and explanatory evidence into strategy evaluation.
+
+6. **Strategy Engine**
+   - Central goal-level strategy decision system.
+   - Internal flow:
+     Applicability → Eligible Strategy Set → Scenario Generation → Comparison → Architecture Composition → Decision Evaluation → Ranking → Recommendation.
+   - Strategy services may orchestrate this engine but must not duplicate its business logic.
+
+7. **Scenarios**
+   - Baseline, what-if and investor-customized scenarios.
+
+8. **Comparison**
+   - Canonical comparison matrix across candidate strategies/scenarios.
+
+9. **Decision**
+   - Decision Evaluation uses goal fit, financial-state fit, horizon, funding/feasibility evidence, constraints, priorities, trade-offs and architecture/technique evidence.
+   - Ranking/recommendation must derive from canonical decision output.
+
+10. **Report**
+    - Individual goal: StrategyRun → GoalReportService → structured report → PDF.
+    - Consolidated plan: multiple goal results + cross-goal allocation/conflicts → consolidated financial plan/report.
+    - Reports consume canonical outputs and must not become an alternative calculation/strategy/decision path.
+
+11. **Investor Decision**
+    - Investor selects/persists strategy, scenario, architecture and implementation parameters.
+    - System recommendation is decision support; it is not the investor's final decision.
+
+### Goal Feasibility vs Strategy Feasibility
+
+These must not be collapsed during cleanup.
+
+**Goal Feasibility:** Can the defined financial objective be funded under the investor's current/projected financial resources?
+
+**Strategy Feasibility:** Is this particular strategy architecture viable/appropriate for this goal under the financial state and constraints?
+
+The Strategy Engine currently represents strategy feasibility through architecture/decision evidence and statuses such as feasible, conditional and infeasible.
+
+### Multi-Goal orchestration
+
+Multi-Goal is a cross-goal orchestration layer, not a replacement for the goal-level Strategy Engine.
+
+For multiple goals:
+
+Financial State → Goals → Goal Feasibility → Constraints → Strategy Engine per goal → Cross-Goal Orchestration → Resource Allocation / Conflict Resolution → Consolidated Financial Plan → Report → Investor Decision
+
+The multi-goal layer owns cross-goal prioritisation, shared-resource competition, allocation, conflicts and consolidated plan assembly. It must not duplicate individual-goal strategy evaluation.
+
+### Canonical implementation map
+
+| Responsibility | Canonical owner |
+|---|---|
+| Financial-state calculation | FinancialStateEngine |
+| Financial-state persistence | FinancialStateSnapshotRepository |
+| Goal definition/calculation | DefinedGoal / Goal domain |
+| Goal feasibility evidence | Goal calculation + funding/feasibility outputs |
+| Constraint evaluation | RuleEngine + ConstraintAggregator |
+| Strategy applicability | Strategy Engine |
+| Scenario generation | Strategy Engine scenario module |
+| Comparison | Strategy Engine comparison module |
+| Architecture composition | Strategy Engine composition module |
+| Decision evaluation | Strategy Engine decision module |
+| Ranking/recommendation | Strategy Engine ranking + recommendation modules |
+| Individual-goal report | GoalReportService |
+| Cross-goal orchestration | Multi-Goal Orchestration layer |
+| Consolidated financial plan | FinancialPlanService / consolidated-plan layer |
+| Investor selection | Strategy selection/persistence flow |
+
+### Cleanup implication
+
+The cleanup target is not simply “one report service”. It is:
+
+**One architectural responsibility → one canonical implementation → one authoritative data flow.**
+
+Classify implementations as:
+
+- **CANONICAL** — authoritative implementation
+- **COMPATIBILITY** — active consumer alias delegating to canonical
+- **LEGACY** — obsolete duplicate implementation
+- **DEAD** — no active architectural/runtime role
+- **DOMAIN LOGIC** — legitimate goal/domain-specific behavior
+
+Only confirmed LEGACY and DEAD implementations should be deleted.
 
 ## 3. Confirmed Legacy Retirement Report Layer
 
