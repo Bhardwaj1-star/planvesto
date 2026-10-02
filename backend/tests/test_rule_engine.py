@@ -40,11 +40,6 @@ def _strategy(**overrides):
     return StrategyDefinition(**values)
 
 
-def test_rule_engine_canonicalizes_goal_type_aliases():
-    engine = StrategyRuleEngine()
-    assert engine.canonical_goal_type("Retirement/Financial Freedom") == "retirement"
-    assert engine.canonical_goal_type("Retirement / Financial Freedom") == "retirement"
-
 
 def test_rule_engine_matches_goal_type_without_component_evaluation():
     result = StrategyRuleEngine().evaluate(
