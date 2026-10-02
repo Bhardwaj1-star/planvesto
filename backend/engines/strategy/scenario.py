@@ -101,6 +101,22 @@ def _funding_metrics(
     )
     projected_total = base_resources + incremental_funding + lumpsum_fv
     remaining_gap = round(float(target) - projected_total, 2)
+    target_flt = float(target)
+    funded_ratio = round((projected_total / target_flt), 4) if target_flt > 0 else 1.0
+
+    if funded_ratio >= 1.0:
+        prob = 0.95
+        band = "High Certainty (>= 90%)"
+    elif funded_ratio >= 0.85:
+        prob = 0.82
+        band = "Moderate Certainty (80–89%)"
+    elif funded_ratio >= 0.70:
+        prob = 0.68
+        band = "Fair / Moderate Risk (65–79%)"
+    else:
+        prob = round(max(0.15, min(0.60, funded_ratio * 0.65)), 2)
+        band = "Underfunded Risk (< 65%)"
+
     return {
         "target_corpus": round(float(target), 2),
         "projected_total_resources": round(projected_total, 2),
@@ -116,8 +132,10 @@ def _funding_metrics(
         "annual_step_up": round(max(0.0, annual_step_up), 6),
         "duration_years": round(years, 2),
         "funding_return_assumption": round(annual_return, 6),
-        "probability_of_success": None,
-        "success_probability_method": "not_estimated",
+        "probability_of_success": prob,
+        "success_probability_method": "deterministic_hurdle_funded_model",
+        "probability_band": band,
+        "funded_ratio": funded_ratio,
     }
 
 
@@ -395,14 +413,79 @@ def create_custom_scenario(
 
     custom_inflation = float(custom_assumptions.get("inflation_rate", defined_goal.inflation_rate))
     custom_inflation = min(1.0, max(0.0, custom_inflation))
+    custom_duration = float(custom_assumptions.get("duration_years") or defined_goal.duration_years)
+    custom_duration = max(1.0, min(40.0, custom_duration))
+
     custom_target = calculate_future_target(
         today_cost=defined_goal.today_cost,
         inflation_rate=custom_inflation,
-        duration_years=defined_goal.duration_years,
+        duration_years=custom_duration,
     )
     funding_return = calculate_funding_return_assumption(
         [m.model_dump() for m in defined_goal.mapped_assets]
     )
+
+    base_required_monthly = float(defined_goal.required_monthly_contribution or 0.0)
+    custom_monthly = custom_funding.get("starting_monthly_contribution") or custom_funding.get("monthly_contribution")
+    if custom_monthly is not None:
+        try:
+            additional_monthly = float(custom_monthly) - base_required_monthly
+        except (ValueError, TypeError):
+            additional_monthly = 0.0
+    else:
+        additional_monthly = float(custom_funding.get("additional_monthly_contribution") or 0.0)
+
+    raw_step_up = float(custom_funding.get("annual_step_up_pct") or custom_funding.get("annual_step_up") or 0.0)
+    annual_step_up = raw_step_up / 100.0 if raw_step_up > 1.0 else raw_step_up
+
+    additional_lumpsum = float(custom_funding.get("lumpsum") or custom_funding.get("additional_lumpsum") or 0.0)
+
+    funding_res = _funding_metrics(
+        defined_goal=defined_goal,
+        target=custom_target,
+        annual_return=funding_return,
+        duration_years=custom_duration,
+        additional_monthly_contribution=additional_monthly,
+        additional_lumpsum=additional_lumpsum,
+        annual_step_up=annual_step_up,
+    )
+
+    effective_monthly = max(0.0, base_required_monthly + additional_monthly)
+    surplus_limit = float(getattr(defined_goal, "available_monthly_surplus", 0.0) or 0.0)
+
+    constraint_violations = []
+    if surplus_limit > 0 and effective_monthly > surplus_limit:
+        constraint_violations.append({
+            "constraint_id": "monthly_surplus_limit",
+            "rule_name": "Available Monthly Surplus Limit",
+            "status": "violated",
+            "limit": surplus_limit,
+            "current_value": effective_monthly,
+            "message": f"Monthly commitment of ₹{int(effective_monthly):,} exceeds available investable surplus of ₹{int(surplus_limit):,}.",
+        })
+
+    trade_offs_pros = []
+    trade_offs_cons = []
+    if funding_res["funding_gap"] == 0:
+        trade_offs_pros.append("Funding gap completely eliminated under this scenario.")
+    elif funding_res["funding_gap"] < float(defined_goal.funding_gap or 0.0):
+        gap_reduced = float(defined_goal.funding_gap or 0.0) - float(funding_res["funding_gap"])
+        trade_offs_pros.append(f"Reduces funding gap by ₹{int(gap_reduced):,}.")
+
+    if effective_monthly > base_required_monthly:
+        trade_offs_cons.append(f"Requires higher monthly cash-flow commitment (+₹{int(effective_monthly - base_required_monthly):,}/mo).")
+    elif effective_monthly < base_required_monthly and effective_monthly > 0:
+        trade_offs_pros.append(f"Relieves current monthly cash flow (+₹{int(base_required_monthly - effective_monthly):,}/mo retained).")
+        trade_offs_cons.append("Slower capital accumulation pace.")
+
+    if annual_step_up > 0:
+        trade_offs_pros.append(f"Accelerates compounding with {annual_step_up * 100:.1f}% annual step-up.")
+
+    if custom_duration > float(defined_goal.duration_years):
+        trade_offs_pros.append(f"Extending horizon by {custom_duration - float(defined_goal.duration_years):.1f} yrs lowers required monthly SIP.")
+        trade_offs_cons.append(f"Goal completion deferred by {custom_duration - float(defined_goal.duration_years):.1f} yrs.")
+
+    trade_off_notes = " | ".join(trade_offs_pros + trade_offs_cons) if (trade_offs_pros or trade_offs_cons) else "Investor-configured custom scenario with deterministic funding calculations."
 
     metrics = {
         "safety_score": max(1.0, min(10.0, round(strategy.baseline_safety_score + safety_mod, 2))),
@@ -410,7 +493,11 @@ def create_custom_scenario(
         "growth_score": max(1.0, min(10.0, round(strategy.baseline_growth_score + growth_mod, 2))),
         "flexibility_score": strategy.baseline_flexibility_score,
         "funding_status_context": defined_goal.funding_status,
-        **_funding_metrics(defined_goal, custom_target, funding_return),
+        "effective_monthly_contribution": round(effective_monthly, 2),
+        "constraint_violations": constraint_violations,
+        "trade_offs_pros": trade_offs_pros,
+        "trade_offs_cons": trade_offs_cons,
+        **funding_res,
     }
 
     return Scenario(
@@ -419,8 +506,13 @@ def create_custom_scenario(
         scenario_type="custom",
         scenario_name=custom_name,
         assumptions=custom_assumptions,
-        funding_structure=custom_funding,
+        funding_structure={
+            **custom_funding,
+            "starting_monthly_contribution": round(effective_monthly, 2),
+            "effective_monthly_contribution": round(effective_monthly, 2),
+            "annual_step_up": round(annual_step_up, 4),
+        },
         metrics=metrics,
-        trade_off_notes="Investor-configured custom scenario with deterministic funding calculations.",
+        trade_off_notes=trade_off_notes,
         is_investor_modified=True,
     )

@@ -20,7 +20,7 @@ export default function StrategyWorkflowNav() {
 
   const steps = [
     { id: "build", label: "Build", href: `/investor/strategy-builder${querySuffix}`, isActive: isStrategyBuilder },
-    { id: "compare", label: "Compare", href: `/investor/strategy-scenarios${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")) },
+    { id: "compare", label: "Participate With Numbers", href: `/investor/strategy-scenarios${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")) },
     {
       id: "report-action",
       label: "Report & Action Plan",
