@@ -132,45 +132,27 @@ Reports present canonical planning outputs. Individual-goal reporting follows:
 
 **Strategy Run → GoalReportService → Structured Goal Decision Report → PDF**
 
-### Stage 17 — Report Scope Boundary
+The report is a presentation layer over canonical calculation, scenario, comparison, decision and explainability outputs. It must not create an alternative business-logic path.
 
-Scenarios represent alternative assumption/implementation states used to examine outcomes. The current engine supports baseline, what-if and investor-customized scenarios.
+Two report scopes remain distinct:
+1. **Individual Goal Decision Report** — one goal's financial position, calculation, feasibility/funding, strategies, scenarios, trade-offs, alternatives, assumptions, decision and provenance.
+2. **Consolidated Financial Plan / Multi-Goal Report** — multiple goals, cross-goal allocation/conflicts, priorities, consolidated actions and overall plan outputs.
 
-### Stage 8 — Comparison
+### Stage 17 — Investor Decision
 
-The Strategy Engine builds the comparison matrix across candidate strategies/scenarios. Comparison is an explicit decision-support stage, not a separate competing strategy system.
+The system provides decision support. The investor makes the final choice.
 
-### Stage 9 — Decision
+The system may persist selected strategy, scenario, architecture and implementation parameters. Therefore:
 
-Decision Evaluation determines how candidate strategies/architectures perform against goal fit, financial-state fit, horizon, funding/feasibility evidence, constraints, investor priorities, trade-offs and architecture/technique evidence where applicable.
+**Strategy Recommendation ≠ Investor Decision**
 
-Decision output feeds ranking and recommendation. The recommendation must be derived from canonical decision output.
+### Stage 18 — Updated Financial State
 
-### Stage 10 — Report
+After execution, actual financial data becomes the next planning snapshot.
 
-Reports present canonical planning outputs for the investor.
+**Decision → Execution / Updated Data → Updated Financial State → Replanning**
 
-Individual-goal reporting follows:
-
-Strategy Run → GoalReportService → Structured Goal Decision Report → PDF
-
-GoalReportService is the canonical individual-goal report authority.
-
-Reports consume canonical outputs. Reporting code must not create an alternative strategy/calculation/decision path.
-
-Two report scopes must remain distinct:
-1. Individual Goal Decision Report — one defined goal, its feasibility/funding result, strategy evaluation, scenarios/comparison, decision/recommendation, constraints, trade-offs, assumptions/provenance and investor-selection context.
-2. Consolidated Financial Plan / Multi-Goal Report — multiple goals, cross-goal resource allocation, conflicts/trade-offs, resolved priorities, consolidated actions and overall financial-plan outputs.
-
-These report scopes may compose one another but must not duplicate their underlying decision logic.
-
-### Stage 11 — Investor Decision
-
-The system recommendation is decision support, not the investor's final decision.
-
-The investor may select/persist strategy, scenario, architecture and implementation parameters. Canonical persisted selection fields include selected_strategy_id, selected_scenario_id, selected_architecture, selected_implementation_parameters and selection_timestamp.
-
-Therefore: Strategy Recommendation ≠ Investor Decision.
+Decision history should be preserved, and actual outcomes can be compared with the assumptions used by the strategy.
 
 ## 2. Strategy Feasibility vs Goal Feasibility
 
