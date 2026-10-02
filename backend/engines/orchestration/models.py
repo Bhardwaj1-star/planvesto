@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
+from rules.goals import canonical_goal_priority
+
 GoalPriorityLevel = Literal["critical", "high", "medium", "low"]
 FundingStatusType = Literal["fully_funded", "partially_funded", "unfunded", "within_surplus", "surplus_shortfall", "requires_review"]
 FeasibilityStatusType = Literal["feasible", "constrained", "infeasible"]
@@ -29,7 +31,7 @@ class GoalEvaluationInput(BaseModel):
     @classmethod
     def normalize_client_priority(cls, value):
         if isinstance(value, str):
-            return value.strip().lower()
+            return canonical_goal_priority(value)
         return value
 
 
