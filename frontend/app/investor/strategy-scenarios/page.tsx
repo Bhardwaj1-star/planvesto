@@ -437,65 +437,22 @@ function StrategyScenariosContent() {
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
         {success && <InvestorStatus tone="success">{success}</InvestorStatus>}
 
-        {/* Goal & Strategy Selector Bar */}
+        {/* Selected Goal & Strategy Context */}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                1. Select Active Planning Goal
-              </label>
-              <select
-                value={goalId}
-                onChange={(e) => {
-                  setGoalId(e.target.value);
-                  setActiveScenarioId(null);
-                }}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-navy-600 focus:bg-white focus:outline-none"
-              >
-                {goals.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                <span>Horizon: {String(definedGoal?.duration_years ?? "—")} yrs</span>
-                <span>•</span>
-                <span>Target Year: {String(definedGoal?.target_year ?? "—")}</span>
-                <span>•</span>
-                <span>Status: <strong className="text-slate-700">{String(definedGoal?.funding_status ?? "Active")}</strong></span>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Goal</p>
+              <p className="mt-2 text-lg font-extrabold text-slate-900">{String(definedGoal?.goal_name ?? goalId)}</p>
+              <p className="mt-1 text-xs text-slate-500">Goal Version {run?.defined_goal_version ?? (urlGoalVersion || "—")}</p>
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                2. Selected Strategy Path
-              </label>
-              {run?.applicable_strategies && run.applicable_strategies.length > 0 ? (
-                <select
-                  value={strategyId}
-                  onChange={(e) => {
-                    setStrategyId(e.target.value);
-                    setActiveScenarioId(null);
-                  }}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-navy-600 focus:bg-white focus:outline-none"
-                >
-                  {run.applicable_strategies.map((item) => (
-                    <option key={item.strategy_id} value={item.strategy_id}>
-                      {item.name} {item.strategy_id === run.recommendation?.recommended_strategy_id ? "(Recommended)" : ""}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                  No strategies generated yet.
-                </div>
-              )}
-              {strategy && (
-                <p className="mt-2 text-xs text-slate-600 line-clamp-2">
-                  <span className="font-semibold text-slate-800">Objective:</span> {strategy.strategic_objective || strategy.tagline || strategy.description}
-                </p>
-              )}
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Selected Strategy</p>
+              <p className="mt-2 text-lg font-extrabold text-slate-900">{strategy?.name ?? strategyId}</p>
+              <p className="mt-1 text-xs text-slate-500">Strategy Run v{run?.run_version ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Architecture</p>
+              <p className="mt-2 break-all text-sm font-semibold text-slate-800">{urlArchitectureId ?? "—"}</p>
             </div>
           </div>
         </section>
