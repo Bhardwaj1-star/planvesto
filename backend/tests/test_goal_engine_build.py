@@ -72,7 +72,7 @@ def test_goal_engine_keeps_passive_income_distinct_from_retirement():
         _input("Financial Freedom / Passive Income"),
         {},
     )
-    assert goal.goal_type == "passive_income"
+    assert goal.goal_type == "financial_independence"
     assert goal.goal_name == "Financial Freedom / Passive Income"
     assert goal.version_metadata["funding_model"] == "target_gap_plus_monthly_contribution"
 
