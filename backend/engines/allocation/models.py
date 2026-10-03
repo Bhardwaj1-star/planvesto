@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from pydantic import BaseModel, Field
-from rules.goals import GoalPriority
+from rules.goals import GoalPriorityLevel
 from rules.multi_goal import FundingStatusType, FeasibilityStatusType
 
 
@@ -10,8 +10,8 @@ class GoalAllocationResult(BaseModel):
     goal_id: str
     goal_name: str
     goal_type: str = "general"
-    client_priority: GoalPriority
-    resolved_priority: GoalPriorityLevel
+    client_priority: GoalPriorityLevel
+    resolved_priority: GoalPriorityLevelLevel
     target_date: str | None = None
     required_monthly_contribution: float = 0.0
     allocated_monthly_contribution: float = 0.0
