@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import PlanningBasketButton from "./PlanningBasketButton";
 
-export default function StrategyWorkflowNav() {
+export default function StrategyWorkflowNav({ showWorkflow = true }: { showWorkflow?: boolean }) {
   const pathname = usePathname();
   const [goalId, setGoalId] = useState<string | null>(null);
 
@@ -36,7 +36,7 @@ export default function StrategyWorkflowNav() {
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <nav aria-label="Strategy workflow" className="overflow-x-auto">
+      {showWorkflow && <nav aria-label="Strategy workflow" className="overflow-x-auto">
         <ol className="flex min-w-max items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           {steps.map((step, index) => {
             const active = step.isActive;
@@ -58,7 +58,7 @@ export default function StrategyWorkflowNav() {
             );
           })}
         </ol>
-      </nav>
+      </nav>}
       {isStrategyBuilder && <PlanningBasketButton />}
     </div>
   );
