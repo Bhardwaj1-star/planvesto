@@ -94,7 +94,27 @@ class GoalReportService:
         if run.selected_strategy_version_id != strategy_version_id:
             raise HTTPException(status_code=409, detail="Strategy Version is not the selected source for this Strategy Run")
 
-        return self._load(planning_unit_id, run.strategy_run_id)
+        run, goal, context = self._load(planning_unit_id, run.strategy_run_id)
+        implementation_context = (
+            version.implementation_parameters.get("__implementation_context__")
+            if isinstance(version.implementation_parameters, dict)
+            else None
+        )
+        if isinstance(implementation_context, dict):
+            run.selected_implementation_parameters = version.implementation_parameters
+            final_scenario = implementation_context.get("final_scenario")
+            if isinstance(final_scenario, dict):
+                try:
+                    from models.strategy import Scenario
+                    final_scenario_model = Scenario(**final_scenario)
+                    run.scenarios = [
+                        item for item in run.scenarios
+                        if item.scenario_id != final_scenario_model.scenario_id
+                    ] + [final_scenario_model]
+                    run.selected_scenario_id = final_scenario_model.scenario_id
+                except Exception:
+                    pass
+        return run, goal, context
 
     @staticmethod
     def _dump(value: Any) -> Any:

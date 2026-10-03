@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { apiRequest } from "../../../lib/api/client";
-import { buildStrategy, getStrategyRunHistory, getPlanningUnitId, selectStrategy, type StrategyRun } from "../../../lib/api/strategy";
+import { buildStrategy, getStrategyRunHistory, getPlanningUnitId, type StrategyRun } from "../../../lib/api/strategy";
 import { getLatestDefinedGoal } from "../../../lib/api/goals";
 import type { DefinedGoal } from "../../../lib/onboarding/goals/types";
 
@@ -31,6 +32,7 @@ function resolveArchitectureId(run: StrategyRun | null, strategyId: string) {
 }
 
 export default function InvestorStrategyBuilderPage() {
+  const router = useRouter();
   const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
   const [baskets, setBaskets] = useState<PlanningBasket[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
@@ -41,7 +43,6 @@ export default function InvestorStrategyBuilderPage() {
   const [selectedStrategyId, setSelectedStrategyId] = useState("");
   const [selectedScenarioId, setSelectedScenarioId] = useState("");
   const [selectedArchitectureId, setSelectedArchitectureId] = useState("");
-  const [parameters, setParameters] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,11 +115,11 @@ export default function InvestorStrategyBuilderPage() {
         if (!active) return;
         setGoalPreview(preview);
         setRun(currentRun);
-        const restoredStrategyId = currentRun.selected_strategy_id ?? "";
-        setSelectedStrategyId(restoredStrategyId);
-        setSelectedScenarioId(currentRun.selected_scenario_id ?? "");
-        setSelectedArchitectureId(resolveArchitectureId(currentRun, restoredStrategyId));
-        setParameters(currentRun.selected_implementation_parameters ?? {});
+        const recommendedStrategyId = currentRun.recommendation.recommended_strategy_id || currentRun.rankings[0]?.strategy_id || "";
+        setSelectedStrategyId(recommendedStrategyId);
+        const recommendedScenarioId = currentRun.recommendation.recommended_scenario_id || currentRun.rankings.find((item) => item.strategy_id === recommendedStrategyId)?.scenario_id || "";
+        setSelectedScenarioId(recommendedScenarioId);
+        setSelectedArchitectureId(resolveArchitectureId(currentRun, recommendedStrategyId));
         setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Strategy Builder."); }
       finally { if (active) setWorking(false); }
@@ -143,11 +144,10 @@ export default function InvestorStrategyBuilderPage() {
     try {
       const next = await operation();
       setRun(next);
-      const nextStrategyId = next.selected_strategy_id ?? next.recommendation.recommended_strategy_id ?? "";
+      const nextStrategyId = next.recommendation.recommended_strategy_id || next.rankings[0]?.strategy_id || "";
       setSelectedStrategyId(nextStrategyId);
-      setSelectedScenarioId(next.selected_scenario_id ?? next.recommendation.recommended_scenario_id ?? "");
+      setSelectedScenarioId(next.recommendation.recommended_scenario_id || next.rankings.find((item) => item.strategy_id === nextStrategyId)?.scenario_id || "");
       setSelectedArchitectureId(resolveArchitectureId(next, nextStrategyId));
-      setParameters(next.selected_implementation_parameters ?? {});
       const planningUnitId = getPlanningUnitId();
       if (planningUnitId && selectedGoalId) setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
       if (successMessage) setSuccessMessage(successMessage);
@@ -165,29 +165,24 @@ export default function InvestorStrategyBuilderPage() {
       setError("Planning unit is missing. Please refresh the page and try again.");
       return;
     }
-    if (!run?.strategy_run_id) {
-      setError("Strategy run is missing. Rebuild the Strategy Run before saving the selection.");
-      return;
-    }
-    if (!selectedStrategyId) {
-      setError("No strategy is selected. Select an architecture before saving.");
-      return;
-    }
-    if (!selectedScenarioId) {
-      setError("No scenario is selected. Select an architecture before saving.");
+    if (!run?.strategy_run_id || !selectedGoalId || !selectedStrategyId) {
+      setError("Select a strategy before planning its implementation.");
       return;
     }
 
-    const architecture = run.architectures.find((item) => item.architecture_id === selectedArchitectureId && item.primary_strategy_id === selectedStrategyId)
-      ?? run.architectures.find((item) => item.primary_strategy_id === selectedStrategyId);
-    if (!architecture) {
-      setError("A matching strategy architecture is unavailable. Please select the architecture again.");
+    const architecture = run.architectures.find(
+      (item) => item.primary_strategy_id === selectedStrategyId,
+    );
+    const scenario = run.scenarios.find(
+      (item) => item.strategy_id === selectedStrategyId && item.scenario_id === selectedScenarioId,
+    );
+    if (!architecture || !scenario) {
+      setError("The selected strategy architecture is incomplete. Please select it again.");
       return;
     }
 
-    void execute(
-      () => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters, architecture.architecture_id),
-      "Selection saved successfully.",
+    router.push(
+      `/investor/strategy-scenarios?goalId=${encodeURIComponent(selectedGoalId)}&strategyRunId=${encodeURIComponent(run.strategy_run_id)}&strategyId=${encodeURIComponent(selectedStrategyId)}&scenarioId=${encodeURIComponent(selectedScenarioId)}&architectureId=${encodeURIComponent(architecture.architecture_id)}&goalVersion=${encodeURIComponent(String(run.defined_goal_version))}`,
     );
   };
 
@@ -264,11 +259,35 @@ export default function InvestorStrategyBuilderPage() {
       {goalPreview && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Goal Calculation &amp; Preview</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["Today’s Cost",formatINR(goalPreview.today_cost)],["Inflation",`${(goalPreview.inflation_rate*100).toFixed(1)}%`],["Required Corpus",formatINR(goalPreview.future_target)],["Funding Gap",formatINR(goalPreview.funding_gap)]].map(([label,value])=><div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-lg font-extrabold">{value}</p></div>)}</div><div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600"><span>Target: <strong>{String(goalPreview.target_month).padStart(2,"0")}/{goalPreview.target_year}</strong></span><span>Mapped Assets: <strong>{formatINR(goalPreview.projected_mapped_asset_value)}</strong></span><span>Monthly Contribution: <strong>{formatINR(goalPreview.required_monthly_contribution)}</strong></span><span>Status: <strong>{goalPreview.funding_status}</strong></span></div></section>}
 
       {!run ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center"><h2 className="text-xl font-bold">{selectedBasket ? "Basket selected" : "No Strategy Run yet"}</h2><p className="mt-2 text-sm text-slate-500">{selectedBasket ? "Select an individual goal to build its Strategy Run. Basket-level execution will be connected to the multi-goal strategy flow." : "Build the Strategy Run after reviewing the goal calculation."}</p></section> : <>
-        <section><div className="mb-4"><h2 className="text-lg font-bold">Strategy Architectures</h2><p className="mt-1 text-sm text-slate-500">Applicable architectures evaluated for this goal.</p></div><div className="grid gap-5 lg:grid-cols-2">{displayedRankings.map((ranking)=><article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${selectedStrategyId===ranking.strategy_id&&selectedScenarioId===ranking.scenario_id?"border-teal-500 ring-2 ring-teal-100":"border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{ranking.is_recommended?"Recommended Architecture":"Alternative Architecture"}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended&&<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.description}</p><div className="mt-4 space-y-2 text-xs text-slate-600">{run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale?.length? <div><b>Goal fit:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale.join("; ")}</div>:null}<div><b>Feasibility:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.feasibility_status}</div>{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs?.length?<div><b>Trade-offs:</b> {run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs.join("; ")}</div>:null}</div><button onClick={()=>{setSelectedStrategyId(ranking.strategy_id);setSelectedScenarioId(ranking.scenario_id);const architecture=run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id);setSelectedArchitectureId(architecture?.architecture_id??"");const s=run.applicable_strategies.find(x=>x.strategy_id===ranking.strategy_id);setParameters(Object.fromEntries((s?.implementation_parameters??[]).map(p=>[p.name,p.default_value])));}} className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50">{selectedStrategyId===ranking.strategy_id&&selectedScenarioId===ranking.scenario_id?"Selected":"Select this architecture"}</button></article>)}</div></section>
+        <section><div className="mb-4"><h2 className="text-lg font-bold">Strategy Architectures</h2><p className="mt-1 text-sm text-slate-500">Applicable architectures evaluated for this goal.</p></div><div className="grid gap-5 lg:grid-cols-2">{displayedRankings.map((ranking)=><article key={`${ranking.strategy_id}-${ranking.scenario_id}`} className={`rounded-3xl border bg-white p-6 shadow-sm ${selectedStrategyId===ranking.strategy_id&&selectedScenarioId===ranking.scenario_id?"border-teal-500 ring-2 ring-teal-100":"border-slate-200"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{ranking.is_recommended?"Recommended Architecture":"Alternative Architecture"}</p><h3 className="mt-1 text-xl font-extrabold">{ranking.strategy_name}</h3><p className="mt-1 text-sm text-slate-500">{ranking.scenario_name}</p></div>{ranking.is_recommended&&<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">Recommended</span>}</div><p className="mt-4 text-sm leading-6 text-slate-600">{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.description}</p><div className="mt-4 space-y-2 text-xs text-slate-600">{run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale?.length? <div><b>Goal fit:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.rationale.join("; ")}</div>:null}<div><b>Feasibility:</b> {run.architectures.find(a=>a.primary_strategy_id===ranking.strategy_id)?.feasibility_status}</div>{run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs?.length?<div><b>Trade-offs:</b> {run.applicable_strategies.find(s=>s.strategy_id===ranking.strategy_id)?.trade_offs.join("; ")}</div>:null}</div><button
+  onClick={() => {
+    if (ranking.is_recommended) {
+      setSelectedStrategyId(ranking.strategy_id);
+      setSelectedScenarioId(ranking.scenario_id);
+      const architecture = run.architectures.find((a) => a.primary_strategy_id === ranking.strategy_id);
+      setSelectedArchitectureId(architecture?.architecture_id ?? "");
+      return;
+    }
+    router.push(`/investor/strategy-comparison?goalId=${encodeURIComponent(selectedGoalId)}&strategyRunId=${encodeURIComponent(run.strategy_run_id ?? "")}&recommendedStrategyId=${encodeURIComponent(run.recommendation.recommended_strategy_id)}&alternativeStrategyId=${encodeURIComponent(ranking.strategy_id)}`);
+  }}
+  className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold hover:bg-slate-50"
+>
+  {ranking.is_recommended ? "Selected" : "Compare"}
+</button></article>)}</div></section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Recommendation</h2><p className="mt-3 text-sm leading-6 text-slate-600">{run.recommendation.complete_reasoning}</p><ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">{run.recommendation.short_reasons.map((reason,i)=><li key={i}>{reason}</li>)}</ul><p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">Feasibility: {run.recommendation.feasibility_status}</p></section>
 
-        {selectedStrategy&&<section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation Parameters</h2><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter(p=>p.editable).map(p=><label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type==="choice"?<select value={String(parameters[p.name]??p.default_value)} onChange={e=>setParameters(x=>({...x,[p.name]:e.target.value}))} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">{(p.choices??[]).map(choice=><option key={choice}>{choice}</option>)}</select>:<input type="number" step={p.param_type==="integer"?1:"any"} min={p.min_value??undefined} max={p.max_value??undefined} value={String(parameters[p.name]??p.default_value)} onChange={e=>setParameters(x=>({...x,[p.name]:Number(e.target.value)}))} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"/>}</label>)}</div>{selectedScenario&&<div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes||"No additional trade-off notes supplied."}</p></div>}<InvestorButton className="mt-6" onClick={handleSelect} disabled={working||!selectedScenarioId}>{working?"Saving…":run.selected_strategy_version_id?"Save selection":"Confirm selection"}</InvestorButton></section>}
+        {selectedStrategy&&<section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Selected Strategy</h2>
+              <p className="mt-1 text-sm text-slate-500">Strategy selection is complete. Implementation parameters and what-if analysis happen next.</p>
+            </div>
+            <InvestorButton onClick={handleSelect} disabled={working}>
+              Plan Your Implementation
+            </InvestorButton>
+          </div>
+        </section>}
 
       </>}
     </div>

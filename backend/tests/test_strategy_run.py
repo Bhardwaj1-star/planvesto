@@ -132,13 +132,7 @@ class TestStrategyRunLifecycle:
         assert {architecture.primary_strategy_id for architecture in persisted_architectures} == linked_strategy_ids
 
         service.strat_repo.get_run_by_id.return_value = restored
-        service.strategy_version_service.create_version = MagicMock(
-            return_value=MagicMock(
-                strategy_version_id="strategy-version-education",
-                version=1,
-                implementation_parameters={},
-            )
-        )
+        service.strategy_version_service.create_version = MagicMock()
         selected = service.select_strategy(StrategySelectRequest(
             planning_unit_id="pu-test-run",
             strategy_run_id="run-education-legacy",
@@ -147,7 +141,10 @@ class TestStrategyRunLifecycle:
             selected_architecture_id=restored.selected_architecture.architecture_id,
         ))
         assert selected.selected_architecture.primary_strategy_id == selected_strategy_id
-        repo.update_selection.assert_called_once()
+        assert selected.selected_strategy_version_id is None
+        assert selected.selected_strategy_version is None
+        service.strategy_version_service.create_version.assert_not_called()
+        repo.update_selection.assert_not_called()
 
         row = {
             "strategy_run_id": selected.strategy_run_id,
@@ -306,15 +303,9 @@ class TestStrategyRunLifecycle:
         assert "does not exist in this strategy run" in exc_info.value.detail
         strat_repo_mock.update_selection.assert_not_called()
 
-    @patch("services.strategy_service.StrategyVersionService.create_version")
     @patch("services.strategy_service.StrategyRepository")
-    def test_valid_strategy_and_scenario_selection_succeeds(self, MockStratRepo, mock_create_version):
+    def test_valid_strategy_and_scenario_selection_succeeds(self, MockStratRepo):
         strat_repo_mock = MockStratRepo.return_value
-        from models.strategy_version import StrategyVersion
-        mock_create_version.return_value = StrategyVersion(
-            strategy_version_id="sv-mock-1", planning_unit_id="pu-1", strategy_id="strat-cap-preservation",
-            version=1, library_version="1.0", implementation_version="1.0", implementation_parameters={"debt_allocation_pct": 80.0},
-        )
         strat_a = StrategyDefinition(strategy_id="strat-cap-preservation", name="Conservative", tagline="tag", description="desc")
         scen_a = Scenario(strategy_id="strat-cap-preservation", scenario_id="scen-test-1", scenario_name="Conservative Baseline")
         existing_run = StrategyRun(
@@ -327,13 +318,16 @@ class TestStrategyRunLifecycle:
         svc = StrategyService()
         req = StrategySelectRequest(
             planning_unit_id="pu-1", strategy_run_id="run-1", selected_strategy_id="strat-cap-preservation", selected_scenario_id="scen-test-1",
-            selected_implementation_parameters={"debt_allocation_pct": 80.0},
         )
         updated = svc.select_strategy(req)
-        strat_repo_mock.update_selection.assert_called_once()
+        strat_repo_mock.update_selection.assert_not_called()
         assert updated.selected_strategy_id == "strat-cap-preservation"
         assert updated.selected_scenario_id == "scen-test-1"
-        assert updated.selected_implementation_parameters["debt_allocation_pct"] == 80.0
+        assert updated.selected_strategy_version_id is None
+        assert updated.selected_strategy_version is None
+        assert updated.selected_implementation_parameters == {}
+
+
 
     # ── 3. Selection Revalidation during Recalculation ────────────────────────
     @patch.object(StrategyService, "_financial_context", return_value={})

@@ -6,12 +6,12 @@ import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
-import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import {
-  addCustomScenario,
-  getLatestStrategyRun,
+  finalizeImplementation,
   getPlanningUnitId,
-  selectStrategy,
+  getStrategyRunById,
+  previewImplementation,
+  downloadGoalStrategyReportPdfByStrategyVersion,
   type Scenario,
   type StrategyImplementationParamDef,
   type StrategyRun,
@@ -70,8 +70,11 @@ function StrategyScenariosContent() {
   const router = useRouter();
   const urlGoalId = searchParams.get("goalId");
   const urlStrategyId = searchParams.get("strategyId");
+  const urlStrategyRunId = searchParams.get("strategyRunId");
+  const urlScenarioId = searchParams.get("scenarioId");
+  const urlArchitectureId = searchParams.get("architectureId");
+  const urlGoalVersion = Number(searchParams.get("goalVersion") || "0");
 
-  const [goals, setGoals] = useState<Array<{ id: string; name: string; targetAmount?: string }>>([]);
   const [goalId, setGoalId] = useState<string>("");
   const [definedGoal, setDefinedGoal] = useState<Record<string, unknown> | null>(null);
   const [run, setRun] = useState<StrategyRun | null>(null);
@@ -96,41 +99,14 @@ function StrategyScenariosContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // 1. Initial Load of Goals
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await loadGoalPlannerData();
-        const activeGoals = data.goals.map((g) => ({
-          id: g.id,
-          name: g.name,
-          targetAmount: g.targetAmount,
-        }));
-        if (active) {
-          setGoals(activeGoals);
-          if (urlGoalId && activeGoals.some((g) => g.id === urlGoalId)) {
-            setGoalId(urlGoalId);
-          } else if (activeGoals[0]) {
-            setGoalId(activeGoals[0].id);
-          }
-        }
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Unable to load active goals.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [urlGoalId]);
 
-  // 2. Load Defined Goal and Latest Strategy Run when goalId changes
+  // 2. Load the exact Strategy Run selected in Strategy Builder.
+  // Latest-run state is never used to establish implementation context.
   useEffect(() => {
-    if (!goalId) {
+    if (!urlGoalId || !urlStrategyRunId || !urlStrategyId) {
       setRun(null);
       setDefinedGoal(null);
+      setError("Implementation context is missing. Return to Strategy Builder and select a strategy.");
       return;
     }
     let active = true;
@@ -140,38 +116,36 @@ function StrategyScenariosContent() {
       try {
         const pu = getPlanningUnitId();
         if (!pu) throw new Error("Planning unit is not available.");
+        const dg = await getLatestDefinedGoal(pu, urlGoalId);
+        const selectedRun = await getStrategyRunById(pu, urlStrategyRunId);
+        if (!active) return;
 
-        // Load DefinedGoal for surplus limit and today's cost
-        try {
-          const dg = await getLatestDefinedGoal(pu, goalId);
-          if (active) setDefinedGoal(dg);
-        } catch {
-          if (active) setDefinedGoal(null);
+        if (urlGoalVersion && selectedRun.defined_goal_version !== urlGoalVersion) {
+          throw new Error("The selected goal version no longer matches this Strategy Run.");
+        }
+        const selectedScenarioId = urlScenarioId || selectedRun.scenarios.find((item) => item.strategy_id === urlStrategyId && item.scenario_type === "baseline")?.scenario_id || "";
+        if (!selectedRun.applicable_strategies.some((item) => item.strategy_id === urlStrategyId)) {
+          throw new Error("The selected strategy is not available in this Strategy Run.");
         }
 
-        // Load latest Strategy Run
-        const latest = await getLatestStrategyRun(pu, goalId);
-        if (active) {
-          setRun(latest);
-          const initialStratId =
-            (urlStrategyId && latest.applicable_strategies.some((s) => s.strategy_id === urlStrategyId) && urlStrategyId) ||
-            latest.selected_strategy_id ||
-            latest.recommendation.recommended_strategy_id ||
-            latest.applicable_strategies[0]?.strategy_id ||
-            "";
-          setStrategyId(initialStratId);
-        }
+        setGoalId(urlGoalId);
+        setDefinedGoal(dg);
+        setRun(selectedRun);
+        setStrategyId(urlStrategyId);
+        setActiveScenarioId(selectedScenarioId);
       } catch (err) {
         if (active) {
           setRun(null);
-          setError(err instanceof Error ? err.message : "No Strategy Run found for this goal. Please run Strategy Builder first.");
+          setError(err instanceof Error ? err.message : "Unable to load the selected implementation context.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     })();
     return () => {
       active = false;
     };
-  }, [goalId, urlStrategyId]);
+  }, [urlGoalId, urlStrategyId, urlStrategyRunId, urlScenarioId, urlGoalVersion]);
 
   // Strategy object
   const strategy = useMemo(
@@ -246,11 +220,9 @@ function StrategyScenariosContent() {
   // Handle Recalculation
   async function handleRecalculate() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId) {
-      return setError("A valid Strategy Run and selected strategy are required.");
+    if (!pu || !run?.strategy_run_id || !strategyId || !activeScenarioId) {
+      return setError("The selected Strategy Run, strategy, and scenario are required.");
     }
-
-    const currentName = scenarioName.trim() || `Custom ₹${Math.round(inputMonthly).toLocaleString("en-IN")}/mo`;
 
     const assumptions: Record<string, unknown> = {};
     if (inflationPct.trim()) {
@@ -292,58 +264,79 @@ function StrategyScenariosContent() {
     setSuccess(null);
 
     try {
-      const updatedRun = await addCustomScenario(
+      const updatedRun = await previewImplementation(
         pu,
         run.strategy_run_id,
         strategyId,
-        currentName,
+        activeScenarioId,
+        Object.fromEntries(
+          editableParameters.map((param) => {
+            const raw = strategyParams[param.name];
+            return [param.name, param.param_type === "choice" ? raw : Number(raw)];
+          }),
+        ),
         assumptions,
         fundingStructure,
+        urlArchitectureId || undefined,
       );
       setRun(updatedRun);
-
-      // Focus on the newly added scenario
       const newlyAdded = updatedRun.scenarios
         .filter((s) => s.strategy_id === strategyId && s.is_investor_modified)
         .slice(-1)[0];
-      if (newlyAdded) {
-        setActiveScenarioId(newlyAdded.scenario_id);
-      }
-
-      setSuccess("Recalculation complete. Outcomes, probability bands, and trade-offs updated.");
+      if (newlyAdded) setActiveScenarioId(newlyAdded.scenario_id);
+      setSuccess("What-if analysis recalculated. Nothing has been saved yet.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to calculate scenario.");
+      setError(err instanceof Error ? err.message : "Failed to calculate implementation preview.");
     } finally {
       setWorking(false);
     }
   }
 
   // Handle Decision Lock & Navigation to Action Plan
-  async function handleLockDecision(scenarioToLock: Scenario) {
+  async function handleLockDecision() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId) {
-      return setError("Missing Strategy Run or Strategy Selection.");
+    if (!pu || !run?.strategy_run_id || !strategyId || !activeScenarioId) {
+      return setError("Missing implementation context.");
     }
+
+    const implementationParameters: Record<string, unknown> = Object.fromEntries(
+      editableParameters.map((param) => {
+        const raw = strategyParams[param.name];
+        return [param.name, param.param_type === "choice" ? raw : Number(raw)];
+      }),
+    );
+    const assumptions: Record<string, unknown> = {};
+    if (inflationPct.trim()) assumptions.inflation_rate = Number(inflationPct) / 100;
+    if (durationYears.trim()) assumptions.duration_years = Number(durationYears);
+
+    const fundingStructure: Record<string, unknown> = {
+      starting_monthly_contribution: inputMonthly,
+      annual_step_up_pct: Number(annualStepUpPct) || 0,
+      lumpsum: Number(lumpsum) || 0,
+    };
 
     setLocking(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const updatedRun = await selectStrategy(
+      const finalizedRun = await finalizeImplementation(
         pu,
         run.strategy_run_id,
+        run.defined_goal_version,
         strategyId,
-        scenarioToLock.scenario_id,
-        scenarioToLock.funding_structure ?? {},
+        activeScenarioId,
+        implementationParameters,
+        assumptions,
+        fundingStructure,
+        urlArchitectureId || undefined,
       );
-      setRun(updatedRun);
-      setSuccess("Decision successfully locked! Redirecting to your Action Plan…");
-      setTimeout(() => {
-        router.push(`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(updatedRun.selected_strategy_version_id ?? "")}`);
-      }, 900);
+      setRun(finalizedRun);
+      const versionId = finalizedRun.selected_strategy_version_id;
+      if (!versionId) throw new Error("Implementation finalized but no Strategy Version was created.");
+      setSuccess("Implementation finalized. Your Strategy Version is now the source of truth.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to lock decision.");
+      setError(err instanceof Error ? err.message : "Unable to finalize implementation.");
       setLocking(false);
     }
   }
@@ -382,13 +375,13 @@ function StrategyScenariosContent() {
   return (
     <main className="min-h-screen bg-[#f6f8fb] pb-20 text-slate-900">
       <InvestorHeader
-        eyebrow="Step 2: Interactive Decision Workspace"
-        title="Participate With Your Numbers"
-        description="Interact directly with the strategy using your own financial numbers. Explore parameter changes, observe cause-and-effect trade-offs, and lock your informed decision."
+        eyebrow="Plan Your Implementation"
+        title="Plan Your Implementation"
+        description="Configure the selected strategy with your implementation parameters and numbers. Explore what-if outcomes before finalizing the implementation."
       />
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav />
+        <StrategyWorkflowNav showWorkflow={false} />
 
         {/* Core Product Principle Banner */}
         <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
@@ -411,65 +404,22 @@ function StrategyScenariosContent() {
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
         {success && <InvestorStatus tone="success">{success}</InvestorStatus>}
 
-        {/* Goal & Strategy Selector Bar */}
+        {/* Selected Goal & Strategy Context */}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                1. Select Active Planning Goal
-              </label>
-              <select
-                value={goalId}
-                onChange={(e) => {
-                  setGoalId(e.target.value);
-                  setActiveScenarioId(null);
-                }}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-navy-600 focus:bg-white focus:outline-none"
-              >
-                {goals.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                <span>Horizon: {String(definedGoal?.duration_years ?? "—")} yrs</span>
-                <span>•</span>
-                <span>Target Year: {String(definedGoal?.target_year ?? "—")}</span>
-                <span>•</span>
-                <span>Status: <strong className="text-slate-700">{String(definedGoal?.funding_status ?? "Active")}</strong></span>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Goal</p>
+              <p className="mt-2 text-lg font-extrabold text-slate-900">{String(definedGoal?.goal_name ?? goalId)}</p>
+              <p className="mt-1 text-xs text-slate-500">Goal Version {run?.defined_goal_version ?? (urlGoalVersion || "—")}</p>
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-                2. Selected Strategy Path
-              </label>
-              {run?.applicable_strategies && run.applicable_strategies.length > 0 ? (
-                <select
-                  value={strategyId}
-                  onChange={(e) => {
-                    setStrategyId(e.target.value);
-                    setActiveScenarioId(null);
-                  }}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-navy-600 focus:bg-white focus:outline-none"
-                >
-                  {run.applicable_strategies.map((item) => (
-                    <option key={item.strategy_id} value={item.strategy_id}>
-                      {item.name} {item.strategy_id === run.recommendation?.recommended_strategy_id ? "(Recommended)" : ""}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                  No strategies generated yet.
-                </div>
-              )}
-              {strategy && (
-                <p className="mt-2 text-xs text-slate-600 line-clamp-2">
-                  <span className="font-semibold text-slate-800">Objective:</span> {strategy.strategic_objective || strategy.tagline || strategy.description}
-                </p>
-              )}
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Selected Strategy</p>
+              <p className="mt-2 text-lg font-extrabold text-slate-900">{strategy?.name ?? strategyId}</p>
+              <p className="mt-1 text-xs text-slate-500">Strategy Run v{run?.run_version ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Architecture</p>
+              <p className="mt-2 break-all text-sm font-semibold text-slate-800">{urlArchitectureId ?? "—"}</p>
             </div>
           </div>
         </section>
@@ -992,40 +942,65 @@ function StrategyScenariosContent() {
               </div>
             </section>
 
-            {/* PILLAR 4: FINAL INVESTOR DECISION & ACTION PLAN LOCK */}
+            {/* PILLAR 4: FINALIZE IMPLEMENTATION */}
             <section className="rounded-3xl border-2 border-navy-900 bg-linear-to-r from-navy-950 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div className="space-y-2 max-w-2xl">
                   <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/30">
-                    <span>Pillar 4</span> · <span>The Investor Decides</span>
+                    <span>Pillar 4</span> · <span>Finalize Implementation</span>
                   </div>
                   <h3 className="text-2xl font-black tracking-tight text-white">
-                    Lock This Decision & Proceed to Action Plan
+                    Finalize Your Implementation
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    By locking this decision, Planvesto commits this scenario ({activeScenario?.scenario_name}) as your
-                    authoritative strategy execution baseline. Your action items, SIP schedules, asset allocations, and
-                    annual step-up triggers will be generated in Report.
+                    When you finalize, Planvesto creates the immutable Strategy Version containing the selected strategy and finalized implementation context. Report and Action Plan then use that Strategy Version as their single source of truth.
                   </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (activeScenario) void handleLockDecision(activeScenario);
-                    }}
+                    onClick={() => void handleLockDecision()}
                     disabled={locking || !activeScenario}
                     className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-sm font-black text-slate-950 shadow-lg hover:bg-emerald-400 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    {locking ? "Locking Decision…" : "Lock This Decision & Proceed →"}
+                    {locking ? "Finalizing Implementation…" : "Finalize Implementation →"}
                   </button>
-                  <Link
-                    href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}${run.selected_strategy_version_id ? `&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}` : ""}`}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
-                  >
-                    View Goal Decision Report ↗
-                  </Link>
+                  {run.selected_strategy_version_id && (
+                    <>
+                      <Link
+                        href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        View Report ↗
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const blob = await downloadGoalStrategyReportPdfByStrategyVersion(getPlanningUnitId()!, run.selected_strategy_version_id!);
+                            const url = URL.createObjectURL(blob);
+                            const anchor = document.createElement("a");
+                            anchor.href = url;
+                            anchor.download = `goal-strategy-report-${run.selected_strategy_version_id}.pdf`;
+                            anchor.click();
+                            URL.revokeObjectURL(url);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Unable to download the report.");
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        Download Report ↓
+                      </button>
+                      <Link
+                        href={`/investor/action-plan?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        Action Plan →
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </section>

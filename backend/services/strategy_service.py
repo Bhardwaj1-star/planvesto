@@ -399,21 +399,192 @@ class StrategyService:
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
 
-    def select_strategy(self, request: StrategySelectRequest) -> StrategyRun:
+    def _validate_selection_context(self, request):
         run = self.strat_repo.get_run_by_id(request.planning_unit_id, request.strategy_run_id)
-        if not run: raise HTTPException(status_code=404, detail="Strategy run not found")
-        matched = next((s for s in run.applicable_strategies if s.strategy_id == request.selected_strategy_id), None)
-        if not matched: raise HTTPException(status_code=400, detail=f"Selected strategy '{request.selected_strategy_id}' does not exist in this strategy run's applicable strategies.")
-        scenario = next((s for s in run.scenarios if s.scenario_id == request.selected_scenario_id), None)
-        if not scenario: raise HTTPException(status_code=400, detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.")
-        if scenario.strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="Selected scenario does not match selected strategy.")
+        if not run:
+            raise HTTPException(status_code=404, detail="Strategy run not found")
+
+        matched = next(
+            (strategy for strategy in run.applicable_strategies if strategy.strategy_id == request.selected_strategy_id),
+            None,
+        )
+        if not matched:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Selected strategy '{request.selected_strategy_id}' does not exist in this strategy run's applicable strategies.",
+            )
+
+        scenario = next(
+            (item for item in run.scenarios if item.scenario_id == request.selected_scenario_id),
+            None,
+        )
+        if not scenario:
+            raise HTTPException(status_code=400, detail=f"Selected scenario '{request.selected_scenario_id}' does not exist in this strategy run.")
+        if scenario.strategy_id != request.selected_strategy_id:
+            raise HTTPException(status_code=400, detail="Selected scenario does not match selected strategy.")
+
         run = self._ensure_run_architectures(run)
-        architecture = next((a for a in run.architectures if a.architecture_id == request.selected_architecture_id), None) if request.selected_architecture_id else next((a for a in run.architectures if a.primary_strategy_id == request.selected_strategy_id), None)
-        if architecture is None or architecture.primary_strategy_id != request.selected_strategy_id: raise HTTPException(status_code=400, detail="A valid strategy architecture matching the selected strategy is required for selection.")
-        try: version = self.strategy_version_service.create_version(planning_unit_id=request.planning_unit_id, strategy_id=request.selected_strategy_id, parameters=request.selected_implementation_parameters, source="library", status="draft")
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from exc
-        self.strat_repo.update_selection(request.planning_unit_id, request.strategy_run_id, request.selected_strategy_id, request.selected_scenario_id, version.implementation_parameters, architecture, version.strategy_version_id, version.version)
-        run.selected_strategy_id = request.selected_strategy_id; run.selected_scenario_id = request.selected_scenario_id; run.selected_strategy_version_id = version.strategy_version_id; run.selected_strategy_version = version.version; run.selected_implementation_parameters = version.implementation_parameters; run.selected_architecture = architecture
+        architecture = (
+            next(
+                (item for item in run.architectures if item.architecture_id == request.selected_architecture_id),
+                None,
+            )
+            if request.selected_architecture_id
+            else next(
+                (item for item in run.architectures if item.primary_strategy_id == request.selected_strategy_id),
+                None,
+            )
+        )
+        if architecture is None or architecture.primary_strategy_id != request.selected_strategy_id:
+            raise HTTPException(
+                status_code=400,
+                detail="A valid strategy architecture matching the selected strategy is required.",
+            )
+        return run, matched, scenario, architecture
+
+    def select_strategy(self, request: StrategySelectRequest) -> StrategyRun:
+        """Validate a strategy choice without creating or persisting a StrategyVersion.
+
+        Strategy selection is a transient decision. The implementation workflow owns
+        persistence; StrategyVersion is created only when implementation is finalized.
+        """
+        run, _matched, _scenario, architecture = self._validate_selection_context(request)
+        run.selected_strategy_id = request.selected_strategy_id
+        run.selected_scenario_id = request.selected_scenario_id
+        run.selected_implementation_parameters = {}
+        run.selected_strategy_version_id = None
+        run.selected_strategy_version = None
+        run.selected_architecture = architecture
+        return run
+
+    def preview_implementation(self, request) -> StrategyRun:
+        """Evaluate implementation inputs without persisting a run or StrategyVersion."""
+        run, matched, scenario, architecture = self._validate_selection_context(request)
+
+        assumptions = dict(request.assumptions or {})
+        funding_structure = dict(request.funding_structure or {})
+        for name, value in (request.implementation_parameters or {}).items():
+            funding_structure[name] = value
+
+        defined_goal = self.goal_repo.get_defined_goal_by_version(
+            request.planning_unit_id, run.goal_id, run.defined_goal_version
+        )
+        if not defined_goal:
+            raise HTTPException(status_code=409, detail="Underlying DefinedGoal snapshot not found.")
+        custom_scenario = create_custom_scenario(
+            matched,
+            defined_goal,
+            "Implementation Preview",
+            assumptions,
+            funding_structure,
+        )
+
+        custom_scenarios = [
+            item for item in run.scenarios
+            if item.is_investor_modified and item.strategy_id == request.selected_strategy_id
+        ] + [custom_scenario]
+        financial_context = self._financial_context(request.planning_unit_id, defined_goal)
+        result, _rule_assessment, _constraint_set = self._execute(
+            defined_goal,
+            run.investor_priorities,
+            financial_context,
+            custom_scenarios,
+            planning_unit_id=request.planning_unit_id,
+        )
+        return StrategyRun(
+            **run.model_dump(
+                exclude={
+                    "applicable_strategies",
+                    "scenarios",
+                    "what_if_scenarios",
+                    "investor_priorities",
+                    "comparison_matrix",
+                    "rankings",
+                    "recommendation",
+                    "architectures",
+                }
+            ),
+            applicable_strategies=result.applicable_strategies,
+            scenarios=result.scenarios,
+            what_if_scenarios=result.what_if_scenarios,
+            investor_priorities=result.priorities,
+            comparison_matrix=result.comparison_matrix,
+            rankings=result.rankings,
+            recommendation=result.recommendation,
+            architectures=result.architectures,
+            selected_strategy_id=request.selected_strategy_id,
+            selected_scenario_id=custom_scenario.scenario_id,
+            selected_strategy_version_id=None,
+            selected_strategy_version=None,
+            selected_implementation_parameters=dict(request.implementation_parameters or {}),
+            selected_architecture=architecture,
+        )
+
+    def finalize_implementation(self, request) -> StrategyRun:
+        """Create the first StrategyVersion only after implementation is finalized."""
+        run, _matched, scenario, architecture = self._validate_selection_context(request)
+        if run.defined_goal_version != request.defined_goal_version:
+            raise HTTPException(
+                status_code=409,
+                detail="DefinedGoal version does not match the Strategy Run.",
+            )
+
+        defined_goal = self.goal_repo.get_defined_goal_by_version(
+            request.planning_unit_id, run.goal_id, request.defined_goal_version
+        )
+        if not defined_goal:
+            raise HTTPException(status_code=404, detail="Underlying DefinedGoal snapshot not found.")
+
+        parameters = dict(request.implementation_parameters or {})
+        funding_structure = dict(request.funding_structure or {})
+        for name, value in parameters.items():
+            funding_structure[name] = value
+
+        # The finalized implementation becomes the first persisted StrategyVersion.
+        # The reserved implementation context keeps Participate With Your Numbers
+        # inputs and the finalized what-if outcome inside the immutable snapshot
+        # without changing the database schema.
+        preview_scenario = create_custom_scenario(
+            _matched,
+            defined_goal,
+            "Final Implementation",
+            dict(request.assumptions or {}),
+            funding_structure,
+        )
+        parameters["__implementation_context__"] = {
+            "defined_goal_version": request.defined_goal_version,
+            "selected_scenario_id": request.selected_scenario_id,
+            "assumptions": dict(request.assumptions or {}),
+            "funding_structure": funding_structure,
+            "final_scenario": preview_scenario.model_dump(mode="json"),
+        }
+        try:
+            version = self.strategy_version_service.create_version(
+                planning_unit_id=request.planning_unit_id,
+                strategy_id=request.selected_strategy_id,
+                parameters=parameters,
+                source="library",
+                status="provisional",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        self.strat_repo.update_selection(
+            request.planning_unit_id,
+            request.strategy_run_id,
+            request.selected_strategy_id,
+            request.selected_scenario_id,
+            version.implementation_parameters,
+            architecture,
+            version.strategy_version_id,
+            version.version,
+        )
+        run.selected_strategy_id = request.selected_strategy_id
+        run.selected_scenario_id = request.selected_scenario_id
+        run.selected_strategy_version_id = version.strategy_version_id
+        run.selected_strategy_version = version.version
+        run.selected_implementation_parameters = version.implementation_parameters
+        run.selected_architecture = architecture
         return run
 
     def get_latest_run(self, planning_unit_id: str, goal_id: str) -> StrategyRun:

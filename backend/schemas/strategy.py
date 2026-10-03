@@ -40,6 +40,29 @@ class StrategySelectRequest(StrictRequestModel):
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
 
 
+class StrategyImplementationPreviewRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
+    selected_strategy_id: str = Field(min_length=1, max_length=100)
+    selected_scenario_id: str = Field(min_length=1, max_length=100)
+    selected_architecture_id: str | None = Field(default=None, min_length=1, max_length=100)
+    implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
+    assumptions: dict[str, Any] = Field(default_factory=dict, max_length=50)
+    funding_structure: dict[str, Any] = Field(default_factory=dict, max_length=50)
+
+
+class StrategyImplementationFinalizeRequest(StrictRequestModel):
+    planning_unit_id: str = Field(min_length=1, max_length=100)
+    strategy_run_id: str = Field(min_length=1, max_length=100)
+    defined_goal_version: int = Field(ge=1)
+    selected_strategy_id: str = Field(min_length=1, max_length=100)
+    selected_scenario_id: str = Field(min_length=1, max_length=100)
+    selected_architecture_id: str | None = Field(default=None, min_length=1, max_length=100)
+    implementation_parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
+    assumptions: dict[str, Any] = Field(default_factory=dict, max_length=50)
+    funding_structure: dict[str, Any] = Field(default_factory=dict, max_length=50)
+
+
 class GoalDecisionReport(StrictRequestModel):
     """Canonical typed contract for the Goal Decision Report."""
     model_config = {"extra": "ignore"}

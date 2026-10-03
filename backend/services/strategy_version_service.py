@@ -19,7 +19,8 @@ class StrategyVersionService:
         parent_parameters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         definitions = {param.name: param for param in strategy.implementation_parameters}
-        unknown = set(parameters) - set(definitions)
+        reserved = {"__implementation_context__"}
+        unknown = set(parameters) - set(definitions) - reserved
         if unknown:
             raise ValueError(f"Unknown implementation parameters: {sorted(unknown)}")
 
@@ -37,6 +38,9 @@ class StrategyVersionService:
 
             self._validate_value(definition, value)
             validated[name] = value
+
+        if "__implementation_context__" in parameters:
+            validated["__implementation_context__"] = parameters["__implementation_context__"]
 
         return validated
 

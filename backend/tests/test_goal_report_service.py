@@ -7,6 +7,7 @@ from models.strategy import (
     StrategyRun,
 )
 from services.goal_report_service import GoalReportService
+from models.strategy_version import StrategyVersion
 
 
 class Goal:
@@ -137,7 +138,15 @@ def test_report_source_is_selected_strategy_version(monkeypatch):
     run.strategy_run_id = "run-selected"
     run.selected_strategy_version_id = "sv-selected"
 
-    service.strategy_version_repo.get_by_id = lambda planning_unit_id, strategy_version_id: object()
+    service.strategy_version_repo.get_by_id = lambda planning_unit_id, strategy_version_id: StrategyVersion(
+        strategy_version_id=strategy_version_id,
+        planning_unit_id=planning_unit_id,
+        strategy_id="strat-goal-funding",
+        version=1,
+        library_version="1.0.0",
+        implementation_version="1.0.0",
+        implementation_parameters={},
+    )
     service.strategy_repo.get_run_by_strategy_version_id = lambda planning_unit_id, strategy_version_id: run
     service._load = lambda planning_unit_id, strategy_run_id: (run, Goal(), {})
 

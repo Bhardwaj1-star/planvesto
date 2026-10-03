@@ -2,7 +2,7 @@ from fastapi import APIRouter, Header, Query
 from fastapi.responses import Response
 from api.auth import authenticate_user, verify_goal_ownership, verify_planning_unit_ownership, verify_strategy_run_ownership, verify_strategy_version_ownership
 from models.strategy import StrategyRun
-from schemas.strategy import CustomScenarioRequest, FinancialPlanBuildRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
+from schemas.strategy import CustomScenarioRequest, FinancialPlanBuildRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategyImplementationFinalizeRequest, StrategyImplementationPreviewRequest, StrategySelectRequest
 from services.strategy_service import StrategyService
 from services.goal_report_service import GoalReportService
 from services.financial_plan_service import FinancialPlanService
@@ -58,6 +58,31 @@ def select_strategy(request: StrategySelectRequest, authorization: str | None = 
     user_id = authenticate_user(authorization)
     verify_strategy_run_ownership(request.planning_unit_id, request.strategy_run_id, user_id)
     return StrategyService().select_strategy(request)
+
+
+@router.post("/implementation/preview", response_model=StrategyRun)
+def preview_implementation(request: StrategyImplementationPreviewRequest, authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(request.planning_unit_id, request.strategy_run_id, user_id)
+    return StrategyService().preview_implementation(request)
+
+
+@router.post("/implementation/finalize", response_model=StrategyRun)
+def finalize_implementation(request: StrategyImplementationFinalizeRequest, authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(request.planning_unit_id, request.strategy_run_id, user_id)
+    return StrategyService().finalize_implementation(request)
+
+
+@router.get("/runs/by-id/{strategy_run_id}", response_model=StrategyRun)
+def get_run_by_id(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
+    run = StrategyService().strat_repo.get_run_by_id(planning_unit_id, strategy_run_id)
+    if not run:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Strategy run not found")
+    return run
 
 
 @router.get("/runs/{goal_id}/latest", response_model=StrategyRun)
