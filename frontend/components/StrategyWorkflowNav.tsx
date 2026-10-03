@@ -9,30 +9,31 @@ export default function StrategyWorkflowNav() {
   const pathname = usePathname();
   const [goalId, setGoalId] = useState<string | null>(null);
 
+  const [strategyVersionId, setStrategyVersionId] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setGoalId(new URLSearchParams(window.location.search).get("goalId"));
+      const params = new URLSearchParams(window.location.search);
+      setGoalId(params.get("goalId"));
+      setStrategyVersionId(params.get("strategyVersionId"));
     }
   }, []);
 
-  const querySuffix = goalId ? `?goalId=${encodeURIComponent(goalId)}` : "";
+  const querySuffix = (() => {
+    const params = new URLSearchParams();
+    if (goalId) params.set("goalId", goalId);
+    if (strategyVersionId) params.set("strategyVersionId", strategyVersionId);
+    const value = params.toString();
+    return value ? `?${value}` : "";
+  })();
   const isStrategyBuilder = Boolean(pathname?.startsWith("/investor/strategy-builder"));
 
   const steps = [
-    { id: "build", label: "Build", href: `/investor/strategy-builder${querySuffix}`, isActive: isStrategyBuilder },
+    { id: "build", label: "Build", href: `/investor/strategy-builder${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-builder")) },
     { id: "compare", label: "Participate With Numbers", href: `/investor/strategy-scenarios${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")) },
-    {
-      id: "report-action",
-      label: "Report & Action Plan",
-      href: `/investor/action-plan${querySuffix}`,
-      isActive: Boolean(
-        pathname?.startsWith("/investor/action-plan") ||
-        pathname?.startsWith("/investor/goal-report") ||
-        pathname?.startsWith("/investor/retirement-report") ||
-        pathname?.startsWith("/investor/financial-plan")
-      ),
-    },
-  ];
+    { id: "report", label: "Report", href: `/investor/goal-report${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/goal-report") || pathname?.startsWith("/investor/retirement-report")) },
+    { id: "action-plan", label: "Action Plan", href: `/investor/action-plan${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/action-plan")) },
+  ]
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
