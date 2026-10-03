@@ -74,6 +74,17 @@ def finalize_implementation(request: StrategyImplementationFinalizeRequest, auth
     return StrategyService().finalize_implementation(request)
 
 
+@router.get("/runs/by-id/{strategy_run_id}", response_model=StrategyRun)
+def get_run_by_id(strategy_run_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_run_ownership(planning_unit_id, strategy_run_id, user_id)
+    run = StrategyService().strat_repo.get_run_by_id(planning_unit_id, strategy_run_id)
+    if not run:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Strategy run not found")
+    return run
+
+
 @router.get("/runs/{goal_id}/latest", response_model=StrategyRun)
 def get_latest_run(goal_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
