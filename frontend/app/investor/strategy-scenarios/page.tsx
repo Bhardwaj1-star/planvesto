@@ -375,9 +375,9 @@ function StrategyScenariosContent() {
   return (
     <main className="min-h-screen bg-[#f6f8fb] pb-20 text-slate-900">
       <InvestorHeader
-        eyebrow="Step 2: Interactive Decision Workspace"
-        title="Participate With Your Numbers"
-        description="Interact directly with the strategy using your own financial numbers. Explore parameter changes, observe cause-and-effect trade-offs, and lock your informed decision."
+        eyebrow="Plan Your Implementation"
+        title="Plan Your Implementation"
+        description="Configure the selected strategy with your implementation parameters and numbers. Explore what-if outcomes before finalizing the implementation."
       />
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
@@ -942,20 +942,18 @@ function StrategyScenariosContent() {
               </div>
             </section>
 
-            {/* PILLAR 4: FINAL INVESTOR DECISION & ACTION PLAN LOCK */}
+            {/* PILLAR 4: FINALIZE IMPLEMENTATION */}
             <section className="rounded-3xl border-2 border-navy-900 bg-linear-to-r from-navy-950 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div className="space-y-2 max-w-2xl">
                   <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/30">
-                    <span>Pillar 4</span> · <span>The Investor Decides</span>
+                    <span>Pillar 4</span> · <span>Finalize Implementation</span>
                   </div>
                   <h3 className="text-2xl font-black tracking-tight text-white">
-                    Lock This Decision & Proceed to Action Plan
+                    Finalize Your Implementation
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    By locking this decision, Planvesto commits this scenario ({activeScenario?.scenario_name}) as your
-                    authoritative strategy execution baseline. Your action items, SIP schedules, asset allocations, and
-                    annual step-up triggers will be generated in Report.
+                    When you finalize, Planvesto creates the immutable Strategy Version containing the selected strategy and finalized implementation context. Report and Action Plan then use that Strategy Version as their single source of truth.
                   </p>
                 </div>
 
