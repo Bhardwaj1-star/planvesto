@@ -20,20 +20,26 @@ def _years(name: str, label: str, default: int, minimum: int = 1, maximum: int =
 BASE = dict(library_version="2.0", implementation_version="2.0")
 
 GOAL_TYPES = [
-    "Retirement",
-    "Financial Freedom / Passive Income",
-    "Education",
-    "Marriage",
-    "Dream Home",
-    "Vehicle",
-    "Vacation",
-    "Wealth Creation",
-    "Debt Repayment",
-    "Philanthropy",
-    "Others",
+    "emergency_fund",
+    "debt_freedom",
+    "education",
+    "marriage",
+    "home",
+    "home_improvement",
+    "vehicle",
+    "travel",
+    "retirement",
+    "financial_independence",
+    "family_care",
+    "healthcare",
+    "business",
+    "lifestyle",
+    "wealth_creation",
+    "legacy_giving",
+    "other",
 ]
 
-CORPUS_GOAL_TYPES = [g for g in GOAL_TYPES if g != "Debt Repayment"]
+CORPUS_GOAL_TYPES = [g for g in GOAL_TYPES if g not in {"emergency_fund", "debt_freedom"}]
 
 CANONICAL_STRATEGIES: list[StrategyDefinition] = [
     StrategyDefinition(
