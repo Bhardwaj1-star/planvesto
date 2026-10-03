@@ -132,13 +132,7 @@ class TestStrategyRunLifecycle:
         assert {architecture.primary_strategy_id for architecture in persisted_architectures} == linked_strategy_ids
 
         service.strat_repo.get_run_by_id.return_value = restored
-        service.strategy_version_service.create_version = MagicMock(
-            return_value=MagicMock(
-                strategy_version_id="strategy-version-education",
-                version=1,
-                implementation_parameters={},
-            )
-        )
+        service.strategy_version_service.create_version = MagicMock()
         selected = service.select_strategy(StrategySelectRequest(
             planning_unit_id="pu-test-run",
             strategy_run_id="run-education-legacy",
@@ -147,7 +141,10 @@ class TestStrategyRunLifecycle:
             selected_architecture_id=restored.selected_architecture.architecture_id,
         ))
         assert selected.selected_architecture.primary_strategy_id == selected_strategy_id
-        repo.update_selection.assert_called_once()
+        assert selected.selected_strategy_version_id is None
+        assert selected.selected_strategy_version is None
+        service.strategy_version_service.create_version.assert_not_called()
+        repo.update_selection.assert_not_called()
 
         row = {
             "strategy_run_id": selected.strategy_run_id,
