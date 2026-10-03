@@ -53,7 +53,7 @@ function StrategyComparisonContent() {
         description="Understand how the recommended strategy differs from the alternative, and why the decision engine produced these two paths."
       />
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav showWorkflow={false} />
+        <StrategyWorkflowNav />
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
         {!comparison ? (
           <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
