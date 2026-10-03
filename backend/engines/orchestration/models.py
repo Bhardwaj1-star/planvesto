@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
-from rules.goals import canonical_goal_priority
-
-GoalPriorityLevel = Literal["critical", "high", "medium", "low"]
-FundingStatusType = Literal["fully_funded", "partially_funded", "unfunded", "within_surplus", "surplus_shortfall", "requires_review"]
-FeasibilityStatusType = Literal["feasible", "constrained", "infeasible"]
+from rules.goals import GoalPriority, canonical_goal_priority
+from rules.multi_goal import FundingStatusType, FeasibilityStatusType
 
 
 class GoalEvaluationInput(BaseModel):
     goal_id: str
     goal_name: str
     goal_type: str = "general"
-    client_priority: GoalPriorityLevel = "medium"
+    client_priority: GoalPriority = "medium"
     target_date: str | None = None
     target_year: int | None = None
     target_month: int | None = None
