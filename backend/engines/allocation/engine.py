@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from rules.constraints import PRIORITY_RANKS
+from rules.multi_goal import get_priority_rank
 from rules.goals import GoalPriority
 from engines.allocation.models import (
     ConsolidatedAllocationResult,
@@ -12,11 +12,9 @@ from engines.allocation.models import (
 class ResourceAllocationEngine:
     """Allocates shared financial resources across goals after single-goal strategies and constraints have been evaluated."""
 
-    PRIORITY_RANKS = PRIORITY_RANKS
-
     @classmethod
     def priority_rank(cls, priority: str | None) -> int:
-        return cls.PRIORITY_RANKS.get(str(priority or "").lower(), 4)
+        return get_priority_rank(priority)
 
     def allocate(
         self,

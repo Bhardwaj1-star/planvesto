@@ -6,7 +6,7 @@ from services.financial_plan_service import FinancialPlanService
 def test_priority_rank_orders_known_priorities():
     service = FinancialPlanService.__new__(FinancialPlanService)
     assert service._priority_rank("critical") < service._priority_rank("high") < service._priority_rank("medium") < service._priority_rank("low")
-    assert service._priority_rank("unknown") > service._priority_rank("low")
+    assert service._priority_rank("unknown") == service._priority_rank("medium")
 
 
 def test_goal_row_uses_recommendation_when_strategy_not_selected():

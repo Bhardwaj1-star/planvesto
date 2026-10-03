@@ -110,7 +110,7 @@ def test_canonical_goal_report_service_works_for_non_retirement_goal():
         planning_unit_id="pu-edu-1",
         goal_id="goal-edu-1",
         goal_name="Child College Education",
-        goal_type="Child Education",
+        goal_type="education",
         today_cost=2000000.0,
         target_month=6,
         target_year=2035,

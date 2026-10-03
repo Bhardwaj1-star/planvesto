@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 from engines.allocation.engine import ResourceAllocationEngine
-from rules.constraints import PRIORITY_RANKS
+from rules.multi_goal import get_priority_rank
 from rules.goals import GoalPriority
 from engines.orchestration.models import (
     GoalEvaluationInput,
@@ -14,14 +14,12 @@ from engines.orchestration.models import (
 class MultiGoalOrchestrator:
     """Coordinates multiple goals competing for shared resources without replacing single-goal StrategyEngine."""
 
-    PRIORITY_RANKS = PRIORITY_RANKS
-
     def __init__(self, allocation_engine: ResourceAllocationEngine | None = None):
         self.allocation_engine = allocation_engine or ResourceAllocationEngine()
 
     @classmethod
     def priority_rank(cls, priority: str | None) -> int:
-        return cls.PRIORITY_RANKS.get(str(priority or "").lower(), 4)
+        return get_priority_rank(priority)
 
     def resolve_goal_priority(
         self,
