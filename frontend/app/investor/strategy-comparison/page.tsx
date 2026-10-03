@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import InvestorHeader from "../../../components/InvestorHeader";
@@ -8,7 +8,7 @@ import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { getPlanningUnitId, getStrategyRunById, type StrategyRun } from "../../../lib/api/strategy";
 
-export default function StrategyComparisonPage() {
+function StrategyComparisonContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [run, setRun] = useState<StrategyRun | null>(null);
@@ -118,5 +118,23 @@ export default function StrategyComparisonPage() {
         )}
       </div>
     </main>
+  );
+}
+
+
+export default function StrategyComparisonPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10">
+          <div className="mx-auto max-w-6xl space-y-6">
+            <div className="h-10 w-80 animate-pulse rounded-xl bg-slate-200" />
+            <div className="h-96 animate-pulse rounded-3xl bg-white" />
+          </div>
+        </main>
+      }
+    >
+      <StrategyComparisonContent />
+    </Suspense>
   );
 }
