@@ -99,7 +99,7 @@ export default function ActionPlanPage() {
       >
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={`/investor/goal-report?strategyVersionId=${encodeURIComponent(strategyVersionId)}`}
+            href="/investor/reports"
             className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm"
           >
             View Report

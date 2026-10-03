@@ -381,7 +381,7 @@ function StrategyScenariosContent() {
       />
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav showWorkflow={false} />
+        <StrategyWorkflowNav />
 
         {/* Core Product Principle Banner */}
         <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
@@ -408,7 +408,7 @@ function StrategyScenariosContent() {
             {run?.selected_strategy_version_id && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
-                  href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                  href="/investor/reports"
                   className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
                 >
                   View Report ↗
