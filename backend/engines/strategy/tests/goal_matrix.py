@@ -27,6 +27,6 @@ GOAL_CASES = (
 def expected_goal_aliases() -> dict[str, str]:
     return {
         "retirement": "retirement",
-        "education": "child education",
-        "home": "home purchase",
+        "education": "education",
+        "home": "home",
     }
