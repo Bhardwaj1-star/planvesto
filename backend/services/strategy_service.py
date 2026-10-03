@@ -80,6 +80,7 @@ class StrategyService:
             "liquid_assets": liquid_assets,
             "assets": assets,
             "liabilities": liabilities,
+            "total_liabilities": liabilities,
             "net_worth": net_worth,
             "retirement_assets": getattr(defined_goal, "projected_mapped_asset_value", 0.0),
         })
