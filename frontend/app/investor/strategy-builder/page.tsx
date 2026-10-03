@@ -148,8 +148,8 @@ export default function InvestorStrategyBuilderPage() {
       setParameters(next.selected_implementation_parameters ?? {});
       const planningUnitId = getPlanningUnitId();
       if (planningUnitId && selectedGoalId) setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
+      if (successMessage) setSuccessMessage(successMessage);
     } catch (err) { setError(err instanceof Error ? err.message : "Strategy operation failed."); }
-    if (successMessage) setSuccessMessage(successMessage);
     finally { setWorking(false); }
   };
 
