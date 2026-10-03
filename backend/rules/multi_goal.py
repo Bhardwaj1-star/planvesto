@@ -1,8 +1,15 @@
 """Authoritative multi-goal allocation, trade-off, and priority hierarchy rules."""
 from __future__ import annotations
 
-from typing import Any
-from rules.goals import is_discretionary_goal, is_essential_goal
+from typing import Any, Literal
+from rules.goals import GoalPriority, is_discretionary_goal, is_essential_goal
+
+# Canonical multi-goal status vocabularies. Allocation and orchestration share these.
+FundingStatusType = Literal[
+    "fully_funded", "partially_funded", "unfunded",
+    "within_surplus", "surplus_shortfall", "requires_review",
+]
+FeasibilityStatusType = Literal["feasible", "constrained", "infeasible"]
 
 # Priority Ranks: lower number = higher priority
 PRIORITY_RANK_MAP: dict[str, int] = {
