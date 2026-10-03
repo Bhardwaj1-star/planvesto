@@ -8,6 +8,26 @@ class StrategyRepository:
     def __init__(self):
         self.db = get_supabase()
 
+    def get_selected_strategy_version_id(self, planning_unit_id: str, goal_id: str) -> str | None:
+        """Return the latest explicitly selected StrategyVersion for a goal.
+
+        This is intentionally independent of is_latest/run history semantics: the
+        selected StrategyVersion is the report source of truth.
+        """
+        res = (
+            self.db.table("strategy_runs")
+            .select("selected_strategy_version_id")
+            .eq("planning_unit_id", planning_unit_id)
+            .eq("goal_id", goal_id)
+            .not_.is_("selected_strategy_version_id", "null")
+            .order("run_version", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if not res.data:
+            return None
+        return res.data[0].get("selected_strategy_version_id")
+
     def get_latest_run(self, planning_unit_id: str, goal_id: str) -> StrategyRun | None:
         res = self.db.table("strategy_runs").select("*").eq("planning_unit_id", planning_unit_id).eq("goal_id", goal_id).eq("is_latest", True).maybe_single().execute()
         return self._hydrate_run(res.data) if res and res.data else None
