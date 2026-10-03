@@ -67,13 +67,13 @@ def test_goal_engine_projects_mapped_asset_into_funding_gap():
     assert goal.funding_return_assumption == 0.08
 
 
-def test_goal_engine_keeps_passive_income_distinct_from_retirement():
+def test_goal_engine_keeps_financial_independence_distinct_from_retirement():
     goal = GoalEngine().calculate_defined_goal(
         _input("Financial Freedom / Passive Income"),
         {},
     )
     assert goal.goal_type == "financial_independence"
-    assert goal.goal_name == "Financial Freedom / Passive Income"
+    assert goal.goal_name == "Financial Independence"
     assert goal.version_metadata["funding_model"] == "target_gap_plus_monthly_contribution"
 
 
