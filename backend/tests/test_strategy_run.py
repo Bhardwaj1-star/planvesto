@@ -481,6 +481,8 @@ class TestStrategyConstraintGating:
             )
         ])
 
+        service.engine.execute = MagicMock()
+
         with pytest.raises(HTTPException) as exc_info:
             service._execute(
                 _dummy_defined_goal(),
@@ -490,5 +492,4 @@ class TestStrategyConstraintGating:
             )
 
         assert exc_info.value.status_code == 422
-        service.engine.execute = MagicMock()
         service.engine.execute.assert_not_called()
