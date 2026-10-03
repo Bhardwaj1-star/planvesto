@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorStatus } from "../../../components/InvestorUI";
 import { getPlanningUnitId, getGoalStrategyReportByStrategyVersion, downloadGoalStrategyReportPdfByStrategyVersion, type GoalStrategyReport } from "../../../lib/api/strategy";
@@ -92,7 +91,6 @@ export default function GoalReportPage() {
         </div>
       </InvestorHeader>
       <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-10">
-        <StrategyWorkflowNav />
 
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
 
