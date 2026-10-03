@@ -8,10 +8,10 @@ import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import {
-  addCustomScenario,
-  getLatestStrategyRun,
+  finalizeImplementation,
   getPlanningUnitId,
-  selectStrategy,
+  getStrategyRunById,
+  previewImplementation,
   type Scenario,
   type StrategyImplementationParamDef,
   type StrategyRun,
@@ -70,6 +70,10 @@ function StrategyScenariosContent() {
   const router = useRouter();
   const urlGoalId = searchParams.get("goalId");
   const urlStrategyId = searchParams.get("strategyId");
+  const urlStrategyRunId = searchParams.get("strategyRunId");
+  const urlScenarioId = searchParams.get("scenarioId");
+  const urlArchitectureId = searchParams.get("architectureId");
+  const urlGoalVersion = Number(searchParams.get("goalVersion") || "0");
 
   const [goals, setGoals] = useState<Array<{ id: string; name: string; targetAmount?: string }>>([]);
   const [goalId, setGoalId] = useState<string>("");
@@ -126,11 +130,13 @@ function StrategyScenariosContent() {
     };
   }, [urlGoalId]);
 
-  // 2. Load Defined Goal and Latest Strategy Run when goalId changes
+  // 2. Load the exact Strategy Run selected in Strategy Builder.
+  // Latest-run state is never used to establish implementation context.
   useEffect(() => {
-    if (!goalId) {
+    if (!urlGoalId || !urlStrategyRunId || !urlStrategyId) {
       setRun(null);
       setDefinedGoal(null);
+      setError("Implementation context is missing. Return to Strategy Builder and select a strategy.");
       return;
     }
     let active = true;
@@ -140,38 +146,36 @@ function StrategyScenariosContent() {
       try {
         const pu = getPlanningUnitId();
         if (!pu) throw new Error("Planning unit is not available.");
+        const dg = await getLatestDefinedGoal(pu, urlGoalId);
+        const selectedRun = await getStrategyRunById(pu, urlStrategyRunId);
+        if (!active) return;
 
-        // Load DefinedGoal for surplus limit and today's cost
-        try {
-          const dg = await getLatestDefinedGoal(pu, goalId);
-          if (active) setDefinedGoal(dg);
-        } catch {
-          if (active) setDefinedGoal(null);
+        if (urlGoalVersion && selectedRun.defined_goal_version !== urlGoalVersion) {
+          throw new Error("The selected goal version no longer matches this Strategy Run.");
+        }
+        const selectedScenarioId = urlScenarioId || selectedRun.scenarios.find((item) => item.strategy_id === urlStrategyId && item.scenario_type === "baseline")?.scenario_id || "";
+        if (!selectedRun.applicable_strategies.some((item) => item.strategy_id === urlStrategyId)) {
+          throw new Error("The selected strategy is not available in this Strategy Run.");
         }
 
-        // Load latest Strategy Run
-        const latest = await getLatestStrategyRun(pu, goalId);
-        if (active) {
-          setRun(latest);
-          const initialStratId =
-            (urlStrategyId && latest.applicable_strategies.some((s) => s.strategy_id === urlStrategyId) && urlStrategyId) ||
-            latest.selected_strategy_id ||
-            latest.recommendation.recommended_strategy_id ||
-            latest.applicable_strategies[0]?.strategy_id ||
-            "";
-          setStrategyId(initialStratId);
-        }
+        setGoalId(urlGoalId);
+        setDefinedGoal(dg);
+        setRun(selectedRun);
+        setStrategyId(urlStrategyId);
+        setActiveScenarioId(selectedScenarioId);
       } catch (err) {
         if (active) {
           setRun(null);
-          setError(err instanceof Error ? err.message : "No Strategy Run found for this goal. Please run Strategy Builder first.");
+          setError(err instanceof Error ? err.message : "Unable to load the selected implementation context.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     })();
     return () => {
       active = false;
     };
-  }, [goalId, urlStrategyId]);
+  }, [urlGoalId, urlStrategyId, urlStrategyRunId, urlScenarioId, urlGoalVersion]);
 
   // Strategy object
   const strategy = useMemo(
@@ -246,11 +250,9 @@ function StrategyScenariosContent() {
   // Handle Recalculation
   async function handleRecalculate() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId) {
-      return setError("A valid Strategy Run and selected strategy are required.");
+    if (!pu || !run?.strategy_run_id || !strategyId || !selectedScenarioId) {
+      return setError("The selected Strategy Run, strategy, and scenario are required.");
     }
-
-    const currentName = scenarioName.trim() || `Custom ₹${Math.round(inputMonthly).toLocaleString("en-IN")}/mo`;
 
     const assumptions: Record<string, unknown> = {};
     if (inflationPct.trim()) {
@@ -292,58 +294,82 @@ function StrategyScenariosContent() {
     setSuccess(null);
 
     try {
-      const updatedRun = await addCustomScenario(
+      const updatedRun = await previewImplementation(
         pu,
         run.strategy_run_id,
         strategyId,
-        currentName,
+        selectedScenarioId,
+        Object.fromEntries(
+          editableParameters.map((param) => {
+            const raw = strategyParams[param.name];
+            return [param.name, param.param_type === "choice" ? raw : Number(raw)];
+          }),
+        ),
         assumptions,
         fundingStructure,
+        urlArchitectureId || undefined,
       );
       setRun(updatedRun);
-
-      // Focus on the newly added scenario
       const newlyAdded = updatedRun.scenarios
         .filter((s) => s.strategy_id === strategyId && s.is_investor_modified)
         .slice(-1)[0];
-      if (newlyAdded) {
-        setActiveScenarioId(newlyAdded.scenario_id);
-      }
-
-      setSuccess("Recalculation complete. Outcomes, probability bands, and trade-offs updated.");
+      if (newlyAdded) setActiveScenarioId(newlyAdded.scenario_id);
+      setSuccess("What-if analysis recalculated. Nothing has been saved yet.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to calculate scenario.");
+      setError(err instanceof Error ? err.message : "Failed to calculate implementation preview.");
     } finally {
       setWorking(false);
     }
   }
 
   // Handle Decision Lock & Navigation to Action Plan
-  async function handleLockDecision(scenarioToLock: Scenario) {
+  async function handleLockDecision() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId) {
-      return setError("Missing Strategy Run or Strategy Selection.");
+    if (!pu || !run?.strategy_run_id || !strategyId || !selectedScenarioId) {
+      return setError("Missing implementation context.");
     }
+
+    const implementationParameters: Record<string, unknown> = Object.fromEntries(
+      editableParameters.map((param) => {
+        const raw = strategyParams[param.name];
+        return [param.name, param.param_type === "choice" ? raw : Number(raw)];
+      }),
+    );
+    const assumptions: Record<string, unknown> = {};
+    if (inflationPct.trim()) assumptions.inflation_rate = Number(inflationPct) / 100;
+    if (durationYears.trim()) assumptions.duration_years = Number(durationYears);
+
+    const fundingStructure: Record<string, unknown> = {
+      starting_monthly_contribution: inputMonthly,
+      annual_step_up_pct: Number(annualStepUpPct) || 0,
+      lumpsum: Number(lumpsum) || 0,
+    };
 
     setLocking(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const updatedRun = await selectStrategy(
+      const finalizedRun = await finalizeImplementation(
         pu,
         run.strategy_run_id,
+        run.defined_goal_version,
         strategyId,
-        scenarioToLock.scenario_id,
-        scenarioToLock.funding_structure ?? {},
+        selectedScenarioId,
+        implementationParameters,
+        assumptions,
+        fundingStructure,
+        urlArchitectureId || undefined,
       );
-      setRun(updatedRun);
-      setSuccess("Decision successfully locked! Redirecting to your Action Plan…");
+      setRun(finalizedRun);
+      const versionId = finalizedRun.selected_strategy_version_id;
+      if (!versionId) throw new Error("Implementation finalized but no Strategy Version was created.");
+      setSuccess("Implementation finalized. Your Strategy Version is now the source of truth.");
       setTimeout(() => {
-        router.push(`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(updatedRun.selected_strategy_version_id ?? "")}`);
-      }, 900);
+        router.push(`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(versionId)}`);
+      }, 700);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to lock decision.");
+      setError(err instanceof Error ? err.message : "Unable to finalize implementation.");
       setLocking(false);
     }
   }
@@ -388,7 +414,7 @@ function StrategyScenariosContent() {
       />
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav />
+        <StrategyWorkflowNav showWorkflow={false} />
 
         {/* Core Product Principle Banner */}
         <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
