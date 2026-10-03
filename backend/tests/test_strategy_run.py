@@ -40,6 +40,30 @@ def _dummy_defined_goal(version=1, target=1000000.0):
     )
 
 
+class TestStrategyFinancialContext:
+    @patch("services.strategy_service.StrategyRepository")
+    def test_financial_context_normalizes_total_liabilities(self, MockStratRepo):
+        service = StrategyService()
+        service.financial_state_repo.get_latest = MagicMock(return_value={
+            "financial_state": {
+                "total_liabilities": {"value": 125000.0},
+                "income_annual": {"value": 1200000.0},
+                "expenses_annual": {"value": 600000.0},
+                "investable_surplus_monthly": {"value": 50000.0},
+                "total_assets": {"value": 2500000.0},
+                "net_worth": {"value": 2375000.0},
+            }
+        })
+        service.goal_repo.get_planning_unit_assets = MagicMock(return_value=[])
+
+        with patch("services.strategy_service.FinancialDataRepository") as mock_data_repo:
+            mock_data_repo.return_value.get_active_asset_types.return_value = []
+            context = service._financial_context("pu-test-run", _dummy_defined_goal())
+
+        assert context["liabilities"] == 125000.0
+        assert context["total_liabilities"] == 125000.0
+
+
 class TestStrategyRunLifecycle:
     @patch("services.strategy_service.StrategyRepository")
     def test_fresh_education_run_has_architecture_for_every_ranking(self, MockStratRepo):
