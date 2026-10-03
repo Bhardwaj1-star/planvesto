@@ -103,6 +103,11 @@ class RuleAssessment:
 class StrategyRuleEngine:
     """Evaluates library-level strategy rules without ranking or architecture decisions."""
 
+    @staticmethod
+    def canonical_goal_type(value: str | None) -> str:
+        """Backward-compatible facade over the canonical goal rule."""
+        return canonical_goal_type(value)
+
     def evaluate(
         self,
         strategy: StrategyDefinition,
