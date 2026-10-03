@@ -6,12 +6,10 @@ import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorStatus } from "../../../components/InvestorUI";
 import {
   getPlanningUnitId,
-  getLatestStrategyRun,
-  downloadGoalStrategyReportPdf,
+  getSelectedStrategyVersion,
+  downloadGoalStrategyReportPdfByStrategyVersion,
   downloadCompleteFinancialPlanPdf,
-  downloadRetirementReportPdf,
   downloadBasketReportPdf,
-  type StrategyRun,
 } from "../../../lib/api/strategy";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 
@@ -25,7 +23,7 @@ export default function ReportsPage() {
   const [customBasketGoalIds, setCustomBasketGoalIds] = useState<string[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
   const [selectedReport, setSelectedReport] = useState("complete-financial-plan");
-  const [runs, setRuns] = useState<Record<string, StrategyRun | null>>({});
+  const [selectedVersions, setSelectedVersions] = useState<Record<string, { strategy_version_id: string; strategy_id: string; version: number } | null>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,23 +63,23 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedGoalId || runs[selectedGoalId] !== undefined) return;
+    if (!selectedGoalId || selectedVersions[selectedGoalId] !== undefined) return;
     let active = true;
     (async () => {
       try {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) return;
-        const run = await getLatestStrategyRun(planningUnitId, selectedGoalId);
-        if (active) setRuns((current) => ({ ...current, [selectedGoalId]: run }));
+        const version = await getSelectedStrategyVersion(planningUnitId, selectedGoalId);
+        if (active) setSelectedVersions((current) => ({ ...current, [selectedGoalId]: version }));
       } catch {
-        if (active) setRuns((current) => ({ ...current, [selectedGoalId]: null }));
+        if (active) setSelectedVersions((current) => ({ ...current, [selectedGoalId]: null }));
       }
     })();
     return () => { active = false; };
-  }, [selectedGoalId, runs]);
+  }, [selectedGoalId, selectedVersions]);
 
   const selectedGoal = useMemo(() => goals.find((goal) => goal.id === selectedGoalId), [goals, selectedGoalId]);
-  const selectedRun = selectedGoalId ? runs[selectedGoalId] : null;
+  const selectedVersion = selectedGoalId ? selectedVersions[selectedGoalId] : null;
   const options = [
     {
       id: "complete-financial-plan",
@@ -101,8 +99,8 @@ export default function ReportsPage() {
       id: "goal-strategy-report",
       title: "Individual Goal Report",
       description: "Complete strategy, calculation, feasibility and funding report for any selected goal (Retirement, Education, Home, etc.).",
-      available: Boolean(selectedRun?.strategy_run_id),
-      reason: "Build a Strategy Run for this goal first.",
+      available: Boolean(selectedVersion?.strategy_version_id),
+      reason: "Finalize the implementation for this goal first.",
     },
   ];
 
@@ -126,13 +124,10 @@ export default function ReportsPage() {
         blob = await downloadBasketReportPdf(planningUnitId, goalIds, basket?.name || "Goal Basket Planning Report");
         filename = "goal-basket-report.pdf";
       } else {
-        if (!selectedRun?.strategy_run_id) throw new Error("No completed Strategy Run is available for this goal.");
+        if (!selectedVersion?.strategy_version_id) throw new Error("No finalized Strategy Version is available for this goal.");
         if (selectedReport === "goal-strategy-report") {
-          blob = await downloadGoalStrategyReportPdf(planningUnitId, selectedRun.strategy_run_id);
+          blob = await downloadGoalStrategyReportPdfByStrategyVersion(planningUnitId, selectedVersion.strategy_version_id);
           filename = "goal-report-" + (selectedGoal?.name || selectedGoalId).replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".pdf";
-        } else {
-          blob = await downloadRetirementReportPdf(planningUnitId, selectedRun.strategy_run_id);
-          filename = "retirement-planning-report.pdf";
         }
       }
 
@@ -239,10 +234,10 @@ export default function ReportsPage() {
           </section>
         )}
 
-        {selectedReport !== "complete-financial-plan" && selectedReport !== "basket-goal-report" && !selectedRun?.strategy_run_id && (
+        {selectedReport !== "complete-financial-plan" && selectedReport !== "basket-goal-report" && !selectedVersion?.strategy_version_id && (
           <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <h3 className="font-bold">Report is not available yet</h3>
-            <p className="mt-2 text-sm text-slate-500">Build the Strategy Run for the selected goal first.</p>
+            <p className="mt-2 text-sm text-slate-500">Finalize the implementation for the selected goal first.</p>
             {selectedGoalId && <Link href={"/investor/strategy-builder?goalId=" + encodeURIComponent(selectedGoalId)} className="mt-5 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white">Open Strategy Builder</Link>}
           </section>
         )}
