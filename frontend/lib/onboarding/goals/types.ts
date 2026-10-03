@@ -63,6 +63,10 @@ export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | 
   const clean = String(value ?? "").trim();
   return canonicalGoalTypeByLabel[clean] ?? clean.toLowerCase().replace(/\\s+/g, "_");
 }
+
+export const goalTypeLabelByCanonical = Object.fromEntries(
+  Object.entries(canonicalGoalTypeByLabel).map(([label, value]) => [value, label]),
+) as Record<CanonicalGoalType, string>;
 export const goalPriorities = ["Critical", "Important", "Aspirational"] as const;
 export const goalFlexibilities = ["Fixed", "Flexible"] as const;
 export const targetModes = ["Date", "Age"] as const;
