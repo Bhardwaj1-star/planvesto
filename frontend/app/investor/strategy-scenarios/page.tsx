@@ -381,7 +381,7 @@ function StrategyScenariosContent() {
       />
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav showWorkflow={false} />
+        <StrategyWorkflowNav />
 
         {/* Core Product Principle Banner */}
         <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
