@@ -12,6 +12,7 @@ import {
   getPlanningUnitId,
   getStrategyRunById,
   previewImplementation,
+  downloadGoalStrategyReportPdfByStrategyVersion,
   type Scenario,
   type StrategyImplementationParamDef,
   type StrategyRun,
@@ -365,9 +366,6 @@ function StrategyScenariosContent() {
       const versionId = finalizedRun.selected_strategy_version_id;
       if (!versionId) throw new Error("Implementation finalized but no Strategy Version was created.");
       setSuccess("Implementation finalized. Your Strategy Version is now the source of truth.");
-      setTimeout(() => {
-        router.push(`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(versionId)}`);
-      }, 700);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to finalize implementation.");
       setLocking(false);
@@ -995,20 +993,47 @@ function StrategyScenariosContent() {
                 <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (activeScenario) void handleLockDecision(activeScenario);
-                    }}
+                    onClick={() => void handleLockDecision()}
                     disabled={locking || !activeScenario}
                     className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-4 text-sm font-black text-slate-950 shadow-lg hover:bg-emerald-400 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    {locking ? "Locking Decision…" : "Lock This Decision & Proceed →"}
+                    {locking ? "Finalizing Implementation…" : "Finalize Implementation →"}
                   </button>
-                  <Link
-                    href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}${run.selected_strategy_version_id ? `&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}` : ""}`}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
-                  >
-                    View Goal Decision Report ↗
-                  </Link>
+                  {run.selected_strategy_version_id && (
+                    <>
+                      <Link
+                        href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        View Report ↗
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const blob = await downloadGoalStrategyReportPdfByStrategyVersion(getPlanningUnitId()!, run.selected_strategy_version_id!);
+                            const url = URL.createObjectURL(blob);
+                            const anchor = document.createElement("a");
+                            anchor.href = url;
+                            anchor.download = `goal-strategy-report-${run.selected_strategy_version_id}.pdf`;
+                            anchor.click();
+                            URL.revokeObjectURL(url);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Unable to download the report.");
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        Download Report ↓
+                      </button>
+                      <Link
+                        href={`/investor/action-plan?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                        className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
+                      >
+                        Action Plan →
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </section>
