@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 from pydantic import BaseModel, Field
-from rules.goals import GoalPriority
+from rules.goals import GoalPriorityLevel
 
 ConstraintSeverity = Literal["hard", "warning", "info"]
 RatioStatus = Literal["excellent", "healthy", "attention", "critical"]
@@ -24,7 +24,7 @@ class ConstraintCheckResult(BaseModel):
     severity: ConstraintSeverity
     passed: bool
     message: str
-    suggested_override_priority: GoalPriority | None = None
+    suggested_override_priority: GoalPriorityLevel | None = None
     override_reason: str | None = None
     ratio_evidence: dict[str, Any] = Field(default_factory=dict)
 
