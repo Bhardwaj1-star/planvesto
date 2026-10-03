@@ -84,12 +84,12 @@ def adapt_rule_assessment(assessment) -> list[CanonicalConstraint]:
 # ---------------------------------------------------------------------------
 
 def adapt_ratio_result(ratio: FinancialRatioResult) -> CanonicalConstraint:
-    """Convert a FinancialRatioResult into an info-level CanonicalConstraint."""
-    severity: ConstraintSeverity = "info"
-    if ratio.status == "critical":
-        severity = "hard"
-    elif ratio.status == "attention":
-        severity = "warning"
+    """Convert a financial ratio into diagnostic evidence.
+
+    A ratio status, including critical, is measured evidence rather than a
+    goal-specific hard constraint. Explicit ConstraintCheckResult objects
+    carry hard/eligibility effects after goal-specific business rules apply.
+    """
 
     return CanonicalConstraint(
         constraint_id=f"ratio-{ratio.ratio_key}",
@@ -97,10 +97,10 @@ def adapt_ratio_result(ratio: FinancialRatioResult) -> CanonicalConstraint:
         domain="financial_ratio",
         source="moneywheel",
         source_engine="FinancialRatioConstraintEvaluator",
-        severity=severity,
+        severity="info",
         role="explanatory_evidence",
         kind="diagnostic",
-        passed=ratio.status not in ("critical",),
+        passed=True,
         message=f"{ratio.name}: {ratio.value} {ratio.unit} ({ratio.status or 'unknown'})",
         value=ratio.value,
         unit=ratio.unit,

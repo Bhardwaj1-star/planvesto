@@ -171,14 +171,18 @@ class TestAdapters:
         assert c.severity == "info"  # healthy -> info
         assert c.passed is True
 
-    def test_adapt_ratio_result_critical(self):
+    def test_adapt_ratio_result_critical_is_diagnostic(self):
         ratio = FinancialRatioResult(
             ratio_key="debt_to_income_ratio", name="DTI",
             value=55.0, unit="%", status="critical",
         )
         c = adapt_ratio_result(ratio)
-        assert c.severity == "hard"
-        assert c.passed is False
+        # Critical ratio status is evidence. Goal-specific hard effects are
+        # emitted separately by adapt_constraint_check().
+        assert c.severity == "info"
+        assert c.role == "explanatory_evidence"
+        assert c.kind == "diagnostic"
+        assert c.passed is True
 
     def test_adapt_constraint_check(self):
         check = ConstraintCheckResult(

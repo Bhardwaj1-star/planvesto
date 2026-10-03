@@ -82,6 +82,33 @@ def test_critical_emergency_fund_overrides_discretionary_goal(evaluator):
     assert assessment.suggested_overrides["g_vacation"]["resolved_priority"] == "low"
 
 
+def test_critical_emergency_reserve_does_not_block_essential_goal(evaluator):
+    financial_context = {
+        "monthly_income": 80000.0,
+        "monthly_expenses": 50000.0,
+        "monthly_surplus": 30000.0,
+        "liquid_assets": 50000.0,  # 1.0 month -> critical
+        "total_assets": 200000.0,
+        "total_liabilities": 50000.0,
+    }
+    goals = [
+        GoalEvaluationInput(
+            goal_id="g_education",
+            goal_name="Child Education",
+            goal_type="education",
+            client_priority="critical",
+            required_monthly_contribution=15000.0,
+        )
+    ]
+
+    assessment = evaluator.assess_constraints(goals, financial_context)
+
+    # The critical metric is evidence; the hard rule applies only to
+    # discretionary goals. Education is an essential canonical goal.
+    assert assessment.hard_constraints == []
+    assert assessment.suggested_overrides == {}
+
+
 def test_critical_debt_to_income_constrains_discretionary_goal(evaluator):
     # Debt payments are 50% of income (> 40% is critical)
     financial_context = {
