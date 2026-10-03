@@ -114,6 +114,26 @@ def test_missing_parameters_use_defaults_and_create_next_version(monkeypatch):
     }
 
 
+def test_implementation_context_is_allowed_and_persisted(monkeypatch):
+    from services import strategy_version_service as _svs
+    _original = _svs.get_strategy_by_id
+    monkeypatch.setattr(
+        _svs,
+        "get_strategy_by_id",
+        lambda sid: make_strategy() if sid == "test-strategy" else _original(sid),
+    )
+    repository = FakeRepository()
+    service = StrategyVersionService(repository)
+    context = {"defined_goal_version": 3, "funding_structure": {"starting_monthly_contribution": 5000}}
+    version = service.create_version(
+        "pu-1",
+        "test-strategy",
+        parameters={"allocation_pct": 70, "__implementation_context__": context},
+    )
+    assert version.implementation_parameters["allocation_pct"] == 70
+    assert version.implementation_parameters["__implementation_context__"] == context
+
+
 def test_unknown_parameter_rejected():
     service = StrategyVersionService(FakeRepository())
     with pytest.raises(ValueError, match="Unknown implementation parameters"):
