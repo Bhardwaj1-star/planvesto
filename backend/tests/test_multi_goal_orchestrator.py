@@ -47,7 +47,7 @@ def test_multiple_independent_goals_within_surplus(orchestrator):
         GoalEvaluationInput(
             goal_id="g2",
             goal_name="Child Education",
-            goal_type="child education",
+            goal_type="education",
             client_priority="medium",
             target_date="2035-06",
             required_monthly_contribution=15000.0,
@@ -77,7 +77,7 @@ def test_competing_goals_sharing_limited_surplus(orchestrator):
         GoalEvaluationInput(
             goal_id="g2",
             goal_name="Vacation Home",
-            goal_type="home purchase",
+            goal_type="home",
             client_priority="medium",
             target_date="2038-10",
             required_monthly_contribution=25000.0,
