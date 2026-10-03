@@ -4,7 +4,7 @@ from typing import Any
 
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
-from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_priority, canonical_goal_type
+from rules.goals import canonical_goal_priority, canonical_goal_type
 from rules.moneywheel import RULES
 
 
@@ -102,10 +102,6 @@ class RuleAssessment:
 
 class StrategyRuleEngine:
     """Evaluates library-level strategy rules without ranking or architecture decisions."""
-
-    @staticmethod
-    def canonical_goal_type(value: str | None) -> str:
-        return canonical_goal_type(value)
 
     def evaluate(
         self,
