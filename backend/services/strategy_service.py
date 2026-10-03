@@ -541,6 +541,23 @@ class StrategyService:
             funding_structure[name] = value
 
         # The finalized implementation becomes the first persisted StrategyVersion.
+        # The reserved implementation context keeps Participate With Your Numbers
+        # inputs and the finalized what-if outcome inside the immutable snapshot
+        # without changing the database schema.
+        preview_scenario = create_custom_scenario(
+            _matched,
+            defined_goal,
+            "Final Implementation",
+            dict(request.assumptions or {}),
+            funding_structure,
+        )
+        parameters["__implementation_context__"] = {
+            "defined_goal_version": request.defined_goal_version,
+            "selected_scenario_id": request.selected_scenario_id,
+            "assumptions": dict(request.assumptions or {}),
+            "funding_structure": funding_structure,
+            "final_scenario": preview_scenario.model_dump(mode="json"),
+        }
         try:
             version = self.strategy_version_service.create_version(
                 planning_unit_id=request.planning_unit_id,
