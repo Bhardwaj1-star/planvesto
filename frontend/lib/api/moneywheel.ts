@@ -18,10 +18,21 @@ export type MoneywheelRatio = {
   available: boolean;
 };
 
+export type MoneywheelRule = {
+  key: string;
+  name: string;
+  value: number | null;
+  unit: string;
+  formula: string;
+  explanation: string;
+  available: boolean;
+};
+
 export type MoneywheelResult = {
   planning_unit_id: string;
   overall_status: "excellent" | "healthy" | "attention" | "critical" | "incomplete" | null;
   ratios: MoneywheelRatio[];
+  rules: MoneywheelRule[];
   rule_set_version: string;
   calculated_at: string;
   metadata: Record<string, unknown>;
