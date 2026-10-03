@@ -11,6 +11,7 @@ import {
   goalFlexibilities,
   goalStatuses,
   goalTypes,
+  goalTypeLabelByCanonical,
   returnFrequencies,
   UI_PRIORITY_OPTIONS,
   toBackendPriority,
@@ -45,7 +46,7 @@ function definedGoalToForm(goal: DefinedGoal): GoalFormData {
   const raw = (metadata.dynamic_details || {}) as Partial<DynamicDetails>;
   return {
     goal_id: goal.goal_id,
-    goal_type: goal.goal_type,
+    goal_type: goalTypeLabelByCanonical[goal.goal_type as keyof typeof goalTypeLabelByCanonical] || goal.goal_type,
     today_cost: String(goal.today_cost || ""),
     target_date: `${goal.target_year}-${String(goal.target_month).padStart(2, "0")}`,
     priority: toBackendPriority(goal.priority),
