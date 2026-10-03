@@ -413,3 +413,82 @@ class TestGoalServiceStrategyRecalculationErrorHandling:
             saved_goal = svc.save_and_define_goal(req)
         assert "Automatic strategy recalculation failed for goal g-test-run (version 2)" in caplog.text
         assert "Database connection timed out during recalculation" in caplog.text
+
+
+class TestStrategyConstraintGating:
+    @patch.object(StrategyService, "_rule_assessment")
+    @patch.object(StrategyService, "_build_constraint_set")
+    def test_actionable_override_constraint_does_not_block_strategy_build(
+        self, mock_build_constraints, mock_rule_assessment
+    ):
+        from engines.constraints.models import ConstraintSet, CanonicalConstraint
+
+        service = StrategyService()
+        rule_assessment = MagicMock()
+        mock_rule_assessment.return_value = rule_assessment
+        mock_build_constraints.return_value = ConstraintSet(constraints=[
+            CanonicalConstraint(
+                constraint_id="check-RULE_EMERGENCY_RESERVE_CRITICAL-g-test-run",
+                rule_id="RULE_EMERGENCY_RESERVE_CRITICAL",
+                domain="financial_ratio",
+                source="ratio_constraint_evaluator",
+                source_engine="FinancialRatioConstraintEvaluator",
+                severity="hard",
+                role="hard_constraint",
+                kind="hard",
+                passed=False,
+                message="Emergency fund coverage is critical.",
+                goal_id="g-test-run",
+                suggested_override_priority="low",
+                override_reason="Discretionary allocation is constrained until reserve is established.",
+            )
+        ])
+
+        expected = MagicMock()
+        service.engine.execute = MagicMock(return_value=expected)
+        result = service._execute(
+            _dummy_defined_goal(),
+            InvestorPriorities(),
+            {},
+            planning_unit_id="pu-test-run",
+        )
+
+        assert result[0] is expected
+        service.engine.execute.assert_called_once()
+
+    @patch.object(StrategyService, "_rule_assessment")
+    @patch.object(StrategyService, "_build_constraint_set")
+    def test_unresolved_hard_constraint_still_blocks_strategy_build(
+        self, mock_build_constraints, mock_rule_assessment
+    ):
+        from engines.constraints.models import ConstraintSet, CanonicalConstraint
+
+        service = StrategyService()
+        mock_rule_assessment.return_value = MagicMock()
+        mock_build_constraints.return_value = ConstraintSet(constraints=[
+            CanonicalConstraint(
+                constraint_id="rule-goal-eligibility-g-test-run",
+                rule_id="RULE_GOAL_INELIGIBLE",
+                domain="goal_eligibility",
+                source="rule_engine",
+                source_engine="RuleEngine",
+                severity="hard",
+                role="eligibility",
+                kind="hard",
+                passed=False,
+                message="Goal is not eligible for strategy planning.",
+                goal_id="g-test-run",
+            )
+        ])
+
+        with pytest.raises(HTTPException) as exc_info:
+            service._execute(
+                _dummy_defined_goal(),
+                InvestorPriorities(),
+                {},
+                planning_unit_id="pu-test-run",
+            )
+
+        assert exc_info.value.status_code == 422
+        service.engine.execute = MagicMock()
+        service.engine.execute.assert_not_called()
