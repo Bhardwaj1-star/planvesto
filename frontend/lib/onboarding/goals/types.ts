@@ -1,18 +1,68 @@
 import type { WorkflowReadiness } from "../../api/orchestration";
 
 export const goalTypes = [
-  "Retirement",
-  "Financial Freedom / Passive Income",
+  "Emergency Fund",
+  "Debt Freedom",
   "Education",
   "Marriage",
-  "Dream Home",
+  "Home",
+  "Home Improvement",
   "Vehicle",
-  "Vacation",
+  "Travel & Experiences",
+  "Retirement",
+  "Financial Independence",
+  "Family Care",
+  "Healthcare",
+  "Business & Entrepreneurship",
+  "Lifestyle",
   "Wealth Creation",
-  "Debt Repayment",
-  "Philanthropy",
-  "Others",
-];
+  "Legacy & Giving",
+  "Other",
+] as const;
+
+export type CanonicalGoalType =
+  | "emergency_fund"
+  | "debt_freedom"
+  | "education"
+  | "marriage"
+  | "home"
+  | "home_improvement"
+  | "vehicle"
+  | "travel"
+  | "retirement"
+  | "financial_independence"
+  | "family_care"
+  | "healthcare"
+  | "business"
+  | "lifestyle"
+  | "wealth_creation"
+  | "legacy_giving"
+  | "other";
+
+export const canonicalGoalTypeByLabel: Record<string, CanonicalGoalType> = {
+  "Emergency Fund": "emergency_fund",
+  "Debt Freedom": "debt_freedom",
+  Education: "education",
+  Marriage: "marriage",
+  Home: "home",
+  "Home Improvement": "home_improvement",
+  Vehicle: "vehicle",
+  "Travel & Experiences": "travel",
+  Retirement: "retirement",
+  "Financial Independence": "financial_independence",
+  "Family Care": "family_care",
+  Healthcare: "healthcare",
+  "Business & Entrepreneurship": "business",
+  Lifestyle: "lifestyle",
+  "Wealth Creation": "wealth_creation",
+  "Legacy & Giving": "legacy_giving",
+  Other: "other",
+};
+
+export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | string {
+  const clean = String(value ?? "").trim();
+  return canonicalGoalTypeByLabel[clean] ?? clean.toLowerCase().replace(/\\s+/g, "_");
+}
 export const goalPriorities = ["Critical", "Important", "Aspirational"] as const;
 export const goalFlexibilities = ["Fixed", "Flexible"] as const;
 export const targetModes = ["Date", "Age"] as const;
