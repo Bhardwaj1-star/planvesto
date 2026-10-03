@@ -238,11 +238,13 @@ class StrategyService:
         # identity is goal + primary strategy; supporting composition is data,
         # not identity. This keeps old runs selectable without a schema change.
         architectures = []
+        legacy_id_to_canonical_id = {}
         for architecture in existing_architectures:
             canonical_id = canonical_architecture_id(
                 run.goal_id,
                 architecture.primary_strategy_id,
             )
+            legacy_id_to_canonical_id[architecture.architecture_id] = canonical_id
             normalized = architecture.model_copy(update={"architecture_id": canonical_id})
             if not any(item.architecture_id == canonical_id for item in architectures):
                 architectures.append(normalized)
@@ -303,16 +305,20 @@ class StrategyService:
                 ),
             )
 
-        canonical_architecture_ids = {
+        available_architecture_ids = {
             architecture.architecture_id for architecture in architectures
         }
         alternative_architecture_ids = [
-            architecture.architecture_id
-            for architecture in architectures
-            if architecture.architecture_id != (
-                recommendation_architecture.architecture_id
-                if recommendation_architecture is not None
-                else None
+            legacy_id_to_canonical_id.get(architecture_id, architecture_id)
+            for architecture_id in run.recommendation.alternative_architecture_ids
+        ]
+        alternative_architecture_ids = [
+            architecture_id
+            for architecture_id in alternative_architecture_ids
+            if architecture_id in available_architecture_ids
+            and (
+                recommendation_architecture is None
+                or architecture_id != recommendation_architecture.architecture_id
             )
         ]
 
