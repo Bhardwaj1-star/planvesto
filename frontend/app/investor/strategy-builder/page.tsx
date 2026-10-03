@@ -61,7 +61,7 @@ export default function InvestorStrategyBuilderPage() {
           (data?.goals ?? []).map(async (goal) => {
             try {
               const defined = await getLatestDefinedGoal(planningUnitId, goal.id);
-              return { id: defined.goal_id, name: defined.goal_type || defined.goal_name || "Untitled Goal" };
+              return { id: defined.goal_id, name: defined.goal_name || defined.goal_type || "Untitled Goal" };
             } catch {
               return null;
             }
