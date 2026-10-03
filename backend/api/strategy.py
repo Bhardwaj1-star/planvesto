@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Header, Query
 from fastapi.responses import Response
-from api.auth import authenticate_user, verify_goal_ownership, verify_planning_unit_ownership, verify_strategy_run_ownership
+from api.auth import authenticate_user, verify_goal_ownership, verify_planning_unit_ownership, verify_strategy_run_ownership, verify_strategy_version_ownership
 from models.strategy import StrategyRun
 from schemas.strategy import CustomScenarioRequest, FinancialPlanBuildRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategySelectRequest
 from services.strategy_service import StrategyService
@@ -72,6 +72,21 @@ def get_run_history(goal_id: str, planning_unit_id: str = Query(...), authorizat
     user_id = authenticate_user(authorization)
     verify_goal_ownership(planning_unit_id, goal_id, user_id)
     return StrategyService().get_run_history(planning_unit_id, goal_id)
+
+
+@router.get("/strategy-versions/{strategy_version_id}/report")
+def get_goal_strategy_report_by_strategy_version(strategy_version_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_version_ownership(planning_unit_id, strategy_version_id, user_id)
+    return GoalReportService().build_report(planning_unit_id, strategy_version_id=strategy_version_id)
+
+
+@router.get("/strategy-versions/{strategy_version_id}/report.pdf")
+def download_goal_strategy_report_pdf_by_strategy_version(strategy_version_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
+    user_id = authenticate_user(authorization)
+    verify_strategy_version_ownership(planning_unit_id, strategy_version_id, user_id)
+    pdf = GoalReportService().generate_pdf(planning_unit_id, strategy_version_id=strategy_version_id)
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=goal-strategy-report-{strategy_version_id}.pdf"})
 
 
 @router.get("/runs/{strategy_run_id}/report")
