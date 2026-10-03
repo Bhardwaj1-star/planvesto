@@ -59,6 +59,7 @@ GOAL_TYPE_ALIASES: dict[str, str] = {
     "childrens education": "education",
     "marriage": "marriage",
     "child marriage": "marriage",
+    "child_marriage": "marriage",
     "children marriage": "marriage",
     "dream home": "home",
     "home purchase": "home",
