@@ -399,7 +399,7 @@ class StrategyService:
         new_run.strategy_run_id = self.strat_repo.save_run(new_run)
         return new_run
 
-    def _validate_selection_context(self, request) -> tuple[StrategyRun, object, object]:
+    def _validate_selection_context(self, request):
         run = self.strat_repo.get_run_by_id(request.planning_unit_id, request.strategy_run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
@@ -466,20 +466,18 @@ class StrategyService:
         for name, value in (request.implementation_parameters or {}).items():
             funding_structure[name] = value
 
-        custom_scenario = create_custom_scenario(
-            matched,
-            self.goal_repo.get_defined_goal_by_version(
-                request.planning_unit_id, run.goal_id, run.defined_goal_version
-            ),
-            "Implementation Preview",
-            assumptions,
-            funding_structure,
-        )
         defined_goal = self.goal_repo.get_defined_goal_by_version(
             request.planning_unit_id, run.goal_id, run.defined_goal_version
         )
         if not defined_goal:
             raise HTTPException(status_code=409, detail="Underlying DefinedGoal snapshot not found.")
+        custom_scenario = create_custom_scenario(
+            matched,
+            defined_goal,
+            "Implementation Preview",
+            assumptions,
+            funding_structure,
+        )
 
         custom_scenarios = [
             item for item in run.scenarios
