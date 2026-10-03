@@ -295,23 +295,30 @@ Multiple DefinedGoals (competing for surplus)
 
 ### 3.1 Goal Taxonomy & Classification
 
-| Goal Concept | Canonical Normalized Key (`rules/goals.py`) | Legacy / Strategy Alias | Category (`rules/goals.py`) | Priority Rank (`rules/multi_goal.py`) | Priority Rank (`engines/orchestration`) |
-|---|---|---|---|---|---|
-| **Retirement** | `retirement` | `retirement` | **Essential** | 1 (`critical`) / 2 (`high`) | 0 (`critical`) / 1 (`high`) |
-| **Education** | `child education` | `Child Education` | Discretionary / Essential* | 2 (`high`) / 3 (`medium`) | 1 (`high`) / 2 (`medium`) |
-| **Marriage** | `child marriage` | `Child Marriage` | Discretionary | 3 (`medium`) | 2 (`medium`) |
-| **Dream Home** | `home purchase` | `Home Purchase` | Discretionary | 2 (`high`) / 3 (`medium`) | 1 (`high`) / 2 (`medium`) |
-| **Vehicle / Car** | `vehicle` | `Vehicle` | **Discretionary** | 3 (`medium`) / 4 (`low`) | 2 (`medium`) / 3 (`low`) |
-| **Vacation** | `travel` | `Travel` | **Discretionary** | 4 (`low`) | 3 (`low`) |
-| **Wealth Creation** | `wealth_creation` | `Wealth Creation` | Discretionary | 3 (`medium`) | 2 (`medium`) |
-| **Debt Repayment** | `other` *(Code conflict)* | `debt_repayment` *(Docs)* | **Essential** | 1 (`critical`) | 0 (`critical`) |
-| **Emergency Fund** | `emergency_fund` | `contingency` | **Essential** | 1 (`critical`) | 0 (`critical`) |
-| **Financial Freedom / Passive Income** | `passive_income` | `passive_income` | Discretionary | 3 (`medium`) | 2 (`medium`) |
-| **Philanthropy** | `other` *(Code conflict)* | `philanthropy` *(Docs)* | Discretionary | 4 (`low`) | 3 (`low`) |
-| **Other** | `other` | `Other` | Discretionary | 3 (`medium`) / 4 (`low`) | 2 (`medium`) / 3 (`low`) |
+Goal type is the standardized intent. A beneficiary, such as a child, spouse or parent, is context/dynamic detail and is never embedded in the goal identity. The goal name remains user-defined (for example, "Daughter's MBA").
 
+| Goal Concept | Canonical Key | Legacy aliases / context |
+|---|---|---|
+| **Emergency Fund** | `emergency_fund` | emergency, contingency |
+| **Debt Freedom** | `debt_freedom` | debt repayment |
+| **Education** | `education` | child education; beneficiary is context |
+| **Marriage** | `marriage` | child marriage; beneficiary is context |
+| **Home** | `home` | dream home, home purchase |
+| **Home Improvement** | `home_improvement` | renovation |
+| **Vehicle** | `vehicle` | car |
+| **Travel & Experiences** | `travel` | vacation |
+| **Retirement** | `retirement` | retirement / financial freedom is normalized to retirement only when retirement is explicit |
+| **Financial Independence** | `financial_independence` | passive income, financial freedom |
+| **Family Care** | `family_care` | parents/family support |
+| **Healthcare** | `healthcare` | health care |
+| **Business & Entrepreneurship** | `business` | entrepreneurship |
+| **Lifestyle** | `lifestyle` | planned lifestyle purchases/upgrades |
+| **Wealth Creation** | `wealth_creation` | long-term corpus without a more specific goal |
+| **Legacy & Giving** | `legacy_giving` | philanthropy, charity, giving |
+| **Other** | `other` | genuinely outside the taxonomy |
 
----
+Priority and time horizon remain separate goal attributes; they do not create additional goal types.
+
 
 ### 3.2 Asset & Liability Classification Taxonomy
 
