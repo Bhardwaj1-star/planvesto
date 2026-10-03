@@ -30,9 +30,9 @@ export default function RetirementReportPage() {
         if (!active) return;
 
         if (retirementGoal?.id) {
-          router.replace(`/investor/goal-report?goalId=${encodeURIComponent(retirementGoal.id)}`);
+          router.replace("/investor/reports");
         } else {
-          router.replace('/investor/goal-report');
+          router.replace("/investor/reports");
         }
       } catch {
         if (active) {
