@@ -402,7 +402,27 @@ function StrategyScenariosContent() {
         </div>
 
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
-        {success && <InvestorStatus tone="success">{success}</InvestorStatus>}
+        {success && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <InvestorStatus tone="success">{success}</InvestorStatus>
+            {run?.selected_strategy_version_id && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                  className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                >
+                  View Report ↗
+                </Link>
+                <Link
+                  href={`/investor/action-plan?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
+                  className="inline-flex items-center rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                >
+                  Action Plan →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Selected Goal & Strategy Context */}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
