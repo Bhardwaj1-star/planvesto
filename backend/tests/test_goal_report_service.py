@@ -129,3 +129,19 @@ def test_report_exposes_scenario_outputs(monkeypatch):
 
     assert len(report["what_if_analysis"]) == 1
     assert report["what_if_analysis"][0]["trade_off"] == "Higher monthly burden."
+
+
+def test_report_source_is_selected_strategy_version(monkeypatch):
+    service = GoalReportService()
+    run = make_run()
+    run.strategy_run_id = "run-selected"
+    run.selected_strategy_version_id = "sv-selected"
+
+    service.strategy_version_repo.get_by_id = lambda planning_unit_id, strategy_version_id: object()
+    service.strategy_repo.get_run_by_strategy_version_id = lambda planning_unit_id, strategy_version_id: run
+    service._load = lambda planning_unit_id, strategy_run_id: (run, Goal(), {})
+
+    loaded_run, _, _ = service._load_by_strategy_version("p1", "sv-selected")
+
+    assert loaded_run.strategy_run_id == "run-selected"
+    assert loaded_run.selected_strategy_version_id == "sv-selected"

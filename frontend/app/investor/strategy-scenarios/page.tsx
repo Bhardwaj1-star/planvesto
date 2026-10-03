@@ -340,7 +340,7 @@ function StrategyScenariosContent() {
       setRun(updatedRun);
       setSuccess("Decision successfully locked! Redirecting to your Action Plan…");
       setTimeout(() => {
-        router.push(`/investor/action-plan?goalId=${encodeURIComponent(goalId)}`);
+        router.push(`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(updatedRun.selected_strategy_version_id ?? "")}`);
       }, 900);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to lock decision.");
@@ -1005,7 +1005,7 @@ function StrategyScenariosContent() {
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                     By locking this decision, Planvesto commits this scenario ({activeScenario?.scenario_name}) as your
                     authoritative strategy execution baseline. Your action items, SIP schedules, asset allocations, and
-                    annual step-up triggers will be generated in Step 3.
+                    annual step-up triggers will be generated in Report.
                   </p>
                 </div>
 
@@ -1021,7 +1021,7 @@ function StrategyScenariosContent() {
                     {locking ? "Locking Decision…" : "Lock This Decision & Proceed →"}
                   </button>
                   <Link
-                    href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}`}
+                    href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}${run.selected_strategy_version_id ? `&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}` : ""}`}
                     className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-xs font-semibold text-white hover:bg-white/20 transition-all text-center"
                   >
                     View Goal Decision Report ↗

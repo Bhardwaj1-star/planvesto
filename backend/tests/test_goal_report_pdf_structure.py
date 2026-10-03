@@ -3,7 +3,7 @@ from services.goal_report_service import GoalReportService
 
 def test_individual_goal_pdf_is_generated_from_complete_goal_report_contract(monkeypatch):
     service = GoalReportService()
-    service.build_report = lambda planning_unit_id, strategy_run_id: {
+    service.build_report = lambda planning_unit_id, strategy_run_id=None, strategy_version_id=None: {
         "goal_name": "My Vacation",
         "goal_type": "Travel",
         "goal_details": {},

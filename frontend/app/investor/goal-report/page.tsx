@@ -5,90 +5,61 @@ import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorStatus } from "../../../components/InvestorUI";
-import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
-import { getPlanningUnitId, getLatestStrategyRun, getGoalStrategyReport, downloadGoalStrategyReportPdf, type GoalStrategyReport } from "../../../lib/api/strategy";
+import { getPlanningUnitId, getGoalStrategyReportByStrategyVersion, downloadGoalStrategyReportPdfByStrategyVersion, type GoalStrategyReport } from "../../../lib/api/strategy";
 
 export default function GoalReportPage() {
-  const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
-  const [selectedGoalId, setSelectedGoalId] = useState("");
+  const [strategyVersionId, setStrategyVersionId] = useState("");
   const [report, setReport] = useState<GoalStrategyReport | null>(null);
   const [working, setWorking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await loadGoalPlannerData();
-        const activeGoals = (data?.goals ?? []).map((g) => ({ id: g.id, name: g.name || "Untitled Goal" }));
-        if (!active) return;
-        setGoals(activeGoals);
-        const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("goalId") : null;
-        const initialGoalId = activeGoals.find((g) => g.id === requested)?.id ?? activeGoals[0]?.id ?? "";
-        setSelectedGoalId(initialGoalId);
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Unable to load goals.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
+    const requested = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("strategyVersionId") : null;
+    setStrategyVersionId(requested ?? "");
   }, []);
 
   useEffect(() => {
-    if (!selectedGoalId) {
+    if (!strategyVersionId) {
       setReport(null);
+      setError("A selected Strategy Version is required to open the goal report. Return to Participate With Numbers and lock a decision first.");
+      setLoading(false);
       return;
     }
     let active = true;
     (async () => {
-      setWorking(true);
-      setError(null);
+      setWorking(true); setLoading(true); setError(null);
       try {
         const planningUnitId = getPlanningUnitId();
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-
-        const selectedRun = await getLatestStrategyRun(planningUnitId, selectedGoalId);
-        if (!selectedRun?.strategy_run_id) throw new Error("No completed Strategy Run is available for the selected goal. Please build a strategy first.");
-
-        const next = await getGoalStrategyReport(planningUnitId, selectedRun.strategy_run_id);
+        const next = await getGoalStrategyReportByStrategyVersion(planningUnitId, strategyVersionId);
         if (active) setReport(next);
       } catch (err) {
-        if (active) {
-          setReport(null);
-          setError(err instanceof Error ? err.message : "Unable to load goal report.");
-        }
+        if (active) { setReport(null); setError(err instanceof Error ? err.message : "Unable to load goal report."); }
       } finally {
-        if (active) setWorking(false);
+        if (active) { setWorking(false); setLoading(false); }
       }
     })();
     return () => { active = false; };
-  }, [selectedGoalId]);
+  }, [strategyVersionId]);
 
   const download = async () => {
-    if (!report) return;
+    if (!strategyVersionId) return;
     setWorking(true); setError(null);
     try {
       const planningUnitId = getPlanningUnitId();
       if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-      const runId = report.strategy_run_id;
-      if (!runId) throw new Error("Strategy run ID is not available.");
-      const blob = await downloadGoalStrategyReportPdf(planningUnitId, runId);
+      const blob = await downloadGoalStrategyReportPdfByStrategyVersion(planningUnitId, strategyVersionId);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `goal-strategy-report-${runId}.pdf`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      anchor.download = `goal-strategy-report-${strategyVersionId}.pdf`;
+      document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to download PDF.");
-    } finally {
-      setWorking(false);
-    }
+    } finally { setWorking(false); }
   };
+
 
   if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-6xl space-y-6"><div className="h-10 w-64 animate-pulse rounded-xl bg-slate-200" /><div className="h-96 animate-pulse rounded-3xl bg-white" /></div></main>;
 
@@ -97,17 +68,18 @@ export default function GoalReportPage() {
       <InvestorHeader
         eyebrow="Planvesto Report"
         title={report?.goal_name ?? report?.goal?.name ?? "Goal Report"}
-        description={report ? `${report.goal_type ?? report.goal?.type ?? "Financial"} goal report generated from the selected Strategy Run and Financial State.` : "Goal report"}
+        description={report ? `${report.goal_type ?? report.goal?.type ?? "Financial"} goal report generated from the selected Strategy Version and Financial State.` : "Detailed goal report"}
       >
         <div className="flex flex-wrap items-center gap-2">
-          {selectedGoalId && (
+          {report && (
             <Link
-              href={`/investor/strategy-builder?goalId=${encodeURIComponent(selectedGoalId)}`}
+              href={`/investor/strategy-builder?goalId=${encodeURIComponent(report.goal?.id ?? report.goal_id ?? "")}`}
               className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               Strategy Builder
             </Link>
           )}
+
           {report && (
             <button
               onClick={() => void download()}
@@ -122,39 +94,12 @@ export default function GoalReportPage() {
       <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-10">
         <StrategyWorkflowNav />
 
-        {goals.length > 0 && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <label className="block max-w-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Goal</span>
-              <select
-                value={selectedGoalId}
-                onChange={(e) => setSelectedGoalId(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold"
-              >
-                {goals.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-        )}
-
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
 
         {!report && !error && !working && (
           <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
             <h2 className="text-xl font-bold">No Report Available</h2>
-            <p className="mt-2 text-sm text-slate-500">Build a strategy run for this goal to generate a goal report.</p>
-            {selectedGoalId && (
-              <Link
-                href={`/investor/strategy-builder?goalId=${encodeURIComponent(selectedGoalId)}`}
-                className="mt-6 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white"
-              >
-                Open Strategy Builder
-              </Link>
-            )}
+            <p className="mt-2 text-sm text-slate-500">Lock a Strategy Version in Participate With Numbers to generate its detailed goal report.</p>
           </section>
         )}
 

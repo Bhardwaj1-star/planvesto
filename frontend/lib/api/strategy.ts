@@ -127,6 +127,8 @@ export type GoalStrategyReport = {
 
 export function getGoalStrategyReport(planningUnitId:string,strategyRunId:string):Promise<GoalStrategyReport>{return apiRequest<GoalStrategyReport>(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/report?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
 export function downloadGoalStrategyReportPdf(planningUnitId:string,strategyRunId:string):Promise<Blob>{return apiRequestBlob(`/api/strategy/runs/${encodeURIComponent(strategyRunId)}/report.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
+export function getGoalStrategyReportByStrategyVersion(planningUnitId:string,strategyVersionId:string):Promise<GoalStrategyReport>{return apiRequest<GoalStrategyReport>(`/api/strategy/strategy-versions/${encodeURIComponent(strategyVersionId)}/report?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
+export function downloadGoalStrategyReportPdfByStrategyVersion(planningUnitId:string,strategyVersionId:string):Promise<Blob>{return apiRequestBlob(`/api/strategy/strategy-versions/${encodeURIComponent(strategyVersionId)}/report.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);}
 
 export function buildBasketReport(planningUnitId: string, goalIds: string[], basketName?: string): Promise<Record<string, unknown>> {
   return apiRequest<Record<string, unknown>>("/api/basket-report", {
