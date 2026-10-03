@@ -16,9 +16,9 @@ export function validateGoal(goal: Goal): GoalErrors {
   const details = goal.dynamicDetails;
 
   if (!goal.goalType) errors.goalType = "Select a goal type.";
-  if (goal.goalType === "Others") required(errors, "otherGoalName", details.otherGoalName, "Enter a name for this goal.");
+  if (goal.goalType === "Other") required(errors, "otherGoalName", details.otherGoalName, "Enter a name for this goal.");
 
-  const noTodayCost = goal.goalType === "Retirement" || goal.goalType === "Financial Freedom / Passive Income" || goal.goalType === "Debt Repayment";
+  const noTodayCost = goal.goalType === "Retirement" || goal.goalType === "Financial Independence" || goal.goalType === "Debt Freedom";
   if (!noTodayCost) {
     if (!goal.targetAmount) errors.targetAmount = "Enter today's cost.";
     else if (!Number.isFinite(targetAmount) || targetAmount <= 0) errors.targetAmount = "Enter an amount greater than zero.";
@@ -38,7 +38,7 @@ export function validateGoal(goal: Goal): GoalErrors {
       required(errors, "lifeExpectancy", details.lifeExpectancy, "Enter life expectancy.");
       required(errors, "desiredLifestyleMonthlyExpense", details.desiredLifestyleMonthlyExpense, "Enter the desired monthly expense.");
       break;
-    case "Financial Freedom / Passive Income":
+    case "Financial Independence":
       required(errors, "desiredPassiveIncomeAmount", details.desiredPassiveIncomeAmount, "Enter the desired passive income amount.");
       break;
     case "Education":
@@ -47,24 +47,24 @@ export function validateGoal(goal: Goal): GoalErrors {
     case "Marriage":
       required(errors, "marriageForWhom", details.marriageForWhom, "Select who the marriage goal is for.");
       break;
-    case "Dream Home":
+    case "Home":
       required(errors, "preferredLocation", details.preferredLocation, "Enter a preferred location.");
       break;
     case "Vehicle":
       required(errors, "vehicleType", details.vehicleType, "Enter the vehicle type.");
       required(errors, "vehicleCondition", details.vehicleCondition, "Select new or used.");
       break;
-    case "Vacation":
+    case "Travel & Experiences":
       required(errors, "vacationFrequency", details.vacationFrequency, "Enter the vacation frequency.");
       required(errors, "vacationType", details.vacationType, "Select domestic or international.");
       break;
     case "Wealth Creation":
       required(errors, "targetWealthCorpus", details.targetWealthCorpus, "Enter the target wealth/corpus.");
       break;
-    case "Debt Repayment":
+    case "Debt Freedom":
       required(errors, "selectedLiabilityId", details.selectedLiabilityId, "Select a liability to repay.");
       break;
-    case "Philanthropy":
+    case "Legacy & Giving":
       required(errors, "philanthropyContributionAmount", details.philanthropyContributionAmount, "Enter the contribution amount.");
       break;
   }
