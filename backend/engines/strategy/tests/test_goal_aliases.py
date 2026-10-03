@@ -8,5 +8,5 @@ def test_supported_goal_aliases_are_canonical():
 
 
 def test_user_facing_goal_names_are_canonicalized():
-    assert _canonical_goal_type("Education") == "child education"
-    assert _canonical_goal_type("Dream Home") == "home purchase"
+    assert _canonical_goal_type("Education") == "education"
+    assert _canonical_goal_type("Dream Home") == "home"
