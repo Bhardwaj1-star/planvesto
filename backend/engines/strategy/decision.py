@@ -47,9 +47,6 @@ class DecisionResult:
     feasibility_status: str = "feasible"
     constraints: list[str] = field(default_factory=list)
 
-def _canonical_goal_type(goal_type: str | None) -> str:
-    return canonical_goal_type(goal_type)
-
 def _empty(message: str) -> DecisionResult:
     return DecisionResult("", "", None, [], [], [], [message], message, "infeasible", [message])
 
@@ -99,7 +96,7 @@ def evaluate_decision(strategies: list[StrategyDefinition], scenarios: list[Scen
         status=fit.status if gate_ok else EligibilityStatus.FAIL
         reasons=list(gate_reasons)+[r.reason for r in fit.failed_fits]
         if status==EligibilityStatus.CONDITIONAL: reasons.extend(fit.required_changes)
-        canonical=_canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"
+        canonical=canonical_goal_type(defined_goal.goal_type); duration=float(defined_goal.duration_years or 0); funding=defined_goal.funding_status or "Shortfall"
         goal_fit = calculate_goal_fit_score(
             canonical_goal_type=canonical,
             applicable_types=primary.applicable_goal_types,
