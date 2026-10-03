@@ -69,9 +69,9 @@ def test_rule_engine_does_not_use_financial_context_as_component_activation():
     assert result.missing_inputs == ()
 
 
-def test_retirement_and_passive_income_have_distinct_canonical_identities():
+def test_retirement_and_financial_independence_have_distinct_canonical_identities():
     assert canonical_goal_type("Retirement") == "retirement"
-    assert canonical_goal_type("Financial Freedom / Passive Income") == "passive_income"
-    assert canonical_goal_name("passive_income") == "Financial Freedom / Passive Income"
+    assert canonical_goal_type("Financial Freedom / Passive Income") == "financial_independence"
+    assert canonical_goal_name("financial_independence") == "Financial Independence"
     assert canonical_goal_type("Retirement/Financial Freedom") == "retirement"
     assert canonical_goal_name("Retirement/Financial Freedom") == "Retirement"
