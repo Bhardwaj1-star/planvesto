@@ -13,6 +13,7 @@ from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from models.strategy import InvestorPriorities
 from services.goal_report_service import GoalReportService
+from rules.multi_goal import get_priority_rank
 from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 
@@ -41,7 +42,7 @@ class FinancialPlanService:
 
     @staticmethod
     def _priority_rank(value: Any) -> int:
-        return {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(str(value or "").lower(), 4)
+        return get_priority_rank(value)
 
     @staticmethod
     def _goal_row(report: dict[str, Any]) -> dict[str, Any]:
