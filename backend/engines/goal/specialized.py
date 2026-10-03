@@ -151,7 +151,7 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
             **meta,
         }
 
-    if kind in {"child education", "education"}:
+    if kind == "education":
         current_cost = _positive(data, "current_education_cost")
         child_age = float(data.get("child_age", 0) or 0)
         education_start_age = _positive(data, "education_start_age")
