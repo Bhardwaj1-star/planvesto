@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 from rules.constraints import PRIORITY_RANKS
+from rules.goals import GoalPriority
 from engines.allocation.models import (
     ConsolidatedAllocationResult,
     GoalAllocationResult,
-    GoalPriorityLevel,
 )
 
 
@@ -65,8 +65,8 @@ class ResourceAllocationEngine:
             goal_id = g.get("goal_id", "")
             goal_name = g.get("goal_name", goal_id)
             goal_type = g.get("goal_type", "general")
-            client_p: GoalPriorityLevel = g.get("client_priority", "medium")
-            resolved_p: GoalPriorityLevel = g.get("resolved_priority", client_p)
+            client_p: GoalPriority = g.get("client_priority", "medium")
+            resolved_p: GoalPriority = g.get("resolved_priority", client_p)
             req = float(g.get("required_monthly_contribution") or 0.0)
             target_dt = g.get("target_date")
             override_applied = bool(g.get("override_applied", False))
