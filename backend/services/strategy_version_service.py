@@ -39,6 +39,9 @@ class StrategyVersionService:
             self._validate_value(definition, value)
             validated[name] = value
 
+        if "__implementation_context__" in parameters:
+            validated["__implementation_context__"] = parameters["__implementation_context__"]
+
         return validated
 
     @staticmethod
