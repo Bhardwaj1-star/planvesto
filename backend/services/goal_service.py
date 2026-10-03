@@ -241,9 +241,8 @@ class GoalService:
     def save_and_define_goal(self, request: GoalInput) -> DefinedGoal:
         self._enrich_retirement_context(request)
 
-        # Normalize the goal identity before persistence so legacy
-        # "Retirement / Financial Freedom" records become Retirement,
-        # while "Financial Freedom / Passive Income" remains passive_income.
+        # Normalize goal type to the canonical taxonomy while preserving a
+        # real user-defined goal name; legacy type labels are canonicalized.
         request.goal_type = canonical_goal_type(request.goal_type)
         request.goal_name = canonical_goal_name(request.goal_type, request.goal_name)
 
