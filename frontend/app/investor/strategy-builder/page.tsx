@@ -46,6 +46,7 @@ export default function InvestorStrategyBuilderPage() {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const selectedTargetKey = selectedBasketId ? `basket:${selectedBasketId}` : selectedGoalId;
   const selectedBasket = baskets.find((basket) => basket.id === selectedBasketId) ?? null;
@@ -193,7 +194,48 @@ export default function InvestorStrategyBuilderPage() {
   if (!goals.length) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center"><h1 className="text-2xl font-extrabold">No goals available</h1><Link href="/investor/goal-planner" className="mt-6 inline-flex rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white">Open Goal Planner</Link></div></main>;
 
   return <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
-    <InvestorHeader eyebrow="Decide" title="Strategy Builder" description="Build a coherent strategy architecture for a defined goal. The decision engine determines applicability, feasibility, trade-offs and recommendation."/>
+    <InvestorHeader eyebrow="Decide" title="Strategy Builder" description="Build a coherent strategy architecture for a defined goal. The decision engine determines applicability, feasibility, trade-offs and recommendation.">
+      <button
+        type="button"
+        onClick={() => setShowHistory((value) => !value)}
+        aria-expanded={showHistory}
+        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+      >
+        <span>History</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{history.length}</span>
+        <span aria-hidden="true">{showHistory ? "↑" : "↓"}</span>
+      </button>
+    </InvestorHeader>
+    {showHistory && (
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-10">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-900">Strategy Run History</h2>
+                <p className="mt-1 text-xs text-slate-500">Immutable strategy run versions for the selected goal.</p>
+              </div>
+              <span className="text-xs font-semibold text-slate-400">{history.length} runs</span>
+            </div>
+            {history.length > 0 ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {history.map((item) => (
+                  <div key={item.strategy_run_id ?? `${item.created_at}-${item.run_version}`} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-800">Run v{item.run_version}</span>
+                      <span className="text-[11px] font-semibold text-slate-400">Goal v{item.defined_goal_version}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleString("en-IN") : "—"}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-slate-500">No strategy runs yet for this goal.</p>
+            )}
+          </div>
+        </div>
+      </section>
+    )}
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
       <StrategyWorkflowNav/>
       {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
@@ -227,7 +269,6 @@ export default function InvestorStrategyBuilderPage() {
 
         {selectedStrategy&&<section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold">Implementation Parameters</h2><div className="mt-5 grid gap-4 md:grid-cols-2">{selectedStrategy.implementation_parameters.filter(p=>p.editable).map(p=><label key={p.name} className="rounded-2xl bg-slate-50 p-4"><span className="text-sm font-bold">{p.label}</span><p className="mt-1 text-xs text-slate-500">{p.description}</p>{p.param_type==="choice"?<select value={String(parameters[p.name]??p.default_value)} onChange={e=>setParameters(x=>({...x,[p.name]:e.target.value}))} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">{(p.choices??[]).map(choice=><option key={choice}>{choice}</option>)}</select>:<input type="number" step={p.param_type==="integer"?1:"any"} min={p.min_value??undefined} max={p.max_value??undefined} value={String(parameters[p.name]??p.default_value)} onChange={e=>setParameters(x=>({...x,[p.name]:Number(e.target.value)}))} className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"/>}</label>)}</div>{selectedScenario&&<div className="mt-5 rounded-2xl border border-slate-100 p-4"><p className="text-sm font-bold">Scenario: {selectedScenario.scenario_name}</p><p className="mt-1 text-sm text-slate-500">{selectedScenario.trade_off_notes||"No additional trade-off notes supplied."}</p></div>}<InvestorButton className="mt-6" onClick={handleSelect} disabled={working||!selectedScenarioId}>{working?"Saving…":run.selected_strategy_version_id?"Save selection":"Confirm selection"}</InvestorButton></section>}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Strategy Run History</h2><p className="mt-1 text-sm text-slate-500">Immutable strategy run versions.</p></div><span className="text-xs text-slate-400">{history.length} runs</span></div>{history.length>0&&<div className="mt-5 space-y-2">{history.map(item=><div key={item.strategy_run_id??`${item.created_at}-${item.run_version}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4"><span className="font-bold">Run v{item.run_version}</span><span className="text-xs text-slate-400">Goal v{item.defined_goal_version} · {item.created_at?new Date(item.created_at).toLocaleString("en-IN"):"—"}</span></div>)}</div>}</section>
       </>}
     </div>
   </main>;
