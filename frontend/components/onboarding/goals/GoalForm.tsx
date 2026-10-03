@@ -75,7 +75,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
   const details = goal.dynamicDetails;
 
   useEffect(() => {
-    if (goal.goalType !== "Debt Repayment") return;
+    if (goal.goalType !== "Debt Freedom") return;
     let active = true;
     async function loadLiabilities() {
       const planningUnitId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
@@ -95,10 +95,10 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
     return () => { active = false; };
   }, [goal.goalType]);
 
-  const isOther = goal.goalType === "Others";
+  const isOther = goal.goalType === "Other";
   const isRetirement = goal.goalType === "Retirement";
-  const isFinancialFreedom = goal.goalType === "Financial Freedom / Passive Income";
-  const isDebt = goal.goalType === "Debt Repayment";
+  const isFinancialFreedom = goal.goalType === "Financial Independence";
+  const isDebt = goal.goalType === "Debt Freedom";
   const needsTodayCost = !isRetirement && !isFinancialFreedom && !isDebt;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -126,7 +126,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
         <select
           id="goalType"
           value={goal.goalType}
-          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Others" ? "" : e.target.value })}
+          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Other" ? "" : e.target.value })}
           className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
         >
           <option value="">Select a goal</option>
@@ -146,20 +146,20 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
             </>}
 
-            {goal.goalType === "Financial Freedom / Passive Income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
+            {goal.goalType === "Financial Independence" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
 
             {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
 
             {goal.goalType === "Marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
 
-            {goal.goalType === "Dream Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
+            {goal.goalType === "Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
 
             {goal.goalType === "Vehicle" && <>
               <TextField id="vehicleType" label="Vehicle Type" value={details.vehicleType} onChange={(value) => updateDetails(goal, { vehicleType: value }, onChange)} placeholder="e.g. SUV, Sedan, Bike" error={errors["vehicleType"]} />
               <ChoiceGroup label="Condition" name="vehicleCondition" value={details.vehicleCondition} options={["New", "Used"]} error={errors["vehicleCondition"]} onChange={(value) => updateDetails(goal, { vehicleCondition: value as GoalDynamicDetails["vehicleCondition"] }, onChange)} />
             </>}
 
-            {goal.goalType === "Vacation" && <>
+            {goal.goalType === "Travel & Experiences" && <>
               <TextField id="vacationFrequency" label="Frequency" value={details.vacationFrequency} onChange={(value) => updateDetails(goal, { vacationFrequency: value }, onChange)} placeholder="e.g. Once a year" error={errors["vacationFrequency"]} />
               <ChoiceGroup label="Travel Type" name="vacationType" value={details.vacationType} options={["Domestic", "International"]} error={errors["vacationType"]} onChange={(value) => updateDetails(goal, { vacationType: value as GoalDynamicDetails["vacationType"] }, onChange)} />
             </>}
@@ -179,7 +179,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               })()}
             </div>}
 
-            {goal.goalType === "Philanthropy" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
+            {goal.goalType === "Legacy & Giving" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
 
             {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
 
