@@ -207,12 +207,22 @@ class StrategyService:
     def _execute(self, defined_goal: DefinedGoal, priorities: InvestorPriorities, financial_context: dict, custom_scenarios=None, planning_unit_id: str = ""):
         rule_assessment = self._rule_assessment(defined_goal, financial_context)
         constraint_set = self._build_constraint_set(rule_assessment, financial_context, planning_unit_id, defined_goal)
-        if constraint_set.has_hard_failures:
+        # Some financial-state hard constraints are policy overrides rather
+        # than build blockers. For example, a critical emergency reserve
+        # constraint demotes a discretionary goal's allocation priority to low;
+        # it does not make the Strategy Builder unable to produce a strategy.
+        # True eligibility/goal gates still block execution.
+        blocking_hard_constraints = [
+            constraint
+            for constraint in constraint_set.hard_constraints
+            if constraint.suggested_override_priority is None
+        ]
+        if blocking_hard_constraints:
             raise HTTPException(
                 status_code=422,
                 detail={
                     "message": "Goal failed hard planning constraints.",
-                    "constraints": [c.model_dump() for c in constraint_set.hard_constraints],
+                    "constraints": [c.model_dump() for c in blocking_hard_constraints],
                 },
             )
         return self.engine.execute(
