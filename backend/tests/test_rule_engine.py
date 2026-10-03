@@ -75,3 +75,5 @@ def test_retirement_and_financial_independence_have_distinct_canonical_identitie
     assert canonical_goal_name("financial_independence") == "Financial Independence"
     assert canonical_goal_type("Retirement/Financial Freedom") == "retirement"
     assert canonical_goal_name("Retirement/Financial Freedom") == "Retirement"
+    assert canonical_goal_name("Education", "Daughter MBA") == "Daughter MBA"
+    assert canonical_goal_name("Child Education", "Education") == "Education"
