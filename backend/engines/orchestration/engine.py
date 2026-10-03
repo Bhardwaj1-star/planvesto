@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Callable
 from engines.allocation.engine import ResourceAllocationEngine
 from rules.constraints import PRIORITY_RANKS
+from rules.goals import GoalPriority
 from engines.orchestration.models import (
     GoalEvaluationInput,
-    GoalPriorityLevel,
     GoalResolution,
     MultiGoalPlanResult,
 )
@@ -28,7 +28,7 @@ class MultiGoalOrchestrator:
         goal: GoalEvaluationInput,
         financial_context: dict[str, Any],
         rule_overrides: dict[str, dict[str, Any]] | None = None,
-    ) -> tuple[GoalPriorityLevel, bool, str | None]:
+    ) -> tuple[GoalPriority, bool, str | None]:
         """Determines resolved priority while preserving client_priority for auditability.
 
         If explicit rule_overrides specifies an override for goal_id, or if an approved rule applies,
