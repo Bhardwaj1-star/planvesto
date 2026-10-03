@@ -103,5 +103,5 @@ def test_current_snapshot_with_stored_rules_is_not_reconstructed():
     result = _canonical_result(_snapshot(ratios, {"rules": stored_rules}))
 
     assert len(result.ratios) == 9
-    assert result.rules == stored_rules
+    assert [rule.model_dump() for rule in result.rules] == stored_rules
     assert "legacy_normalization" not in result.metadata
