@@ -5,6 +5,7 @@ from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from engines.strategy.engine import StrategyEngine
 from engines.strategy.composition import compose_architectures
+from engines.strategy.identity import canonical_architecture_id
 from engines.strategy.scenario import create_custom_scenario
 from engines.rules.engine import RuleEngine
 from models.defined_goal import DefinedGoal
@@ -232,9 +233,24 @@ class StrategyService:
             architecture for architecture in run.architectures
             if architecture.primary_strategy_id in strategy_ids
         ]
-        covered_strategy_ids = {architecture.primary_strategy_id for architecture in existing_architectures}
+
+        # Normalize persisted legacy IDs at the service boundary. Architecture
+        # identity is goal + primary strategy; supporting composition is data,
+        # not identity. This keeps old runs selectable without a schema change.
+        architectures = []
+        legacy_id_to_canonical_id = {}
+        for architecture in existing_architectures:
+            canonical_id = canonical_architecture_id(
+                run.goal_id,
+                architecture.primary_strategy_id,
+            )
+            legacy_id_to_canonical_id[architecture.architecture_id] = canonical_id
+            normalized = architecture.model_copy(update={"architecture_id": canonical_id})
+            if not any(item.architecture_id == canonical_id for item in architectures):
+                architectures.append(normalized)
+
+        covered_strategy_ids = {architecture.primary_strategy_id for architecture in architectures}
         missing_strategy_ids = strategy_ids - covered_strategy_ids
-        architectures = list(existing_architectures)
 
         if missing_strategy_ids:
             defined_goal = self.goal_repo.get_defined_goal_by_version(
@@ -268,16 +284,61 @@ class StrategyService:
                 (
                     architecture for architecture in architectures
                     if architecture.primary_strategy_id == run.selected_strategy_id
-                    and run.selected_architecture is not None
-                    and architecture.architecture_id == run.selected_architecture.architecture_id
                 ),
-                next(
-                    (architecture for architecture in architectures if architecture.primary_strategy_id == run.selected_strategy_id),
-                    None,
+                None,
+            )
+
+        recommendation_architecture = run.recommendation.architecture
+        if recommendation_architecture is not None:
+            recommendation_architecture = next(
+                (
+                    architecture for architecture in architectures
+                    if architecture.primary_strategy_id == recommendation_architecture.primary_strategy_id
+                ),
+                recommendation_architecture.model_copy(
+                    update={
+                        "architecture_id": canonical_architecture_id(
+                            run.goal_id,
+                            recommendation_architecture.primary_strategy_id,
+                        )
+                    }
                 ),
             )
 
-        changed = architectures != run.architectures or selected_architecture != run.selected_architecture
+        available_architecture_ids = {
+            architecture.architecture_id for architecture in architectures
+        }
+        alternative_architecture_ids = [
+            legacy_id_to_canonical_id.get(architecture_id, architecture_id)
+            for architecture_id in run.recommendation.alternative_architecture_ids
+        ]
+        alternative_architecture_ids = [
+            architecture_id
+            for architecture_id in alternative_architecture_ids
+            if architecture_id in available_architecture_ids
+            and (
+                recommendation_architecture is None
+                or architecture_id != recommendation_architecture.architecture_id
+            )
+        ]
+
+        recommendation_changed = (
+            recommendation_architecture != run.recommendation.architecture
+            or alternative_architecture_ids != run.recommendation.alternative_architecture_ids
+        )
+        if recommendation_changed:
+            run.recommendation = run.recommendation.model_copy(
+                update={
+                    "architecture": recommendation_architecture,
+                    "alternative_architecture_ids": alternative_architecture_ids,
+                }
+            )
+
+        changed = (
+            architectures != run.architectures
+            or selected_architecture != run.selected_architecture
+            or recommendation_changed
+        )
         run.architectures = architectures
         run.selected_architecture = selected_architecture
         if changed and run.strategy_run_id:

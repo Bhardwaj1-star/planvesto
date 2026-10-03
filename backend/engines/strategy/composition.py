@@ -1,6 +1,7 @@
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyArchitecture, StrategyDefinition
 from engines.strategy.components.adapters import components_for_strategy
+from engines.strategy.identity import canonical_architecture_id
 from library.strategies.components import get_canonical_component
 from library.strategies.techniques_canonical import get_canonical_technique
 from library.strategies.solution_matrix import get_strategy_solutions
@@ -104,7 +105,7 @@ def compose_architectures(
             )
 
         return StrategyArchitecture(
-            architecture_id=f"arch-{defined_goal.goal_id}-{primary.strategy_id}-{'-'.join(s.strategy_id for s in support) or 'core'}",
+            architecture_id=canonical_architecture_id(defined_goal.goal_id, primary.strategy_id),
             primary_strategy_id=primary.strategy_id,
             supporting_strategy_ids=[s.strategy_id for s in support],
             solution_ids=[s.solution_id for s in solutions],
