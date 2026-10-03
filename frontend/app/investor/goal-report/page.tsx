@@ -147,19 +147,26 @@ export default function GoalReportPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-teal-700">{bucket.role || "Bucket"}</span>
                         <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-extrabold text-teal-800">
-                          {bucket.allocation_pct}%
+                          {bucket.allocation_pct ?? bucket.allocation ?? "—"}{bucket.allocation_pct != null ? "%" : ""}
                         </span>
                       </div>
-                      <h3 className="mt-2 font-bold text-slate-900">{bucket.bucket_name}</h3>
-                      <p className="mt-1 text-xs text-slate-500">Horizon: {bucket.horizon_years} years</p>
+                      <h3 className="mt-2 font-bold text-slate-900">{bucket.bucket_name ?? bucket.bucket ?? "Product Bucket"}</h3>
+                      {bucket.horizon_years != null && (
+                        <p className="mt-1 text-xs text-slate-500">Horizon: {bucket.horizon_years} years</p>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-1">
-                        {(bucket.instruments || []).map((inst, i) => (
+                        {(Array.isArray(bucket.instruments)
+                          ? bucket.instruments
+                          : typeof bucket.instruments === "string"
+                            ? bucket.instruments.split(",").map((inst) => inst.trim()).filter(Boolean)
+                            : Object.values(bucket.instruments).map(String)
+                        ).map((inst, i) => (
                           <span key={i} className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200">
                             {inst}
                           </span>
                         ))}
                       </div>
-                      <p className="mt-3 text-xs leading-relaxed text-slate-600">{bucket.rationale}</p>
+                      <p className="mt-3 text-xs leading-relaxed text-slate-600">{bucket.rationale ?? bucket.strategic_rule ?? "—"}</p>
                     </div>
                   ))}
                 </div>
