@@ -122,11 +122,14 @@ def canonical_goal_type(value: str | None) -> str:
     return GOAL_TYPE_ALIASES.get(clean, clean)
 
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
-    """Return a goal's user-defined name when supplied, else its canonical type label."""
+    """Preserve a real goal name while replacing legacy/type-label names with the canonical label."""
+    canonical = canonical_goal_type(goal_type)
     supplied = " ".join((fallback or "").strip().split())
     if supplied:
-        return supplied
-    canonical = canonical_goal_type(goal_type)
+        supplied_key = supplied.lower().replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
+        canonical_labels = {name.lower(): key for key, name in CANONICAL_GOAL_NAMES.items()}
+        if supplied_key not in GOAL_TYPE_ALIASES and supplied_key not in canonical_labels and not supplied_key.startswith("retirement/"):
+            return supplied
     return CANONICAL_GOAL_NAMES.get(canonical, str(goal_type or "").strip())
 
 def canonical_goal_priority(value: str | None) -> GoalPriority:
