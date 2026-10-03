@@ -1,5 +1,6 @@
 from rules.constraints import (
     DEBT_TO_INCOME_CRITICAL_PERCENT,
+    DEBT_TO_INCOME_EXCELLENT_PERCENT,
     DEBT_TO_INCOME_HEALTHY_PERCENT,
     EMERGENCY_RESERVE_CRITICAL_MONTHS,
     EMERGENCY_RESERVE_HEALTHY_MONTHS,
@@ -18,7 +19,7 @@ Status = Literal["excellent", "healthy", "attention", "critical"]
 RULES = {
     "savings_rate": {"name": "Savings Rate", "unit": "%", "formula": "(Income - Expenses) / Income × 100", "excellent": (30.0, None), "healthy": (SAVINGS_RATIO_HEALTHY_PERCENT, 30.0), "attention": (10.0, SAVINGS_RATIO_HEALTHY_PERCENT), "critical": (None, 10.0)},
     "liquid_asset_ratio": {"name": "Liquid Asset Ratio", "unit": "%", "formula": "Liquid Assets / Total Assets × 100", "excellent": (25.0, None), "healthy": (15.0, 25.0), "attention": (10.0, 15.0), "critical": (None, 10.0)},
-    "debt_to_income_ratio": {"name": "Debt-to-Income Ratio", "unit": "%", "formula": "Monthly Debt Payments / Gross Monthly Income × 100", "excellent": (None, 20.0), "healthy": (DEBT_TO_INCOME_HEALTHY_PERCENT, 30.0), "attention": (30.0, DEBT_TO_INCOME_CRITICAL_PERCENT), "critical": (DEBT_TO_INCOME_CRITICAL_PERCENT, None)},
+    "debt_to_income_ratio": {"name": "Debt-to-Income Ratio", "unit": "%", "formula": "Monthly Debt Payments / Gross Monthly Income × 100", "excellent": (None, DEBT_TO_INCOME_EXCELLENT_PERCENT), "healthy": (DEBT_TO_INCOME_EXCELLENT_PERCENT, DEBT_TO_INCOME_HEALTHY_PERCENT), "attention": (30.0, DEBT_TO_INCOME_CRITICAL_PERCENT), "critical": (DEBT_TO_INCOME_CRITICAL_PERCENT, None)},
     "leverage_ratio": {"name": "Leverage Ratio", "unit": "%", "formula": "Total Liabilities / Total Assets × 100", "excellent": (None, 20.0), "healthy": (20.0, 30.0), "attention": (30.0, 50.0), "critical": (50.0, None)},
     "financial_asset_ratio": {"name": "Financial Asset Ratio", "unit": "%", "formula": "Financial Assets / Total Assets × 100", "excellent": (70.0, None), "healthy": (50.0, 70.0), "attention": (30.0, 50.0), "critical": (None, 30.0)},
     "insurance_coverage_ratio": {"name": "Insurance Coverage Ratio", "unit": "%", "formula": "Existing Sum Assured / Required Insurance Cover × 100", "excellent": (80.0, None), "healthy": (60.0, 80.0), "attention": (40.0, 60.0), "critical": (None, 40.0)},
