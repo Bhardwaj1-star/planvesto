@@ -2,10 +2,9 @@ from engines.orchestration.models import (
     GoalEvaluationInput,
     GoalResolution,
     MultiGoalPlanResult,
-    GoalPriorityLevel,
-    FundingStatusType,
-    FeasibilityStatusType,
 )
+from rules.goals import GoalPriorityLevel
+from rules.multi_goal import FundingStatusType, FeasibilityStatusType
 from engines.orchestration.engine import MultiGoalOrchestrator
 
 __all__ = [
