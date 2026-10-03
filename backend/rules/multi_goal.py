@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal
+from rules.constraints import PRIORITY_RANKS
 from rules.goals import GoalPriority, is_discretionary_goal, is_essential_goal
 
 # Canonical multi-goal status vocabularies. Allocation and orchestration share these.
@@ -11,19 +12,11 @@ FundingStatusType = Literal[
 ]
 FeasibilityStatusType = Literal["feasible", "constrained", "infeasible"]
 
-# Priority Ranks: lower number = higher priority
-PRIORITY_RANK_MAP: dict[str, int] = {
-    "critical": 1,
-    "high": 2,
-    "medium": 3,
-    "low": 4,
-}
-
 
 def get_priority_rank(priority: str | None) -> int:
-    """Return numeric priority rank for ordering (1 = Critical, 4 = Low)."""
+    """Return canonical numeric priority rank (0 = Critical, 3 = Low)."""
     clean = str(priority or "medium").strip().lower()
-    return PRIORITY_RANK_MAP.get(clean, 3)
+    return PRIORITY_RANKS.get(clean, 3)
 
 
 def is_higher_priority(priority_a: str | None, priority_b: str | None) -> bool:
