@@ -74,8 +74,8 @@ def canonical_goal_type(value: str | None) -> str:
     clean = " ".join((value or "").strip().lower().split())
     clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
     if clean.startswith("retirement/"):
-      return "retirement"
-  return GOAL_TYPE_ALIASES.get(clean, clean)
+        return "retirement"
+    return GOAL_TYPE_ALIASES.get(clean, clean)
 
 
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
