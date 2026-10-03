@@ -7,7 +7,7 @@ import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { apiRequest } from "../../../lib/api/client";
-import { buildStrategy, getLatestStrategyRun, getStrategyRunHistory, getPlanningUnitId, selectStrategy, type StrategyRun } from "../../../lib/api/strategy";
+import { buildStrategy, getStrategyRunHistory, getPlanningUnitId, selectStrategy, type StrategyRun } from "../../../lib/api/strategy";
 import { getLatestDefinedGoal } from "../../../lib/api/goals";
 import type { DefinedGoal } from "../../../lib/onboarding/goals/types";
 
@@ -108,18 +108,18 @@ export default function InvestorStrategyBuilderPage() {
         if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
         let preview: DefinedGoal | null = null;
         try { preview = await apiRequest<DefinedGoal>(`/api/goals/${selectedGoalId}/defined/latest?planning_unit_id=${planningUnitId}`); } catch { preview = null; }
-        let latest: StrategyRun | null = null;
-        try { latest = await getLatestStrategyRun(planningUnitId, selectedGoalId); } catch { latest = null; }
-        if (preview && (!latest || latest.defined_goal_version !== preview.version)) latest = await buildStrategy(planningUnitId, selectedGoalId);
+        // Strategy Builder always evaluates the current goal directly.
+        // Latest-run state is historical data only and never drives the decision flow.
+        const currentRun = await buildStrategy(planningUnitId, selectedGoalId);
         if (!active) return;
         setGoalPreview(preview);
-        setRun(latest);
-        const restoredStrategyId = latest?.selected_strategy_id ?? latest?.recommendation.recommended_strategy_id ?? "";
+        setRun(currentRun);
+        const restoredStrategyId = currentRun.selected_strategy_id ?? "";
         setSelectedStrategyId(restoredStrategyId);
-        setSelectedScenarioId(latest?.selected_scenario_id ?? latest?.recommendation.recommended_scenario_id ?? "");
-        setSelectedArchitectureId(resolveArchitectureId(latest, restoredStrategyId));
-        setParameters(latest?.selected_implementation_parameters ?? {});
-        setHistory(latest ? await getStrategyRunHistory(planningUnitId, selectedGoalId) : []);
+        setSelectedScenarioId(currentRun.selected_scenario_id ?? "");
+        setSelectedArchitectureId(resolveArchitectureId(currentRun, restoredStrategyId));
+        setParameters(currentRun.selected_implementation_parameters ?? {});
+        setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
       } catch (err) { if (active) setError(err instanceof Error ? err.message : "Unable to load Strategy Builder."); }
       finally { if (active) setWorking(false); }
     })();
@@ -131,10 +131,11 @@ export default function InvestorStrategyBuilderPage() {
   const selectedScenario = scenarios.find((s) => s.scenario_id === selectedScenarioId) ?? null;
   const displayedRankings = useMemo(() => {
     if (!run) return [];
-    const recommendedId = run.recommendation.architecture?.primary_strategy_id ?? run.recommendation.recommended_strategy_id;
-    const recommended = run.rankings.find((r) => r.is_recommended || r.strategy_id === recommendedId);
-    const alternative = run.rankings.find((r) => r.strategy_id !== recommended?.strategy_id);
-    return [recommended, alternative].filter(Boolean) as typeof run.rankings;
+    // The Builder always presents two strategy alternatives when two are available.
+    return [...run.rankings]
+      .sort((a, b) => a.rank - b.rank)
+      .filter((ranking, index, items) => items.findIndex((item) => item.strategy_id === ranking.strategy_id) === index)
+      .slice(0, 2);
   }, [run]);
 
   const execute = async (operation: () => Promise<StrategyRun>, successMessage?: string) => {
