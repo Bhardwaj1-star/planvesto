@@ -33,7 +33,7 @@ export default function StrategyWorkflowNav() {
     { id: "compare", label: "Participate With Numbers", href: `/investor/strategy-scenarios${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/strategy-scenarios")) },
     { id: "report", label: "Report", href: `/investor/goal-report${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/goal-report") || pathname?.startsWith("/investor/retirement-report")) },
     { id: "action-plan", label: "Action Plan", href: `/investor/action-plan${querySuffix}`, isActive: Boolean(pathname?.startsWith("/investor/action-plan")) },
-  ]
+  ];
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
