@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorStatus } from "../../../components/InvestorUI";
 import { getPlanningUnitId } from "../../../lib/api/client";
@@ -117,7 +116,6 @@ export default function ActionPlanPage() {
       </InvestorHeader>
 
       <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-        <StrategyWorkflowNav />
 
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
         {message && <InvestorStatus tone="success">{message}</InvestorStatus>}
