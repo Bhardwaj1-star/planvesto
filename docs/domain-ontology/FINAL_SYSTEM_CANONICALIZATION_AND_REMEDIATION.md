@@ -750,3 +750,103 @@ The system is ready for final sign-off only when:
 - Domain documentation matches verified implementation.
 
 Only after this gate is the final system-hardening phase complete.
+
+## 31. Audit Completion Status — Current Gate
+
+The repository audit is **not yet considered fully complete**.
+
+The existing sections capture the target architecture, known findings, remediation priorities, and sign-off conditions. However, the final evidence-backed audit deliverable has not yet been closed.
+
+### What is already established
+
+- End-to-end target architecture is documented.
+- Domain ownership model is documented.
+- StrategyRun vs StrategyVersion authority boundary is defined.
+- Financial State architecture is defined.
+- Goal canonicalization and priority ownership are defined.
+- Constraint semantics are defined.
+- Moneywheel canonical contract is defined as 9 ratios + 2 rules.
+- Known legacy aliases are documented.
+- Liquidity metric collision is documented.
+- Threshold ownership problem is documented.
+- DTI and emergency-coverage calculation conflicts are documented.
+- Approval lifecycle concerns are documented.
+- Action Plan / Report authority is documented.
+- Execution / `actual_state` integrity risk is documented.
+- Onboarding ownership boundary is documented.
+- Auth / ownership model is documented.
+- Remediation priorities and final sign-off conditions are documented.
+
+### What is still required before remediation begins
+
+The final audit must convert the existing findings into repository-proven evidence.
+
+For every material finding, the audit must provide:
+
+- exact file,
+- exact function/class,
+- actual call path,
+- current behavior,
+- domain meaning,
+- evidence for the finding,
+- canonical owner,
+- canonical target,
+- affected consumers,
+- priority,
+- backend/frontend/schema impact,
+- required regression test.
+
+The following areas require explicit evidence closure:
+
+1. StrategyRun vs StrategyVersion — repository-wide current-decision consumers.
+2. Financial State and metric definitions — exact formulas and ownership.
+3. DTI calculation conflict — exact competing implementations.
+4. Emergency coverage calculation conflict — exact competing implementations.
+5. Threshold ownership — complete inventory and semantic classification.
+6. `current_liquidity_ratio` vs `liquid_asset_ratio` — formula/unit/consumer comparison.
+7. Funding / feasibility / eligibility vocabularies — semantic equivalence or intentional separation.
+8. Approval lifecycle — creation, validation, StrategyVersion binding, and enforcement.
+9. Execution `actual_state` — client authority and FinancialState persistence path.
+10. Onboarding ownership — raw data vs derived FinancialState boundary.
+11. Frontend ↔ backend contract duplication.
+12. Legacy aliases — compatibility-only vs authoritative usage.
+13. Tests — exact current failures, stale contracts, and missing regression coverage.
+14. Documentation drift — current code vs domain/architecture documentation.
+
+### Audit status model
+
+Use these states explicitly:
+
+- **VERIFIED** — proven against current repository code/tests.
+- **CONFIRMED CONFLICT** — competing implementations or authorities are proven.
+- **NOT ESTABLISHED** — repository evidence is insufficient; do not invent semantics.
+- **COMPATIBILITY ONLY** — legacy path exists but is not authoritative.
+- **REMEDIATION REQUIRED** — verified issue with a defined canonical target.
+
+Do not mark a finding as resolved merely because the target architecture is documented.
+
+### Final audit gate
+
+The next Coding Agent task is **completion of the existing audit, not a new audit and not implementation**.
+
+Required sequence:
+
+Existing Audit Findings
+→ Repository Evidence Closure
+→ Final 19-Section Audit Deliverable
+→ Canonical Decisions
+→ Target Contracts
+→ Regression Test Plan
+→ Implementation
+→ CI
+→ Second Read-Only Audit
+→ Final Sign-Off
+
+Until the evidence closure and final 19-section deliverable are complete:
+
+- no remediation implementation should begin,
+- no business semantics should be guessed,
+- no schema/migration changes should be introduced,
+- no frontend redesign should be introduced.
+
+This section supersedes any interpretation that the presence of the remediation backlog means the audit itself is complete.
