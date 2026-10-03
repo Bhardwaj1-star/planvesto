@@ -125,10 +125,8 @@ export default function ReportsPage() {
         filename = "goal-basket-report.pdf";
       } else {
         if (!selectedVersion?.strategy_version_id) throw new Error("No finalized Strategy Version is available for this goal.");
-        if (selectedReport === "goal-strategy-report") {
-          blob = await downloadGoalStrategyReportPdfByStrategyVersion(planningUnitId, selectedVersion.strategy_version_id);
-          filename = "goal-report-" + (selectedGoal?.name || selectedGoalId).replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".pdf";
-        }
+        blob = await downloadGoalStrategyReportPdfByStrategyVersion(planningUnitId, selectedVersion.strategy_version_id);
+        filename = "goal-report-" + (selectedGoal?.name || selectedGoalId).replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".pdf";
       }
 
       const url = URL.createObjectURL(blob);
@@ -152,7 +150,7 @@ export default function ReportsPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] pb-16 text-slate-900">
-      <InvestorHeader eyebrow="Reports" title="Your Financial Reports" description="Select a report to review or download. Availability is based on your current planning data and completed Strategy Runs." />
+      <InvestorHeader eyebrow="Reports" title="Your Financial Reports" description="Select a report to review or download. Availability is based on your current planning data and finalized Strategy Versions." />
       <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-10">
         {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
 
@@ -262,7 +260,7 @@ export default function ReportsPage() {
                 working ||
                 (selectedReport !== "complete-financial-plan" &&
                   selectedReport !== "basket-goal-report" &&
-                  !selectedRun?.strategy_run_id) ||
+                  !selectedVersion?.strategy_version_id) ||
                 (selectedReport === "basket-goal-report" && customBasketGoalIds.length < 2 && !selectedBasketId)
               }
               className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
