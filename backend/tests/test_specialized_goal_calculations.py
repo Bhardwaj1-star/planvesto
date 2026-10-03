@@ -25,7 +25,7 @@ def test_retirement_calculates_required_corpus():
 
 def test_education_uses_child_age_and_start_age():
     result = calculate_specialized_target(
-        "Child Education",
+        "Education",
         {
             "child_age": 8,
             "education_start_age": 18,
