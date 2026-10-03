@@ -1,11 +1,9 @@
-"""Authoritative goal classification and normalization business rules."""
+"""Authoritative goal taxonomy and classification business rules."""
 from __future__ import annotations
 
 from typing import Literal
 
-# Canonical goal-priority vocabulary. All planning layers import this type.
 GoalPriority = Literal["critical", "high", "medium", "low"]
-# Backward-compatible alias; there is only one literal definition.
 GoalPriorityLevel = GoalPriority
 
 GOAL_PRIORITY_ALIASES: dict[str, GoalPriority] = {
@@ -23,83 +21,123 @@ GOAL_PRIORITY_ALIASES: dict[str, GoalPriority] = {
     "discretionary": "low",
 }
 
+# Canonical goal identity. Beneficiaries, sub-purpose and other circumstances
+# belong in dynamic/context details; they are never part of the goal type.
 CANONICAL_GOAL_NAMES: dict[str, str] = {
-    "retirement": "Retirement",
-    "passive_income": "Financial Freedom / Passive Income",
-    "child education": "Education",
+    "emergency_fund": "Emergency Fund",
+    "debt_freedom": "Debt Freedom",
+    "education": "Education",
     "marriage": "Marriage",
-    "home purchase": "Dream Home",
+    "home": "Home",
+    "home_improvement": "Home Improvement",
     "vehicle": "Vehicle",
-    "travel": "Vacation",
-    "other": "Others",
+    "travel": "Travel & Experiences",
+    "retirement": "Retirement",
+    "financial_independence": "Financial Independence",
+    "family_care": "Family Care",
+    "healthcare": "Healthcare",
+    "business": "Business & Entrepreneurship",
+    "lifestyle": "Lifestyle",
+    "wealth_creation": "Wealth Creation",
+    "legacy_giving": "Legacy & Giving",
+    "other": "Other",
 }
 
-# Only non-ambiguous legacy aliases remain here. Retirement and passive income
-# are permanently distinct canonical goal identities.
+# Legacy UI/storage labels normalize into the canonical identities above.
+# Existing persisted values remain readable; no database migration is required.
 GOAL_TYPE_ALIASES: dict[str, str] = {
-    "financial freedom/passive income": "passive_income",
-    "financial freedom": "passive_income",
-    "education": "child education",
-    "child education": "child education",
+    "emergency fund": "emergency_fund",
+    "emergency": "emergency_fund",
+    "contingency": "emergency_fund",
+    "debt repayment": "debt_freedom",
+    "debt freedom": "debt_freedom",
+    "education": "education",
+    "child education": "education",
+    "children education": "education",
+    "child's education": "education",
+    "childrens education": "education",
     "marriage": "marriage",
-    "dream home": "home purchase",
-    "home": "home purchase",
+    "child marriage": "marriage",
+    "children marriage": "marriage",
+    "dream home": "home",
+    "home purchase": "home",
+    "home": "home",
+    "home improvement": "home_improvement",
+    "renovation": "home_improvement",
     "car": "vehicle",
+    "vehicle": "vehicle",
     "vacation": "travel",
+    "travel": "travel",
+    "travel & experiences": "travel",
+    "passive income": "financial_independence",
+    "financial freedom": "financial_independence",
+    "financial freedom/passive income": "financial_independence",
+    "financial freedom / passive income": "financial_independence",
+    "financial independence": "financial_independence",
+    "business": "business",
+    "business & entrepreneurship": "business",
+    "entrepreneurship": "business",
+    "family care": "family_care",
+    "parents care": "family_care",
+    "healthcare": "healthcare",
+    "health care": "healthcare",
+    "lifestyle": "lifestyle",
+    "wealth creation": "wealth_creation",
+    "legacy & giving": "legacy_giving",
+    "legacy and giving": "legacy_giving",
+    "philanthropy": "legacy_giving",
+    "charity": "legacy_giving",
+    "giving": "legacy_giving",
     "others": "other",
-    "passive income": "passive_income",
-    "debt repayment": "other",
-    "philanthropy": "other",
+    "other": "other",
 }
 
 DISCRETIONARY_GOAL_TYPES: set[str] = {
-    "vacation",
-    "travel",
-    "car",
+    "home",
+    "home_improvement",
     "vehicle",
-    "luxury",
-    "others",
+    "travel",
+    "lifestyle",
+    "wealth_creation",
+    "legacy_giving",
     "other",
-    "passive_income",
 }
 
 ESSENTIAL_GOAL_TYPES: set[str] = {
     "emergency_fund",
-    "emergency",
-    "contingency",
-    "debt_repayment",
+    "debt_freedom",
+    "education",
     "retirement",
+    "financial_independence",
+    "family_care",
+    "healthcare",
 }
 
-
 def canonical_goal_type(value: str | None) -> str:
-    """Normalize goal type strings without changing their business meaning."""
+    """Normalize legacy/UI goal labels to one canonical goal identity."""
     clean = " ".join((value or "").strip().lower().split())
     clean = clean.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
     if clean.startswith("retirement/"):
         return "retirement"
     return GOAL_TYPE_ALIASES.get(clean, clean)
 
-
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
-    """Return the canonical user-facing name for a canonical goal type."""
+    """Return a goal's user-defined name when supplied, else its canonical type label."""
+    supplied = " ".join((fallback or "").strip().split())
+    if supplied:
+        return supplied
     canonical = canonical_goal_type(goal_type)
-    return CANONICAL_GOAL_NAMES.get(canonical, fallback or str(goal_type or "").strip())
-
+    return CANONICAL_GOAL_NAMES.get(canonical, str(goal_type or "").strip())
 
 def canonical_goal_priority(value: str | None) -> GoalPriority:
     """Normalize UI/storage goal-priority vocabulary to the canonical backend contract."""
     clean = " ".join((value or "").strip().lower().split())
     return GOAL_PRIORITY_ALIASES.get(clean, "medium")
 
-
 def is_discretionary_goal(goal_type: str | None) -> bool:
-    """Return True if goal is categorized as discretionary spending."""
     canonical = canonical_goal_type(goal_type)
     return canonical in DISCRETIONARY_GOAL_TYPES
 
-
 def is_essential_goal(goal_type: str | None) -> bool:
-    """Return True if goal is categorized as essential / core security."""
     canonical = canonical_goal_type(goal_type)
     return canonical in ESSENTIAL_GOAL_TYPES
