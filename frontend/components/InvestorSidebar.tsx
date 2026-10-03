@@ -29,7 +29,6 @@ const navigation: NavGroup[] = [
     label: "Reports",
     items: [
       { label: "Reports Center", href: "/investor/reports" },
-      { label: "Goal Reports", href: "/investor/goal-report" },
     ],
   },
   {
