@@ -45,6 +45,7 @@ export default function InvestorStrategyBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const selectedTargetKey = selectedBasketId ? `basket:${selectedBasketId}` : selectedGoalId;
   const selectedBasket = baskets.find((basket) => basket.id === selectedBasketId) ?? null;
@@ -85,6 +86,8 @@ export default function InvestorStrategyBuilderPage() {
   }, []);
 
   const handleTargetChange = (value: string) => {
+    setError(null);
+    setSuccessMessage(null);
     if (value.startsWith("basket:")) {
       setSelectedBasketId(value.slice("basket:".length));
       setSelectedGoalId("");
@@ -133,8 +136,8 @@ export default function InvestorStrategyBuilderPage() {
     return [recommended, alternative].filter(Boolean) as typeof run.rankings;
   }, [run]);
 
-  const execute = async (operation: () => Promise<StrategyRun>) => {
-    setWorking(true); setError(null);
+  const execute = async (operation: () => Promise<StrategyRun>, successMessage?: string) => {
+    setWorking(true); setError(null); setSuccessMessage(null);
     try {
       const next = await operation();
       setRun(next);
@@ -145,21 +148,45 @@ export default function InvestorStrategyBuilderPage() {
       setParameters(next.selected_implementation_parameters ?? {});
       const planningUnitId = getPlanningUnitId();
       if (planningUnitId && selectedGoalId) setHistory(await getStrategyRunHistory(planningUnitId, selectedGoalId));
+      if (successMessage) setSuccessMessage(successMessage);
     } catch (err) { setError(err instanceof Error ? err.message : "Strategy operation failed."); }
     finally { setWorking(false); }
   };
 
   const handleBuild = () => { const planningUnitId = getPlanningUnitId(); if (planningUnitId && selectedGoalId) void execute(() => buildStrategy(planningUnitId, selectedGoalId)); };
   const handleSelect = () => {
+    setError(null);
+    setSuccessMessage(null);
+
     const planningUnitId = getPlanningUnitId();
-    if (!planningUnitId || !run?.strategy_run_id || !selectedStrategyId || !selectedScenarioId) return;
+    if (!planningUnitId) {
+      setError("Planning unit is missing. Please refresh the page and try again.");
+      return;
+    }
+    if (!run?.strategy_run_id) {
+      setError("Strategy run is missing. Rebuild the Strategy Run before saving the selection.");
+      return;
+    }
+    if (!selectedStrategyId) {
+      setError("No strategy is selected. Select an architecture before saving.");
+      return;
+    }
+    if (!selectedScenarioId) {
+      setError("No scenario is selected. Select an architecture before saving.");
+      return;
+    }
+
     const architecture = run.architectures.find((item) => item.architecture_id === selectedArchitectureId && item.primary_strategy_id === selectedStrategyId)
       ?? run.architectures.find((item) => item.primary_strategy_id === selectedStrategyId);
     if (!architecture) {
-      setError("A matching strategy architecture is unavailable.");
+      setError("A matching strategy architecture is unavailable. Please select the architecture again.");
       return;
     }
-    void execute(() => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters, architecture.architecture_id));
+
+    void execute(
+      () => selectStrategy(planningUnitId, run.strategy_run_id!, selectedStrategyId, selectedScenarioId, parameters, architecture.architecture_id),
+      "Selection saved successfully.",
+    );
   };
 
   if (loading) return <main className="min-h-screen bg-[#f6f8fb] p-6 lg:p-10"><div className="mx-auto max-w-6xl space-y-6"><div className="h-9 w-64 animate-pulse rounded-xl bg-slate-200"/><div className="h-96 animate-pulse rounded-3xl bg-white"/></div></main>;
@@ -170,6 +197,7 @@ export default function InvestorStrategyBuilderPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
       <StrategyWorkflowNav/>
       {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
+      {successMessage && <InvestorStatus tone="success">{successMessage}</InvestorStatus>}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <label className="block flex-1">
