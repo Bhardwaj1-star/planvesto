@@ -5,10 +5,10 @@ from schemas.goals import GoalInput
 
 
 GOAL_TYPES = [
-    "Vacation",
-    "Home Purchase",
+    "Travel & Experiences",
+    "Home",
     "Retirement",
-    "Child Education",
+    "Education",
     "Marriage",
     "Vehicle",
 ]
@@ -36,7 +36,7 @@ def _input(goal_type: str, **overrides):
 
 
 def test_all_planned_goal_types_use_the_same_generic_engine():
-    expected_types = {"Travel": "travel", "Home": "home", "Retirement": "retirement", "Education": "education", "Marriage": "marriage", "Vehicle": "vehicle"}
+    expected_types = {"Travel & Experiences": "travel", "Home": "home", "Retirement": "retirement", "Education": "education", "Marriage": "marriage", "Vehicle": "vehicle"}
     for goal_type in GOAL_TYPES:
         goal = GoalEngine().calculate_defined_goal(_input(goal_type), {})
         assert goal.goal_type == expected_types[goal_type]
