@@ -220,7 +220,7 @@ function StrategyScenariosContent() {
   // Handle Recalculation
   async function handleRecalculate() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId || !selectedScenarioId) {
+    if (!pu || !run?.strategy_run_id || !strategyId || !activeScenarioId) {
       return setError("The selected Strategy Run, strategy, and scenario are required.");
     }
 
@@ -268,7 +268,7 @@ function StrategyScenariosContent() {
         pu,
         run.strategy_run_id,
         strategyId,
-        selectedScenarioId,
+        activeScenarioId,
         Object.fromEntries(
           editableParameters.map((param) => {
             const raw = strategyParams[param.name];
@@ -295,7 +295,7 @@ function StrategyScenariosContent() {
   // Handle Decision Lock & Navigation to Action Plan
   async function handleLockDecision() {
     const pu = getPlanningUnitId();
-    if (!pu || !run?.strategy_run_id || !strategyId || !selectedScenarioId) {
+    if (!pu || !run?.strategy_run_id || !strategyId || !activeScenarioId) {
       return setError("Missing implementation context.");
     }
 
@@ -325,7 +325,7 @@ function StrategyScenariosContent() {
         run.strategy_run_id,
         run.defined_goal_version,
         strategyId,
-        selectedScenarioId,
+        activeScenarioId,
         implementationParameters,
         assumptions,
         fundingStructure,
