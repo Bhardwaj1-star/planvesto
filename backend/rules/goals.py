@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from typing import Literal
 
+# Canonical goal-priority vocabulary. All planning layers import this type.
 GoalPriority = Literal["critical", "high", "medium", "low"]
+# Backward-compatible alias; there is only one literal definition.
+GoalPriorityLevel = GoalPriority
 
 GOAL_PRIORITY_ALIASES: dict[str, GoalPriority] = {
     "critical": "critical",
