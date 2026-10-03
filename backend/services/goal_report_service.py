@@ -11,6 +11,7 @@ from reportlab.lib import colors
 
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
+from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 
 
@@ -27,6 +28,7 @@ class GoalReportService:
     def __init__(self):
         self.goal_repo = GoalRepository()
         self.strategy_repo = StrategyRepository()
+        self.strategy_version_repo = StrategyVersionRepository(self.strategy_repo.db)
         self.financial_state_repo = FinancialStateSnapshotRepository()
 
     def _load(self, planning_unit_id: str, strategy_run_id: str):
@@ -80,6 +82,19 @@ class GoalReportService:
             "retirement_assets": getattr(goal, "projected_mapped_asset_value", 0.0),
         })
         return run, goal, context
+
+    def _load_by_strategy_version(self, planning_unit_id: str, strategy_version_id: str):
+        version = self.strategy_version_repo.get_by_id(planning_unit_id, strategy_version_id)
+        if not version:
+            raise HTTPException(status_code=404, detail="Strategy Version not found")
+
+        run = self.strategy_repo.get_run_by_strategy_version_id(planning_unit_id, strategy_version_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="No Strategy Run is linked to this Strategy Version")
+        if run.selected_strategy_version_id != strategy_version_id:
+            raise HTTPException(status_code=409, detail="Strategy Version is not the selected source for this Strategy Run")
+
+        return self._load(planning_unit_id, run.strategy_run_id)
 
     @staticmethod
     def _dump(value: Any) -> Any:
@@ -432,8 +447,13 @@ class GoalReportService:
             },
         ]
 
-    def build_report(self, planning_unit_id: str, strategy_run_id: str) -> dict[str, Any]:
-        run, goal, context = self._load(planning_unit_id, strategy_run_id)
+    def build_report(self, planning_unit_id: str, strategy_run_id: str | None = None, strategy_version_id: str | None = None) -> dict[str, Any]:
+        if strategy_version_id:
+            run, goal, context = self._load_by_strategy_version(planning_unit_id, strategy_version_id)
+        elif strategy_run_id:
+            run, goal, context = self._load(planning_unit_id, strategy_run_id)
+        else:
+            raise HTTPException(status_code=400, detail="A Strategy Version is required to build the goal report")
         recommendation = self._dump(self._get(run, "recommendation", {})) or {}
         architecture = self._dump(
             self._get(run, "selected_architecture")
@@ -633,8 +653,8 @@ class GoalReportService:
             for key, value in mapping.items()
         ]
 
-    def generate_pdf(self, planning_unit_id: str, strategy_run_id: str) -> bytes:
-        report = self.build_report(planning_unit_id, strategy_run_id)
+    def generate_pdf(self, planning_unit_id: str, strategy_run_id: str | None = None, strategy_version_id: str | None = None) -> bytes:
+        report = self.build_report(planning_unit_id, strategy_run_id, strategy_version_id)
 
         # Accept backward compatible report shapes
         if "goal" not in report:
