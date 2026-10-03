@@ -238,7 +238,7 @@ export default function InvestorStrategyBuilderPage() {
       </section>
     )}
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-10">
-      <StrategyWorkflowNav/>
+      <StrategyWorkflowNav showWorkflow={false} />
       {error && <InvestorStatus tone="error">{error}</InvestorStatus>}
       {successMessage && <InvestorStatus tone="success">{successMessage}</InvestorStatus>}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
