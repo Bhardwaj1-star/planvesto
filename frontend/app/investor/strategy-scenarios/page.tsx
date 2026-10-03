@@ -6,7 +6,6 @@ import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
-import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import {
   finalizeImplementation,
   getPlanningUnitId,
@@ -76,7 +75,6 @@ function StrategyScenariosContent() {
   const urlArchitectureId = searchParams.get("architectureId");
   const urlGoalVersion = Number(searchParams.get("goalVersion") || "0");
 
-  const [goals, setGoals] = useState<Array<{ id: string; name: string; targetAmount?: string }>>([]);
   const [goalId, setGoalId] = useState<string>("");
   const [definedGoal, setDefinedGoal] = useState<Record<string, unknown> | null>(null);
   const [run, setRun] = useState<StrategyRun | null>(null);
@@ -101,35 +99,6 @@ function StrategyScenariosContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // 1. Initial Load of Goals
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await loadGoalPlannerData();
-        const activeGoals = data.goals.map((g) => ({
-          id: g.id,
-          name: g.name,
-          targetAmount: g.targetAmount,
-        }));
-        if (active) {
-          setGoals(activeGoals);
-          if (urlGoalId && activeGoals.some((g) => g.id === urlGoalId)) {
-            setGoalId(urlGoalId);
-          } else if (activeGoals[0]) {
-            setGoalId(activeGoals[0].id);
-          }
-        }
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Unable to load active goals.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [urlGoalId]);
 
   // 2. Load the exact Strategy Run selected in Strategy Builder.
   // Latest-run state is never used to establish implementation context.
