@@ -52,13 +52,16 @@ export type CashFlowTrajectoryItem = {
 };
 
 export type ProductBucketItem = {
-  bucket_id: string;
-  bucket_name: string;
-  role: string;
-  horizon_years: number;
-  allocation_pct: number;
-  instruments: string[];
-  rationale: string;
+  bucket_id?: string;
+  bucket_name?: string;
+  bucket?: string;
+  role?: string;
+  horizon_years?: number;
+  allocation_pct?: number;
+  allocation?: string | number;
+  instruments: string | string[] | Record<string, unknown>;
+  rationale?: string;
+  strategic_rule?: string;
 };
 
 export type ContributionRuleItem = {
