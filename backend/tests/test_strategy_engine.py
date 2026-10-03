@@ -6,7 +6,7 @@ from engines.strategy.engine import StrategyEngine
 from engines.strategy.scenario import create_custom_scenario
 
 
-def _make_goal(goal_type="Child Education", funding_gap=500000.0, funding_status="Shortfall"):
+def _make_goal(goal_type="Education", funding_gap=500000.0, funding_status="Shortfall"):
     return DefinedGoal(
         goal_id="g-100",
         planning_unit_id="pu-100",
@@ -29,7 +29,7 @@ def _make_goal(goal_type="Child Education", funding_gap=500000.0, funding_status
 
 class TestStrategyApplicability:
     def test_applicability_by_goal_type(self):
-        strats = filter_applicable_strategies("Child Education")
+        strats = filter_applicable_strategies("Education")
         assert len(strats) >= 2
         ids = [s.strategy_id for s in strats]
         assert "strat-capital-preservation" in ids
@@ -192,7 +192,7 @@ class TestGenericMultiGoalArchitecture:
     """Verifies that StrategyEngine is generic across different goal types."""
 
     @pytest.mark.parametrize("goal_type,duration,target_amount", [
-        ("Child Education", 8.0, 3000000.0),
+        ("Education", 8.0, 3000000.0),
         ("Home Purchase", 5.0, 5000000.0),
         ("Wealth Creation", 12.0, 10000000.0),
         ("Car", 3.0, 1500000.0),
