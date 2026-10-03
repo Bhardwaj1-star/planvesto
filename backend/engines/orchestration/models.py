@@ -37,7 +37,7 @@ class GoalResolution(BaseModel):
     goal_name: str
     goal_type: str
     client_priority: GoalPriorityLevel
-    resolved_priority: GoalPriorityLevelLevel
+    resolved_priority: GoalPriorityLevel
     target_date: str | None = None
     required_monthly_contribution: float = 0.0
     allocated_monthly_contribution: float = 0.0
