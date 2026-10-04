@@ -14,11 +14,14 @@ def make_state():
         income_annual=metric(1200000),
         expenses_monthly=metric(40000),
         expenses_annual=metric(480000),
+        essential_monthly_expenses=metric(30000),
         investable_surplus_monthly=metric(50000),
         investable_surplus_annual=metric(600000),
         cash_flow_ratio=metric(0.5),
         savings_investment_rate=metric(0.5),
         total_assets=metric(1000000),
+        liquid_assets=metric(250000),
+        financial_assets=metric(700000),
         total_liabilities=metric(200000),
         emi_burden_monthly=metric(10000),
         net_worth=metric(800000),
@@ -27,13 +30,8 @@ def make_state():
     )
 
 
-def test_adapter_maps_existing_financial_state_fields():
-    data = MoneywheelFinancialStateAdapter().build(
-        make_state(),
-        essential_monthly_expenses=30000,
-        liquid_assets=250000,
-        financial_assets=700000,
-    )
+def test_adapter_maps_canonical_financial_state_fields():
+    data = MoneywheelFinancialStateAdapter().build(make_state())
 
     assert data.gross_monthly_income == 100000
     assert data.monthly_surplus == 50000
@@ -45,9 +43,10 @@ def test_adapter_maps_existing_financial_state_fields():
     assert data.financial_assets == 700000
 
 
-def test_adapter_does_not_infer_classification_dependent_fields():
-    data = MoneywheelFinancialStateAdapter().build(make_state())
+def test_adapter_does_not_recalculate_classification_dependent_fields():
+    state = make_state()
+    data = MoneywheelFinancialStateAdapter().build(state)
 
-    assert data.essential_monthly_expenses is None
-    assert data.liquid_assets is None
-    assert data.financial_assets is None
+    assert data.essential_monthly_expenses == 30000
+    assert data.liquid_assets == 250000
+    assert data.financial_assets == 700000
