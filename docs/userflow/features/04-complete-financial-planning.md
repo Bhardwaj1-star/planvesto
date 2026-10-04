@@ -21,7 +21,7 @@
 | Assumptions | Assumptions are explicit model inputs and should not be hidden | Planning return assumptions are explicit inputs, with a centralized fallback and goal-specific assumptions propagated into CFP trajectory calculations | **Implemented / bounded** |
 | Common Data Model | Investor, Financial State, Asset, Liability, Goal, Goal Funding, Constraint, Assumption, Action, Strategy, Scenario, Validation, Decision, Audit | Most appear through existing feature/domain authorities; no single Complete Financial Planning data-model owner | **Available by composition / not centralized here** |
 | Audit | Decision/audit history and traceability | Constraint aggregation audit evidence and strategy lineage are exposed | **Partially available** |
-| No arbitrary universal return | Required return should be derived; no arbitrary universal 10% assumption | CFP trajectory uses FinancialState financial assets and weighted goal funding-return assumptions; no universal fixed return is applied | **Known gap** |
+| No arbitrary universal return | Required return should be derived; no arbitrary universal 10% assumption | CFP trajectory uses FinancialState financial assets and weighted goal funding-return assumptions; no universal fixed return is applied | **Implemented / bounded** |
 | Cross-goal consolidation | Whole financial plan should integrate goals, funding, constraints and trade-offs | Core purpose of this feature; multi-goal orchestration + consolidated output | **Implemented** |
 | Plan snapshot / versioning | Blueprint implies decision/history feedback but does not specify this feature's exact persistence model | Current plan is live; no dedicated immutable Complete Financial Plan version/snapshot | **Not yet implemented** |
 | Rendering / report | Outputs can feed decision/explainability/reporting | Planning data contract exists; rendering remains a presentation layer | **Available by boundary** |
@@ -32,7 +32,7 @@
 
 **What is already available:** cross-goal consolidation, goal funding, current StrategyVersion lineage, constraint evaluation/aggregation, resource allocation, trade-offs, plan-level action requirements, financial trajectory, contingency/governance evidence, and audit/provenance.
 
-**What is only partial or remains to be built:** first-class Proposed Action/Problem flow, dedicated Scenario Engine, Probability/Uncertainty layer, first-class Optimization/explainability boundaries, explicit Assumption model, immutable plan snapshot/versioning, and removal of the fixed 9% trajectory assumption.
+**What is only partial or remains to be built:** first-class Proposed Action/Problem flow, dedicated Scenario Engine, Probability/Uncertainty layer, first-class Optimization/explainability boundaries, explicit Assumption model, immutable plan snapshot/versioning.
 
 **Important boundary:** These gaps do not mean all of them belong inside `04-complete-financial-planning.md`. The feature should consume or orchestrate the appropriate system-level engines rather than duplicate their ownership.
 
