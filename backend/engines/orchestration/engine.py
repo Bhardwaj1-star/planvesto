@@ -132,6 +132,7 @@ class MultiGoalOrchestrator:
                 future_target=s_info.get("future_target"),
                 funding_gap=s_info.get("funding_gap"),
                 projected_mapped_asset_value=s_info.get("projected_mapped_asset_value"),
+                funding_return_assumption=s_info.get("funding_return_assumption"),
                 available_monthly_surplus=s_info.get("available_monthly_surplus"),
                 funding_strategies=s_info.get("funding_strategies", []),
                 override_applied=item.override_applied,
