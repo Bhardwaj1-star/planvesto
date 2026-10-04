@@ -29,7 +29,7 @@ def test_complete_financial_plan_contains_goal_calculation_and_funding_options()
             GoalResolution(
                 goal_id="g1",
                 goal_name="Vacation",
-                goal_type="Travel",
+                goal_type="vacation",
                 client_priority="medium",
                 resolved_priority="medium",
                 target_date="2031-12",
@@ -88,7 +88,7 @@ def test_goal_plan_summary_preserves_strategy_and_funding_data():
         total_allocated_contribution=12000.0,
         overall_funding_status="within_surplus",
         goals=[GoalResolution(
-            goal_id="g1", goal_name="Vacation", goal_type="Travel",
+            goal_id="g1", goal_name="Vacation", goal_type="vacation",
             client_priority="medium", resolved_priority="medium",
             target_date="2031-12", required_monthly_contribution=12000.0,
             allocated_monthly_contribution=12000.0,
