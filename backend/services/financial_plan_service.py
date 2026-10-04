@@ -142,23 +142,6 @@ class FinancialPlanService:
                 "override_reason": r.get("override_reason"),
             })
 
-        action_items = [
-            {
-                "action_id": f"act_{a.get('sequence', idx)}",
-                "category": "goal",
-                "title": a.get("action", f"Fund {a.get('goal_name')}"),
-                "description": a.get("action", ""),
-                "priority": "high",
-                "target_type": "goal",
-                "target_id": a.get("goal_id"),
-                "monthly_commitment": float(a.get("monthly_contribution") or 0.0),
-                "lump_sum_commitment": 0.0,
-                "deadline": a.get("target_date"),
-                "status": a.get("funding_status", "pending"),
-            }
-            for idx, a in enumerate(multi_plan.action_plan, start=1)
-        ]
-
         return {
             "report_type": "complete_financial_plan",
             "planning_unit_id": planning_unit_id,
@@ -231,10 +214,11 @@ class FinancialPlanService:
                 for r in rows
                 if r.get("strategy_version_id")
             ],
-            "actions": multi_plan.action_plan,
+            "actions": [],
             "action_plan": {
-                "actions": action_items,
-                "total_actions": len(action_items),
+                "actions": [],
+                "total_actions": 0,
+                "status": "delegated_to_action_plan",
             },
             "trade_offs": multi_plan.trade_offs,
             "constraints": [
