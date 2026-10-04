@@ -1,591 +1,311 @@
 # Onboarding
 
-## 1. Feature Scope
+## 1. Purpose
 
-Onboarding collects the user's raw planning information and persists the foundational Planning Unit data used by downstream financial planning.
+Onboarding is the **starting point of the financial planning system**.
+
+Its job is to collect the user's important financial information once, in an organized way, so the rest of Planvesto can build a reliable picture of the user's financial life.
+
+Onboarding is **not the financial plan itself**. It provides the information on which the financial plan is built.
+
+---
+
+## 2. Complete User Flow
+
+The user should move through onboarding in this order:
 
 ```text
 User
-└── Onboarding
-    ├── Personal information
-    ├── Family / dependents
-    ├── Income
-    ├── Expenses
-    ├── Assets
-    ├── Liabilities
-    ├── Insurance
-    └── Goals
-        ↓
-    Raw Planning Unit Records
-        ↓
-    FinancialState Construction
-        ↓
-    Financial Measures
-        ↓
-    Goal Planner / MoneyWheel / Strategy Builder
+  ↓
+Personal Information
+  ↓
+Family / Dependents
+  ↓
+Income
+  ↓
+Expenses
+  ↓
+Assets
+  ↓
+Liabilities
+  ↓
+Insurance
+  ↓
+Goals
+  ↓
+Complete Financial Picture
+  ↓
+Financial Health & Measures
+  ↓
+Goal Planner / MoneyWheel / Strategy
 ```
 
-### Identified correction: Insurance is missing from guided onboarding
+This is the core onboarding flow and should remain understandable to a normal user.
 
-Insurance is already implemented in the system, but it is not currently included in the guided onboarding flow.
+---
 
-**Required change:**
+## 3. What We Need to Understand About the User
 
-- Add **Insurance** as a dedicated onboarding step.
-- Position it **after Liabilities and before Goals**.
-- Reuse the existing Insurance implementation; do not create a duplicate domain or duplicate persistence.
-- Insurance must participate in onboarding navigation, resume logic, completion logic, and persistence.
-- Insurance data must remain Planning Unit-scoped and flow into the same downstream financial-planning pipeline as the other raw planning inputs.
+Onboarding must collect the information needed to answer four basic questions:
 
-Existing Insurance implementation to reuse:
+### A. Who is the user?
 
-- `frontend/components/onboarding/insurance/InsuranceSection.tsx`
-- `frontend/lib/onboarding/insurance/types.ts`
-- `frontend/lib/onboarding/insurance/persistence.ts`
-- `frontend/lib/onboarding/insurance/api.ts`
-- `insurance_policies` persistence
+- Personal information
+- Family and dependents
 
-This is an **onboarding integration correction**, not a request to redesign the Insurance domain.
+### B. How does money come in and go out?
 
-Onboarding owns raw-input capture and persistence. It does not own derived FinancialState calculations.
+- Income
+- Expenses
 
-## 2. User / Request Inputs
+### C. What does the user own and owe?
 
-The intended onboarding flow covers:
+- Assets
+- Liabilities
 
-- personal information
-- family / dependents
-- income
-- expenses
-- assets
-- liabilities
-- insurance
-- goals
+### D. What protection does the user have and what does the user want to achieve?
 
-The frontend is organized into dedicated onboarding steps and forms for these domains.
+- Insurance
+- Financial goals
 
-## 3. Input Source / Authority Boundary
+These together form the user's **starting financial picture**.
 
-| Domain | Onboarding role | Downstream authority |
-|---|---|---|
-| Personal information | collect/persist raw input | Planning Unit / profile data |
-| Family/dependents | collect/persist raw input | Planning Unit records |
-| Income | collect/persist raw input | FinancialStateService derives measures |
-| Expenses | collect/persist raw input | FinancialStateService derives measures |
-| Assets | collect/persist raw input | FinancialStateService / Goal Planner consumers |
-| Liabilities | collect/persist raw input | FinancialStateService |
-| Insurance | collect/persist raw policy input | Insurance domain / FinancialState consumers |
-| Goals | collect/persist goal input | Goal Planner / DefinedGoal lifecycle |
+---
 
-Onboarding must not become a second owner of derived financial metrics.
+## 4. Insurance Is a Core Part of Onboarding
 
-## 4. Input Consumption Boundary
+Insurance is not an optional side feature.
 
-Inputs are classified as:
+It is part of understanding the user's financial position because insurance can provide:
 
-### Raw source records
+- financial protection;
+- health protection;
+- life protection;
+- an existing financial commitment through premiums;
+- and, in some policies, a financial value or maturity value.
 
-- income sources
-- expenses
-- assets
-- liabilities
-- insurance policies
-- family/dependent records
-- personal information
-- goal inputs
+Therefore **Insurance must be a dedicated onboarding step**.
 
-### Context / ownership
-
-- authenticated user
-- Planning Unit
-- investor context
-
-### Derived outputs
-
-These are not owned by onboarding:
-
-- FinancialState
-- savings rate
-- liquidity ratios
-- DTI
-- MoneyWheel classifications
-- goal funding calculations
-- strategy eligibility
-
-## 5. Onboarding State / Persistence
-
-The frontend onboarding flow maintains step/navigation state and local form state while collecting inputs.
-
-The persisted raw records become the source of truth for downstream FinancialState construction.
-
-Insurance follows its existing persistence contract: the policy is stored in `insurance_policies`; premium synchronization creates/updates the linked Insurance expense, and current value is synchronized to a linked asset when applicable. Onboarding must reuse this contract.
-
-A completed onboarding step must not be interpreted as a completed financial plan; the downstream services still validate and derive their own authoritative state.
-
-## 6. FinancialState Boundary
+### Correct position
 
 ```text
-Onboarding Raw Inputs
-        ↓
-Persisted Planning Unit Data
-        ↓
-FinancialStateService
-        ↓
-Authoritative FinancialState
-        ↓
-Canonical Financial Calculations
+Assets
+  ↓
+Liabilities
+  ↓
+Insurance
+  ↓
+Goals
 ```
 
-FinancialState freshness depends on source revision. Changed onboarding inputs must cause downstream state rebuild/refresh according to FinancialState authority rules.
+The system already has Insurance functionality. The problem is that it is not currently included in the guided onboarding journey.
 
-## 7. Goal Boundary
+**System decision:** integrate the existing Insurance functionality into onboarding rather than creating another Insurance system.
 
-Goals collected during onboarding are inputs to the Goal Planner.
+---
 
-The canonical goal taxonomy belongs to Goal Planner/rules, not to onboarding UI labels.
+## 5. What Each Step Means
 
-Therefore:
+| Step | What we are collecting | Why it matters |
+|---|---|---|
+| Personal Information | Basic identity and personal circumstances | Establishes the user's planning context |
+| Family / Dependents | People financially connected to the user | Determines who the financial plan needs to consider |
+| Income | Sources and amount of income | Establishes earning capacity |
+| Expenses | Regular and important spending | Establishes cost of living and available surplus |
+| Assets | Things the user owns financially | Establishes existing wealth/resources |
+| Liabilities | Loans and other obligations | Establishes debt burden |
+| Insurance | Life, health and other policies | Establishes protection and insurance-related financial commitments |
+| Goals | What the user wants to achieve | Defines what the financial plan needs to accomplish |
 
-- onboarding can collect goal information;
-- Goal Planner canonicalizes goal identity;
-- DefinedGoal owns versioned calculated planning fields;
-- onboarding does not become the owner of goal funding or feasibility.
+---
 
-## 8. Output Contract
+## 6. Important Business Rules
 
-Onboarding produces persisted raw planning data sufficient for downstream services to construct:
+These are the decisions that the rest of the system must be built around.
 
-- current financial state
-- canonical financial measures
-- defined goals
-- planning context
+### 6.1 Onboarding captures facts; it does not make the plan
 
-It does not directly produce a canonical strategy or Action Plan.
+The user tells the system what is true about their financial life.
 
-## 9. Ownership Boundary
+The system should then use those facts to calculate financial health, evaluate goals and build strategies.
 
-- Onboarding entry/UI: `frontend/app/investor/onboarding/*`
-- Onboarding shell/navigation: `frontend/components/onboarding/OnboardingShell.tsx`, `OnboardingProvider.tsx`
-- Step hooks/forms: `frontend/hooks/onboarding/*`, `frontend/components/onboarding/*`
-- Goals onboarding persistence: `frontend/hooks/onboarding/goals/*`
-- FinancialState authority: `backend/services/financial_state_service.py`
-- Goal canonicalization/calculation: `backend/rules/goals.py`, `backend/engines/goal/*`
+Onboarding should not independently decide:
 
-The frontend captures data; backend domain services own authoritative derived state.
+- whether a goal is financially feasible;
+- which strategy is best;
+- how much the user should invest;
+- or what the user's financial health score is.
 
-## 10. Downstream Dependencies
+Those decisions belong to the downstream planning system.
+
+### 6.2 The user's financial information must connect
+
+The information collected in onboarding cannot remain as isolated forms.
+
+It must come together into one financial picture:
+
+```text
+Personal
++ Family
++ Income
++ Expenses
++ Assets
++ Liabilities
++ Insurance
++ Goals
+        ↓
+Complete Financial Picture
+```
+
+This combined picture is the foundation for everything that follows.
+
+### 6.3 Insurance must affect the financial picture correctly
+
+Insurance should not be treated as only a document or checklist.
+
+Where applicable:
+
+- premiums are part of the user's financial commitments;
+- policy value can represent an existing financial asset;
+- protection information can be used for insurance/protection analysis.
+
+The system must use the existing Insurance rules consistently.
+
+### 6.4 Goals are intentions, not conclusions
+
+When a user says:
+
+> "I want to retire at 55."
+
+or
+
+> "I want financial freedom through passive income."
+
+that is the user's **goal**, not the system's conclusion that the goal is achievable.
+
+The Goal Planner must later determine:
+
+- what the goal will cost;
+- whether current resources are sufficient;
+- what funding is required;
+- and what strategy may be appropriate.
+
+### 6.5 Different goals must remain conceptually separate
+
+Onboarding may collect different kinds of goals, but the planning system must preserve their meaning.
+
+For example:
+
+- **Retirement** is not the same as **Financial Independence**.
+- Financial Independence / Financial Freedom is associated with the user's ability to sustain life through sufficient independent/passive income.
+- A beneficiary or circumstance such as "child" does not automatically create a new goal category.
+
+The goal itself must remain clear; additional circumstances can be captured as supporting information.
+
+---
+
+## 7. What Onboarding Must Produce
+
+At the end of onboarding, the system should have a reliable answer to:
+
+> **"What does this person's financial life look like today, and what are they trying to achieve?"**
+
+That means the system should know:
+
+- who the user is;
+- who depends on them;
+- how much they earn;
+- how much they spend;
+- what they own;
+- what they owe;
+- what protection they have;
+- and what they want to achieve.
+
+This becomes the **single starting point for financial planning**.
+
+---
+
+## 8. What Happens After Onboarding
+
+Onboarding hands the collected information to the rest of the system.
 
 ```text
 Onboarding
-├── Financial Health & Rules
-├── Goal Planner
-├── Investor Profile / planning context
-└── MoneyWheel / Strategy Builder indirectly
-```
-
-Downstream consumers must read their canonical sources rather than relying on transient onboarding UI state.
-
-## 11. Regression Contract
-
-Tests should protect:
-
-- onboarding data persists to the correct Planning Unit;
-- ownership boundaries are enforced;
-- individual/family context remains valid;
-- raw financial inputs remain available to FinancialState construction;
-- changed raw inputs invalidate stale derived FinancialState;
-- goal input does not bypass Goal Planner canonicalization;
-- onboarding does not write competing financial metrics.
-
-## 12. Known Implementation Notes / Gaps
-
-1. Onboarding UI contains broader specialized fields than the generic calculation layer; a collected field is not automatically calculation-driving.
-2. Raw-input persistence and derived FinancialState must remain separate authority boundaries.
-3. Any frontend/backend contract changes must preserve Planning Unit ownership and source revision semantics.
-
-## 13. Important Semantic Boundaries
-
-1. Raw input ≠ FinancialState.
-2. Onboarding ≠ Goal Planner.
-3. Onboarding goal data ≠ DefinedGoal authority.
-4. Form state ≠ persisted source authority.
-5. FinancialState ≠ MoneyWheel output.
-6. Onboarding completion ≠ strategy readiness by itself.
-
-## 14. Final Onboarding Output
-
-```text
-User Inputs
     ↓
-Validated / Persisted Raw Planning Data
-    ├── Personal
-    ├── Family
-    ├── Income
-    ├── Expenses
-    ├── Assets
-    ├── Liabilities
-    ├── Insurance
-    └── Goals
+Complete Financial Picture
     ↓
-FinancialState / DefinedGoal downstream construction
+Financial Health & Measures
     ↓
-Planning-ready source data
-```
-
-## 15. Onboarding End-to-End Contract
-
-USER
+Goal Planning
     ↓
-ONBOARDING STEPS
+MoneyWheel
     ↓
-RAW PLANNING UNIT RECORDS
+Strategy Building
+```
+
+Each stage should use the same underlying financial picture.
+
+The system must not create different versions of the user's financial reality for different features.
+
+---
+
+## 9. Core System Principles
+
+These principles are more important than the individual screens.
+
+1. **One user → one coherent financial picture.**
+2. **Onboarding collects facts; downstream systems analyse and plan.**
+3. **Insurance is a first-class part of financial planning.**
+4. **Assets, liabilities, insurance, income and expenses must connect to the same financial picture.**
+5. **Goals describe what the user wants; the system later determines feasibility and strategy.**
+6. **Goal meaning must remain canonical and consistent throughout the system.**
+7. **The same financial reality must be used by Financial Health, Goal Planner, MoneyWheel and Strategy Builder.**
+8. **Existing domain logic should be reused rather than creating duplicate systems.**
+
+---
+
+## 10. Current Correction
+
+### Problem
+
+Insurance already exists in Planvesto, but the guided onboarding journey does not currently include it.
+
+### Required correction
+
+Add Insurance as a dedicated onboarding step:
+
+```text
+Liabilities
     ↓
-FINANCIALSTATE CONSTRUCTION + GOAL DEFINITION
+Insurance
     ↓
-CANONICAL FINANCIAL / GOAL OUTPUTS
-    ↓
-DOWNSTREAM PLANNING
-
-Scope: Onboarding only.
-
-## 16. Code-Verified Step Contracts
-
-### Current implementation
-
-The current frontend implements **seven** ordered onboarding steps. Insurance is not yet part of that sequence.
-
-### Required target flow
-
-The corrected onboarding flow must contain **eight** steps, with Insurance inserted after Liabilities and before Goals:
-
-| Step | Route | State collection |
-|---|---|---|
-| 1 | `/investor/onboarding/personal-information` | `personalInformation` |
-| 2 | `/investor/onboarding/family-dependents` | `familyMembers[]` |
-| 3 | `/investor/onboarding/income` | `incomeSources[]` |
-| 4 | `/investor/onboarding/expenses` | `expenses[]` |
-| 5 | `/investor/onboarding/assets` | `assets[]` |
-| 6 | `/investor/onboarding/liabilities` | `liabilities[]` |
-| 7 | `/investor/onboarding/insurance` | existing Insurance policy state/persistence |
-| 8 | `/investor/onboarding/goals` | `goals[]` |
-
-**Implementation requirement:** the Insurance route/provider-state/navigation entry must be added. The implementation must reuse the existing Insurance component and persistence layer.
-
-The navigation authority is `frontend/components/onboarding/OnboardingProvider.tsx`. The provider calculates the resume step from persisted record presence and prevents access beyond the next available step.
-
-## 17. Code-Verified Onboarding State
-
-The provider currently owns:
-
-```text
-planningUnitId
-investorId
-personalInformation
-familyMembers[]
-incomeSources[]
-expenses[]
-assets[]
-liabilities[]
-insurance policy state
-goals[]
-completedSteps[]
-isLoading
-persistenceError
+Goals
 ```
 
-Persisted data is loaded whenever the pathname is under `/investor/onboarding/*` or `/investor/profile`.
+The correction should integrate the existing Insurance functionality and make its information part of the same financial picture used by the rest of the system.
 
-Step completion is reconstructed as:
+---
 
-```text
-fullName present       → step 1
-familyMembers.length   → step 2
-incomeSources.length   → step 3
-expenses.length        → step 4
-assets.length          → step 5
-liabilities.length     → step 6
-insurance completion   → step 7
-goals.length           → step 8
-```
-
-Insurance completion must be determined from the existing Insurance persistence/data contract; do not invent a second completion flag only for onboarding.
-
-There is no separate persisted onboarding-completion field in the current provider/persistence implementation.
-
-## 18. Code-Verified Input Contracts
-
-### Personal information
-
-```text
-fullName
-dateOfBirth
-gender
-maritalStatus
-mobileNumber
-address
-city
-state
-country
-occupation
-```
-
-Required validation is implemented for name, DOB, marital status, occupation and address/location fields. Mobile is optional but validated when supplied.
-
-### Family / dependents
-
-```text
-name
-relationship
-dateOfBirth
-occupation
-financialDependency
-includeInPlanning
-```
-
-The validator requires name, relationship, valid DOB and boolean financial dependency. Occupation and include-in-planning are not required by the current validator.
-
-### Income
-
-```text
-incomeType
-amount
-frequency
-expectedAnnualGrowth
-```
-
-Supported income types are Salary, Business, Professional/Freelance, Rental, Interest, Dividend, Pension and Other. Frequency is Monthly or Annual.
-
-### Expenses
-
-```text
-category
-amount
-frequency
-```
-
-Supported categories and frequencies are defined in `frontend/lib/onboarding/expenses/types.ts`.
-
-### Assets
-
-```text
-assetType
-description
-currentValue
-purchaseValue
-purchaseDate
-```
-
-Current value is required and positive. Purchase value/date are optional.
-
-### Liabilities
-
-```text
-liabilityType
-description
-outstandingAmount
-interestRate
-regularPayment
-frequency
-endDate
-```
-
-Outstanding amount is required and positive. Interest rate and regular payment are optional. The current validator does not enforce frequency/endDate.
-
-### Insurance
-
-Insurance already has a dedicated UI and data model. The onboarding integration must reuse it.
-
-Existing policy fields include:
-
-```text
-policyName
-insurer
-policyNumber
-policyType
-premium
-premiumFrequency
-sumAssured
-currentValue
-surrenderValue
-maturityDate
-maturityValue
-```
-
-Existing policy types include Term Insurance, Endowment, Money Back, ULIP, Whole Life, Health Insurance and Other.
-
-The existing Insurance implementation also supports optional policy-document/PDF extraction.
-
-### Goals
-
-The current frontend Goal model contains:
-
-```text
-name
-goalType
-targetAmount
-targetMode
-targetDate
-targetAge
-currentSavedAmount
-monthlyContribution
-priority
-flexibility
-inflationApplicability
-notes
-dynamicDetails
-```
-
-The current dynamic-details model contains goal-specific fields including retirement, passive-income, education, marriage, home, vehicle, vacation, wealth, debt and "other" details.
-
-## 19. Code-Verified Persistence Contract
-
-Persistence is implemented in `frontend/lib/onboarding/persistence.ts` and uses `getPlanningUnitId()`.
-
-```text
-Personal information → investors
-Family/dependents   → dependents
-Income              → income
-Expenses            → expenses
-Assets              → assets
-Liabilities         → liabilities
-Insurance           → insurance_policies
-Goals               → goals
-```
-
-List persistence follows the same general lifecycle:
-
-```text
-read existing IDs
-    ↓
-identify retained UUIDs
-    ↓
-delete omitted persisted records
-    ↓
-update existing records
-    ↓
-insert new records
-    ↓
-reload Planning Unit data
-```
-
-Income additionally requires an investor row before it can be saved.
-
-Insurance persistence has an additional existing synchronization contract:
-
-```text
-Insurance Policy
-      ↓
-insurance_policies
-      ├── premium → Insurance expense
-      └── current value (> 0) → linked asset
-```
-
-The onboarding implementation must reuse this path. It must not duplicate policy storage or the linked expense/asset synchronization.
-
-## 20. Goal-Specific Onboarding Boundary
-
-The onboarding goal UI currently exposes:
-
-```text
-retirement
-marriage
-vehicle
-dream_home
-education
-vacation
-debt_freedom
-wealth_creation
-fire_passive_income
-others
-```
-
-This is the **frontend onboarding vocabulary**. It must not be treated as the backend canonical goal taxonomy.
-
-The current goal persistence is split into two operations:
-
-1. `saveGoals()` writes the base goal row.
-2. `saveDynamicGoalDetailsForList()` writes `goal_type` and `dynamic_details`.
-
-For `others`, the dynamic persistence uses `otherGoalName` as the stored `goal_name`.
-
-The onboarding document therefore records goal collection only. Canonical identity, DefinedGoal calculation, funding gap and feasibility remain downstream Goal Planner responsibilities.
-
-## 21. Current Code Gaps / Non-Assumptions
-
-The following are directly observable implementation facts:
-
-1. The frontend goal taxonomy differs from the backend canonical taxonomy; no canonicalization is asserted at onboarding level.
-2. `saveGoals()` does not persist every field present in the frontend Goal model.
-3. Goal priority is written from the current UI value rather than being canonicalized by the onboarding persistence layer.
-4. Dynamic goal details are saved in a follow-up update after base goal persistence.
-5. Dynamic goal persistence pairs saved/source goals by array index, not by a verified goal-ID mapping.
-6. Liability validation does not currently enforce frequency or end date.
-7. Step completion is inferred from loaded record presence rather than a dedicated persisted completion status.
-8. Persistence is performed directly from the frontend through Supabase.
-9. No field is described as calculation-driving merely because it exists in a frontend type.
-10. No downstream FinancialState, Goal Engine, DefinedGoal or Strategy Builder behavior is claimed as onboarding behavior.
-11. Insurance is already implemented but is missing from the guided onboarding sequence; this is the identified onboarding correction.
-
-## 22. Regression Contract
-
-### Navigation
-- The corrected flow contains eight ordered steps.
-- Insurance is step 7, after Liabilities and before Goals.
-- Future steps remain inaccessible until the preceding step is completed.
-- Completed steps remain revisitable.
-- Resume behavior remains deterministic from persisted data.
-- Successful persistence is required before a step advances.
-- Insurance must be successfully persisted before Goals can be entered.
-
-### Input validation
-- Existing per-domain validators remain authoritative for frontend validation.
-- Required/optional status must not be strengthened in documentation without a corresponding code change.
-- Enum vocabularies must match the current type definitions.
-
-### Persistence
-- Every onboarding save remains scoped to the current Planning Unit.
-- Existing persisted UUID records are updated.
-- Removed list records are deleted.
-- Reloaded state matches persisted records.
-- Income requires an investor row.
-- Insurance uses `insurance_policies` and its existing linked expense/asset synchronization.
-- Goal dynamic details remain attached to the saved goal.
-
-### Authority
-- Onboarding remains a source-input/persistence feature.
-- FinancialState remains downstream.
-- Goal canonicalization/calculation remains downstream.
-- Strategy eligibility/selection remains downstream.
-- Insurance-derived financial effects remain owned by the existing Insurance/FinancialState authorities.
-
-## 23. Final Onboarding Contract
+## 11. Final Business-Level Contract
 
 ```text
 USER
   ↓
-ONBOARDING ENTRY
+UNDERSTAND THE USER
   ↓
-STEP ACCESS / RESUME LOGIC
+UNDERSTAND THEIR MONEY
   ↓
-CLIENT VALIDATION
+UNDERSTAND THEIR PROTECTION
   ↓
-ONBOARDING PROVIDER STATE
+UNDERSTAND THEIR GOALS
   ↓
-PLANNING UNIT-SCOPED SUPABASE RECORDS
-  ├── investors
-  ├── dependents
-  ├── income
-  ├── expenses
-  ├── assets
-  ├── liabilities
-  ├── insurance_policies
-  └── goals + dynamic_details
+BUILD ONE COMPLETE FINANCIAL PICTURE
   ↓
-DOWNSTREAM AUTHORITIES
-  ├── FinancialState
-  ├── Goal Planner / DefinedGoal
-  ├── MoneyWheel
-  └── Strategy Builder
+ANALYSE
+  ↓
+PLAN
+  ↓
+BUILD STRATEGIES
 ```
 
-Scope: this document describes the onboarding behavior that is directly supported by the current repository implementation. It deliberately separates frontend collection/persistence from downstream canonical financial and goal-planning authorities.
+**This document defines the business-level purpose and flow of Onboarding. Detailed implementation decisions belong to the code and supporting technical documentation.**
