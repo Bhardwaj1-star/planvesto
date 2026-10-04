@@ -92,9 +92,9 @@ Raw Investor Data
 → Financial State Snapshot
 → Metrics / Analysis / Constraints / Strategy
 
-Financial State must be server-derived and internally consistent.
+Financial State is the authoritative planning state. Its normal construction remains server-derived from raw financial data; however, per approved D1, action completion may submit a full actual_state, and that client-submitted snapshot is authoritative for the resulting FinancialState. The implementation must therefore make the client-to-state authority explicit, validate the snapshot and ownership boundary, and prevent ambiguity about which snapshot is current.
 
-The final audit must verify that derived financial state cannot be independently fabricated by frontend code or by downstream execution events.
+The final implementation must verify that only the approved action-completion path can establish a new authoritative snapshot and that unrelated authority paths do not silently compete with it.
 
 ## 4. Financial Metrics
 
@@ -477,7 +477,7 @@ The final audit must determine:
 - whether unrelated financial facts can be overwritten,
 - what validation is required.
 
-Execution must not become an uncontrolled alternative source of truth for Financial State.
+Execution is an explicit, controlled authority boundary for Financial State when an action completion submits actual_state, as approved by D1. It must not create an ambiguous second path: the completion contract, validation, snapshot persistence, lineage, and current-state selection must all agree that the submitted snapshot is authoritative.
 
 ## 22. Onboarding Ownership
 
@@ -565,7 +565,9 @@ Backend/domain layer owns:
 - Strategy identity,
 - StrategyVersion,
 - approval validity,
-- authoritative Financial State.
+- persistence and validation of authoritative Financial State.
+
+Approved D1 exception: on action completion, the client-submitted full actual_state is itself authoritative for the resulting FinancialState snapshot. The backend remains responsible for validating, persisting, and exposing that authoritative state consistently.
 
 ## 26. Known Remediation Backlog
 
@@ -719,7 +721,189 @@ Explicit lifecycle transitions.
 Bounded compatibility.
 Test-enforced contracts.
 
+## 30. Post-Audit Story — What Is Finalized, What Remains, and How We Finish
+
+This document has now moved from **audit mode** into **execution mode**.
+
+The story so far is:
+
+1. **The system was audited end-to-end.**  
+   The audit is complete. The remaining problems are no longer unknown repository mysteries; they are identified authority conflicts, duplicated definitions, contract mismatches, lifecycle gaps, and test/document drift.
+
+2. **The canonical direction was defined.**  
+   The target architecture is centralized around explicit domain owners, canonical contracts, bounded compatibility, and one finalized decision authority.
+
+3. **The business decisions are now finalized.**  
+   D1–D8 are resolved and must be treated as binding business decisions for implementation. They override earlier “decision pending” language and any audit recommendation that conflicts with an explicitly approved option.
+
+4. **What is still missing is not another broad audit.**  
+   The remaining work is to turn the approved model into the actual system: centralize canonical definitions, remove/bound competing authorities, align APIs and frontend contracts, repair lifecycle integrity, update regression coverage, run CI, and perform one final read-only verification.
+
+### 30.1 Approved Business Decisions — Binding Implementation Baseline
+
+| Decision | Approved option | Binding implementation rule |
+|---|---|---|
+| **D1 — Execution / FinancialState authority** | **A** | Client-submitted full actual_state is authoritative and may establish/update FinancialState on action completion. |
+| **D2 — Report state basis** | **C** | Provide both finalized-decision state/context and a separate current/latest state view; never silently mix them. |
+| **D3 — Liquidity identity** | **B** | current_liquidity_ratio and liquid_asset_ratio remain distinct canonical metrics. |
+| **D4 — Threshold ownership** | **B** | Centralize only when metric + business purpose are identical; retain distinct thresholds otherwise. |
+| **D5 — Emergency coverage** | **B** | Canonical emergency coverage = liquid assets / essential monthly expenses. The 20% financial-assets estimate is not canonical coverage. |
+| **D6 — Vocabulary** | **B** | constrained = funding/feasibility limitation; conditional = strategy eligibility condition. |
+| **D7 — Approval** | **B** | Approval is an explicit user action bound to the exact StrategyVersion + Goal context. |
+| **D8 — Goal revision** | **C** | Old StrategyVersion remains history, but loses current authority for the revised goal; a new version must be finalized. |
+
+**Decision status: D1–D8 RESOLVED.**
+
+No implementation should reinterpret these decisions without a new explicit business decision.
+
+### 30.2 Current State of the System
+
+| Area | Status | Meaning |
+|---|---|---|
+| Repository/system audit | **DONE** | The codebase has been audited and the verified authority conflicts/remediation surfaces are known. |
+| Domain canonicalization direction | **DEFINED** | Canonical owners and target architecture are established. |
+| Business decision gates D1–D8 | **DONE** | All unresolved business semantics from the execution plan are explicitly resolved. |
+| Canonical implementation | **NOT DONE** | The code still contains the audited competing paths, aliases, duplicated rules, and contract drift that remediation must remove/bound. |
+| Centralized authority enforcement | **NOT DONE** | Canonical owners exist conceptually; code must now enforce them. |
+| Regression suite alignment | **NOT DONE** | Existing tests contain legacy/run-authority assumptions and coverage gaps. |
+| CI validation | **NOT DONE** | The prior audit environment could not execute the full suites because dependencies/tooling were unavailable. |
+| Second read-only audit | **NOT DONE** | This happens only after implementation and CI validation. |
+| Final sign-off | **NOT READY** | Sign-off requires all gates below to pass. |
+
+### 30.3 The Remaining Roadmap
+
+The remaining work is intentionally sequential. Do not jump to P2/P3 while P0 authority boundaries are still unresolved.
+
+#### PHASE 0 — Freeze the Canonical Baseline
+
+**Goal:** make the approved decisions and target contracts the implementation source of truth.
+
+- Treat D1–D8 as resolved.
+- Update implementation notes/contracts that still describe these decisions as unresolved.
+- Identify every current consumer that conflicts with an approved decision.
+- Do not redesign unrelated product behavior.
+
+**Exit condition:** the implementation team has one approved semantic baseline and no unresolved D1–D8 business gate.
+
+#### PHASE 1 — P0: Establish Decision and State Authority
+
+**Goal:** make the system structurally obey the canonical authority model.
+
+1. **StrategyRun → StrategyVersion**
+   - Current finalized reports/plans/actions must stop deriving current decisions from latest/linked StrategyRun.
+   - StrategyVersion must contain or reference the complete finalized goal/version/architecture/implementation context required downstream.
+   - Run-based routes may remain only as explicitly bounded history/compatibility surfaces.
+
+2. **FinancialState freshness/integrity**
+   - Ensure current decision consumers do not silently use stale snapshots after raw financial input changes.
+   - Choose and implement the audited freshness mechanism.
+   - Verify every current-state consumer follows the same authority path.
+
+3. **D1 client actual_state authority**
+   - Preserve the approved client-submitted full snapshot authority.
+   - Make action completion the explicit authority boundary.
+   - Validate ownership/scope and snapshot shape.
+   - Persist action-to-snapshot lineage.
+   - Ensure current-state selection consistently recognizes the authoritative snapshot.
+   - Prevent unrelated, competing execution paths from silently writing different state.
+
+**P0 exit condition:** current decisions have one version authority, FinancialState freshness is deterministic, and action completion has one explicit state-authority contract.
+
+#### PHASE 2 — P1: Centralize Financial Semantics and Lifecycle Rules
+
+**Goal:** eliminate duplicate financial definitions and ambiguous lifecycle semantics.
+
+1. Canonicalize DTI and emergency coverage.
+2. Keep liquidity metrics distinct and remove incompatible fallback.
+3. Classify every threshold by metric + business purpose and centralize only genuine duplicates.
+4. Normalize goal priority at the boundary and in all consumers.
+5. Enforce distinct funding/feasibility/eligibility vocabulary.
+6. Implement explicit approval command, exact binding, validation, and reapproval/invalidation behavior required by D7.
+7. Enforce D8 goal-version binding and new finalization after goal revision.
+
+**P1 exit condition:** each financial/business rule has an explicit owner, each lifecycle transition has a valid authority, and no consumer silently substitutes a different semantic.
+
+#### PHASE 3 — P2: Compatibility and Contract Hardening
+
+**Goal:** prevent legacy representations from re-entering canonical business logic.
+
+- Bound all legacy aliases to compatibility adapters.
+- Validate Moneywheel as exactly **9 ratios + 2 rules**.
+- Align frontend/backend contracts.
+- Remove unrestricted or mismatched status/key contracts.
+- Keep onboarding writes limited to the intended raw-data boundary.
+- Update regression tests that encode superseded run/legacy-key behavior.
+
+**P2 exit condition:** legacy input may be accepted where required, but canonical output and business logic cannot be bypassed.
+
+#### PHASE 4 — P3: Documentation Synchronization
+
+**Goal:** make documentation describe the system that actually exists.
+
+Update the ontology, lifecycle, API/contract, authority, and compatibility documentation only after P0–P2 behavior is implemented and tested.
+
+**P3 exit condition:** documentation, API contracts, tests, and implementation describe the same canonical system.
+
+#### PHASE 5 — Verification and Sign-off
+
+**Goal:** prove the remediation rather than assuming it.
+
+1. Run targeted regression tests for every changed authority boundary.
+2. Run full backend/frontend tests and typechecks.
+3. Run migration/RLS integration tests where applicable.
+4. Require CI green.
+5. Conduct the second read-only audit.
+6. Compare the second audit against this document and the approved D1–D8 register.
+7. Close only findings whose competing authority has been removed or explicitly bounded and whose regression test exists.
+8. Perform final sign-off.
+
+### 30.4 Dependency Graph
+
+The implementation dependency is:
+
+D1–D8 resolved
+→ P0 authority
+→ P1 financial/lifecycle semantics
+→ P2 contracts/compatibility/tests
+→ P3 documentation
+→ CI
+→ second audit
+→ sign-off
+
+The critical rule is:
+
+**Do not use tests or documentation work to hide unresolved authority problems. Fix the authority first, then lock it with tests.**
+
+### 30.5 Definition of “Canonicalized and Centralized”
+
+The system is considered canonicalized only when all of the following are true:
+
+- One canonical definition exists for every domain concept.
+- One authoritative owner exists for every calculation/business rule.
+- Duplicate implementations either disappear or become explicit compatibility adapters.
+- Current decision output has one authority.
+- State transitions cannot bypass the intended lifecycle.
+- Frontend contracts consume backend canonical contracts rather than recreating business semantics.
+- Legacy names cannot become internal business authority.
+- Regression tests fail if a competing authority returns.
+- Documentation matches the verified implementation.
+
+In practical terms, the remaining job is **not to create another architecture**. It is to make the existing approved architecture true in code.
+
+### 30.6 What We Should NOT Do Next
+
+- Do not perform another broad repository audit before implementing the already-verified backlog.
+- Do not invent new business rules while coding.
+- Do not silently reverse D1–D8 because the earlier audit recommended a different option.
+- Do not rename concepts merely for aesthetic consistency.
+- Do not introduce migrations unless the selected canonical contract actually requires persisted/schema change.
+- Do not mark a phase complete because code compiles; the authority boundary must have regression coverage and CI evidence.
+
+---
+
 ## 30. Final Sign-off Gate
+
+The system is currently **NOT ready for final sign-off**. The audit and D1–D8 business decisions are complete; implementation, centralization, regression validation, CI, and the second audit remain.
 
 The system is ready for final sign-off only when:
 
