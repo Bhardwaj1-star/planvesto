@@ -10,7 +10,7 @@ FundingStatusType = Literal[
     "fully_funded", "partially_funded", "unfunded",
     "within_surplus", "surplus_shortfall", "requires_review",
 ]
-FeasibilityStatusType = Literal["feasible", "constrained", "infeasible"]
+FeasibilityStatusType = Literal["pass", "conditional", "infeasible"]
 
 
 def get_priority_rank(priority: str | None) -> int:
