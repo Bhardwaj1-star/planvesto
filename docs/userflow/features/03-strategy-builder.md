@@ -2,28 +2,7 @@
 
 ## 1. Feature Scope
 
-Strategy Builder evaluates applicable strategies for the current canonical DefinedGoal using the current authoritative Financial State, investor priorities, risk/suitability evidence, constraints and the canonical strategy library.
-
-It is responsible for:
-
-- strategy eligibility
-- strategy decision evidence
-- scenario generation
-- comparison and ranking
-- recommendation
-- architecture identity
-- user selection context
-- implementation preview
-- immutable StrategyVersion finalization
-- explicit current StrategyVersion selection authority
-
-It does **not** own:
-
-- Goal definition
-- FinancialState construction
-- canonical financial formulas
-- final action execution
-- historical StrategyRun as current authority
+Strategy Builder evaluates strategies for the current DefinedGoal using current Financial State, investor priorities, rules/constraints/risk evidence and the canonical strategy library.
 
 ```text
 Current DefinedGoal
@@ -34,34 +13,38 @@ Investor Priorities
         +
 Rules / Constraints / Risk Evidence
         ↓
-Strategy Eligibility
+Applicability Filtering
         ↓
-Strategy Scenarios
+Scenarios
         ↓
-Comparison
+Architecture Composition
         ↓
 Decision Evaluation
         ↓
 Ranking / Recommendation
         ↓
-Architecture
-        ↓
 User Selection
         ↓
 Implementation Preview
         ↓
-Finalization
-        ↓
-Immutable StrategyVersion
+StrategyVersion Finalization
         ↓
 Explicit Current Selection
         ↓
-Downstream Action Plan / Reports / Execution
+Downstream Action / Report / Planning
 ```
+
+Strategy Builder does not own:
+
+- Goal definition
+- FinancialState construction
+- canonical financial formulas
+- StrategyRun-as-current authority
+- final action execution
 
 ## 2. User / Request Inputs
 
-### Strategy build
+### Build
 
 POST `/api/strategy/build`
 
@@ -71,158 +54,133 @@ Inputs:
 - `goal_id`
 - optional `investor_priorities`
 
-Investor priorities are:
+Investor priorities contain:
 
 - safety
 - liquidity
 - growth
 - flexibility
 
-The frontend currently sends equal `0.25` defaults when priorities are absent. The service can reuse prior StrategyRun priorities; if neither is available, build fails.
+Current build behavior:
 
-### Strategy selection
+```text
+request priorities
+    ↓
+if absent → previous latest StrategyRun priorities
+    ↓
+if still absent → 400 error
+```
 
-Selection context includes:
+The `InvestorPriorities` model itself defaults to equal 25/25/25/25 values when instantiated directly, but the service build path explicitly requires supplied or reusable priorities.
 
-- `planning_unit_id`
-- `strategy_run_id`
+### Selection
+
+Selection request is bound to:
+
+- Planning Unit
+- StrategyRun
 - selected strategy
 - selected scenario
 - selected architecture
+
+### Preview / Finalization
+
+Implementation requests include:
+
+- StrategyRun
+- exact DefinedGoal version
+- selected strategy/scenario/architecture
+- assumptions
+- funding structure
 - implementation parameters
 
-### Preview / finalization
+## 3. Source / Authority Boundary
 
-Preview and finalization require:
-
-- selected strategy context
-- exact DefinedGoal identity/version
-- selected scenario
-- selected architecture
-- implementation configuration
-
-Finalization produces the immutable StrategyVersion.
-
-## 3. Input Source / Authority Boundary
-
-| Source | Examples | Authority |
+| Source | Role | Authority |
 |---|---|---|
-| DefinedGoal | goal identity, target, duration, funding status/gap, required contribution, flexibility, priority | Current DefinedGoal |
-| Financial State | income, expenses, surplus, assets, liabilities, net worth, liquidity | FinancialStateService |
-| Investor priorities | safety, liquidity, growth, flexibility | Strategy decision input |
-| Goal rules | goal-specific evidence / constraints | Goal Rule Engine |
-| MoneyWheel | canonical financial ratios/rules and constraint evidence | MoneyWheel / constraint owners |
-| Risk / suitability | investor risk and suitability evidence | Risk Profiler / suitability layer |
-| Constraint aggregation | applicable planning constraints | ConstraintAggregator |
-| Strategy library | strategies, components, techniques, solutions | Canonical strategy library |
-| StrategyRun | evaluation context/provenance | Strategy evaluation history, not current authority |
+| DefinedGoal | goal identity, target, duration, funding state/gap, required contribution, priority, flexibility | Current Goal Planner snapshot |
+| FinancialState | income, expenses, surplus, assets, liabilities, net worth and state context | FinancialStateService |
+| MoneyWheel | canonical financial diagnostics | MoneywheelEngine / canonical calculation layer |
+| Constraints | hard/warning/recommendation evidence | ConstraintAggregator + rule owners |
+| Risk | risk-capacity and risk-required evidence | RiskProfilerEngine |
+| Strategy library | strategies, components, techniques, implementation definitions | canonical strategy library |
+| StrategyRun | evaluation/history/provenance | evaluation artifact |
+| StrategyVersion | finalized immutable implementation snapshot | current implementation record |
+| goal_strategy_selections | explicit current selection pointer | current StrategyVersion authority |
 
-DefinedGoal and FinancialState are consumed as authoritative upstream context. Strategy Builder must not create competing versions of either.
+## 4. Financial Context Boundary
 
-Investor priorities are decision preferences, not financial metrics.
+StrategyService builds financial context from the current FinancialState:
 
-## 4. Input Consumption Boundary
+```text
+FinancialStateService.current()
+    ↓
+StrategyService._financial_context()
+    ├── income
+    ├── expenses
+    ├── surplus
+    ├── assets
+    ├── liabilities
+    ├── financial assets
+    ├── liquid assets
+    └── net worth
+        ↓
+MoneywheelEngine
+RiskProfilerEngine
+RuleEngine
+ConstraintAggregator
+```
 
-Strategy Builder consumes inputs according to their semantic role.
+Asset liquidity / financial classification is resolved through the MoneywheelService asset classification path.
 
-### Goal-driving inputs
+Strategy Builder consumes financial evidence; it does not redefine the underlying financial-state formulas.
 
-- canonical goal type/name
-- target
-- duration
-- funding status
-- funding gap
-- required contribution
-- priority
-- flexibility
-- current DefinedGoal version
+## 5. Applicability / Eligibility Boundary
 
-### Financial decision context
+Initial candidate filtering is owned by:
 
-- income
-- expenses
-- investable surplus
-- assets
-- liabilities
-- net worth
-- liquidity
-- MoneyWheel ratios/rules
-- constraint evidence
+`backend/engines/strategy/applicability.py::filter_applicable_strategies()`
 
-These are decision evidence. Strategy Builder does not redefine their formulas.
+It uses canonical goal identity and the StrategyRuleEngine to select applicable strategies.
 
-### Investor decision preferences
+Detailed eligibility is owned by:
 
-- safety
-- liquidity
-- growth
-- flexibility
+`backend/engines/strategy/eligibility.py`
 
-These affect strategy decision/scoring and must not be treated as financial-health metrics.
-
-### Strategy library inputs
-
-- applicable strategies
-- supporting strategies/components
-- techniques
-- solutions
-- library/version metadata
-
-### Historical evaluation context
-
-StrategyRun can provide evaluation provenance, prior investor priorities and generated scenarios. It cannot establish current strategy authority merely because it is latest or marked `is_latest`.
-
-## 5. Canonical Eligibility Rules
-
-Strategy eligibility is evaluated through:
-
-`filter_applicable_strategies()`
-
-Eligibility remains:
+The canonical status vocabulary is:
 
 - `pass`
 - `conditional`
 - `fail`
 
-These statuses are intentionally distinct from:
-
-- Goal Planner funding status: `Shortfall / On Track / Overfunded`
-- allocation funding status: `fully_funded / partially_funded / unfunded / within_surplus / surplus_shortfall / requires_review`
-- goal-level feasibility
-- financial ratio classifications
-
-Do not collapse these vocabularies merely because they all describe some form of planning condition.
-
-### Eligibility semantics
-
 ```text
 Strategy
-└── Eligibility evidence
+└── EligibilityAssessment
     ├── pass
     ├── conditional
     └── fail
 ```
 
-A conditional strategy can represent a strategy that becomes suitable after a required change, missing evidence, de-risking step or other explicit condition. It is not automatically equivalent to funding `constrained`.
+Current eligibility fits include:
 
-## 6. Decision Logic and Scoring
+- `cashflow_fit`
+- `liquidity_fit`
+- `debt_fit`
+- `asset_resource_fit`
+- `risk_capacity_fit`
+- `goal_constraint_fit`
+- `multi_goal_conflict_fit`
+- `implementation_fit`
+
+A conditional result can mean missing evidence, a required change, or a defined de-risking step. It is not the same as Goal Planner feasibility `constrained`.
+
+## 6. Decision Evaluation
+
+Decision policy is owned by:
+
+`backend/engines/strategy/decision.py`
 
 Decision evidence includes:
-
-- goal characteristics
-- planning horizon
-- funding status
-- funding gap
-- flexibility
-- priority
-- liabilities
-- investor priorities
-- eligibility / feasibility evidence
-- constraints
-- architecture/component fit
-- technique evidence
-
-Scoring separates:
 
 - goal fit
 - horizon fit
@@ -230,154 +188,191 @@ Scoring separates:
 - feasibility
 - component fit
 - technique execution
+- eligibility status
+- investor priorities
+- constraints
+- scenario evidence
 
-Current decision examples documented in the system include:
+The engine evaluates every composed architecture and produces a `DecisionResult`.
 
-- pass = 15
-- conditional = 8
-- fail = 0
-- failed eligibility receives an infeasible score
+```text
+Eligibility
+    +
+Goal / Horizon / Funding Fit
+    +
+Feasibility
+    +
+Component / Technique Fit
+        ↓
+Decision Score
+        ↓
+DecisionResult
+```
 
-These scores are decision-policy outputs, not financial metrics.
+The documented pass/conditional/fail scores are decision-policy values. They are not financial metrics.
 
-## 7. Strategy Scenarios
+## 7. Scenario Generation
 
-Applicable strategies can produce:
+StrategyEngine generates:
 
 - baseline scenarios
-- investor-modified scenarios
-- custom scenarios
+- investor-modified/custom scenarios supplied through the service
 - what-if scenarios
 
-A scenario can carry:
+A scenario can contain:
 
 - assumptions
 - funding structure
 - metrics
 - trade-offs
-- selected strategy/component context
+- strategy context
 - implementation implications
 
-Scenarios are evaluation artifacts. They do not become the current strategy merely by being ranked or recommended.
+Scenarios are evaluation artifacts. They do not become current strategy authority merely because they are ranked or recommended.
 
-## 8. Comparison / Recommendation Contract
+## 8. Comparison / Ranking / Recommendation
 
 ```text
 Applicable Strategies
         ↓
-Scenarios
+Baseline / Custom / What-if Scenarios
         ↓
 Comparison Matrix
         ↓
 Decision Evaluation
         ↓
-Rankings
+Scenario Ranking
         ↓
 Recommendation
 ```
 
-Recommendation is an evaluation output.
+Recommendation is produced by:
 
-It may contain:
+`backend/engines/strategy/recommendation.py`
 
-- recommended strategy IDs
-- recommended scenario
-- reasons
-- architecture
-- alternatives
-- feasibility status
-- constraints
-
-Recommendation is not approval and is not current StrategyVersion authority.
+It is an evaluation output, not approval and not current StrategyVersion authority.
 
 ## 9. Strategy Architecture Identity
 
-Canonical architecture identity is:
+Canonical identity is owned by:
+
+`backend/engines/strategy/identity.py::canonical_architecture_id()`
 
 ```text
-Goal ID + Primary Strategy ID
+canonical_architecture_id(
+    goal_id,
+    primary_strategy_id
+)
+        ↓
+stable architecture_id
 ```
 
-The architecture identity is composition-independent.
+Identity is therefore:
 
-Supporting strategies, components, techniques and solutions are composition data.
+**Goal ID + Primary Strategy ID**
 
-Therefore:
+It is composition-independent.
 
-- adding/removing supporting techniques does not silently create a new architecture identity;
-- changing composition does not redefine the primary architecture identity;
-- architecture identity remains stable unless the Goal or Primary Strategy changes.
+Supporting strategies, components and techniques are composition data.
 
-Architecture is therefore an identity boundary, not a serialized copy of every implementation component.
+Changing supporting composition does not create a new canonical architecture identity unless Goal or Primary Strategy changes.
 
-## 10. Lifecycle / State Transitions
+## 10. Architecture Composition
+
+Architecture composition is owned by:
+
+`backend/engines/strategy/composition.py`
+
+The composition contains:
+
+- primary strategy
+- supporting strategies
+- technique IDs
+- supporting rationale / component information
+
+The architecture object carries the canonical architecture ID plus composition.
+
+This separates:
 
 ```text
-Build
-  ↓
-StrategyRun
-  ↓
-Select strategy / scenario / architecture
-  ↓
-Implementation Preview
-  ↓
-Finalize
-  ↓
-Immutable StrategyVersion
-  ↓
-Explicit current selection
-  ↓
-Current Strategy Authority
+Identity
+└── Goal + Primary Strategy
+
+Composition
+└── supporting strategies + techniques + components
 ```
 
-StrategyRun represents evaluation/history.
+## 11. StrategyRun Contract
 
-`is_latest` does not establish current strategy authority.
+StrategyRun is the evaluation/history record.
 
-Finalization requires exact:
-
-- Goal
-- DefinedGoal ID
-- DefinedGoal version
-- selected strategy
-- selected scenario
-- architecture
-- implementation configuration
-
-## 11. StrategyRun Boundary
-
-StrategyRun is an evaluation and provenance record.
-
-It may contain:
+It stores:
 
 - evaluated strategies
 - scenarios
+- what-if scenarios
+- investor priorities
+- comparison matrix
 - rankings
 - recommendation
-- investor priorities
-- decision evidence
+- architectures
+- selected transient context
 - source DefinedGoal ID/version
 - evaluation metadata
 
-It may be used to reconstruct how a recommendation was produced.
+`is_latest` identifies the latest evaluation run only.
 
-It must not be used as the current strategy simply because:
+It does **not** establish current strategy authority.
 
-- it is the latest run;
-- `is_latest=true`;
-- it has the highest ranking;
-- it contains a recommendation.
+Latest run, latest ranking or latest recommendation may be used as evaluation/provenance context, but not as the current implementation pointer.
 
-Current strategy authority is established only through explicit StrategyVersion selection.
+## 12. Strategy Selection vs Finalization
 
-## 12. StrategyVersion Contract
+### Selection
 
-An immutable StrategyVersion contains the finalized implementation context, including:
+`POST /api/strategy/select`
+
+Selection updates transient StrategyRun selection context:
+
+- selected strategy
+- selected scenario
+- selected architecture
+
+It does not create a StrategyVersion.
+
+### Implementation Preview
+
+`POST /api/strategy/implementation/preview`
+
+Preview evaluates implementation inputs and returns a non-persisted StrategyRun-style result.
+
+### Finalization
+
+`POST /api/strategy/implementation/finalize`
+
+Finalization creates the immutable StrategyVersion.
+
+```text
+StrategyRun evaluation
+    ↓
+user selection
+    ↓
+implementation preview
+    ↓
+finalization
+    ↓
+StrategyVersion
+```
+
+## 13. StrategyVersion Contract
+
+Current StrategyVersion model fields include:
 
 - `strategy_version_id`
 - `planning_unit_id`
 - `strategy_id`
 - `version`
+- `parent_version`
 - `source`
 - `library_version`
 - `implementation_version`
@@ -391,13 +386,20 @@ An immutable StrategyVersion contains the finalized implementation context, incl
 - `status`
 - `created_at`
 
-Investor-edited StrategyVersions use `source=investor_edit` and require the appropriate parent version.
+Goal-bound StrategyVersions require:
 
-The StrategyVersion is the immutable implementation snapshot used by downstream current-strategy consumers.
+- Goal context
+- DefinedGoal context
+- finalized architecture
+- source StrategyRun provenance
 
-## 13. Current Strategy Authority
+`investor_edit` versions require `parent_version`.
 
-The current strategy authority is:
+The version snapshot is immutable after insertion; lifecycle approval/primary state is not encoded by mutating the snapshot.
+
+## 14. Current Strategy Authority
+
+Current strategy authority is:
 
 ```text
 Goal
@@ -407,369 +409,281 @@ goal_strategy_selections
 StrategyVersion
 ```
 
-The explicit selection must be validated against the current DefinedGoal.
+`StrategyRepository.get_selected_strategy_version()` validates:
 
-Current StrategyVersion resolution requires consistency of:
-
-- Planning Unit
-- Goal
-- current DefinedGoal
-- exact DefinedGoal ID
-- exact DefinedGoal version
-- StrategyVersion
+- current DefinedGoal is still the selected DefinedGoal
+- exact DefinedGoal ID/version
+- Goal ID
+- StrategyVersion identity
 - source StrategyRun provenance
-- architecture
-- recommendation/strategy identity
-- selected scenario
-- decision snapshot
+- architecture presence
+- recommendation strategy identity
+- selected scenario consistency
+- decision snapshot consistency
 
-A StrategyVersion bound to another Goal or another DefinedGoal version cannot become current.
+A stale DefinedGoal-bound selection returns no current StrategyVersion.
 
-Latest StrategyRun, ranking, recommendation or `is_latest` must never substitute for this explicit authority.
+## 15. Downstream Action Boundary
 
-## 14. Selection vs Finalization vs Approval
+Current action generation is owned by:
 
-These are separate lifecycle concepts.
+`backend/services/strategy_action_generator.py`
 
-### Selection
+Before generating actions, it requires:
 
-User chooses a strategy/scenario/architecture from evaluation output.
+1. StrategyVersion approval;
+2. valid Goal / DefinedGoal context;
+3. finalized architecture;
+4. StrategyVersion is the current selected version for the Goal.
 
-### Finalization
+Action composition is read from the StrategyVersion architecture plus strategy/technique definitions.
 
-The selected implementation context is persisted as an immutable StrategyVersion.
+```text
+Approved Current StrategyVersion
+        ↓
+StrategyActionGenerator
+        ↓
+Architecture
+├── primary strategy
+├── supporting strategies
+└── techniques
+        ↓
+ActionPlanItem
+```
 
-### Approval
+Therefore action generation does not read `run.selected_architecture` as its current authority.
 
-Approval is a separate lifecycle boundary and must not be inferred merely from recommendation, selection or finalization.
+## 16. Approval Boundary
 
-Therefore:
+Approval is distinct from:
+
+- recommendation
+- selection
+- finalization
 
 ```text
 Recommendation ≠ Selection
 Selection ≠ Finalization
 Finalization ≠ Approval
-Approval ≠ Historical Recommendation
+Approval ≠ Historical StrategyRun
 ```
 
-Downstream Action Plan generation depends on the appropriate approved current StrategyVersion lifecycle.
+Action generation requires the approved StrategyVersion lifecycle.
 
-## 15. StrategyVersion Validation / Provenance Boundary
+The StrategyVersion model's `status` is creation metadata; approval/primary lifecycle is represented outside the immutable snapshot.
 
-Before a StrategyVersion becomes current, the system must be able to prove:
+## 17. Goal Revision Boundary
 
-1. it belongs to the authenticated Planning Unit;
-2. it belongs to the requested Goal;
-3. it is bound to the current DefinedGoal;
-4. its DefinedGoal ID/version is exact;
-5. its source StrategyRun belongs to the same planning context;
-6. its architecture is consistent;
-7. its decision snapshot matches the selected recommendation/scenario;
-8. it represents the finalized implementation context.
-
-This prevents stale, cross-goal or cross-revision StrategyVersions from becoming current.
-
-## 16. Output Contract
-
-Strategy Builder produces:
-
-### Evaluation outputs
-
-- applicable strategies
-- eligibility status
-- eligibility evidence
-- scenarios
-- comparison data
-- scoring/decision evidence
-- ranking
-- recommendation
-- alternatives
-- feasibility/constraint context
-
-### Selection outputs
-
-- selected strategy
-- selected scenario
-- selected architecture
-- implementation parameters
-
-### Final implementation output
-
-- immutable StrategyVersion
-- exact Goal / DefinedGoal binding
-- decision snapshot
-- architecture identity
-- source StrategyRun provenance
-
-### Current authority output
-
-- explicit `goal_strategy_selections` binding
-- current StrategyVersion for the current DefinedGoal
-
-The output must make clear the difference between evaluation history, user selection, finalized implementation and current authority.
-
-## 17. Downstream Dependency Boundary
-
-```text
-Current StrategyVersion
-├── Action Plan
-├── Reports
-├── Multi-goal Planning
-└── Execution
-```
-
-Downstream consumers must use the current selected StrategyVersion.
-
-They must not derive current strategy from:
-
-- latest StrategyRun
-- ranking
-- recommendation
-- `is_latest`
-- stale StrategyVersion
-
-A revised DefinedGoal requires a new strategy evaluation and a new StrategyVersion lifecycle.
-
-## 18. Versioning / Replanning Boundary
+Current StrategyRepository prevents a StrategyVersion from remaining current when its DefinedGoal ID/version no longer matches the latest DefinedGoal.
 
 ```text
 DefinedGoal v1
     ↓
-Strategy evaluation
+StrategyRun
     ↓
 StrategyVersion v1
     ↓
-Current selection
+goal_strategy_selections
 
 DefinedGoal v2
     ↓
-New strategy evaluation
+old selection fails current DefinedGoal validation
     ↓
-StrategyVersion v2
+new strategy evaluation
     ↓
-New selection
+new StrategyVersion
     ↓
-New approval / downstream lifecycle
+new current selection
 ```
 
-When a material DefinedGoal revision occurs:
+A material Goal Planner revision also triggers StrategyService recalculation for the new DefinedGoal version.
 
-1. the old DefinedGoal remains history;
-2. the old StrategyVersion remains historical;
-3. the old current selection must no longer satisfy current DefinedGoal binding;
-4. a new strategy evaluation is required;
-5. a new StrategyVersion is finalized;
-6. the new StrategyVersion must be explicitly selected;
-7. downstream current planning must use the new version.
+## 18. API Contract
 
-No silent migration of old strategy/action state is allowed.
+Primary Strategy Builder routes:
+
+- `POST /api/strategy/build`
+- `POST /api/strategy/scenarios/custom`
+- `POST /api/strategy/priorities`
+- `POST /api/strategy/select`
+- `POST /api/strategy/implementation/preview`
+- `POST /api/strategy/implementation/finalize`
+- `GET /api/strategy/runs/{goal_id}/latest`
+- `GET /api/strategy/runs/{goal_id}/history`
+- `GET /api/strategy/strategy-versions/{strategy_version_id}/report`
+- `GET /api/strategy/goals/{goal_id}/selected-version`
+- StrategyVersion history/by-ID routes under `/api/strategy/versions/*`
+
+Run-report routes remain available as history/compatibility access. Current strategy report access should use the StrategyVersion route.
 
 ## 19. Code Ownership
 
-- Strategy API: `backend/api/strategy.py`
-- StrategyVersion API: `backend/api/strategy_version.py`
-- Strategy schemas/contracts: `backend/schemas/strategy.py`
-- Strategy orchestration: `backend/services/strategy_service.py`
-- StrategyVersion lifecycle: `backend/services/strategy_version_service.py`
-- Strategy engine: `backend/engines/strategy/engine.py`
-- Strategy eligibility: `backend/engines/strategy/applicability.py`
-- Strategy decision policy: `backend/rules/strategy_decision.py`
-- Strategy selection authority/repository: `backend/data/strategy_repository.py`
-- StrategyVersion model: `backend/models/strategy_version.py`
-- Frontend strategy contract: `frontend/lib/api/strategy.ts`
-- Current selection persistence: `goal_strategy_selections`
-
-The ownership rule is:
-
 ```text
-Strategy Engine
-└── evaluates
+API
+├── backend/api/strategy.py
+└── backend/api/strategy_version.py
 
-Strategy Rules
-└── define eligibility / decision policy
+Request contracts
+└── backend/schemas/strategy.py
 
-StrategyRun
-└── records evaluation/history
+Orchestration
+└── backend/services/strategy_service.py
 
-StrategyVersion
-└── owns finalized implementation snapshot
+Candidate filtering
+└── backend/engines/strategy/applicability.py
 
-goal_strategy_selections
-└── owns current strategy selection
+Eligibility
+└── backend/engines/strategy/eligibility.py
 
-Downstream consumers
-└── consume current StrategyVersion
+Decision
+└── backend/engines/strategy/decision.py
+
+Scenario generation
+└── backend/engines/strategy/scenario.py
+
+Comparison
+└── backend/engines/strategy/comparison.py
+
+Ranking
+└── backend/engines/strategy/ranking.py
+
+Recommendation
+└── backend/engines/strategy/recommendation.py
+
+Architecture identity
+└── backend/engines/strategy/identity.py
+
+Architecture composition
+└── backend/engines/strategy/composition.py
+
+Strategy engine
+└── backend/engines/strategy/engine.py
+
+StrategyRun persistence
+└── backend/data/strategy_repository.py
+
+StrategyVersion model
+└── backend/models/strategy_version.py
+
+StrategyVersion lifecycle
+└── backend/services/strategy_version_service.py
+
+Action generation
+└── backend/services/strategy_action_generator.py
+
+Current selection persistence
+└── goal_strategy_selections
 ```
-
-No downstream consumer should become a second owner of strategy identity or current strategy authority.
 
 ## 20. Regression Contract
 
-Tests must protect these invariants.
+### Input / context
 
-### Goal / context
-
-- Strategy Builder uses the current DefinedGoal.
-- current FinancialState comes from FinancialStateService.
-- Goal ownership and Planning Unit ownership remain enforced.
+- current DefinedGoal is used;
+- current FinancialState is obtained through FinancialStateService;
+- Planning Unit / Goal ownership is enforced;
+- investor priorities are explicit.
 
 ### Eligibility
 
-- eligibility remains pass / conditional / fail;
-- eligibility is not silently merged with funding or allocation status;
-- conditional does not automatically mean constrained.
+- candidate filtering uses canonical goal identity;
+- detailed eligibility remains pass/conditional/fail;
+- conditional does not become Goal feasibility constrained.
 
 ### Decision
 
 - investor priorities remain decision preferences;
-- decision evidence remains distinct from financial metrics;
-- scoring policy remains owned by strategy decision rules.
+- financial formulas remain outside Strategy Builder ownership;
+- decision scoring remains strategy-policy owned.
 
 ### Architecture
 
-- architecture identity remains Goal ID + Primary Strategy ID;
-- supporting composition does not silently change architecture identity.
+- architecture ID is stable for the same Goal + Primary Strategy;
+- supporting composition does not change canonical identity.
 
 ### StrategyRun
 
-- StrategyRun remains evaluation/history;
-- `is_latest` cannot establish current authority;
-- latest ranking/recommendation cannot substitute for explicit selection.
+- latest run is evaluation history;
+- `is_latest` is not current strategy authority.
 
 ### StrategyVersion
 
-- StrategyVersion is immutable;
-- Goal binding is exact;
-- DefinedGoal ID/version binding is exact;
-- source StrategyRun provenance is consistent;
-- architecture and decision snapshot remain consistent.
+- goal-bound version contains exact Goal/DefinedGoal context;
+- architecture matches primary strategy;
+- decision snapshot matches selected scenario/recommendation;
+- source StrategyRun provenance is present;
+- immutable snapshot is not mutated into approval state.
 
 ### Current authority
 
-- current strategy is resolved through `goal_strategy_selections`;
-- stale DefinedGoal-version selections are rejected;
-- cross-goal StrategyVersions are rejected;
-- stale StrategyVersions cannot become current.
+- `goal_strategy_selections` is the current selection pointer;
+- stale DefinedGoal selections are rejected;
+- cross-goal/cross-version bindings are rejected.
 
-### Downstream
+### Actions
 
-- Action Plan, reports and multi-goal planning consume current StrategyVersion;
-- historical StrategyRuns are not used as current strategy authority.
+- action generation requires approved current StrategyVersion;
+- action composition comes from StrategyVersion architecture and library definitions.
 
-## 21. Known Implementation Notes / Gaps
+## 21. Current Implementation Notes / Gaps
 
-These are implementation observations already identified by the system documentation/audit:
+Confirmed from current code:
 
-1. Investor-priority fallback/default behavior must remain explicit.
-2. StrategyRun remains evaluation provenance/history and must not become current authority.
-3. Approval is a separate lifecycle boundary; recommendation, selection and finalization are not approval.
-4. Goal revision must invalidate old current selection through exact DefinedGoal-version binding.
-5. Strategy Builder consumes financial/risk/constraint evidence but does not own the underlying financial formulas.
-6. Current strategy authority depends on explicit selection plus exact Goal/DefinedGoal/StrategyVersion consistency.
-
-These are implementation points, not new product decisions.
+1. Build can reuse priorities from the latest StrategyRun when the request omits them; this is an evaluation-input fallback, not current strategy authority.
+2. StrategyRun remains callable through latest/history/report routes for evaluation/history compatibility.
+3. Approval remains a separate lifecycle record/boundary; StrategyVersion `status` is immutable creation metadata.
+4. Goal revision invalidates old selection through exact DefinedGoal ID/version validation.
+5. Downstream action generation uses the selected StrategyVersion architecture rather than latest StrategyRun architecture.
+6. FinancialPlanService still has independent financial diagnostic formulas; this is a Financial Health boundary issue, not Strategy Builder ownership.
 
 ## 22. Important Semantic Boundaries
 
-1. **StrategyRun ≠ current strategy**
+1. **StrategyRun ≠ current StrategyVersion**
 2. **Recommendation ≠ approval**
-3. **Selection ≠ final implementation**
-4. **StrategyVersion ≠ StrategyRun**
+3. **Selection ≠ finalization**
+4. **Finalization ≠ approval**
 5. **Ranking ≠ authority**
 6. **Goal Planner ≠ Strategy Builder**
-7. **FinancialState ≠ strategy context**
+7. **FinancialState ≠ strategy-owned calculation**
 8. **Eligibility ≠ feasibility**
-9. **Funding status ≠ strategy eligibility**
-10. **Architecture identity ≠ full strategy composition**
+9. **Funding status ≠ eligibility**
+10. **Architecture identity ≠ composition**
 11. **StrategyVersion ≠ approval record**
 12. **Historical evaluation ≠ current implementation**
-
-These boundaries prevent evaluation artifacts, financial evidence and historical records from becoming competing authorities.
 
 ## 23. Final Strategy Builder Output
 
 ```text
-Current DefinedGoal
+CURRENT DEFINED GOAL
     +
-Current FinancialState
+CURRENT FINANCIAL STATE
     +
-Investor Priorities
+INVESTOR PRIORITIES
     +
-Goal Rules / MoneyWheel / Risk / Constraint Evidence
+RULES / MONEYWHEEL / RISK / CONSTRAINT EVIDENCE
     ↓
-Applicable Strategies
+APPLICABLE STRATEGIES
+    ↓
+ELIGIBILITY
     ├── pass
     ├── conditional
     └── fail
     ↓
-Scenarios
+SCENARIOS
     ├── baseline
-    ├── investor-modified
-    ├── custom
+    ├── custom / investor-modified
     └── what-if
     ↓
-Comparison
+COMPARISON
     ↓
-Decision Evaluation
+DECISION
     ↓
-Ranking
+RANKING
     ↓
-Recommendation
+RECOMMENDATION
     ↓
-Architecture
-    └── Goal ID + Primary Strategy ID
-    ↓
-User Selection
-    ↓
-Implementation Preview
-    ↓
-Finalization
-    ↓
-Immutable StrategyVersion
-    ↓
-goal_strategy_selections
-    ↓
-Current Strategy Authority
-    ↓
-Downstream
-    ├── Action Plan
-    ├── Reports
-    ├── Multi-goal Planning
-    └── Execution
-```
-
-The final output must make clear:
-
-- which DefinedGoal version was evaluated;
-- which FinancialState was used;
-- which investor priorities were applied;
-- which strategies were eligible;
-- which scenarios were compared;
-- why the recommendation was produced;
-- which architecture was selected;
-- which exact implementation became StrategyVersion;
-- which DefinedGoal version the StrategyVersion belongs to;
-- and which StrategyVersion is explicitly current.
-
-## 24. Strategy Builder End-to-End Contract
-
-CURRENT DEFINED GOAL
-    ↓
-CURRENT FINANCIAL STATE
-    ↓
-INVESTOR PRIORITIES
-    ↓
-GOAL RULES / MONEYWHEEL / RISK / CONSTRAINT EVIDENCE
-    ↓
-STRATEGY ELIGIBILITY
-    ↓
-SCENARIO GENERATION
-    ↓
-COMPARISON / DECISION
-    ↓
-RANKING / RECOMMENDATION
-    ↓
-ARCHITECTURE IDENTITY
+ARCHITECTURE
+    └── canonical Architecture ID = Goal ID + Primary Strategy ID
     ↓
 USER SELECTION
     ↓
@@ -779,8 +693,47 @@ FINALIZATION
     ↓
 IMMUTABLE STRATEGYVERSION
     ↓
+goal_strategy_selections
+    ↓
+CURRENT STRATEGY AUTHORITY
+    ↓
+APPROVED STRATEGYVERSION
+    ↓
+ACTION / REPORT / MULTI-GOAL / EXECUTION
+```
+
+## 24. Strategy Builder End-to-End Contract
+
+```text
+CURRENT DEFINED GOAL
+    ↓
+CURRENT FINANCIAL STATE
+    ↓
+INVESTOR PRIORITIES
+    ↓
+APPLICABILITY FILTER
+    ↓
+ELIGIBILITY
+    ↓
+SCENARIO GENERATION
+    ↓
+ARCHITECTURE COMPOSITION
+    ↓
+DECISION / COMPARISON / RANKING
+    ↓
+RECOMMENDATION
+    ↓
+USER SELECTION
+    ↓
+IMPLEMENTATION PREVIEW
+    ↓
+STRATEGYVERSION FINALIZATION
+    ↓
 EXPLICIT CURRENT SELECTION
     ↓
-ACTION PLAN / REPORTS / MULTI-GOAL / EXECUTION
+APPROVAL
+    ↓
+ACTION / REPORT / MULTI-GOAL / EXECUTION
 
-Scope: Strategy Builder only.
+Scope: this document is verified against the current Strategy Builder, StrategyVersion, selection and action-generation code. Unsupported authority claims and stale ownership paths have been removed; confirmed implementation boundaries are stated explicitly.
+```
