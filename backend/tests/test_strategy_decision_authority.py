@@ -39,7 +39,7 @@ def _financial_state_without_external_data(monkeypatch):
     )
 
 
-def _sample_goal(goal_type="Child Education", duration=6.0, shortfall=500000.0, status="Shortfall"):
+def _sample_goal(goal_type="Education", duration=6.0, shortfall=500000.0, status="Shortfall"):
     return DefinedGoal(
         defined_goal_id="dg-test-decision",
         goal_id="g-test-decision",
@@ -216,7 +216,7 @@ def test_technique_execution_is_decision_evidence():
         strategy_family="Funding",
         strategic_objective="Test",
         core_mechanism="Test",
-        applicable_goal_types=["Child Education"],
+        applicable_goal_types=["Education"],
         applicable_goal_characteristics=["shortfall", "fixed_timeline"],
         technique_ids=["tech-bucketing", "tech-laddering"],
         library_version="1.0",
