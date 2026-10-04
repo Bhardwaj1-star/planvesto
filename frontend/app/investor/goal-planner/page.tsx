@@ -155,9 +155,9 @@ export default function GoalPlannerPage() {
     if (!goalName) { setFormError("Please provide a goal name."); return null; }
     let costNum = Number(formData.today_cost);
     if (isSpecialGoal(goalType)) {
-      if (goalType === "Retirement") costNum = Number(d.desiredLifestyleMonthlyExpense) * 12;
-      if (goalType === "Financial Independence") costNum = Number(d.desiredPassiveIncomeAmount) * 12;
-      if (goalType === "Legacy & Giving") costNum = Number(d.philanthropyContributionAmount);
+      if (goalType === "retirement") costNum = Number(d.desiredLifestyleMonthlyExpense) * 12;
+      if (goalType === "fire_passive_income") costNum = Number(d.desiredPassiveIncomeAmount) * 12;
+      
       if (goalType === "Debt Freedom") costNum = liabilities.find((l) => l.id === d.selectedLiabilityId)?.outstandingAmount || 0;
     }
     if (!Number.isFinite(costNum) || costNum <= 0) { setFormError("Please enter the required goal amount."); return null; }
