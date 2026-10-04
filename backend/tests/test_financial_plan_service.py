@@ -69,7 +69,7 @@ def test_build_plan_consolidates_multi_goal_results():
             ),
             GoalResolution(
                 goal_id="g2",
-                goal_name="Child Education",
+                goal_name="Education",
                 goal_type="education",
                 client_priority="high",
                 resolved_priority="high",
