@@ -5,7 +5,7 @@ from typing import Any, List, Tuple
 from models.strategy import StrategyDefinition
 from models.defined_goal import DefinedGoal as GoalSnapshot
 from rules.eligibility import ELIGIBILITY_FITS, EligibilityStatus
-from rules.goals import GOAL_TYPE_ALIASES
+from rules.goals import canonical_goal_type
 from engines.constraints.models import ConstraintSet
 
 # Re-exported for backwards compatibility with tests and callers
@@ -54,10 +54,10 @@ def _fit(status, fit, reason, changes=(), data=None):
 def _goal_gate(strategy, goal, context):
     reasons=[]
     raw=(getattr(goal,"goal_type",getattr(goal,"type","")) or "").strip().lower()
-    canonical=GOAL_TYPE_ALIASES.get(raw, raw)
+    canonical=canonical_goal_type(raw)
     duration=float(getattr(goal,"duration_years",getattr(goal,"horizon_years",0)) or 0)
-    types=[GOAL_TYPE_ALIASES.get(t.strip().lower(),t.strip().lower()) for t in getattr(strategy,"applicable_goal_types",[])]
-    if types and canonical and canonical not in types and "other" not in types: reasons.append(f"Goal type '{raw}' not allowed")
+    types=[canonical_goal_type(t) for t in getattr(strategy,"applicable_goal_types",[])]
+    if types and canonical and canonical not in types: reasons.append(f"Goal type '{raw}' not allowed")
     for c in getattr(strategy,"constraints",[]) or []:
         try:
             if c.startswith("horizon<=") and duration > float(c.split("<=",1)[1]): reasons.append(f"Goal horizon {duration:g} exceeds strategy limit")
