@@ -5,7 +5,7 @@ from engines.strategy.applicability import filter_applicable_strategies
 from models.defined_goal import DefinedGoal
 
 
-def _goal(goal_type="Child Education", funding_status="Shortfall", duration_years=6.0):
+def _goal(goal_type="Education", funding_status="Shortfall", duration_years=6.0):
     return DefinedGoal(
         goal_id="component-test-goal",
         planning_unit_id="component-test-unit",
