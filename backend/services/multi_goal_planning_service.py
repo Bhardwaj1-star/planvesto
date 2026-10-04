@@ -34,7 +34,8 @@ class MultiGoalPlanningService:
         self.goal_report_service = goal_report_service or GoalReportService()
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
         self.constraint_evaluator = constraint_evaluator or FinancialRatioConstraintEvaluator()
-        self.constraint_aggregator = ConstraintAggregator(ratio_evaluator=self.constraint_evaluator)\n        self.financial_state_service = FinancialStateService()
+        self.constraint_aggregator = ConstraintAggregator(ratio_evaluator=self.constraint_evaluator)
+        self.financial_state_service = FinancialStateService()
 
     def build_multi_goal_plan(
         self,
@@ -108,7 +109,36 @@ class MultiGoalPlanningService:
                 "reasons": rec.get("short_reasons", []),
             }
 
-        # Consume the canonical current FinancialState directly.\n        state = self.financial_state_service.current(planning_unit_id, "family")\n        if hasattr(state, "model_dump"):\n            state = state.model_dump(mode="json")\n        financial_context = dict(state) if isinstance(state, dict) else {}\n        financial_context["planning_unit_id"] = planning_unit_id\n\n        def metric_value(key: str):\n            value = financial_context.get(key)\n            return value.get("value") if isinstance(value, dict) else getattr(value, "value", value)\n\n        financial_context.update({\n            "annual_income": metric_value("income_annual"),\n            "income": metric_value("income_annual"),\n            "annual_expenses": metric_value("expenses_annual"),\n            "expenses": metric_value("expenses_annual"),\n            "monthly_surplus": metric_value("investable_surplus_monthly"),\n            "surplus": metric_value("investable_surplus_monthly"),\n            "assets": metric_value("total_assets"),\n            "liabilities": metric_value("total_liabilities"),\n            "total_liabilities": metric_value("total_liabilities"),\n            "net_worth": metric_value("net_worth"),\n            "financial_assets": metric_value("financial_assets"),\n            "liquid_assets": metric_value("liquid_assets"),\n            "essential_monthly_expenses": metric_value("essential_monthly_expenses"),\n            "monthly_debt_payments": metric_value("emi_burden_monthly"),\n            "emi_burden_monthly": metric_value("emi_burden_monthly"),\n        })\n\n        # Evaluate financial health ratios and constraints
+        # Consume the canonical current FinancialState directly.
+        state = self.financial_state_service.current(planning_unit_id, "family")
+        if hasattr(state, "model_dump"):
+            state = state.model_dump(mode="json")
+        financial_context = dict(state) if isinstance(state, dict) else {}
+        financial_context["planning_unit_id"] = planning_unit_id
+
+        def metric_value(key: str):
+            value = financial_context.get(key)
+            return value.get("value") if isinstance(value, dict) else getattr(value, "value", value)
+
+        financial_context.update({
+            "annual_income": metric_value("income_annual"),
+            "income": metric_value("income_annual"),
+            "annual_expenses": metric_value("expenses_annual"),
+            "expenses": metric_value("expenses_annual"),
+            "monthly_surplus": metric_value("investable_surplus_monthly"),
+            "surplus": metric_value("investable_surplus_monthly"),
+            "assets": metric_value("total_assets"),
+            "liabilities": metric_value("total_liabilities"),
+            "total_liabilities": metric_value("total_liabilities"),
+            "net_worth": metric_value("net_worth"),
+            "financial_assets": metric_value("financial_assets"),
+            "liquid_assets": metric_value("liquid_assets"),
+            "essential_monthly_expenses": metric_value("essential_monthly_expenses"),
+            "monthly_debt_payments": metric_value("emi_burden_monthly"),
+            "emi_burden_monthly": metric_value("emi_burden_monthly"),
+        })
+
+        # Evaluate financial health ratios and constraints
         assessment = self.constraint_evaluator.assess_constraints(inputs, financial_context)
         # Build centralized canonical ConstraintSet
         canonical_constraint_set = self.constraint_aggregator.aggregate(
