@@ -22,7 +22,7 @@ def test_generated_what_ifs_cover_core_decision_dimensions():
         name="Goal Funding",
         tagline="Fund the goal",
         description="Funding architecture",
-        applicable_goal_types=["Dream Home"],
+        applicable_goal_types=["dream_home"],
         strategic_objective="Fund the defined goal.",
     )
     scenarios = generate_what_if_scenarios(strategy, Goal())
@@ -41,7 +41,7 @@ def test_what_ifs_do_not_change_strategy_selection_inputs():
         name="Goal Funding",
         tagline="Fund the goal",
         description="Funding architecture",
-        applicable_goal_types=["Dream Home"],
+        applicable_goal_types=["dream_home"],
     )
     scenarios = generate_what_if_scenarios(strategy, Goal())
     assert scenarios
