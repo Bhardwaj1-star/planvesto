@@ -318,11 +318,20 @@ def build_constraint_set(
     conflicts: list[ConstraintConflict] = []
     for rule_id, group in groups.items():
         unique_values = {repr(c.value) for c in group}
-        if len(unique_values) > 1:
+        semantic_signatures = {
+            (c.severity, c.role, c.kind, c.passed)
+            for c in group
+        }
+        if len(unique_values) > 1 or len(semantic_signatures) > 1:
+            reason = (
+                "Multiple sources provide different values for the same constraint."
+                if len(unique_values) > 1
+                else "Multiple sources provide conflicting constraint semantics for the same rule."
+            )
             conflicts.append(ConstraintConflict(
                 key=rule_id,
                 status="unresolved",
-                reason="Multiple sources provide different values for the same constraint.",
+                reason=reason,
                 sources=[c.source for c in group],
                 constraint_ids=[c.constraint_id for c in group],
                 hard_constraint_present=any(c.severity == "hard" for c in group),

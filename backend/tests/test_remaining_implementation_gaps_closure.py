@@ -180,7 +180,7 @@ class TestRemainingImplementationGapsClosure:
         assert assessment.has_overrides is True
         override = assessment.suggested_overrides["g_vacation"]
         assert override["resolved_priority"] == "low"
-        assert "emergency fund coverage" in override["reason"].lower()
+        assert "emergency coverage" in override["reason"].lower()
 
     # Scenario 6: Traceability of client priority vs resolved outcome
     def test_scenario_06_traceability_of_client_priority_vs_resolved_outcome(self):

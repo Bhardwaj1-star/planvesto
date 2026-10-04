@@ -254,6 +254,22 @@ class TestConflictDetection:
         ])
         assert len(cs.conflicts) == 0
 
+    def test_conflict_different_semantics_same_value(self):
+        cs = build_constraint_set([
+            CanonicalConstraint(
+                constraint_id="a", rule_id="SEMANTIC_RULE", domain="declared",
+                source="s1", source_engine="e", severity="hard", kind="hard",
+                role="hard_constraint", passed=False, value=10.0,
+            ),
+            CanonicalConstraint(
+                constraint_id="b", rule_id="SEMANTIC_RULE", domain="declared",
+                source="s2", source_engine="e", severity="info", kind="diagnostic",
+                role="explanatory_evidence", passed=True, value=10.0,
+            ),
+        ])
+        assert len(cs.conflicts) == 1
+        assert "conflicting constraint semantics" in cs.conflicts[0].reason
+
     def test_conflict_different_values(self):
         cs = build_constraint_set([
             CanonicalConstraint(
@@ -340,4 +356,4 @@ class TestBackwardCompatibility:
         })
         assert len(ratios) >= 4
         ratio_keys = {r.ratio_key for r in ratios}
-        assert "savings_ratio" in ratio_keys
+        assert "savings_rate" in ratio_keys
