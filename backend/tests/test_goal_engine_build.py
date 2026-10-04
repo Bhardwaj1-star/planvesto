@@ -5,12 +5,16 @@ from schemas.goals import GoalInput
 
 
 GOAL_TYPES = [
-    "Travel & Experiences",
-    "Home",
-    "Retirement",
-    "Education",
-    "Marriage",
-    "Vehicle",
+    "retirement",
+    "marriage",
+    "vehicle",
+    "dream_home",
+    "education",
+    "vacation",
+    "debt_freedom",
+    "wealth_creation",
+    "fire_passive_income",
+    "others",
 ]
 
 
@@ -36,21 +40,21 @@ def _input(goal_type: str, **overrides):
 
 
 def test_all_planned_goal_types_use_the_same_generic_engine():
-    expected_types = {"Travel & Experiences": "travel", "Home": "home", "Retirement": "retirement", "Education": "education", "Marriage": "marriage", "Vehicle": "vehicle"}
+    expected_types = {goal_type: goal_type for goal_type in GOAL_TYPES}
     for goal_type in GOAL_TYPES:
         goal = GoalEngine().calculate_defined_goal(_input(goal_type), {})
         assert goal.goal_type == expected_types[goal_type]
         assert goal.future_target > goal.today_cost
         assert goal.duration_years > 0
         assert goal.funding_gap > 0
-        expected_model = "retirement_corpus" if "Retirement" in goal_type else "target_gap_plus_monthly_contribution"
+        expected_model = "retirement_corpus" if goal_type == "retirement" else "target_gap_plus_monthly_contribution"
         assert goal.version_metadata["funding_model"] == expected_model
 
 
 def test_goal_engine_projects_mapped_asset_into_funding_gap():
     goal = GoalEngine().calculate_defined_goal(
         _input(
-            "Home Purchase",
+            "dream_home",
             asset_mappings=[
                 {
                     "asset_id": "asset-1",
@@ -69,7 +73,7 @@ def test_goal_engine_projects_mapped_asset_into_funding_gap():
 
 def test_goal_engine_keeps_financial_independence_distinct_from_retirement():
     goal = GoalEngine().calculate_defined_goal(
-        _input("Financial Freedom / Passive Income"),
+        _input("fire_passive_income"),
         {},
     )
     assert goal.goal_type == "fire_passive_income"
@@ -79,10 +83,7 @@ def test_goal_engine_keeps_financial_independence_distinct_from_retirement():
 
 def test_goal_engine_canonicalizes_legacy_retirement_financial_freedom_label():
     goal = GoalEngine().calculate_defined_goal(
-        _input(
-            "Retirement / Financial Freedom",
-            dynamic_details={"currentAge": 30, "lifeExpectancy": 85},
-        ),
+        _input("retirement", dynamic_details={"currentAge": 30, "lifeExpectancy": 85}),
         {},
     )
     assert goal.goal_type == "retirement"
