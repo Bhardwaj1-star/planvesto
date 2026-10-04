@@ -7,7 +7,7 @@ def test_multi_goal_planning_service_build_plan():
     mock_goal_repo = MagicMock()
     mock_strat_repo = MagicMock()
     mock_strat_service = MagicMock()
-    mock_report_service = MagicMock()
+    mock_report_service = MagicMock()\n    mock_financial_state_service = MagicMock()
 
     # Setup 2 mock goals
     mock_goal_repo.list_goals.return_value = [
@@ -67,7 +67,7 @@ def test_multi_goal_planning_service_build_plan():
         goal_repo=mock_goal_repo,
         strategy_repo=mock_strat_repo,
         strategy_service=mock_strat_service,
-        goal_report_service=mock_report_service,
+        goal_report_service=mock_report_service,\n        financial_state_service=mock_financial_state_service,
     )
 
     result = service.build_multi_goal_plan("pu-123")
@@ -87,7 +87,7 @@ def test_multi_goal_planning_service_build_plan():
     assert result.goals[1].goal_id == "goal-2"
     assert result.goals[1].allocated_monthly_contribution == 5000.0
     assert result.goals[1].funding_status == "partially_funded"
-    assert result.goals[1].feasibility_status == "constrained"
+    assert result.goals[1].feasibility_status == "conditional"
 
 
 def test_multi_goal_planning_service_requires_selected_strategy_version():
