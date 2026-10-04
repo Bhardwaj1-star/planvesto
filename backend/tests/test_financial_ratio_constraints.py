@@ -94,7 +94,7 @@ def test_critical_emergency_reserve_does_not_block_essential_goal(evaluator):
     goals = [
         GoalEvaluationInput(
             goal_id="g_education",
-            goal_name="Child Education",
+            goal_name="Education",
             goal_type="education",
             client_priority="critical",
             required_monthly_contribution=15000.0,
