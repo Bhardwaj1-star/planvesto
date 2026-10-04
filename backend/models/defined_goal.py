@@ -1,6 +1,7 @@
 from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
 from models.orchestration import WorkflowReadiness
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION
 
 
 class DefinedGoalAssetMapping(BaseModel):
