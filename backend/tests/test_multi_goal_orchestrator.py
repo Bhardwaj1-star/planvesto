@@ -46,7 +46,7 @@ def test_multiple_independent_goals_within_surplus(orchestrator):
         ),
         GoalEvaluationInput(
             goal_id="g2",
-            goal_name="Child Education",
+            goal_name="Education",
             goal_type="education",
             client_priority="medium",
             target_date="2035-06",
@@ -68,8 +68,8 @@ def test_competing_goals_sharing_limited_surplus(orchestrator):
     goals = [
         GoalEvaluationInput(
             goal_id="g1",
-            goal_name="Child Education",
-            goal_type="child education",
+            goal_name="Education",
+            goal_type="education",
             client_priority="high",
             target_date="2035-05",
             required_monthly_contribution=30000.0,
@@ -91,7 +91,7 @@ def test_competing_goals_sharing_limited_surplus(orchestrator):
     assert result.overall_funding_status == "surplus_shortfall"
     assert result.monthly_gap == 15000.0  # 55000 - 40000
 
-    # Higher priority (Child Education) should be fully funded first
+    # Higher priority (Education) should be fully funded first
     assert result.goals[0].goal_id == "g1"
     assert result.goals[0].allocated_monthly_contribution == 30000.0
     assert result.goals[0].funding_status == "fully_funded"
