@@ -102,7 +102,7 @@ class FinancialRatioConstraintEvaluator:
                 value=sav_val,
                 unit="%",
                 status=status,
-                benchmark="Healthy >= 20.0%",
+                benchmark=f"Healthy >= {SAVINGS_RATIO_HEALTHY_PERCENT}%",
                 evidence={"monthly_surplus": monthly_surplus, "monthly_income": monthly_income},
             ))
 
@@ -120,7 +120,7 @@ class FinancialRatioConstraintEvaluator:
                 value=cov_val,
                 unit="months",
                 status=status,
-                benchmark="Healthy >= 6.0 months (Critical < 3.0 months)",
+                benchmark=f"Healthy >= {EMERGENCY_RESERVE_HEALTHY_MONTHS} months (Critical < {EMERGENCY_RESERVE_CRITICAL_MONTHS} months)",
                 evidence={"liquid_assets": liquid_assets, "monthly_expenses": monthly_expenses},
             ))
 
@@ -138,7 +138,7 @@ class FinancialRatioConstraintEvaluator:
                 value=dti_val,
                 unit="%",
                 status=status,
-                benchmark="Healthy <= 30.0% (Critical > 40.0%)",
+                benchmark=f"Healthy <= {DEBT_TO_INCOME_HEALTHY_PERCENT}% (Critical > {DEBT_TO_INCOME_CRITICAL_PERCENT}%)",
                 evidence={"monthly_emi": monthly_emi, "monthly_income": monthly_income},
             ))
 
@@ -190,13 +190,13 @@ class FinancialRatioConstraintEvaluator:
                             severity="hard",
                             passed=False,
                             message=(
-                                f"Emergency coverage is critical ({ef_ratio.value} months < 3.0 threshold). "
+                                f"Emergency coverage is critical ({ef_ratio.value} months < {EMERGENCY_RESERVE_CRITICAL_MONTHS} threshold). "
                                 f"Discretionary goal '{g.goal_name}' priority demoted to low until baseline reserve is established."
                             ),
                             suggested_override_priority="low",
                             override_reason=(
                                 f"Discretionary allocation constrained because emergency coverage is in critical zone "
-                                f"({ef_ratio.value} months vs minimum 3.0 required)."
+                                f"({ef_ratio.value} months vs minimum {EMERGENCY_RESERVE_CRITICAL_MONTHS} required)."
                             ),
                             ratio_evidence=ef_ratio.evidence,
                         )
@@ -211,7 +211,7 @@ class FinancialRatioConstraintEvaluator:
                     rule_id="WARN_EMERGENCY_RESERVE_ATTENTION",
                     severity="warning",
                     passed=True,
-                    message=f"Emergency coverage is below recommended buffer ({ef_ratio.value} months vs 6.0 recommended).",
+                    message=f"Emergency coverage is below recommended buffer ({ef_ratio.value} months vs {EMERGENCY_RESERVE_HEALTHY_MONTHS} recommended).",
                     ratio_evidence=ef_ratio.evidence,
                 ))
 
@@ -227,12 +227,12 @@ class FinancialRatioConstraintEvaluator:
                             severity="hard",
                             passed=False,
                             message=(
-                                f"Debt-to-Income ratio ({dti_ratio.value}%) exceeds safe critical ceiling (40.0%). "
+                                f"Debt-to-Income ratio ({dti_ratio.value}%) exceeds safe critical ceiling ({DEBT_TO_INCOME_CRITICAL_PERCENT}%). "
                                 f"Discretionary goal '{g.goal_name}' priority reduced to preserve debt serviceability."
                             ),
                             suggested_override_priority="low",
                             override_reason=(
-                                f"Debt-to-Income ratio exceeds critical threshold ({dti_ratio.value}% > 40.0%). "
+                                f"Debt-to-Income ratio exceeds critical threshold ({dti_ratio.value}% > {DEBT_TO_INCOME_CRITICAL_PERCENT}%). "
                                 f"System prioritized financial solvency over discretionary commitments."
                             ),
                             ratio_evidence=dti_ratio.evidence,
@@ -248,7 +248,7 @@ class FinancialRatioConstraintEvaluator:
                     rule_id="WARN_DEBT_BURDEN_ATTENTION",
                     severity="warning",
                     passed=True,
-                    message=f"Debt-to-Income ratio ({dti_ratio.value}%) is in attention range (30-40%). Monitor leverage closely.",
+                    message=f"Debt-to-Income ratio ({dti_ratio.value}%) is in attention range ({DEBT_TO_INCOME_HEALTHY_PERCENT}-{DEBT_TO_INCOME_CRITICAL_PERCENT}%). Monitor leverage closely.",
                     ratio_evidence=dti_ratio.evidence,
                 ))
 
