@@ -572,10 +572,23 @@ Approved D1 exception: on action completion, the client-submitted full actual_st
 ## 26. Known Remediation Backlog
 
 ### P0 — Decision Authority
-Remove or bound every current-decision dependency on latest StrategyRun.
+**CLOSED — verified after remediation and second read-only audit.**
 
-Target:
+Canonical target:
 Finalized Decision → StrategyVersion → Report / Action Plan / Execution
+
+Verified implementation:
+- Multi-goal current planning resolves the explicit selected StrategyVersion per goal.
+- Basket reports resolve the explicit selected StrategyVersion per goal.
+- Version-scoped Goal Report/PDF builds its decision payload from the immutable StrategyVersion decision snapshot; `source_strategy_run_id` is provenance only.
+- Action generation and completion validate the explicit current StrategyVersion.
+- Remaining `get_latest_run()` usage is limited to Strategy Builder evaluation/history (for example, reusing prior investor priorities during a new build) and does not establish finalized downstream decision authority.
+
+Regression coverage:
+- `backend/tests/test_strategy_version_authority.py`
+- `backend/tests/test_financial_plan_goal_data.py`
+
+No current-plan consumer identified in the second audit was found to derive finalized decision authority from `StrategyRun.is_latest`.
 
 ### P0 — Financial State Integrity
 Resolve the client actual_state → authoritative snapshot path.
