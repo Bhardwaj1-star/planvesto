@@ -1,5 +1,42 @@
 # Complete Financial Planning
 
+## Blueprint vs Current Feature — Summary
+
+| Area | Blueprint / System Requirement | Current Feature Document / Code | Status |
+|---|---|---|---|
+| Financial planning purpose | Dynamic financial decision engine: state → goals → constraints → action/problem → strategies → calculations → scenarios → optimization → decision → updated state | Complete Financial Planning consolidates current state, goals, constraints, selected StrategyVersions, allocation, trade-offs, actions and evidence | **Available / implemented** |
+| Financial State | Authoritative current financial state and feedback into updated state | FinancialStateService is the current authority; plan consumes it | **Available / implemented** |
+| Goals | Goals define desired outcomes; goal engine owns goal requirements | Goal Planner owns goal identity/calculation; complete plan consumes goal outputs | **Available / implemented** |
+| Goal Funding | Explicit goal funding requirements and cross-goal funding | Goal requirements + consolidated funding + resource allocation + per-goal funding view | **Available / implemented** |
+| Constraints | Constraints reduce strategy search space and govern decisions | Constraint evaluation + canonical ConstraintSet + overrides + audit trail | **Available / implemented; canonicalization gaps remain** |
+| Proposed Action / Problem | Explicit input to the decision-engine workflow | Plan exposes action requirements, but proposed-action/problem → planning workflow is not a first-class Complete Financial Planning input | **Partially available** |
+| Strategy Engine | Generate financially meaningful alternative paths | Strategy Builder owns strategy evaluation/finalization; Complete Plan represents selected StrategyVersion(s) | **Available by boundary; not owned here** |
+| Calculation Engine | Calculate mathematical consequences of strategies/actions | Goal calculations and canonical financial calculations exist in upstream authorities; plan aggregates their outputs | **Available by boundary; not owned here** |
+| Scenario Engine | Test strategies under changing conditions | Complete plan has contingency matrix and trajectory, but no dedicated scenario engine is represented in this feature | **Partial / missing as dedicated capability** |
+| Probability / Uncertainty | Explicit uncertainty/probability layer | No dedicated probability/uncertainty capability is represented in the current feature document | **Not yet represented** |
+| Optimization | Compare multiple strategies using fit, liquidity, debt, risk, flexibility, outcome quality and trade-offs | Multi-goal orchestration allocates shared resources and exposes trade-offs; strategy optimization remains upstream | **Partial / boundary exists** |
+| Explainability | Explain why options/decisions were produced | Reasons, notes, trade-offs, constraint evidence and audit trail are exposed | **Partially available** |
+| Decision | Investor decides among evaluated options; system should not silently decide for investor | StrategyVersion selection/approval is upstream; Complete Plan consolidates finalized decisions | **Available by boundary** |
+| Updated Financial State / Feedback Loop | Decision/execution updates state and feeds the next planning cycle | Action Plan and FinancialState authorities define this boundary; Complete Plan itself does not own execution/state mutation | **Available by boundary** |
+| Assumptions | Assumptions are explicit model inputs and should not be hidden | Fixed 9% trajectory assumption exists and is explicitly documented as a gap; assumption model is not first-class here | **Partial / gap** |
+| Common Data Model | Investor, Financial State, Asset, Liability, Goal, Goal Funding, Constraint, Assumption, Action, Strategy, Scenario, Validation, Decision, Audit | Most appear through existing feature/domain authorities; no single Complete Financial Planning data-model owner | **Available by composition / not centralized here** |
+| Audit | Decision/audit history and traceability | Constraint aggregation audit evidence and strategy lineage are exposed | **Partially available** |
+| No arbitrary universal return | Required return should be derived; no arbitrary universal 10% assumption | Current trajectory helper uses fixed 9% return assumption and is explicitly flagged as non-canonical | **Known gap** |
+| Cross-goal consolidation | Whole financial plan should integrate goals, funding, constraints and trade-offs | Core purpose of this feature; multi-goal orchestration + consolidated output | **Implemented** |
+| Plan snapshot / versioning | Blueprint implies decision/history feedback but does not specify this feature's exact persistence model | Current plan is live; no dedicated immutable Complete Financial Plan version/snapshot | **Not yet implemented** |
+| Rendering / report | Outputs can feed decision/explainability/reporting | Planning data contract exists; rendering remains a presentation layer | **Available by boundary** |
+
+### Summary
+
+**Blueprint coverage:** The current Complete Financial Planning feature covers the core cross-goal planning/consolidation layer and connects the Blueprint's Financial State, Goals, Constraints, Strategy, Calculation, Decision and Audit concepts through their existing authorities.
+
+**What is already available:** cross-goal consolidation, goal funding, current StrategyVersion lineage, constraint evaluation/aggregation, resource allocation, trade-offs, plan-level action requirements, financial trajectory, contingency/governance evidence, and audit/provenance.
+
+**What is only partial or remains to be built:** first-class Proposed Action/Problem flow, dedicated Scenario Engine, Probability/Uncertainty layer, first-class Optimization/explainability boundaries, explicit Assumption model, immutable plan snapshot/versioning, and removal of the fixed 9% trajectory assumption.
+
+**Important boundary:** These gaps do not mean all of them belong inside `04-complete-financial-planning.md`. The feature should consume or orchestrate the appropriate system-level engines rather than duplicate their ownership.
+
+
 ## 1. Feature Scope
 
 Complete Financial Planning is the system-level feature that consolidates the investor's current financial state, all active goals, goal funding requirements, financial constraints, selected strategy versions, resource allocation, trade-offs, action requirements, and planning evidence into one coherent financial plan.
