@@ -2,153 +2,146 @@
 
 ## 1. Feature Scope
 
-Financial Health & Rules builds the authoritative Financial State from Planning Unit records, computes canonical financial measures, classifies MoneyWheel ratios/rules, and evaluates planning constraints.
+Financial Health & Rules constructs the current authoritative Financial State from Planning Unit financial records, exposes canonical financial calculations, builds the MoneyWheel diagnostic contract, and evaluates financial constraints.
 
 ```text
 Planning Unit Financial Records
-└── Financial State
-    └── Canonical Calculations
-        ├── Cash flow / savings
-        ├── Assets / liquidity
-        ├── Liabilities / debt burden
-        ├── Net worth
-        ├── Coverage measures
-        └── Goal funding / required return
-            └── MoneyWheel ratios
-                └── MoneyWheel rules
+└── FinancialStateService
+    └── Current FinancialState
+        ├── income / expenses / surplus
+        ├── assets / liquidity
+        ├── liabilities / debt burden
+        ├── net worth
+        └── derived financial facts
+            └── MoneyWheel
+                ├── 9 canonical ratios
+                └── 2 canonical coverage rules
                     └── Constraint evaluation
-                        └── Diagnostic / planning evidence
-                            └── Downstream planning
+                        └── Planning evidence
 ```
 
-The feature owns financial-state construction, shared financial mathematics, MoneyWheel classification, and constraint evaluation boundaries. It does not own goal definition, strategy selection, or downstream strategy decisions.
+It does not own Goal definition or Strategy selection.
 
-## 2. User / Request Inputs
+## 2. Request Inputs
 
-Financial Health is driven by:
+Financial State is scoped by:
 
 - `planning_unit_id`
-- `scope`: family or individual
-- `investor_id`: required for individual scope and invalid for family scope
+- `scope = family | individual`
+- `investor_id` when scope is individual
 
-The service reads the underlying Planning Unit records required to construct the current state:
+Validation is owned by `FinancialStateService._validate_context()`.
+
+Rules:
+
+- Planning Unit ID is required.
+- Individual scope requires investor ID.
+- Family scope rejects investor ID.
+- Individual investor must belong to the Planning Unit.
+
+The service reads:
 
 - investors
 - income
 - expenses
 - assets
 - liabilities
-- ownership
+- asset ownership
 - liability responsibility
 - expense participation
 
-The client does not submit the complete derived Financial State as authoritative calculation input.
+## 3. FinancialState Authority
 
-## 3. Input Source / Authority Boundary
+The current Financial State authority is:
 
-| Source | Examples | Authority |
-|---|---|---|
-| Planning Unit financial records | income, expenses, assets, liabilities | Existing Planning Unit data |
-| Ownership/context | Planning Unit, scope, investor | FinancialStateService validation |
-| Derived financial state | monthly income, expenses, surplus, assets, liabilities, net worth | FinancialStateService |
-| MoneyWheel calculations | canonical ratios/rules | Calculation + MoneyWheel rule owners |
-| Constraint policy | hard/warning/diagnostic consequences | Constraint rule owner |
+`backend/services/financial_state_service.py`
 
-FinancialStateService is the current Financial State authority.
+```text
+Raw Planning Unit Records
+        ↓
+FinancialStateService._inputs()
+        ↓
+FinancialStateService._revision()
+        ↓
+FinancialStateEngine.build()
+        ↓
+FinancialState snapshot
+        ↓
+Current FinancialState
+```
 
-A FinancialState snapshot is reusable only when its:
+The client does not own the complete derived Financial State.
 
-- raw-input revision
+Missing source data remains unavailable; the service must not silently convert missing derived facts into authoritative zero values.
+
+## 4. Freshness / Snapshot Contract
+
+Current code computes a deterministic raw-input revision using SHA-256 over normalized financial-state inputs.
+
+```text
+Current raw records
+└── _revision()
+    └── input_revision
+        ↓
+latest stored snapshot
+    ├── same revision + valid context
+    │   └── reuse
+    └── changed revision / invalid lineage
+        └── rebuild and save
+```
+
+A reusable snapshot must match:
+
 - Planning Unit
 - scope
 - investor context
-- authority lineage
+- stored `input_revision`
+- FinancialState context
 
-remain valid.
+Action-completion snapshots additionally require valid:
 
-Changed raw inputs force a rebuild.
+- action ID
+- StrategyVersion ID
+- completed action record
+- snapshot lineage
 
-MoneyWheel must read the current backend Financial State rather than treating a client-provided snapshot as authoritative.
+Therefore the current service-level FinancialState path is revision-aware; a stale snapshot is rebuilt rather than treated as current.
 
-## 4. Input Consumption Boundary
-
-Every input consumed by Financial Health must have a defined semantic role.
-
-### State-building inputs
-
-These establish the Financial State:
-
-- income records
-- expense records
-- asset records
-- liability records
-- investor/Planning Unit ownership context
-- liability responsibility
-- expense participation
-
-### Calculation-driving state
-
-The Financial State supplies the inputs needed for:
-
-- monthly/annual income and expenses
-- investable surplus
-- assets and liquidity
-- liabilities / EMI burden
-- net worth
-- cash-flow / savings measures
-- safety reserve
-- MoneyWheel ratios
-- goal funding and required-return calculations where applicable
-
-### Context / scope inputs
-
-- planning_unit_id
-- scope
-- investor_id
-
-These determine ownership and calculation scope; they are not themselves financial measures.
-
-Missing source data remains unavailable. It must not silently become zero.
-
-## 5. Canonical Rules and Calculations
+## 5. Canonical Calculation Layer
 
 Shared financial mathematics is owned by:
 
 `backend/engines/calculation/canonical.py`
 
-Canonical calculations currently documented by the system are:
+The canonical calculation layer provides pure calculations and `DerivedFact` outputs.
+
+Canonical formulas currently implemented:
 
 - **Savings Rate** = Monthly Surplus / Monthly Income × 100
 - **Liquid Asset Ratio** = Liquid Assets / Total Assets × 100
 - **Expense Coverage** = Liquid Assets / Monthly Expenses
 - **Emergency Coverage** = Liquid Assets / Essential Monthly Expenses
-- **DTI** = Monthly Debt Payments / Gross Monthly Income × 100
-- **Leverage** = Total Liabilities / Total Assets × 100
+- **DTI** = Monthly Debt Payments / Gross Monthly Income × 100, with ratio form also supported
+- **Leverage Ratio** = Total Liabilities / Total Assets × 100
 - **Financial Asset Ratio** = Financial Assets / Total Assets × 100
 - **Insurance Coverage Ratio** = Existing Sum Assured / Required Insurance Cover × 100
 - **Goal Funding Ratio** = Current Goal Funding / Goal Target Amount × 100
 - **Future Funding Ratio** = Projected Goal Funding / Future Goal Target × 100
-- **Required Rate of Return** = ((Future Goal Target / Current Goal Funding)^(1/Duration) - 1) × 100
+- **Required Rate of Return** = ((Future Goal Target / Current Goal Funding)^(1 / Duration) − 1) × 100
 
-These are calculations, not business decisions.
-
-Calculation results preserve availability/reason information. Missing source data must remain unavailable rather than being silently converted to zero.
-
-### Calculation ownership boundary
+The canonical layer also contains other derived calculations, but only the MoneyWheel contract is listed below as the feature's canonical 9+2 contract.
 
 ```text
-Financial State
-└── calculation/canonical.py
-    └── Mathematical result
-        └── MoneyWheel rule classification
-            └── Constraint interpretation
+FinancialState
+└── canonical.py
+    └── mathematical result / DerivedFact
+        ├── MoneyWheel classification
+        └── Constraint interpretation
 ```
 
-Consumers must not create competing implementations of these canonical formulas.
+Calculation ownership and decision authority are separate. Consumers must not implement competing versions of the same formula.
 
 ## 6. MoneyWheel Canonical Contract
-
-MoneyWheel has one canonical contract:
 
 ### Canonical ratios
 
@@ -167,351 +160,253 @@ MoneyWheel has one canonical contract:
 1. `expense_coverage`
 2. `emergency_coverage`
 
-Expense Coverage and Emergency Coverage are distinct.
+The coverage rules are distinct:
 
 - Expense Coverage = liquid assets / monthly expenses
 - Emergency Coverage = liquid assets / essential monthly expenses
 
-Emergency coverage is therefore not another name for expense coverage.
+`current_liquidity_ratio` is **not** a synonym for `liquid_asset_ratio`. It is a compatibility definition with a different formula:
 
-### Rule classification
+`Liquid Assets / Short-Term Liabilities`.
 
-Current emergency bands:
+## 7. MoneyWheel Threshold Ownership
 
-- excellent: ≥ 9 months
-- healthy: 6–<9 months
-- attention: 3–<6 months
-- critical: <3 months
+MoneyWheel classification is owned by:
 
-MoneyWheel ratios use excellent/healthy/attention/critical bands where defined.
+`backend/rules/moneywheel.py`
 
-The boundary is:
+Current canonical classification bands include:
 
-```text
-Calculation
-└── mathematical result
+- Savings Rate: excellent ≥30%, healthy 20–<30%, attention 10–<20%, critical <10%
+- Liquid Asset Ratio: excellent ≥25%, healthy 15–<25%, attention 10–<15%, critical <10%
+- DTI: excellent <20%, healthy 20–<30%, attention 30–<40%, critical ≥40%
+- Leverage: excellent <20%, healthy 20–<30%, attention 30–<50%, critical ≥50%
+- Financial Asset Ratio: excellent ≥70%, healthy 50–<70%, attention 30–<50%, critical <30%
+- Insurance Coverage: excellent ≥80%, healthy 60–<80%, attention 40–<60%, critical <40%
+- Goal Funding: excellent ≥100%, healthy 80–<100%, attention 50–<80%, critical <50%
+- Future Funding: same 100/80/50 boundaries
+- Required Rate of Return: excellent <8%, healthy 8–<12%, attention 12–<15%, critical ≥15%
+- Emergency / Expense Coverage: excellent ≥9 months, healthy 6–<9, attention 3–<6, critical <3
 
-Rule
-└── threshold / classification interpretation
+Thresholds are rule policy, not mathematical formula definitions.
 
-Constraint
-└── business consequence for planning
-```
+## 8. Compatibility / Alias Boundary
 
-A critical ratio does not automatically make every goal infeasible.
+`canonicalize_metric_key()` is the compatibility normalizer.
 
-Current explicit hard/warning consequences cover emergency coverage, DTI and savings-rate.
-
-## 7. Canonicalization / Compatibility Boundary
-
-Metric aliases normalize through:
-
-`canonicalize_metric_key()`
-
-Known compatibility mappings include:
+Current legacy mappings:
 
 - `savings_ratio` → `savings_rate`
 - `liquid_asset_to_total_asset` → `liquid_asset_ratio`
 - `insurance_gap_ratio` → `insurance_coverage_ratio`
 - `emergency_fund_coverage` → `emergency_coverage`
 
-Compatibility vocabulary is not a second business concept.
+Compatibility-only definitions currently retained include:
 
-The canonical key is the only key that should be used for new business logic. Legacy aliases exist only at compatibility boundaries where required.
+- `emergency_fund_coverage`
+- `current_liquidity_ratio`
+- `expense_ratio`
+- `solvency_ratio`
 
-## 8. Lifecycle / State Transitions
+These are not additional canonical MoneyWheel concepts. New business logic must use canonical keys.
+
+## 9. Constraint Boundary
+
+Constraint evaluation is owned by:
+
+`backend/engines/constraints/evaluator.py`
+
+Current ratio evaluation consumes the canonical calculation functions for:
+
+- savings rate
+- emergency coverage
+- DTI
+- leverage
+
+The evaluator also resolves monthly income/expenses and essential monthly expenses from its financial context.
 
 ```text
-Raw Planning Unit Records
+Canonical Metric
     ↓
+MoneyWheel Classification
+    ↓
+Constraint Evaluator
+    ├── hard constraint
+    ├── warning
+    └── no constraint consequence
+```
+
+A critical metric is not automatically equivalent to goal infeasibility.
+
+## 10. Current Constraint Consequences
+
+Current code implements:
+
+### Emergency coverage
+
+- critical (<3 months): hard constraint for high/critical discretionary goals; suggested priority may be reduced to low.
+- attention (3–<6 months): warning.
+
+### DTI
+
+- critical (≥40%): hard constraint for high/critical discretionary goals; suggested priority may be reduced to low.
+- attention (30–<40%): warning.
+
+### Savings rate
+
+- critical or attention: warning.
+
+Constraint severity and MoneyWheel classification are separate concepts.
+
+## 11. FinancialPlanService Duplicate Surface
+
+There is a **confirmed remaining duplicate calculation surface** in:
+
+`backend/services/financial_plan_service.py`
+
+Its MoneyWheel health scan currently calculates:
+
+- DTI as outstanding liabilities / annual income
+- emergency coverage as `(financial_assets * 0.2) / monthly_expenses`
+
+These are not the canonical formulas.
+
+Therefore this feature document must **not** describe FinancialPlanService's scan as authoritative MoneyWheel calculation.
+
+Required architectural boundary:
+
+```text
+Canonical calculation layer
+└── owns financial formulas
+
+MoneyWheel rules
+└── owns classification thresholds
+
+FinancialPlanService
+└── must consume canonical facts
+    └── must not redefine DTI/emergency coverage
+```
+
+This is a current implementation gap, not a documentation decision.
+
+## 12. Financial State → Downstream Boundary
+
+```text
 FinancialStateService
-    ↓
-Authoritative FinancialState Snapshot
-    ↓
-Canonical Financial Calculations
-    ↓
-MoneyWheel Ratios
-    ↓
-MoneyWheel Rule Classification
-    ↓
-Constraint Evaluation
-    ↓
-Diagnostic / Planning Evidence
-    ↓
-Goal / Strategy / Planning Consumers
+├── Goal Planner feasibility
+├── MoneyWheel
+├── Constraint evaluation
+├── Risk / suitability context
+├── Strategy Builder financial context
+├── Reports
+└── Multi-goal planning
 ```
 
-When source revisions change, the authoritative Financial State snapshot is rebuilt.
+Downstream consumers consume Financial State and canonical facts. They do not become alternate owners of FinancialState construction.
 
-Current-state selection is based on source revision and ownership scope, not on a client-provided snapshot alone.
+## 13. D1 Action-Completion Boundary
 
-## 9. Financial State Output Contract
-
-The Financial State output must represent the current authoritative financial condition for the requested Planning Unit scope.
-
-It includes, where source data is available:
-
-- monthly/annual income
-- monthly/annual expenses
-- investable surplus
-- assets
-- liquid assets / liquidity
-- liabilities
-- EMI / debt burden
-- net worth
-- cash-flow / savings measures
-- safety reserve
-- revision / lineage context
-- availability / reason information for unavailable derived values
-
-FinancialState is the authoritative state consumed by downstream financial planning.
-
-It is distinct from the MoneyWheel output.
-
-## 10. MoneyWheel Output Contract
+Current FinancialStateService also supports D1 actual-state persistence.
 
 ```text
-Current FinancialState
-└── Canonical MoneyWheel Output
-    ├── 9 canonical ratios
-    ├── 2 canonical rules
-    ├── ratio classifications
-    ├── rule classifications
-    ├── diagnostic evidence
-    └── applicable constraint consequences
+Completed Action
+    +
+client-submitted actual_state
+    +
+source snapshot
+    +
+expected input revision
+    +
+StrategyVersion/action lineage
+        ↓
+FinancialStateService.save_actual_state()
+        ↓
+action_completion snapshot
 ```
 
-The MoneyWheel output must preserve the distinction between:
+The submitted state is validated as a FinancialState and accepted only when the expected raw-input revision and source snapshot still match.
 
-- calculated value
-- classification/status
-- business constraint consequence
+This is a lifecycle write path, not a second FinancialState calculation owner.
 
-A MoneyWheel classification is not itself a goal-feasibility result.
+## 14. Code Ownership
 
-## 11. Constraint Output Boundary
-
-Constraint evaluation consumes canonical financial measures and rule classifications.
-
-It may produce:
-
-- hard constraints
-- warning constraints
-- diagnostics
-- supporting evidence
-
-Constraint evaluation does not own the underlying mathematical formulas.
-
-Constraint consequences are business policy. They must not be duplicated inside calculation code or UI code.
-
-## 12. Code Ownership
-
-- API: `backend/api/financial_state.py`
-- Financial State authority/freshness: `backend/services/financial_state_service.py`
-- Financial State engine/model/schema: `backend/engines/financial_state/engine.py`, `backend/models/financial_state.py`, `backend/schemas/financial_state.py`
-- Shared calculations: `backend/engines/calculation/canonical.py`
-- Calculation exports: `backend/engines/calculation/__init__.py`
-- MoneyWheel API: `backend/api/moneywheel.py`
+- Financial State service: `backend/services/financial_state_service.py`
+- Financial State engine: `backend/engines/financial_state/engine.py`
+- Financial State snapshot repository: `backend/data/financial_state_repository.py`
+- Canonical calculations: `backend/engines/calculation/canonical.py`
 - MoneyWheel engine: `backend/engines/moneywheel/engine.py`
 - MoneyWheel rules / aliases: `backend/rules/moneywheel.py`
-- Constraint policy: `backend/rules/constraints.py`
 - Constraint evaluation: `backend/engines/constraints/evaluator.py`
-- Downstream strategy consumers: Strategy Builder / planning services; they consume the outputs and do not redefine the canonical financial formulas.
-
-## 13. Downstream Dependency Boundary
-
-Financial Health & Rules provides evidence to:
-
-```text
-Financial Health & Rules
-├── Goal Planner
-│   └── goal-level feasibility
-│
-├── Strategy Builder
-│   ├── financial context
-│   ├── constraint evidence
-│   ├── risk / suitability evidence
-│   └── strategy decision inputs
-│
-├── MoneyWheel UI
-│   └── ratios / rules / classifications
-│
-└── Multi-goal / downstream planning
-    └── financial decision context
-```
-
-Downstream consumers may consume canonical outputs, but must not reimplement the same mathematical definitions.
-
-## 14. Versioning / State Authority
-
-FinancialState snapshots carry revision and lineage context.
-
-The current state is determined by:
-
-- Planning Unit ownership
-- scope
-- investor context
-- source/raw-input revision
-- FinancialState authority lineage
-
-A client-provided historical snapshot cannot override the current authoritative Financial State.
-
-When an action completion submits an actual state, that path is subject to the system's explicit FinancialState authority/freshness validation and current-snapshot requirements.
+- Constraint thresholds / rule IDs: `backend/rules/constraints.py`
+- Financial State model: `backend/models/financial_state.py`
 
 ## 15. Regression Contract
 
-Tests must protect these invariants.
+### FinancialState authority
 
-### Authority
+- current state is built from Planning Unit records;
+- scope and ownership are validated;
+- raw-input revision is checked before reusing a snapshot;
+- changed raw inputs force rebuild;
+- action-completion snapshots retain lineage.
 
-- FinancialStateService remains the current Financial State authority.
-- stale source revisions do not remain current.
-- client snapshots cannot silently override current state.
-- scope and ownership boundaries remain enforced.
+### Canonical calculations
 
-### Calculations
-
-- canonical formulas remain centralized;
-- savings rate uses the canonical definition;
-- liquid asset ratio remains distinct from current liquidity;
-- DTI uses the canonical debt-payment/income definition;
-- emergency coverage uses essential monthly expenses;
-- expense coverage remains distinct from emergency coverage;
-- unavailable inputs remain unavailable rather than becoming zero.
+- identical inputs produce identical canonical results;
+- missing required inputs remain unavailable;
+- DTI uses monthly debt payments / gross monthly income;
+- emergency coverage uses liquid assets / essential monthly expenses;
+- liquid asset ratio remains distinct from current liquidity ratio.
 
 ### MoneyWheel
 
-- exactly the canonical nine ratios remain authoritative;
-- exactly the two canonical rules remain authoritative;
+- exactly 9 canonical ratios are exposed;
+- exactly 2 canonical coverage rules are exposed;
 - aliases normalize to canonical keys;
-- emergency coverage remains distinct from expense coverage;
-- ratio classification remains separate from constraint consequence.
+- canonical thresholds remain deterministic.
 
 ### Constraints
 
-- constraint evaluation consumes canonical outputs;
-- hard/warning/diagnostic consequences remain policy-owned;
-- a critical financial ratio does not automatically equal goal infeasibility.
+- emergency critical/attention behavior remains distinct;
+- DTI critical/attention behavior remains distinct;
+- savings-rate attention/critical produces warning evidence;
+- MoneyWheel classification does not automatically become goal infeasibility.
 
-### Lifecycle
+### Duplicate protection
 
-- changed raw inputs rebuild the authoritative FinancialState;
-- current state is selected from valid revision/lineage context;
-- downstream consumers use current state.
+- FinancialPlanService must not introduce alternate DTI/emergency formulas;
+- downstream consumers should use canonical calculation/fact outputs.
 
-## 16. Known Implementation Notes / Gaps
+## 16. Current Implementation Gaps
 
-These are implementation observations already identified by the system documentation/audit:
+Confirmed from current code:
 
-1. Liquidity breakdown depends on available asset classification.
-2. FinancialState does not store every MoneyWheel ratio; MoneyWheel derives canonical output separately.
-3. Not every MoneyWheel ratio is currently a hard constraint.
-4. Legacy snapshot normalization is compatibility behavior, not a second contract.
-5. Canonical metric aliases remain in compatibility paths and must not become competing business vocabulary.
-6. Parallel metric calculations / threshold bands identified by the broader audit require continued verification so that shared mathematics remains centralized and purpose-specific thresholds remain owned by their respective rule/policy layer.
+1. FinancialPlanService still contains duplicate DTI and emergency-coverage calculations.
+2. Compatibility definitions remain in `rules/moneywheel.py`; they must stay boundary-only.
+3. Constraint evaluation has fallback context extraction for legacy field names; canonical upstream FinancialState should remain the preferred source.
+4. Threshold ownership is purpose-specific: identical metric semantics may share classification policy, but distinct business consequences remain in their rule owner.
 
-These are implementation points, not new product decisions.
-
-## 17. Important Semantic Boundaries
-
-1. **FinancialState ≠ MoneyWheel output**
-2. **Calculation ≠ Rule**
-3. **Rule ≠ Constraint**
-4. **Ratio status ≠ Goal feasibility**
-5. **Client snapshot ≠ authoritative current FinancialState**
-6. **Compatibility alias ≠ canonical metric**
-7. **Current FinancialState ≠ historical FinancialState snapshot**
-8. **Financial Health evidence ≠ Strategy decision**
-9. **Financial Health constraint evidence ≠ strategy eligibility by itself**
-
-These boundaries prevent downstream features from becoming competing owners of financial semantics.
-
-## 18. Final Financial Health & Rules Output
+## 17. Final Financial Health Contract
 
 ```text
-Planning Unit Financial Records
+PLANNING UNIT RECORDS
     ↓
-Authoritative FinancialState
-    ├── Income / Expenses
-    ├── Investable Surplus
-    ├── Assets / Liquidity
-    ├── Liabilities / EMI
-    ├── Net Worth
-    └── Safety Reserve
+FINANCIALSTATESERVICE
     ↓
-Canonical Calculations
-    ├── savings_rate
-    ├── liquid_asset_ratio
-    ├── debt_to_income_ratio
-    ├── leverage_ratio
-    ├── financial_asset_ratio
-    ├── insurance_coverage_ratio
-    ├── goal_funding_ratio
-    ├── future_funding_ratio
-    └── required_rate_of_return
-    ↓
-Canonical Rules
-    ├── expense_coverage
-    └── emergency_coverage
-    ↓
-Classification / Diagnostics
-    ↓
-Constraint Evaluation
-    ├── hard constraints
-    ├── warnings
-    └── diagnostics
-    ↓
-Downstream Planning
-    ├── Goal feasibility
-    ├── Strategy decision evidence
-    ├── MoneyWheel UI
-    └── Multi-goal / planning context
-```
-
-The final output must make clear:
-
-- what the current Financial State is;
-- which canonical calculations were available;
-- which MoneyWheel ratios/rules were derived;
-- how those ratios/rules were classified;
-- which constraint consequences apply;
-- what evidence is available to downstream planning;
-- and which authority owns each layer.
-
-## 19. Financial Health & Rules End-to-End Contract
-
-RAW PLANNING UNIT RECORDS
-    ↓
-OWNERSHIP / SCOPE VALIDATION
-    ↓
-FINANCIAL STATE CONSTRUCTION
-    ↓
-AUTHORITATIVE FINANCIALSTATE SNAPSHOT
+CURRENT FINANCIALSTATE
     ↓
 CANONICAL CALCULATIONS
-    ├── income / expenses
-    ├── surplus
-    ├── liquidity / assets
-    ├── liabilities / debt burden
-    ├── net worth
-    ├── coverage
-    ├── funding
-    └── required return
     ↓
 MONEYWHEEL
-    ├── 9 canonical ratios
-    └── 2 canonical rules
-    ↓
-RULE CLASSIFICATION
+    ├── 9 ratios
+    └── 2 coverage rules
     ↓
 CONSTRAINT EVALUATION
+    ├── hard
+    ├── warning
+    └── diagnostic evidence
     ↓
-DIAGNOSTIC / PLANNING EVIDENCE
-    ↓
-DOWNSTREAM CONSUMERS
-    ├── Goal Planner
-    ├── Strategy Builder
-    ├── MoneyWheel UI
-    └── Multi-goal / planning services
+GOAL / STRATEGY / REPORT / MULTI-GOAL CONSUMERS
+```
 
-Scope: Financial Health & Rules only.
+Scope: this document is verified against the current Financial Health, canonical calculation, MoneyWheel and constraint code. Confirmed duplicate implementation gaps are explicitly retained as gaps rather than presented as canonical behavior.
