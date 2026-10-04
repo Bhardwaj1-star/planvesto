@@ -43,7 +43,7 @@ class GoalResolution(BaseModel):
     allocated_monthly_contribution: float = 0.0
     shortfall: float = 0.0
     funding_status: FundingStatusType = "fully_funded"
-    feasibility_status: FeasibilityStatusType = "feasible"
+    feasibility_status: FeasibilityStatusType = "pass"
     recommended_strategy_id: str | None = None
     recommended_strategy_name: str | None = None
     strategy_version_id: str | None = None
