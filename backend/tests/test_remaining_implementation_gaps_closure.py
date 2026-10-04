@@ -68,7 +68,7 @@ class TestRemainingImplementationGapsClosure:
             ),
             GoalEvaluationInput(
                 goal_id="g2",
-                goal_name="Child Education",
+                goal_name="Education",
                 goal_type="education",
                 client_priority="medium",
                 target_date="2035-06",
@@ -90,7 +90,7 @@ class TestRemainingImplementationGapsClosure:
         goals = [
             GoalEvaluationInput(
                 goal_id="g1",
-                goal_name="Child Education",
+                goal_name="Education",
                 goal_type="education",
                 client_priority="high",
                 required_monthly_contribution=30000.0,
