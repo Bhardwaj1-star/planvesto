@@ -6,7 +6,7 @@ from engines.strategy.engine import StrategyEngine
 from engines.strategy.scenario import create_custom_scenario
 
 
-def _make_goal(goal_type="Education", funding_gap=500000.0, funding_status="Shortfall"):
+def _make_goal(goal_type="education", funding_gap=500000.0, funding_status="Shortfall"):
     return DefinedGoal(
         goal_id="g-100",
         planning_unit_id="pu-100",
@@ -230,7 +230,7 @@ class TestGenericMultiGoalArchitecture:
 
 def test_strategy_engine_accepts_ui_goal_priority_important():
     """Legacy/UI goal priority labels are normalized at the orchestration boundary."""
-    goal = _make_goal(goal_type="Education", funding_status="Shortfall")
+    goal = _make_goal(goal_type="education", funding_status="Shortfall")
     goal.priority = "Important"
     result = StrategyEngine().execute(goal, priorities=InvestorPriorities())
     assert result.recommendation is not None
