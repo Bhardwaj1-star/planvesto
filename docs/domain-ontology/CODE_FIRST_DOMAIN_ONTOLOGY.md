@@ -301,7 +301,7 @@ Goal type is the standardized intent. A beneficiary, such as a child, spouse or 
 |---|---|---|
 | **Emergency Fund** | `emergency_fund` | emergency, contingency |
 | **Debt Freedom** | `debt_freedom` | debt repayment |
-| **Education** | `education` | child education; beneficiary is context |
+| **Education** | `education` | beneficiary is context |
 | **Marriage** | `marriage` | child marriage; beneficiary is context |
 | **Home** | `home` | dream home, home purchase |
 | **Home Improvement** | `home_improvement` | renovation |
