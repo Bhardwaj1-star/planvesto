@@ -751,102 +751,236 @@ The system is ready for final sign-off only when:
 
 Only after this gate is the final system-hardening phase complete.
 
-## 31. Audit Completion Status — Current Gate
+## 31. Audit Completion Status — Evidence Closure
 
-The repository audit is **not yet considered fully complete**.
+**Evidence closure: COMPLETE (2026-10-03).** Section 32 closes the repository-evidence gaps listed here and fulfills the Section 27 deliverable. Audit completion does not mean the implementation is complete or that Section 30 sign-off is satisfied. No code, schema, migration, frontend, or PR changes were made during the audit.
 
-The existing sections capture the target architecture, known findings, remediation priorities, and sign-off conditions. However, the final evidence-backed audit deliverable has not yet been closed.
+Finding labels:
 
-### What is already established
+- **VERIFIED** — established from current repository code, contract, migration, or test source.
+- **CONFIRMED CONFLICT** — competing implementations or authorities are established.
+- **NOT ESTABLISHED** — repository evidence is insufficient; semantics are not inferred.
+- **COMPATIBILITY ONLY** — legacy surface is bounded to compatibility or history use.
+- **REMEDIATION REQUIRED** — verified issue has a proposed canonical target; no fix is implied.
 
-- End-to-end target architecture is documented.
-- Domain ownership model is documented.
-- StrategyRun vs StrategyVersion authority boundary is defined.
-- Financial State architecture is defined.
-- Goal canonicalization and priority ownership are defined.
-- Constraint semantics are defined.
-- Moneywheel canonical contract is defined as 9 ratios + 2 rules.
-- Known legacy aliases are documented.
-- Liquidity metric collision is documented.
-- Threshold ownership problem is documented.
-- DTI and emergency-coverage calculation conflicts are documented.
-- Approval lifecycle concerns are documented.
-- Action Plan / Report authority is documented.
-- Execution / `actual_state` integrity risk is documented.
-- Onboarding ownership boundary is documented.
-- Auth / ownership model is documented.
-- Remediation priorities and final sign-off conditions are documented.
+### Test execution limits
 
-### What is still required before remediation begins
+- `python -m pytest ...` failed with `No module named pytest`.
+- Direct pytest collection for seven selected backend files produced seven collection errors and zero executed tests. Errors include unresolved `api`/`models` imports and missing `pydantic`/`fastapi`; retrying with `PYTHONPATH=/workspaces/planvesto/backend` produced the same result.
+- `cd frontend && npm test` failed with `tsx: not found`; `cd frontend && npm run typecheck` failed with `tsc: not found`.
+- No dependencies were installed. No live Supabase data/policies or destructive scenarios were tested. Migration files prove declared policies, not production deployment state.
 
-The final audit must convert the existing findings into repository-proven evidence.
+## 32. Completed Code-First Audit — 19-Section Deliverable
 
-For every material finding, the audit must provide:
+### 1. Executive System Verdict
 
-- exact file,
-- exact function/class,
-- actual call path,
-- current behavior,
-- domain meaning,
-- evidence for the finding,
-- canonical owner,
-- canonical target,
-- affected consumers,
-- priority,
-- backend/frontend/schema impact,
-- required regression test.
+**CONFIRMED CONFLICT / REMEDIATION REQUIRED — P0:** StrategyVersion is the intended finalized authority but is not the sole current authority. Latest StrategyRun paths supply multi-goal/basket report content and planning inputs; version-scoped reports and action generation still read linked-run decision/composition fields. **CONFIRMED CONFLICT / REMEDIATION REQUIRED — P0:** completion can persist client-provided `actual_state` as latest FinancialState. **CONFIRMED CONFLICT / REMEDIATION REQUIRED — P1:** consolidated-plan DTI and emergency coverage use noncanonical inputs/formulas. **NOT ESTABLISHED:** approval writer and approval acceptance semantics. System sign-off is not ready.
 
-The following areas require explicit evidence closure:
+### 2. End-to-End Architecture Trace
 
-1. StrategyRun vs StrategyVersion — repository-wide current-decision consumers.
-2. Financial State and metric definitions — exact formulas and ownership.
-3. DTI calculation conflict — exact competing implementations.
-4. Emergency coverage calculation conflict — exact competing implementations.
-5. Threshold ownership — complete inventory and semantic classification.
-6. `current_liquidity_ratio` vs `liquid_asset_ratio` — formula/unit/consumer comparison.
-7. Funding / feasibility / eligibility vocabularies — semantic equivalence or intentional separation.
-8. Approval lifecycle — creation, validation, StrategyVersion binding, and enforcement.
-9. Execution `actual_state` — client authority and FinancialState persistence path.
-10. Onboarding ownership — raw data vs derived FinancialState boundary.
-11. Frontend ↔ backend contract duplication.
-12. Legacy aliases — compatibility-only vs authoritative usage.
-13. Tests — exact current failures, stale contracts, and missing regression coverage.
-14. Documentation drift — current code vs domain/architecture documentation.
+| Boundary | Current call path and behavior | Status / owner / impact |
+|---|---|---|
+| Auth → Planning Unit | `api.auth.authenticate_user()` → `verify_planning_unit_ownership()`; frontend `getPlanningUnitId()` selects/creates an owned unit. | **VERIFIED.** Auth + Planning Unit domain. |
+| Onboarding → Raw Data | Onboarding provider → `lib/onboarding/persistence.ts` → direct Supabase raw-table writes guarded by RLS. | **VERIFIED.** Raw data is input; frontend does not write FinancialState snapshots. |
+| Raw Data → FinancialState | `FinancialStateService.build()` → `FinancialStateEngine.build()` → snapshot insert. | **VERIFIED.** Backend builder owns derived state. Latest snapshot has no raw revision check. |
+| Metrics → Analysis → Constraints | Canonical calculation functions feed FinancialState/Moneywheel; RuleEngine, constraint evaluator and FinancialPlanService have parallel calculations/bands. | **CONFIRMED CONFLICT.** Calculation layer should own formulas; rule owner should own purpose-specific thresholds. |
+| Goal → Feasibility | `/api/goals` → GoalService → GoalEngine → versioned DefinedGoal → `_apply_feasibility()` using FinancialState surplus. | **VERIFIED.** Stale snapshots can affect current feasibility. |
+| Candidates → Recommendation | StrategyService assembles rules/constraints/risk → StrategyEngine → StrategyRun. | **VERIFIED.** Run owns an evaluation, not finalized implementation. |
+| Selection → Preview → Finalization | Selection is transient; preview stateless; finalization inserts provisional StrategyVersion and updates run selection fields. | **VERIFIED / CONFIRMED CONFLICT.** No separate selection record or visible finalization idempotency guard. |
+| Version → Report / Actions | Version route resolves a linked run; report reads that run; action generator reads run architecture; run-ID report endpoints remain. | **CONFIRMED CONFLICT.** StrategyVersion must be sufficient for finalized downstream output. |
+| Execution → FinancialState | Completion request may supply `actual_state`; service validates and inserts it as latest snapshot. | **CONFIRMED CONFLICT.** Backend FinancialState builder must remain authority. |
 
-### Audit status model
+Evidence anchors: `backend/api/auth.py::authenticate_user` / `verify_planning_unit_ownership`; `frontend/lib/onboarding/persistence.ts::saveIncomeSources` / `saveSimpleList`; `backend/services/financial_state_service.py::build`; `backend/services/goal_service.py::_apply_feasibility`; `backend/services/strategy_service.py::finalize_implementation`; `backend/services/action_plan_service.py::complete_action_with_actual_state`.
 
-Use these states explicitly:
+### 3. Source-of-Truth Matrix
 
-- **VERIFIED** — proven against current repository code/tests.
-- **CONFIRMED CONFLICT** — competing implementations or authorities are proven.
-- **NOT ESTABLISHED** — repository evidence is insufficient; do not invent semantics.
-- **COMPATIBILITY ONLY** — legacy path exists but is not authoritative.
-- **REMEDIATION REQUIRED** — verified issue with a defined canonical target.
+| Domain | Current authority | Target / finding |
+|---|---|---|
+| Raw financial inputs | Supabase onboarding tables | **VERIFIED:** persisted input authority. |
+| FinancialState | Latest snapshot by `calculated_at` | **CONFIRMED CONFLICT:** derived state may be stale; bind to raw revision or rebuild. |
+| Financial metrics | Canonical calculation module plus local reimplementations | **CONFIRMED CONFLICT:** centralize formulas; separate metric from policy band. |
+| Goal | Raw goal row plus versioned DefinedGoal | **VERIFIED:** DefinedGoal owns calculated planning fields. |
+| Recommendation/history | StrategyRun recommendation for that run | **VERIFIED:** evaluation authority only. |
+| Final implementation | StrategyVersion plus linked run metadata | **CONFIRMED CONFLICT:** version lacks goal-version/architecture context used downstream. |
+| Selected version per goal | Highest run version with non-null selected-version ID | **CONFIRMED CONFLICT:** no explicit current goal-to-version pointer. |
+| Approval | Existence of approval snapshot for PU/version | **NOT ESTABLISHED:** no app writer/validation flow found. |
+| Report | Generated from linked run, even when addressed by StrategyVersion | **CONFIRMED CONFLICT:** target is version-sourced report. |
+| Action Plan | Actions keyed by version; generator also reads run architecture | **CONFIRMED CONFLICT:** target is version-sourced composition. |
+| Execution | Latest snapshot can derive from request `actual_state` | **CONFIRMED CONFLICT:** target is server-derived or validated actual evidence. |
 
-Do not mark a finding as resolved merely because the target architecture is documented.
+Evidence: `backend/data/financial_state_repository.py::get_latest`; `backend/data/strategy_repository.py::get_selected_strategy_version_id`; `backend/services/goal_report_service.py::_load_by_strategy_version`; `backend/services/strategy_action_generator.py::generate`.
 
-### Final audit gate
+### 4. StrategyRun vs StrategyVersion Authority Audit
 
-The next Coding Agent task is **completion of the existing audit, not a new audit and not implementation**.
+**SR-1 — current-plan latest-run consumers. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P0.** `MultiGoalPlanningService.build_multi_goal_plan()` → `get_latest_run()` → `GoalReportService.build_report(..., run.strategy_run_id)`; report supplies strategy/recommendation/feasibility for allocation (`backend/services/multi_goal_planning_service.py::build_multi_goal_plan`, `backend/services/goal_report_service.py::build_report`). `BasketReportService.build_report()` similarly gets latest run per goal. These are current output, not history.
 
-Required sequence:
+**SR-2 — version report reads linked-run decisions. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P0.** `/strategy-versions/{id}/report` → `_load_by_strategy_version()` → linked StrategyRun → `build_report()`. It verifies selected-version ID equality, then reads selected strategy, recommendation, scenario and architecture from run. Target owner is StrategyVersion; consumers are reports/PDFs.
 
-Existing Audit Findings
-→ Repository Evidence Closure
-→ Final 19-Section Audit Deliverable
-→ Canonical Decisions
-→ Target Contracts
-→ Regression Test Plan
-→ Implementation
-→ CI
-→ Second Read-Only Audit
-→ Final Sign-Off
+**SR-3 — selected version is inferred from run history. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P1.** `StrategyRepository.get_selected_strategy_version_id()` chooses greatest `run_version` with non-null version ID, without requiring latest run or current DefinedGoal version. `on_defined_goal_updated()` can copy old version ID to a run for the new DefinedGoal version.
 
-Until the evidence closure and final 19-section deliverable are complete:
+**SR-4 — action composition reads run architecture. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P1.** `StrategyActionGenerator.generate()` reads linked `run.selected_architecture` to choose supporting strategies and techniques. Architecture composition is absent from StrategyVersion.
 
-- no remediation implementation should begin,
-- no business semantics should be guessed,
-- no schema/migration changes should be introduced,
-- no frontend redesign should be introduced.
+Run history/latest-run UI and prior priorities used to seed a *new* build are legitimate history/new-evaluation use. Run-ID report/retirement routes are **COMPATIBILITY ONLY as intended**, but are still callable for current report output and therefore not actually bounded to history. Provenance-only run-ID collection in FinancialPlanService is history use.
 
-This section supersedes any interpretation that the presence of the remediation backlog means the audit itself is complete.
+**Canonical target:** evaluation/history stays in StrategyRun; immutable StrategyVersion contains finalized strategy, goal version and architecture; all current reports/plans/actions resolve from that version. Regression tests: mutate latest run after finalization and prove outputs do not change; reject goal/version mismatch; generate actions only from version composition.
+
+### 5. Financial State & Metric Audit
+
+**VERIFIED canonical definitions (`backend/engines/calculation/canonical.py`):** liquid-asset ratio = liquid assets / total assets × 100; expense coverage = liquid assets / monthly expenses; emergency coverage = liquid assets / essential monthly expenses; DTI = monthly debt payments / gross monthly income; savings, leverage, financial-asset, insurance, goal/future funding and required-return calculations are also defined there. Moneywheel engine consumes those functions.
+
+**FS-1 — freshness. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P0.** Onboarding mutates raw rows; `FinancialStateSnapshotRepository.get_latest()` orders only by `calculated_at`. GoalService reads latest snapshot and rebuilds only when absent; StrategyService reads latest. Owner/target: backend builder, snapshot bound to raw revision or rebuilt for current decisions. Consumers: feasibility, strategy, analysis, report, action generation. Test: raw mutation then downstream build reflects changed value.
+
+**FS-2 — duplicate formulas. CONFIRMED CONFLICT / REMEDIATION REQUIRED, P1.** `FinancialPlanService._build_moneywheel_health_scan()` and `_build_ratio_constraints()` calculate DTI as outstanding liabilities / annual income and emergency coverage as `(financial_assets * 0.2) / monthly_expenses`. Canonical DTI uses monthly debt payments / gross monthly income; canonical emergency/expense coverage uses classified liquid assets. The 20% estimate’s business owner is **NOT ESTABLISHED**. Target: consume canonical facts and separately named planning rules. Test same fixture yields same canonical metric across surfaces.
+
+### 6. Threshold Ownership Audit
+
+| Threshold | Owner / consumers | Semantic classification and result |
+|---|---|---|
+| Savings rate: <10, 10–<20, 20–<30, ≥30% | `rules/moneywheel.py::RULES`; 20% constant in `rules/constraints.py`; Moneywheel and constraint evaluator. | Same diagnostic measure; shared 20% boundary is genuine overlap. **VERIFIED**, internal alias remains. |
+| Liquid-asset ratio: <10, 10–<15, 15–<25, ≥25% | `rules/moneywheel.py`; Moneywheel. | Liquid/total assets, percent. Not current liquidity. **VERIFIED.** |
+| DTI: <20, 20–<30, 30–<40, ≥40% | constants `rules/constraints.py`, bands `rules/moneywheel.py`; evaluator and Moneywheel. | Same payment-service DTI; benchmark strings are duplicate literals. **CONFIRMED overlap; centralize.** |
+| Leverage: <20, 20–<30, 30–<50, ≥50% | `rules/moneywheel.py`; RuleEngine critical threshold begins at 30%. | Same metric, different severity in 30–50% range. **CONFIRMED CONFLICT.** |
+| Financial asset ratio: <30, 30–<50, 50–<70, ≥70%; plan guardrail 50% | Moneywheel rules and FinancialPlanService. | Diagnostic bands vs plan guardrail; policy identity **NOT ESTABLISHED**. |
+| Insurance: <40, 40–<60, 60–<80, ≥80% | Moneywheel rules. | Coverage diagnostic; `insurance_gap_ratio` alias is not inverted. |
+| Goal/future funding: <50, 50–<80, 80–<100, ≥100% | Moneywheel rules. | Current and projected metrics are distinct despite shared bands. |
+| Required return: <8, 8–<12, 12–<15, ≥15% | Moneywheel rules. | Diagnostic only; suitability cutoff **NOT ESTABLISHED**. |
+| Coverage 3/6/9 months | Legacy Moneywheel rules; critical/healthy constants 3/6 in constraint rules. | Expense vs essential-expense denominators differ. Keep separate. |
+| Reserve sizing: cash-flow ratio ≤50→3, ≤70→6, ≤85→9, else 12 months | `rules/financial_state.py::required_safety_reserve_months`; FinancialStateEngine. | Reserve amount sizing, not coverage bands. **VERIFIED distinct.** |
+| Current liquidity: <0.75, 0.75–<1, 1–<1.5, ≥1.5x | Legacy Moneywheel rule registry; RuleEngine. | Liquid assets / short-term liabilities; no equivalent canonical Moneywheel input is established. Alias substitution is invalid. **CONFIRMED CONFLICT.** |
+| Financial-plan guardrails: savings 25% pass/15% conditional, DTI 40%, reserve 6 months, assets 50% | FinancialPlanService. | Same/similar names but mixed purposes; DTI/emergency formulas conflict. Savings/asset policy equivalence **NOT ESTABLISHED**. |
+| Goal feasibility | funding gap ≤0 or required ≤ surplus → feasible; positive surplus insufficient → constrained; no surplus → infeasible. | GoalService planning feasibility, not ratio band. **VERIFIED.** |
+| Eligibility | contribution ≤ surplus; liquid ≥ reserve; resources ≥ required; risk required ≤ capacity. | Relative comparisons in Strategy eligibility; global risk-capacity cutoff **NOT ESTABLISHED**. |
+| Horizon and scenario bands | Horizon score uses <4 / 4–<10 / ≥10; characteristics use ≤5 / ≥7. Scenario funded ratio uses 1/.85/.70. | Distinct strategy purposes; scenario labels do not match cutoffs exactly. **CONFIRMED CONFLICT** on label/boundary. |
+| Risk capacity | RiskProfiler records evidence; eligibility compares required risk with capacity. | Separate numeric cutoff **NOT ESTABLISHED**. |
+
+**Owner recommendation:** centralize only identical formula + role thresholds (e.g. DTI bands, savings 20% diagnostic boundary). Preserve reserve sizing, expense coverage and emergency coverage as separate rules. FinancialPlanService values are not canonical until policy intent is established.
+
+### 7. Goal / Funding / Feasibility / Eligibility Vocabulary Audit
+
+- **VERIFIED:** `canonical_goal_type()` owns backend goal taxonomy; GoalService uses it. Strategy eligibility directly reads `GOAL_TYPE_ALIASES`, and frontend duplicates UI labels. Target: backend normalization authority; frontend map presentation-only.
+- **CONFIRMED CONFLICT:** `canonical_goal_priority()` maps `Important→high`, etc., but GoalService does not normalize priority before saving. RuleEngine checks raw `critical/high`; other consumers canonicalize. Test aliases yield identical behavior.
+- **VERIFIED distinct funding concepts:** goal status `Shortfall/On Track/Overfunded` describes target funding; allocation `fully_funded/partially_funded/unfunded/...` describes distribution of surplus. Keep separate types.
+- **NOT ESTABLISHED equivalence:** `constrained` means limited funding in goal/allocation paths; Strategy eligibility `conditional` also covers missing evidence, required change and de-risking. Do not rename without a product decision.
+- **VERIFIED eligibility contract:** eight named fits use pass/conditional/fail; numeric checks compare requirement/evidence rather than define global financial cutoffs.
+
+### 8. Legacy Alias Audit
+
+| Alias | Behavior / normalization | Classification |
+|---|---|---|
+| Legacy goal labels | `rules/goals.py::canonical_goal_type()` normalizes; GoalService uses it; eligibility directly uses alias dict; frontend duplicates labels. | **COMPATIBILITY ONLY** at boundary; **REMEDIATION REQUIRED** for bypass/duplicate map. |
+| Priority labels | Normalizer exists but raw input may persist and raw RuleEngine checks remain. | **CONFIRMED CONFLICT.** |
+| `savings_ratio` | Legacy snapshot → `savings_rate`; evaluator emits/consumes old key. | Snapshot **COMPATIBILITY ONLY**; internal vocabulary **REMEDIATION REQUIRED**. |
+| `liquid_asset_to_total_asset` | Legacy snapshot → `liquid_asset_ratio`. | **COMPATIBILITY ONLY.** |
+| `insurance_gap_ratio` | Legacy snapshot → `insurance_coverage_ratio` without inversion. | **COMPATIBILITY ONLY**, name misleading. |
+| `emergency_fund_coverage` | Active expense-based constraint/diagnostic input; can reconstruct `expense_coverage`. | **CONFIRMED active competing vocabulary**; not essential-expense emergency coverage. |
+| `current_liquidity_ratio` | Liquid/short-term-liability multiple; RuleEngine substitutes liquid-asset percent. | **CONFIRMED CONFLICT.** |
+| `expense_ratio` | Moneywheel registry defines need-expense percentage; ProfileEngine emits expense/income ratio unit=`ratio`. | **CONFIRMED competing meaning**; equivalence **NOT ESTABLISHED**. |
+| `solvency_ratio` | Registry defines one-minus-leverage; no production consumer located. | Legacy definition; active consumer **NOT ESTABLISHED**. |
+| `strat-cap-preservation` | Strategy registry maps to canonical `strat-capital-preservation`. | **COMPATIBILITY ONLY.** |
+| Architecture IDs | StrategyService normalizes old IDs to canonical goal+primary identity. | **COMPATIBILITY ONLY.** |
+| Report compatibility fields | `goal_funding`, `goal_context`, duplicate top-level fields are emitted. | **COMPATIBILITY ONLY** output. |
+| Retirement route / `MoneyWheelEngine` | Legacy run-ID route and public import alias remain. | Import alias **COMPATIBILITY ONLY**; report route remains live authority bypass. |
+
+Canonical ratio output is fixed to nine keys; **CONFIRMED CONFLICT:** `_canonical_rules()` passes any stored two-item `metadata.rules` without key validation. Regression must reject/normalize noncanonical keys.
+
+### 9. Strategy Lifecycle Audit
+
+- **VERIFIED:** StrategyRun contains candidates/scenarios/rankings/recommendation; selection validates against run and remains transient; preview is stateless.
+- **CONFIRMED CONFLICT / P1:** finalization inserts provisional StrategyVersion and updates run; no idempotency guard found.
+- **CONFIRMED CONFLICT / P1:** DefinedGoal recalculation can carry old StrategyVersion ID to new goal version.
+- **CONFIRMED CONFLICT / P1:** StrategyVersion status permits six states, creation service only draft/provisional, while StrategyEditService can request approved for an approved/primary parent; runtime failure is **NOT ESTABLISHED** because tests could not run.
+- **Target:** versioning domain owns finalized context; bind version to goal/version/architecture; separate approval state. Tests cover retry, changed goal and edit lifecycle.
+
+### 10. Approval Lifecycle Audit
+
+**NOT ESTABLISHED / REMEDIATION REQUIRED, P1.** Migration defines approval snapshot fields (PU, strategy/version, goal/DefinedGoal, suitability, acknowledgement) and allows authenticated owner insert. No application approval writer was found. `ActionPlanRepository.is_strategy_version_approved()` only checks row existence for PU/version. `StrategyEditService` returns `approval_snapshot_required=False` while action generation requires an approval snapshot. Target: explicit approval command bound to exact PU/goal/DefinedGoal/version/context; validate cross-record ownership and suitability. Backend/frontend approval flow and possibly RLS/schema work. Tests: valid approval, mismatched IDs/context, edited version and action gate.
+
+### 11. Report & Action Plan Audit
+
+- **CONFIRMED CONFLICT / P0:** version report loads linked StrategyRun and reads its decisions; run-ID report/PDF/retirement routes bypass StrategyVersion. Report is generated on demand. `_load()` reads latest FinancialState, not a version-bound snapshot; whether report should be current-state or finalization-state is **NOT ESTABLISHED**.
+- **CONFIRMED CONFLICT / P1:** action items are version-keyed, but generator reads linked run architecture to choose supporting strategies/techniques.
+- **VERIFIED:** ActionPlan status transitions are guarded in ActionPlanService; planned/confirmed may complete/cancel; terminal actions cannot be modified/deleted.
+- **Target:** version contains sufficient goal, architecture and implementation context; current report/actions use only that version; legacy run routes restricted to history/preview. Test latest-run mutation cannot change outputs.
+
+### 12. Execution & Data Integrity Audit
+
+**EX-1 — CONFIRMED CONFLICT / REMEDIATION REQUIRED, P0.** `/api/action-plan/actions/{action_id}/complete` accepts `ActionCompletionRequest.actual_state`; service validates as FinancialState and calls snapshot repository insert. It verifies action ownership/path ID, but does not establish payload values came from server-owned raw records or ensure payload identity matches action. Current authority can be client data. Target: server-derived state or validated narrow execution facts, preserve unrelated financial data, explicit action→snapshot link. Consumers: all latest-snapshot decision paths. Regression: forged financial values, mismatched PU/scope rejected; valid completion records lineage.
+
+`ActionPlanService.complete_action()` is a second completion method that does not save a FinancialState snapshot; no non-test caller found. Active production use **NOT ESTABLISHED**; verify/remove or unify. Test both paths if retained.
+
+### 13. Auth & Ownership Audit
+
+- **VERIFIED:** backend bearer-token authentication and PU ownership helper; child checks validate resource ID with PU; goals also validate investor/assets. Action, strategy, version and DefinedGoal endpoints call applicable helpers.
+- **VERIFIED in migration:** raw-table RLS uses owned PU. **CONFIRMED integrity gap:** approval insert RLS checks PU ownership only; it does not demonstrate all referenced foreign records belong to that PU.
+- **NOT ESTABLISHED:** production database has applied current migration policies; no live query was made.
+- **Target/tests:** validate approval cross-record ownership and run cross-PU IDOR tests for goals, versions, runs, actions, snapshots; test migration policies in integration CI.
+
+### 14. State Machine Audit
+
+| Domain | Evidence-backed state / issue |
+|---|---|
+| Onboarding | Seven frontend steps; completion derived from row presence. Persisted backend state **NOT ESTABLISHED**. |
+| Goal | Backend goal status is string; UI has fixed set. DefinedGoal has `is_latest`, funding and feasibility status. **CONFIRMED contract ambiguity.** |
+| StrategyRun | Open status string (`completed`, `recalculated` observed), mutable latest/selection metadata. **CONFIRMED conflict** with immutable history. |
+| Selection | Transient until finalization; no separate persisted state. **VERIFIED.** |
+| Implementation | Stateless preview → provisional version; duplicate finalize guard absent. **CONFIRMED conflict.** |
+| Version / approval | Six version labels plus separate approval snapshot; edit path can request disallowed status. **CONFIRMED conflict.** |
+| Report | Generated on demand; fixed `investor_decision_required` status after finalize is ambiguous; persisted report state **NOT ESTABLISHED**. |
+| Action | planned → confirmed → completed/cancelled; terminal guards enforced. **VERIFIED.** |
+| Execution | Completion methods differ in whether they persist FinancialState. **CONFIRMED conflict.** |
+
+### 15. Frontend ↔ Backend Contract Audit
+
+- **VERIFIED mostly aligned:** frontend Moneywheel field shapes and FinancialState Metric core fields correspond to Pydantic models.
+- **CONFIRMED mismatch:** frontend Moneywheel keys are unrestricted strings/lists unbounded; backend enforces 9/2 lengths but stored-rule adapter bypasses rule-key validation.
+- **CONFIRMED mismatch:** frontend StrategyRun type includes optional `approval_status` not present in backend and omits backend `what_if_scenarios`.
+- **CONFIRMED mismatch:** frontend GoalStatus is closed union; backend GoalInput status is free string. UI priority accepts display and canonical vocabulary; backend field is string.
+- **VERIFIED vocabulary split:** StrategyArchitecture uses `conditional`; goal/allocation feasibility uses `constrained`; no normalizer equating them found.
+- **Target owner:** backend model/schema contract; generate or contract-test TypeScript types. Tests: serialization fixture, key/status validation, TypeScript compile.
+
+### 16. Documentation / Test Drift
+
+- **CONFIRMED documentation drift:** ontology says Moneywheel has 12 ratios / RULES v1.3; current output model is 9 ratios + 2 rules and RULE_SET_VERSION 2.0.
+- **CONFIRMED documentation drift:** target flow says version authority while current multi-goal/basket/report paths consume runs.
+- **Stale-to-target tests:** `test_financial_ratio_constraints.py` asserts legacy ratio keys; `test_multi_goal_planning_service.py` and `test_basket_report_service.py` mock latest-run/current report paths. They match present behavior but conflict with target.
+- **Coverage gaps:** report-version test does not check linked-run decision/architecture/goal-version consistency; Moneywheel test does not cover stored two-rule pass-through; action tests do not test client actual-state authority.
+- **Exact runs:** backend selected suite: 7 collection errors, 0 tests; missing imports/dependencies noted in Section 31. Frontend `npm test`: `tsx: not found`; `npm run typecheck`: `tsc: not found`. These are environment failures, not assertion failures. No dependency install attempted.
+
+### 17. Prioritized Remediation Backlog
+
+| Priority | Problem / evidence | Current → canonical owner / required change | Risk / consumers / impact / regression test |
+|---|---|---|---|
+| **P0** | Current plans/reports/actions still take latest/linked-run decision data (Sections 32.4, .11). | Mixed Run/Version → complete StrategyVersion. Persist goal/version/architecture and route all current outputs through it. | Stale recommendation/composition. Backend + API; schema likely. Test mutated latest run cannot alter report, basket/plan or actions. |
+| **P0** | FinancialState snapshots lack raw revision freshness (Section 32.5). | Latest timestamp → builder tied to raw revision or rebuild. | Stale feasibility/strategy. Backend + onboarding; schema likely for revision. Test mutate raw input, verify downstream. |
+| **P0** | Client `actual_state` persisted as latest snapshot (Section 32.12). | Request payload → server-derived/validated execution data. | Arbitrary values affect all planning. Backend/API, possible schema lineage. Test forged values/scope rejected and valid snapshot linked. |
+| **P1** | Financial-plan DTI/emergency calculations and leverage status diverge (Sections 32.5–6). | Local calculations → canonical metric plus distinct approved policies. | Misleading plan constraints. Backend. Test same fixture and boundary statuses across outputs. |
+| **P1** | Approval writer/validation absent; edit status disagrees with approval-row gate (Section 32.10). | Row existence/status → exact version-bound approval command. | Actions blocked or unlocked inconsistently. Backend/frontend, RLS/schema possible. Test binding, mismatches, edit and action gate. |
+| **P1** | Liquidity fallback is unit/formula-incompatible; priority raw aliases persist (Sections 32.6–8). | Fallback/raw labels → distinct canonical metrics and boundary normalization. | Wrong health/ranking. Backend/API. Test invalid alias fallback and equivalent priorities. |
+| **P1** | `conditional` vs `constrained` semantics are not resolved (Section 32.7). | Multiple local types → explicit domain-specific types unless approved equivalence. | Consumers conflate limited funding and missing evidence. Backend/frontend; migration only if persisted vocabulary changes. Tests by status meaning. |
+| **P2** | Moneywheel rules can bypass key validation; frontend types are underconstrained (Section 32.8, .15). | Stored/free keys → canonical output validation. | Legacy vocabulary escapes API. Backend/frontend. Test invalid metadata and exact nine/two keys. |
+| **P2** | Existing tests encode run-ID/legacy-key contracts and miss authority regressions (Section 32.16). | Legacy tests → target contract regressions. | Future changes retain competing authority. Backend/frontend tests only. Execute CI after dependencies available. |
+| **P3** | Ontology and flow docs stale/inconsistent (Section 32.16). | Old description → evidence-backed implementation plus approved target. | Agents implement stale contracts. Documentation only after decisions. |
+
+### 18. Canonical Target Architecture
+
+Existing target flow in Sections 1 and 29 remains unchanged:
+
+`Auth → Planning Unit → Raw Data → server-derived FinancialState → canonical metrics → Goal/Feasibility/Constraints → StrategyRun evaluation → selection/preview → immutable StrategyVersion → version-sourced Report → version-sourced Action Plan → server-validated Execution.`
+
+StrategyRun remains history/evaluation. StrategyVersion owns finalized goal/version, architecture composition and implementation parameters. Approval is separate, explicit and version-bound. Legacy aliases normalize only at read/input boundaries; output remains canonical. Execution cannot silently overwrite unrelated FinancialState.
+
+### 19. Final Sign-off Conditions
+
+**Audit status: COMPLETE. System sign-off: NOT READY; remediation required.**
+
+- [ ] StrategyVersion is the sole finalized decision authority for current reports, plans and actions.
+- [ ] Version captures goal/version/architecture context; mismatch is rejected.
+- [ ] FinancialState freshness is tied to raw revisions or rebuilt before current decisions.
+- [ ] DTI, emergency coverage, liquidity and thresholds have explicit owners and consistent consumers.
+- [ ] Funding/feasibility/eligibility vocabularies are documented without guessed equivalence.
+- [ ] Approval writer, validation, version binding and changed-version behavior are explicit and tested.
+- [ ] Client actual-state payload cannot silently overwrite server-authoritative FinancialState.
+- [ ] Aliases cannot become business authority or noncanonical output.
+- [ ] Frontend/backend types and docs match verified contracts.
+- [ ] Relevant regression tests and full CI pass with dependencies installed.
+- [ ] A second read-only audit confirms all competing authority paths are removed or bounded.
