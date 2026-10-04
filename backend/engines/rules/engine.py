@@ -5,7 +5,7 @@ from typing import Any
 from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
 from rules.goals import canonical_goal_priority, canonical_goal_type
-from rules.moneywheel import RULES
+from rules.moneywheel import RULES, canonicalize_metric_key
 
 
 class DecisionRole(str, Enum):
@@ -171,16 +171,15 @@ class RuleEngine:
 
     @staticmethod
     def _metric_value(context: dict[str, Any], key: str) -> float | None:
-        raw = context.get(key)
+        normalized_key = canonicalize_metric_key(key)
+        raw = context.get(normalized_key)
         if raw is None:
             aliases = {
                 "emergency_fund_coverage": ("emergency_coverage", "emergency_fund_months"),
                 "emergency_coverage": ("emergency_fund_coverage", "emergency_fund_months"),
-                "current_liquidity_ratio": ("liquid_asset_ratio", "current_liquidity"),
-                "liquid_asset_ratio": ("current_liquidity_ratio",),
                 "savings_rate": ("savings_ratio",),
                 "savings_ratio": ("savings_rate",),
-            }.get(key, ())
+            }.get(normalized_key, ())
             for alias in aliases:
                 if alias in context:
                     raw = context[alias]
@@ -325,12 +324,12 @@ class RuleEngine:
                 role=DecisionRole.EXPLANATORY_EVIDENCE,
             ))
 
-        ef_rule = RULES["emergency_fund_coverage"]
+        ef_rule = RULES["emergency_coverage"]
         liq_rule = RULES["current_liquidity_ratio"]
         dti_rule = RULES["debt_to_income_ratio"]
         lev_rule = RULES["leverage_ratio"]
 
-        self._health_diagnostic(context, diagnostics, "emergency_fund_coverage", "emergency-reserve-health", "Emergency reserve coverage", ef_rule["excellent"][0], ef_rule["healthy"][0])
+        self._health_diagnostic(context, diagnostics, "emergency_coverage", "emergency-reserve-health", "Emergency reserve coverage", ef_rule["excellent"][0], ef_rule["healthy"][0])
         self._health_diagnostic(context, diagnostics, "current_liquidity_ratio", "liquidity-health", "Current liquidity", liq_rule["excellent"][0], liq_rule["healthy"][0])
         self._health_diagnostic(context, diagnostics, "debt_to_income_ratio", "debt-pressure-health", "Debt-to-income", dti_rule["excellent"][1], dti_rule["healthy"][1], True)
         self._health_diagnostic(context, diagnostics, "leverage_ratio", "leverage-health", "Leverage", lev_rule["excellent"][1], lev_rule["healthy"][1], True)

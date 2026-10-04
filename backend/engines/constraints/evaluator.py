@@ -57,6 +57,10 @@ class FinancialRatioConstraintEvaluator:
             or (self._extract_metric(financial_context, "annual_expenses") or 0.0) / 12.0
             or (self._extract_metric(financial_context, "expenses") or 0.0) / 12.0
         )
+        essential_monthly_expenses = (
+            self._extract_metric(financial_context, "essential_monthly_expenses")
+            or monthly_expenses
+        )
         monthly_surplus = self._extract_metric(financial_context, "monthly_surplus")
         if monthly_surplus is None and monthly_income > 0:
             monthly_surplus = monthly_income - monthly_expenses
@@ -79,22 +83,22 @@ class FinancialRatioConstraintEvaluator:
 
         from engines.calculation.canonical import (
             calculate_debt_to_income_ratio,
-            calculate_expense_coverage,
+            calculate_emergency_coverage,
             calculate_leverage_ratio,
             calculate_savings_rate,
         )
 
-        # 1. Savings Ratio
+        # 1. Savings Rate
         sav_val = calculate_savings_rate(monthly_surplus, monthly_income)
         if sav_val is not None:
             sav_val = round(sav_val, 2)
             try:
-                status = classify("savings_ratio", sav_val)
+                status = classify("savings_rate", sav_val)
             except ValueError:
                 status = "attention"
             results.append(FinancialRatioResult(
-                ratio_key="savings_ratio",
-                name="Savings Ratio",
+                ratio_key="savings_rate",
+                name="Savings Rate",
                 value=sav_val,
                 unit="%",
                 status=status,
@@ -102,17 +106,17 @@ class FinancialRatioConstraintEvaluator:
                 evidence={"monthly_surplus": monthly_surplus, "monthly_income": monthly_income},
             ))
 
-        # 2. Emergency Fund Coverage
-        cov_val = calculate_expense_coverage(liquid_assets, monthly_expenses)
+        # 2. Emergency Coverage
+        cov_val = calculate_emergency_coverage(liquid_assets, essential_monthly_expenses)
         if cov_val is not None:
             cov_val = round(cov_val, 2)
             try:
-                status = classify("emergency_fund_coverage", cov_val)
+                status = classify("emergency_coverage", cov_val)
             except ValueError:
                 status = "critical"
             results.append(FinancialRatioResult(
-                ratio_key="emergency_fund_coverage",
-                name="Emergency Fund Coverage",
+                ratio_key="emergency_coverage",
+                name="Emergency Coverage",
                 value=cov_val,
                 unit="months",
                 status=status,
@@ -171,8 +175,8 @@ class FinancialRatioConstraintEvaluator:
         warnings: list[ConstraintCheckResult] = []
         suggested_overrides: dict[str, dict[str, Any]] = {}
 
-        # 1. Emergency Fund Rule
-        ef_ratio = ratio_map.get("emergency_fund_coverage")
+        # 1. Emergency Coverage Rule
+        ef_ratio = ratio_map.get("emergency_coverage")
         if ef_ratio:
             if ef_ratio.status == "critical":
                 # Critical emergency reserve deficit: any discretionary goal prioritized above emergency is constrained
@@ -186,12 +190,12 @@ class FinancialRatioConstraintEvaluator:
                             severity="hard",
                             passed=False,
                             message=(
-                                f"Emergency fund coverage is critical ({ef_ratio.value} months < 3.0 threshold). "
+                                f"Emergency coverage is critical ({ef_ratio.value} months < 3.0 threshold). "
                                 f"Discretionary goal '{g.goal_name}' priority demoted to low until baseline reserve is established."
                             ),
                             suggested_override_priority="low",
                             override_reason=(
-                                f"Discretionary allocation constrained because emergency fund coverage is in critical zone "
+                                f"Discretionary allocation constrained because emergency coverage is in critical zone "
                                 f"({ef_ratio.value} months vs minimum 3.0 required)."
                             ),
                             ratio_evidence=ef_ratio.evidence,
@@ -207,7 +211,7 @@ class FinancialRatioConstraintEvaluator:
                     rule_id="WARN_EMERGENCY_RESERVE_ATTENTION",
                     severity="warning",
                     passed=True,
-                    message=f"Emergency fund coverage is below recommended buffer ({ef_ratio.value} months vs 6.0 recommended).",
+                    message=f"Emergency coverage is below recommended buffer ({ef_ratio.value} months vs 6.0 recommended).",
                     ratio_evidence=ef_ratio.evidence,
                 ))
 
@@ -249,7 +253,7 @@ class FinancialRatioConstraintEvaluator:
                 ))
 
         # 3. Savings Rate Rule
-        sav_ratio = ratio_map.get("savings_ratio")
+        sav_ratio = ratio_map.get("savings_rate")
         if sav_ratio and sav_ratio.status in ("critical", "attention"):
             warnings.append(ConstraintCheckResult(
                 rule_id="WARN_SAVINGS_RATE_DEFICIT",

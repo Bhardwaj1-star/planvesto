@@ -15,6 +15,67 @@ RULE_SET_VERSION = "2.0"
 
 Status = Literal["excellent", "healthy", "attention", "critical"]
 
+CANONICAL_RATIO_KEYS = (
+    "savings_rate",
+    "liquid_asset_ratio",
+    "debt_to_income_ratio",
+    "leverage_ratio",
+    "financial_asset_ratio",
+    "insurance_coverage_ratio",
+    "goal_funding_ratio",
+    "future_funding_ratio",
+    "required_rate_of_return",
+)
+
+CANONICAL_RULE_KEYS = ("expense_coverage", "emergency_coverage")
+
+LEGACY_RATIO_ALIASES = {
+    "savings_ratio": "savings_rate",
+    "liquid_asset_to_total_asset": "liquid_asset_ratio",
+    "insurance_gap_ratio": "insurance_coverage_ratio",
+    "emergency_fund_coverage": "emergency_coverage",
+}
+
+# Compatibility-only definitions remain explicitly bounded and are never the current
+# canonical contract. They are accepted at the boundary and normalized immediately.
+COMPATIBILITY_RATIO_DEFINITIONS = {
+    "emergency_fund_coverage": {
+        "name": "Emergency Fund Coverage",
+        "unit": "months",
+        "formula": "Liquid Assets / Monthly Expenses",
+        "excellent": (9.0, None),
+        "healthy": (EMERGENCY_RESERVE_HEALTHY_MONTHS, 9.0),
+        "attention": (EMERGENCY_RESERVE_CRITICAL_MONTHS, EMERGENCY_RESERVE_HEALTHY_MONTHS),
+        "critical": (None, EMERGENCY_RESERVE_CRITICAL_MONTHS),
+    },
+    "current_liquidity_ratio": {
+        "name": "Current Liquidity Ratio",
+        "unit": "x",
+        "formula": "Liquid Assets / Short-Term Liabilities",
+        "excellent": (1.5, None),
+        "healthy": (1.0, 1.5),
+        "attention": (0.75, 1.0),
+        "critical": (None, 0.75),
+    },
+    "expense_ratio": {
+        "name": "Need Expense Ratio",
+        "unit": "%",
+        "formula": "Need Expenses / Gross Monthly Income × 100",
+        "excellent": (None, 40.0),
+        "healthy": (40.0, 50.0),
+        "attention": (50.0, 60.0),
+        "critical": (60.0, None),
+    },
+    "solvency_ratio": {
+        "name": "Solvency Ratio",
+        "unit": "%",
+        "formula": "(1 - Leverage Ratio) × 100",
+        "excellent": (80.0, None),
+        "healthy": (70.0, 80.0),
+        "attention": (50.0, 70.0),
+        "critical": (None, 50.0),
+    },
+}
 
 # Final MoneyWheel ratio set. Thresholds remain versioned planning baselines.
 RULES = {
@@ -27,7 +88,10 @@ RULES = {
     "goal_funding_ratio": {"name": "Goal Funding Ratio", "unit": "%", "formula": "Current Goal Funding / Goal Target Amount × 100", "excellent": (100.0, None), "healthy": (80.0, 100.0), "attention": (50.0, 80.0), "critical": (None, 50.0)},
     "future_funding_ratio": {"name": "Future Funding Ratio", "unit": "%", "formula": "Projected Goal Funding / Future Goal Target × 100", "excellent": (100.0, None), "healthy": (80.0, 100.0), "attention": (50.0, 80.0), "critical": (None, 50.0)},
     "required_rate_of_return": {"name": "Required Rate of Return", "unit": "%", "formula": "(Future Goal Target / Current Goal Funding)^(1 / Goal Duration Years) - 1 × 100", "excellent": (None, 8.0), "healthy": (8.0, 12.0), "attention": (12.0, 15.0), "critical": (15.0, None)},
+    "emergency_coverage": {"name": "Emergency Coverage", "unit": "months", "formula": "Liquid Assets / Essential Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
+    "expense_coverage": {"name": "Expense Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
 }
+RULES.update(COMPATIBILITY_RATIO_DEFINITIONS)
 
 RULE_DEFINITIONS = {
     "expense_coverage": {
@@ -42,22 +106,24 @@ RULE_DEFINITIONS = {
     },
 }
 
-# Backward compatibility aliases and coverage thresholds for diagnostics / downstream callers
-RULES.update({
-    "emergency_fund_coverage": {"name": "Emergency Fund Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (EMERGENCY_RESERVE_HEALTHY_MONTHS, 9.0), "attention": (EMERGENCY_RESERVE_CRITICAL_MONTHS, EMERGENCY_RESERVE_HEALTHY_MONTHS), "critical": (None, EMERGENCY_RESERVE_CRITICAL_MONTHS)},
-    "emergency_coverage": {"name": "Emergency Coverage", "unit": "months", "formula": "Liquid Assets / Essential Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
-    "expense_coverage": {"name": "Expense Coverage", "unit": "months", "formula": "Liquid Assets / Monthly Expenses", "excellent": (9.0, None), "healthy": (6.0, 9.0), "attention": (3.0, 6.0), "critical": (None, 3.0)},
-    "current_liquidity_ratio": {"name": "Current Liquidity Ratio", "unit": "x", "formula": "Liquid Assets / Short-Term Liabilities", "excellent": (1.5, None), "healthy": (1.0, 1.5), "attention": (0.75, 1.0), "critical": (None, 0.75)},
-    "savings_ratio": RULES["savings_rate"],
-    "expense_ratio": {"name": "Need Expense Ratio", "unit": "%", "formula": "Need Expenses / Gross Monthly Income × 100", "excellent": (None, 40.0), "healthy": (40.0, 50.0), "attention": (50.0, 60.0), "critical": (60.0, None)},
-    "liquid_asset_to_total_asset": RULES["liquid_asset_ratio"],
-    "solvency_ratio": {"name": "Solvency Ratio", "unit": "%", "formula": "(1 - Leverage Ratio) × 100", "excellent": (80.0, None), "healthy": (70.0, 80.0), "attention": (50.0, 70.0), "critical": (None, 50.0)},
-    "insurance_gap_ratio": RULES["insurance_coverage_ratio"],
-})
+
+def canonicalize_metric_key(key: str | None) -> str:
+    if key is None:
+        raise KeyError("Metric key is required.")
+    normalized = str(key).strip()
+    if normalized in CANONICAL_RATIO_KEYS or normalized in CANONICAL_RULE_KEYS:
+        return normalized
+    mapped = LEGACY_RATIO_ALIASES.get(normalized)
+    if mapped is not None:
+        return mapped
+    if normalized in RULES:
+        return normalized
+    return normalized
 
 
 def classify(key: str, value: float) -> Status:
-    rule = RULES[key]
+    canonical_key = canonicalize_metric_key(key)
+    rule = RULES[canonical_key]
     for status in ("excellent", "healthy", "attention", "critical"):
         lower, upper = rule[status]
         if lower is not None and value < lower:

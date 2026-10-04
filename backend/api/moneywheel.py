@@ -4,30 +4,11 @@ from api.auth import authenticate_user, verify_planning_unit_ownership
 from data.moneywheel_repository import MoneywheelRepository
 from schemas.moneywheel import MoneywheelCalculateRequest, MoneywheelResponse
 from models.moneywheel import MoneywheelResult
-from rules.moneywheel import RULES, RULE_DEFINITIONS
+from rules.moneywheel import CANONICAL_RATIO_KEYS, LEGACY_RATIO_ALIASES, RULES, RULE_DEFINITIONS
 from services.financial_state_service import FinancialStateService
 from services.moneywheel_service import MoneywheelService
 
 router = APIRouter(prefix="/api/moneywheel", tags=["Moneywheel"])
-
-_CANONICAL_RATIO_KEYS = (
-    "savings_rate",
-    "liquid_asset_ratio",
-    "debt_to_income_ratio",
-    "leverage_ratio",
-    "financial_asset_ratio",
-    "insurance_coverage_ratio",
-    "goal_funding_ratio",
-    "future_funding_ratio",
-    "required_rate_of_return",
-)
-
-_LEGACY_RATIO_ALIASES = {
-    "savings_ratio": "savings_rate",
-    "liquid_asset_to_total_asset": "liquid_asset_ratio",
-    "insurance_gap_ratio": "insurance_coverage_ratio",
-}
-
 
 def _service():
     return MoneywheelService(MoneywheelRepository())
@@ -61,10 +42,10 @@ def _canonical_ratios(rows: list[dict]) -> tuple[list[dict], list[str]]:
     normalized: list[dict] = []
     legacy_keys: list[str] = []
 
-    for key in _CANONICAL_RATIO_KEYS:
+    for key in CANONICAL_RATIO_KEYS:
         row = by_key.get(key)
         if row is None:
-            for legacy_key, canonical_key in _LEGACY_RATIO_ALIASES.items():
+            for legacy_key, canonical_key in LEGACY_RATIO_ALIASES.items():
                 if canonical_key == key and legacy_key in by_key:
                     row = dict(by_key[legacy_key])
                     row["key"] = key
