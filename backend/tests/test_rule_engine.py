@@ -10,7 +10,7 @@ def _goal(**overrides):
         planning_unit_id="pu-rule",
         version=1,
         is_latest=True,
-        goal_type="Retirement",
+        goal_type="retirement",
         goal_name="Retirement",
         today_cost=1000000.0,
         inflation_rate=0.06,
@@ -38,7 +38,6 @@ def _strategy(**overrides):
     )
     values.update(overrides)
     return StrategyDefinition(**values)
-
 
 
 def test_rule_engine_matches_goal_type_without_component_evaluation():
@@ -69,11 +68,24 @@ def test_rule_engine_does_not_use_financial_context_as_component_activation():
     assert result.missing_inputs == ()
 
 
-def test_retirement_and_financial_independence_have_distinct_canonical_identities():
-    assert canonical_goal_type("Retirement") == "retirement"
-    assert canonical_goal_type("Financial Freedom / Passive Income") == "financial_independence"
-    assert canonical_goal_name("financial_independence") == "Financial Independence"
-    assert canonical_goal_type("Retirement/Financial Freedom") == "retirement"
-    assert canonical_goal_name("Retirement/Financial Freedom") == "Retirement"
-    assert canonical_goal_name("Education", "Daughter MBA") == "Daughter MBA"
-    assert canonical_goal_name("Education", "Education") == "Education"
+def test_canonical_goal_taxonomy_accepts_only_the_onboarding_ids():
+    expected = {
+        "retirement": "Retirement",
+        "marriage": "Marriage",
+        "vehicle": "Vehicle",
+        "dream_home": "Dream Home",
+        "education": "Education",
+        "vacation": "Vacation",
+        "debt_freedom": "Debt Freedom",
+        "wealth_creation": "Wealth Creation",
+        "fire_passive_income": "FIRE / Passive Income",
+        "others": "Others",
+    }
+    for goal_type, label in expected.items():
+        assert canonical_goal_type(goal_type) == goal_type
+        assert canonical_goal_name(goal_type) == label
+
+    assert canonical_goal_type("Financial Independence") == ""
+    assert canonical_goal_type("Passive Income") == ""
+    assert canonical_goal_type("Child Education") == ""
+    assert canonical_goal_type("philanthropy") == ""
