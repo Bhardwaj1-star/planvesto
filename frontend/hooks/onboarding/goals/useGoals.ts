@@ -10,7 +10,7 @@ import { validateGoal } from "../../../lib/onboarding/goals/validation";
 
 export function useGoals() {
   const { goals, setGoals, saveGoals } = useOnboardingStore();
-  const { completeStep, goPrevious } = useOnboardingNavigation(7);
+  const { completeStep, goPrevious } = useOnboardingNavigation(8);
   const router = useRouter();
   const [draft, setDraft] = useState<Goal>({ id: createGoalId(), ...emptyGoal });
   const [isAdding, setIsAdding] = useState(goals.length === 0);
@@ -56,7 +56,7 @@ export function useGoals() {
       goalsToSave = editingGoalId ? goals.map((goal) => (goal.id === editingGoalId ? draft : goal)) : [...goals, draft];
     }
     try { await persistGoals(goalsToSave); } catch { return; }
-    setDraft({ id: createGoalId(), ...emptyGoal }); setEditingGoalId(null); setIsAdding(false); setErrors({}); setIsSubmitted(false); setIsComplete(true); completeStep(7); router.push("/investor/financial-state");
+    setDraft({ id: createGoalId(), ...emptyGoal }); setEditingGoalId(null); setIsAdding(false); setErrors({}); setIsSubmitted(false); setIsComplete(true); completeStep(8); router.push("/investor/financial-state");
   }
 
   return { goals, draft, editingGoalId, isAdding, isFormOpen: isAdding || Boolean(editingGoalId), errors, isComplete, startAdding, startEditing, updateDraft, saveGoal, removeGoal, cancelEditing, handleContinue, goPrevious };
