@@ -356,4 +356,4 @@ class TestBackwardCompatibility:
         })
         assert len(ratios) >= 4
         ratio_keys = {r.ratio_key for r in ratios}
-        assert "savings_ratio" in ratio_keys
+        assert "savings_rate" in ratio_keys
