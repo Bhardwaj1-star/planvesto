@@ -220,7 +220,7 @@ class FinancialPlanService:
                     "feasibility_status": r.get("feasibility_status"),
                     "available_monthly_surplus": r.get("available_monthly_surplus"),
                     "funding_strategies": r.get("funding_strategies", []),
-                    "is_feasible": r.get("feasibility_status") == "feasible",
+                    "is_feasible": r.get("feasibility_status") == "pass",
                     "reasons": r.get("reasons", []),
                     "notes": r.get("notes", []),
                 }
