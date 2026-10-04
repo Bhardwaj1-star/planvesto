@@ -13,6 +13,7 @@ from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from services.goal_report_service import GoalReportService
 from rules.multi_goal import get_priority_rank
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 
 
 class BasketReportService:
@@ -88,6 +89,7 @@ class BasketReportService:
             req_monthly = 0.0
 
         projected_mapped = calc.get("projected_mapped_asset_value") or 0.0
+        funding_return_assumption = normalize_annual_return(calc.get("funding_return_assumption"))
         try:
             projected_mapped = float(projected_mapped)
         except (ValueError, TypeError):
@@ -120,6 +122,7 @@ class BasketReportService:
             "funding_gap": funding_gap,
             "required_monthly_contribution": req_monthly,
             "projected_mapped_asset_value": projected_mapped,
+            "funding_return_assumption": funding_return_assumption,
             "funding_status": calc.get("funding_status") or ("Shortfall" if funding_gap > 0 else "On Track"),
             "strategy_run_id": prov.get("strategy_run_id") or r.get("strategy_run_id") or "run",
             "strategy_name": strat.get("selected_strategy_name") or strat.get("name") or "Goal Funding",
@@ -138,7 +141,13 @@ class BasketReportService:
 
         combined_opening = sum(g["projected_mapped_asset_value"] for g in goals)
         combined_monthly = sum(g["required_monthly_contribution"] for g in goals)
-        return_rate = 0.09
+        weighted_value = sum(max(0.0, g.get("projected_mapped_asset_value", 0.0)) for g in goals)
+        weighted_return = sum(
+            max(0.0, g.get("projected_mapped_asset_value", 0.0))
+            * normalize_annual_return(g.get("funding_return_assumption"))
+            for g in goals
+        )
+        return_rate = (weighted_return / weighted_value) if weighted_value > 0 else DEFAULT_FUNDING_RETURN_ASSUMPTION
 
         trajectory: list[dict[str, Any]] = []
         balance = combined_opening
