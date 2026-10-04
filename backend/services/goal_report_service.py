@@ -14,6 +14,7 @@ from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from services.financial_state_service import FinancialStateService
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 
 
 class GoalReportService:
@@ -316,9 +317,9 @@ class GoalReportService:
 
         return_rate = cls._get(goal, "funding_return_assumption")
         try:
-            return_rate = float(return_rate) if return_rate is not None else 0.09
+            return_rate = normalize_annual_return(return_rate if return_rate is not None else DEFAULT_FUNDING_RETURN_ASSUMPTION)
         except (ValueError, TypeError):
-            return_rate = 0.09
+            return_rate = DEFAULT_FUNDING_RETURN_ASSUMPTION
 
         monthly_req = cls._get(goal, "required_monthly_contribution")
         try:
