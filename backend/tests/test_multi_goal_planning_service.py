@@ -88,6 +88,8 @@ def test_multi_goal_planning_service_build_plan():
     assert result.goals[1].allocated_monthly_contribution == 5000.0
     assert result.goals[1].funding_status == "partially_funded"
     assert result.goals[1].feasibility_status == "conditional"
+    mock_financial_state_service.current.assert_called_once_with("pu-123", "family")
+    mock_strat_service._financial_context.assert_not_called()
 
 
 def test_multi_goal_planning_service_requires_selected_strategy_version():
