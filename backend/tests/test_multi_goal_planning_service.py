@@ -9,6 +9,18 @@ def test_multi_goal_planning_service_build_plan():
     mock_strat_service = MagicMock()
     mock_report_service = MagicMock()
     mock_financial_state_service = MagicMock()
+    mock_financial_state_service.current.return_value = {
+        "income_annual": {"value": 1200000.0},
+        "expenses_annual": {"value": 900000.0},
+        "investable_surplus_monthly": {"value": 25000.0},
+        "total_assets": {"value": 5000000.0},
+        "total_liabilities": {"value": 1000000.0},
+        "net_worth": {"value": 4000000.0},
+        "financial_assets": {"value": 4000000.0},
+        "liquid_assets": {"value": 1000000.0},
+        "essential_monthly_expenses": {"value": 50000.0},
+        "emi_burden_monthly": {"value": 20000.0},
+    }
 
     # Setup 2 mock goals
     mock_goal_repo.list_goals.return_value = [
@@ -58,11 +70,6 @@ def test_multi_goal_planning_service_build_plan():
             "strategy": {"name": "Conservative Debt"},
         },
     ]
-
-    mock_strat_service._financial_context.return_value = {
-        "monthly_surplus": 25000.0,
-        "annual_income": 1200000.0,
-    }
 
     service = MultiGoalPlanningService(
         goal_repo=mock_goal_repo,
