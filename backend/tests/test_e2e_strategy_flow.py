@@ -29,7 +29,7 @@ def _financial_state_without_external_data(monkeypatch):
 from services.goal_report_service import GoalReportService
 
 
-def _create_test_defined_goal(goal_type="Retirement"):
+def _create_test_defined_goal(goal_type="retirement"):
     return DefinedGoal(defined_goal_id="dg_retire_001", goal_id="goal_retire_001", planning_unit_id="pu_investor_001", version=1, is_latest=True, goal_type=goal_type, goal_name="Retirement Corpus Planning", today_cost=5000000.0, inflation_rate=0.06, target_month=12, target_year=2045, duration_years=20.0, future_target=16035677.0, priority="Critical", flexibility="Fixed", funding_gap=8000000.0, funding_status="Shortfall")
 
 
