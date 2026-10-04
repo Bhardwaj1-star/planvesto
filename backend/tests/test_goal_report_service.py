@@ -26,7 +26,7 @@ class Goal:
     goal_id = "g1"
     defined_goal_id = "dg1"
     goal_name = "Dream Home"
-    goal_type = "Dream Home"
+    goal_type = "dream_home"
     priority = "High"
     flexibility = "Flexible"
     status = "Active"
@@ -57,7 +57,7 @@ def make_run():
         tagline="Fund the goal",
         description="Fund a defined goal.",
         strategic_objective="Match future funding requirements with resources.",
-        applicable_goal_types=["Dream Home"],
+        applicable_goal_types=["dream_home"],
         technique_ids=["tech-asset-earmarking"],
         component_ids=["component-funding"],
     )
