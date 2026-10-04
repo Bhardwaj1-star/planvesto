@@ -97,14 +97,14 @@ class ResourceAllocationEngine:
                     allocated = 0.0
                     funding_status = "unfunded"
                     funding_pct = 0.0
-                    feasibility = "infeasible" if req > 0 else "feasible"
+                    feasibility = "infeasible" if req > 0 else "pass"
                     trade_off_impact = f"Goal '{goal_name}' is unfunded from current monthly surplus due to higher-priority allocations."
                     trade_offs.append(trade_off_impact)
                     reasoning = "Unfunded from current cash flow. Surplus was fully committed to higher-priority goals."
             else:
                 funding_status = "requires_review"
                 funding_pct = 0.0
-                feasibility = "constrained"
+                feasibility = "conditional"
                 reasoning = "Available monthly surplus is unconfigured; funding allocation pending financial state verification."
 
             if override_applied and override_reason:
