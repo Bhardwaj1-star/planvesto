@@ -2,7 +2,7 @@ import { supabase } from "../../supabase";
 import type { Goal } from "./types";
 
 export async function saveDynamicGoalDetails(goalId: string, goal: Goal) {
-  const goalName = goal.goalType === "Others"
+  const goalName = goal.goalType === "others"
     ? goal.dynamicDetails.otherGoalName.trim()
     : goal.goalType;
 
