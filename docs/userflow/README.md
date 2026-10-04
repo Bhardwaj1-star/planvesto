@@ -1,29 +1,51 @@
-# Planvesto User Flow
+# Planvesto User Flow — Dependency Map
 
 ```text
-User
-│
-├── 1. Apni financial information deta hai
-│       ↓
-│   System financial picture samajhta hai
-│
-├── 2. Apna goal choose / update karta hai
-│       ↓
-│   System goal ki funding aur feasibility check karta hai
-│
-├── 3. Available strategy options dekhta hai
-│       ↓
-│   System options ko compare karke recommendation banata hai
-│
-├── 4. Strategy select aur approve karta hai
-│       ↓
-│   System selected plan ko lock karta hai
-│       ↓
-│   Actions bante hain
-│
-└── 5. Action complete karta hai
-        ↓
-    Actual financial state update hoti hai
-        ↓
-    Next planning cycle
+USER
+ │
+ ├── 1. Financial Picture
+ │      │
+ │      └── Financial State
+ │              │
+ │              ▼
+ │          Goals + Constraints
+ │
+ ├── 2. Goal Funding
+ │      │
+ │      └── Goal → Funding → Feasibility
+ │
+ ├── 3. Strategy Choice
+ │      │
+ │      └── Goal + Financial Situation
+ │              ↓
+ │          Strategy Options
+ │              ↓
+ │          User Selection
+ │              ↓
+ │          Strategy Version
+ │
+ ├── 4. Approval → Action
+ │      │
+ │      └── Strategy Version
+ │              ↓
+ │          Approval
+ │              ↓
+ │          Actions
+ │              ↓
+ │          Actual Financial Change
+ │              ↓
+ │          Financial State
+ │
+ └── 5. Goal Change
+        │
+        └── New Goal Version
+                ↓
+            New Strategy Version
+                ↓
+            New Approval
+                ↓
+            New Actions
+
+OLD VERSION = HISTORY
+NEW VERSION = CURRENT
 ```
