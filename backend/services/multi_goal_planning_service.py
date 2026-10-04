@@ -96,7 +96,7 @@ class MultiGoalPlanningService:
                 "recommended_strategy_id": report.get("selected_strategy_id") or rec.get("recommended_strategy_id"),
                 "recommended_strategy_name": report.get("strategy", {}).get("name"),
                 "strategy_version_id": strategy_version_id,
-                "feasibility_status": rec.get("feasibility_status") or "feasible",
+                "feasibility_status": {"feasible": "pass", "constrained": "conditional"}.get(\n                    rec.get("feasibility_status"), rec.get("feasibility_status") or "pass"\n                ),
                 "required_monthly_contribution": req_monthly,
                 "today_cost": calc.get("today_cost"),
                 "future_target": calc.get("future_target"),
