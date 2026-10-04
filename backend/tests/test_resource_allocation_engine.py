@@ -45,7 +45,7 @@ def test_competing_goals_with_partial_funding(allocation_engine):
     goals = [
         {
             "goal_id": "g1",
-            "goal_name": "Child Education",
+            "goal_name": "Education",
             "client_priority": "high",
             "resolved_priority": "high",
             "required_monthly_contribution": 25000.0,
