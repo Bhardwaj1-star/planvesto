@@ -28,8 +28,8 @@ export const onboardingSteps = [
   { number: 3, slug: "income", title: "Income" },
   { number: 4, slug: "expenses", title: "Expenses" },
   { number: 5, slug: "assets", title: "Assets" },
-  { number: 6, slug: "liabilities", title: "Liabilities" },
-  { number: 7, slug: "insurance", title: "Insurance" },
+  { number: 6, slug: "insurance", title: "Insurance" },
+  { number: 7, slug: "liabilities", title: "Liabilities" },
   { number: 8, slug: "goals", title: "Goals" },
 ] as const;
 
@@ -113,7 +113,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             data.incomeSources.length ? 3 : 0,
             data.expenses.length ? 4 : 0,
             data.assets.length ? 5 : 0,
-            data.liabilities.length ? 6 : 0,
+            data.liabilities.length ? 7 : 0,
             data.goals.length ? 8 : 0,
           ].filter(Boolean),
           isLoading: false,
