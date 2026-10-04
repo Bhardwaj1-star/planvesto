@@ -10,7 +10,7 @@ export default function GoalsForm() {
 
   return (
     <OnboardingShell
-      currentStep={6}
+      currentStep={8}
       title="What are you planning your money for?"
       subtitle="Financial planning connects your balance sheet and cash flow to life milestones, family security, and future aspirations."
       stepContext="Goals & Life Aspirations"
@@ -47,7 +47,6 @@ export default function GoalsForm() {
           </div>
         )}
 
-        {/* Consistent Action Bar */}
         <div className="flex flex-col-reverse items-stretch gap-4 pt-4 sm:flex-row sm:items-center sm:justify-between border-t border-slate-200/80">
           <button
             type="button"
@@ -55,7 +54,7 @@ export default function GoalsForm() {
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-900"
           >
             <span aria-hidden="true">&larr;</span>
-            Back to Liabilities
+            Back to Insurance
           </button>
 
           <button
