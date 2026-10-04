@@ -422,7 +422,7 @@ class FinancialPlanService:
             {
                 "risk_event": "Loss of Primary Earner Income",
                 "immediate_action": "File term life insurance claim (recommended: 15–20x annual family expenses) and activate Emergency Fund.",
-                "planning_change": "Ring-fence living expenses; temporarily freeze discretionary vacation goals; preserve child education & retirement corpus.",
+                "planning_change": "Ring-fence living expenses; temporarily freeze discretionary vacation goals; preserve education & retirement corpus.",
                 "what_not_to_do": "Do not liquidate long-term compounding investments at distress valuations or borrow against credit cards.",
             },
             {
