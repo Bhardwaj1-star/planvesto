@@ -21,6 +21,7 @@ class FakeDataRepository:
             "asset_owners": self.get_asset_owners(planning_unit_id),
             "liability_responsibilities": self.get_liability_responsibilities(planning_unit_id),
             "expense_participants": self.get_expense_participants(planning_unit_id),
+            "asset_type_master": [],
         }
 
     def get_investors(self, planning_unit_id):

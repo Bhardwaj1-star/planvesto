@@ -6,6 +6,7 @@ from typing import Any
 from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
 from models.financial_state import FinancialState, Metric
 from rules.financial_state import MISSING_INPUT, cash_flow_ratio, required_safety_reserve_months, savings_investment_rate
+from rules.financial_metrics import is_essential_expense
 
 
 class FinancialStateEngine:
@@ -13,10 +14,11 @@ class FinancialStateEngine:
               expense_rows: list[dict[str, Any]], asset_rows: list[dict[str, Any]],
               liability_rows: list[dict[str, Any]], asset_owner_rows: list[dict[str, Any]],
               liability_responsibility_rows: list[dict[str, Any]], expense_participant_rows: list[dict[str, Any]],
+              asset_type_master: list[dict[str, Any]] | None = None,
               scope: str = "family", investor_id: str | None = None) -> FinancialState:
         income = self._income(income_rows, scope, investor_id)
         expenses = self._expenses(expense_rows, scope, investor_id, expense_participant_rows)
-        assets = self._assets(asset_rows, asset_owner_rows, scope, investor_id)
+        assets = self._assets(asset_rows, asset_owner_rows, asset_type_master or [], scope, investor_id)
         liabilities = self._liabilities(liability_rows, liability_responsibility_rows, scope, investor_id)
 
         surplus_m = None
@@ -42,12 +44,15 @@ class FinancialStateEngine:
             income_breakdown=income.breakdown,
             expenses_monthly=Metric(value=round_money(expenses.monthly), available=expenses.available, reason=expenses.reason),
             expenses_annual=Metric(value=round_money(expenses.annual), available=expenses.available, reason=expenses.reason),
+            essential_monthly_expenses=self._metric(expenses.essential_monthly),
             expense_breakdown=expenses.breakdown,
             investable_surplus_monthly=self._metric(surplus_m),
             investable_surplus_annual=self._metric(surplus_a),
             cash_flow_ratio=self._metric(cfr),
             savings_investment_rate=self._metric(savings),
             total_assets=self._metric(assets.total),
+            liquid_assets=self._metric(assets.liquid_assets, assets.classification_available),
+            financial_assets=self._metric(assets.financial_assets, assets.classification_available),
             asset_breakdown=assets.breakdown,
             asset_allocation=assets.allocation,
             liquidity_breakdown=assets.liquidity_breakdown,
@@ -61,8 +66,8 @@ class FinancialStateEngine:
         )
 
     @staticmethod
-    def _metric(value):
-        return Metric(value=value, available=value is not None, reason=None if value is not None else MISSING_INPUT)
+    def _metric(value, available=True):
+        return Metric(value=value, available=available and value is not None, reason=None if available and value is not None else MISSING_INPUT)
 
     def _income(self, rows, scope, investor_id):
         selected = rows if scope == "family" else [r for r in rows if r.get("investor_id") == investor_id]
@@ -88,20 +93,29 @@ class FinancialStateEngine:
                 if p.get("investor_id") == investor_id:
                     factors[p.get("expense_id")] = float(p.get("participation_percentage") or 100) / 100
         selected = rows if scope == "family" else [r for r in rows if r.get("expense_id") in factors]
-        monthly = 0.0; breakdown = defaultdict(float); available = bool(selected)
+        monthly = 0.0; essential_monthly = 0.0; breakdown = defaultdict(float); available = bool(selected)
         for r in selected:
             m = monthly_amount(float(r.get("amount") or 0), str(r.get("frequency") or ""))
             if m is None:
                 available = False; continue
             m *= factors.get(r.get("expense_id"), 1.0)
-            monthly += m; breakdown[str(r.get("expense_type") or "Other")] += m
-        return _Component(monthly, monthly * 12, available, None if available else MISSING_INPUT,
+            monthly += m
+            if is_essential_expense(r.get("expense_type")):
+                essential_monthly += m
+            breakdown[str(r.get("expense_type") or "Other")] += m
+        return _ExpenseComponent(monthly, monthly * 12, essential_monthly, available, None if available else MISSING_INPUT,
                           [{"type": k, "monthly": round_money(v), "annual": round_money(v * 12)} for k, v in breakdown.items()])
 
-    def _assets(self, rows, owners, scope, investor_id):
+    def _assets(self, rows, owners, classifications, scope, investor_id):
         owner_map = defaultdict(list)
         for row in owners: owner_map[row.get("asset_id")].append(row)
-        breakdown=[]; total=0.0; liquidity=defaultdict(float)
+        lookup = {}
+        for item in classifications:
+            if item.get("is_active", True):
+                for key in (item.get("name"), item.get("code")):
+                    if key:
+                        lookup[str(key).strip().lower()] = item
+        breakdown=[]; total=0.0; liquid=0.0; financial=0.0; liquidity=defaultdict(float); classification_available=True
         for r in rows:
             value=float(r.get("current_value") or 0); owner_rows=owner_map.get(r.get("asset_id"), [])
             if not owner_rows: share=1.0
@@ -110,11 +124,19 @@ class FinancialStateEngine:
                 matching=[o for o in owner_rows if o.get("investor_id")==investor_id]
                 share=float(matching[0].get("ownership_percentage") or 100)/100 if matching else 0.0
             owned=value*share; total+=owned
+            raw_type = str(r.get("asset_type") or r.get("asset_name") or "").strip()
+            master = lookup.get(raw_type.lower())
+            if master is None:
+                classification_available = False
+                liquidity["Unclassified"] += owned
+            else:
+                if master.get("is_liquid") is True: liquid += owned
+                if master.get("is_financial") is True: financial += owned
+                liquidity[str(master.get("name") or raw_type)] += owned
             breakdown.append({"asset_id":r.get("asset_id"),"name":r.get("asset_name"),"current_value":round_money(owned),"ownership_applied":round_money(share*100),"liquidity":None})
-            liquidity["Unclassified"] += owned
         allocation=[{"asset_id":x["asset_id"],"name":x["name"],"percentage":percentage(x["current_value"],total)} for x in breakdown] if total else []
         liquidity_breakdown=[{"classification":k,"value":round_money(v),"percentage":percentage(v,total)} for k,v in liquidity.items()]
-        return _AssetComponent(total, breakdown, allocation, liquidity_breakdown)
+        return _AssetComponent(total, liquid, financial, classification_available, breakdown, allocation, liquidity_breakdown)
 
     def _liabilities(self, rows, responsibilities, scope, investor_id):
         resp_map=defaultdict(list)
@@ -141,7 +163,9 @@ class FinancialStateEngine:
 
 class _Component:
     def __init__(self, monthly, annual, available, reason, breakdown): self.monthly=monthly; self.annual=annual; self.available=available; self.reason=reason; self.breakdown=breakdown
+class _ExpenseComponent:
+    def __init__(self, monthly, annual, essential_monthly, available, reason, breakdown): self.monthly=monthly; self.annual=annual; self.essential_monthly=essential_monthly; self.available=available; self.reason=reason; self.breakdown=breakdown
 class _AssetComponent:
-    def __init__(self,total,breakdown,allocation,liquidity_breakdown): self.total=total; self.available=True; self.breakdown=breakdown; self.allocation=allocation; self.liquidity_breakdown=liquidity_breakdown
+    def __init__(self,total,liquid_assets,financial_assets,classification_available,breakdown,allocation,liquidity_breakdown): self.total=total; self.liquid_assets=liquid_assets; self.financial_assets=financial_assets; self.classification_available=classification_available; self.available=True; self.breakdown=breakdown; self.allocation=allocation; self.liquidity_breakdown=liquidity_breakdown
 class _LiabilityComponent:
     def __init__(self,total,breakdown,allocation,emi,emi_available): self.total=total; self.available=True; self.breakdown=breakdown; self.allocation=allocation; self.emi=emi; self.emi_available=emi_available

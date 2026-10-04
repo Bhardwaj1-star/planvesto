@@ -1,23 +1,15 @@
-import logging
 from typing import Any
 
 from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
-from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
-from rules.financial_metrics import ESSENTIAL_EXPENSE_TYPES
 from rules.protection import (
     calculate_required_insurance_cover,
     is_health_insurance,
     is_life_insurance,
 )
-
-logger = logging.getLogger(__name__)
-
-# Re-exported for backwards compatibility with tests and callers
-ESSENTIAL_EXPENSE_TYPES = ESSENTIAL_EXPENSE_TYPES
 
 
 class MoneywheelService:
@@ -26,7 +18,7 @@ class MoneywheelService:
     def __init__(
         self,
         repository,
-        data_repository: FinancialDataRepository | None = None,
+        data_repository=None,
         goal_repository: GoalRepository | None = None,
         engine: MoneywheelEngine | None = None,
         adapter: MoneywheelFinancialStateAdapter | None = None,
@@ -54,29 +46,15 @@ class MoneywheelService:
     def calculate_from_financial_state(
         self,
         financial_state: FinancialState,
-        *,
-        essential_monthly_expenses: float | None = None,
-        liquid_assets: float | None = None,
-        financial_assets: float | None = None,
     ) -> MoneywheelResult:
+        """Calculate MoneyWheel exclusively from canonical FinancialState facts.
+
+        Policy/domain inputs such as insurance policies and goal funding remain
+        separate sources; shared financial facts must never be re-derived here.
+        """
         planning_unit_id = financial_state.planning_unit_id
-        expenses = self.data_repository.get_expenses(planning_unit_id)
-        assets = self.data_repository.get_assets(planning_unit_id)
         policies = self.data_repository.get_insurance_policies(planning_unit_id)
 
-        active_asset_types = self.data_repository.get_active_asset_types()
-        unmapped_asset_types: set[str] = set()
-
-        if essential_monthly_expenses is None:
-            essential_monthly_expenses = self._sum_expenses(expenses)
-        if liquid_assets is None:
-            liquid_assets = self._sum_assets(
-                assets, "is_liquid", classifications=active_asset_types, unmapped_accumulator=unmapped_asset_types
-            )
-        if financial_assets is None:
-            financial_assets = self._sum_assets(
-                assets, "is_financial", classifications=active_asset_types, unmapped_accumulator=unmapped_asset_types
-            )
         total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
@@ -107,12 +85,7 @@ class MoneywheelService:
             "projected_goal_funding": projected_goal_funding,
         }
 
-        data = self.adapter.build(
-            financial_state,
-            essential_monthly_expenses=essential_monthly_expenses,
-            liquid_assets=liquid_assets,
-            financial_assets=financial_assets,
-        )
+        data = self.adapter.build(financial_state)
         data.current_goal_funding = current_goal_funding
         data.goal_target_amount = goal_target_amount
         data.projected_goal_funding = projected_goal_funding
@@ -120,19 +93,12 @@ class MoneywheelService:
         data.existing_sum_assured = total_sum_assured
         data.required_insurance_cover = required_insurance_cover
 
-        debug_metadata = {
-            "unmapped_asset_types": sorted(list(unmapped_asset_types)),
-        }
-
         result = self.calculate(
             data,
             financial_state.model_dump(mode="json"),
             protection_metadata=protection_metadata,
-            debug_metadata=debug_metadata,
         )
         result.metadata["goals"] = goal_metadata
-        if "unmapped_asset_types" not in result.metadata:
-            result.metadata["unmapped_asset_types"] = sorted(list(unmapped_asset_types))
         return result
 
     def _goal_funding(self, planning_unit_id: str):
@@ -243,15 +209,3 @@ class MoneywheelService:
                 total += float(row.get("current_value") or 0)
         return total
 
-    @staticmethod
-    def _sum_liabilities(rows, allowed_types):
-        return sum(float(row.get("outstanding_amount") or 0) for row in rows if str(row.get("liability_type") or "Other") in allowed_types)
-
-    @staticmethod
-    def _sum_expenses(rows):
-        from engines.calculation.engine import monthly_amount
-        return sum(
-            monthly_amount(float(row.get("amount") or 0), str(row.get("frequency") or "")) or 0
-            for row in rows
-            if str(row.get("expense_type") or "Other") in ESSENTIAL_EXPENSE_TYPES
-        )

@@ -82,6 +82,9 @@ class FinancialDataRepository:
             "expense_participants": related_rows(
                 "expense_participants", "expense_id", expense_ids
             ),
+            # Asset classification is part of the FinancialState input revision because
+            # liquidity/financial-asset facts depend on these authoritative flags.
+            "asset_type_master": self.get_active_asset_types(),
         }
 
     def get_asset_owners(self, planning_unit_id: str):
