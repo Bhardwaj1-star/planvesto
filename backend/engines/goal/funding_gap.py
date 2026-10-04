@@ -3,6 +3,7 @@ from engines.calculation.engine import round_money
 
 
 from engines.calculation.canonical import calculate_goal_funding_gap
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 
 
 def calculate_funding_gap(
@@ -65,23 +66,24 @@ def calculate_required_monthly_contribution(
 
 def calculate_funding_return_assumption(
     mapped_assets: list[dict],
-    fallback_return: float = 0.08,
+    fallback_return: float = DEFAULT_FUNDING_RETURN_ASSUMPTION,
 ) -> float:
     """
     Returns the weighted nominal annual return of mapped assets using their
     allocated current value as weights. Falls back explicitly when no mapped
     capital exists.
     """
+    fallback = normalize_annual_return(fallback_return)
     if not mapped_assets:
-        return float(fallback_return)
+        return fallback
 
     total_value = sum(max(0.0, float(item.get("allocated_amount", 0.0))) for item in mapped_assets)
     if total_value <= 0.0:
-        return float(fallback_return)
+        return fallback
 
     weighted = sum(
         max(0.0, float(item.get("allocated_amount", 0.0)))
-        * float(item.get("expected_return", fallback_return))
+        * normalize_annual_return(item.get("expected_return", fallback))
         for item in mapped_assets
     )
     return weighted / total_value
