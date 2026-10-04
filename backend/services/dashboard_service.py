@@ -85,7 +85,7 @@ class DashboardService:
         value = (goal_type or "").strip().lower()
         if "home" in value or "house" in value or "property" in value:
             return "home"
-        if "education" in value or "child" in value or "college" in value:
+        if "education" in value or "college" in value:
             return "education"
         if "travel" in value or "vacation" in value:
             return "travel"
