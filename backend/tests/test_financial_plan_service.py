@@ -28,7 +28,7 @@ def test_goal_row_uses_recommendation_when_strategy_not_selected():
             "recommended_strategy_id": "progressive_de_risking",
             "complete_reasoning": "Use growth early and reduce risk near retirement.",
             "short_reasons": ["Long horizon"],
-            "feasibility_status": "feasible",
+            "feasibility_status": "pass",
         },
         "selected_strategy_id": None,
         "strategy": {"name": "Progressive De-risking"},
@@ -100,7 +100,7 @@ def test_build_plan_consolidates_multi_goal_results():
     assert plan["consolidated_funding"]["required_monthly_contribution"] == 40000.0
     assert plan["consolidated_funding"]["allocated_monthly_contribution"] == 40000.0
     assert plan["consolidated_funding"]["funding_status"] == "within_surplus"
-    assert len(plan["actions"]) == 2
+    assert plan["actions"] == []\n    assert plan["action_plan"]["status"] == "delegated_to_action_plan"
 
 
 def test_generate_pdf_produces_bytes():
@@ -183,7 +183,7 @@ def test_generate_pdf_with_system_priority_override():
                 allocated_monthly_contribution=5000.0,
                 shortfall=10000.0,
                 funding_status="partially_funded",
-                feasibility_status="constrained",
+                feasibility_status="conditional",
                 override_applied=True,
                 override_reason="Deprioritized because discretionary travel cannot compromise retirement.",
             ),
