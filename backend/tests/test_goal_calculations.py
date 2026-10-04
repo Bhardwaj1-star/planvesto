@@ -150,7 +150,7 @@ class TestGoalEngineFull:
             planning_unit_id="pu-123",
             goal_id="goal-1",
             goal_name="Higher Education",
-            goal_type="Child Education",
+            goal_type="Education",
             today_cost=1000000.0,
             target_month=1,
             target_year=2031,
