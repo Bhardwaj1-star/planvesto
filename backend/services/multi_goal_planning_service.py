@@ -50,16 +50,17 @@ class MultiGoalPlanningService:
 
         for goal in goals:
             goal_id = goal["goal_id"]
-            run = self.strategy_repo.get_latest_run(planning_unit_id, goal_id)
-            if not run:
-                if priorities is None:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Strategy run missing for goal '{goal_id}'. Build the goal strategy first or provide investor priorities.",
-                    )
-                run = self.strategy_service.build_strategy(planning_unit_id, goal_id, priorities)
+            strategy_version_id = self.strategy_repo.get_selected_strategy_version_id(planning_unit_id, goal_id)
+            if not strategy_version_id:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No current StrategyVersion selected for goal '{goal_id}'. Finalize a strategy version before building the current multi-goal plan.",
+                )
 
-            report = self.goal_report_service.build_report(planning_unit_id, run.strategy_run_id)
+            report = self.goal_report_service.build_report(
+                planning_unit_id,
+                strategy_version_id=strategy_version_id,
+            )
             calc = report.get("goal_calculation", {})
             rec = report.get("recommendation", {})
 

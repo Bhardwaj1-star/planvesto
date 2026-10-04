@@ -9,17 +9,10 @@ def test_basket_report_service_build_report_and_generate_pdf():
     service.strategy_repo = MagicMock()
     service.goal_report_service = MagicMock()
 
-    mock_run_g1 = MagicMock(strategy_run_id="run-g1")
-    mock_run_g2 = MagicMock(strategy_run_id="run-g2")
-
-    def mock_get_latest_run(pu_id, goal_id):
-        if goal_id == "g1":
-            return mock_run_g1
-        elif goal_id == "g2":
-            return mock_run_g2
-        return None
-
-    service.strategy_repo.get_latest_run.side_effect = mock_get_latest_run
+    service.strategy_repo.get_selected_strategy_version_id.side_effect = lambda pu_id, goal_id: {
+        "g1": "sv-g1",
+        "g2": "sv-g2",
+    }.get(goal_id)
 
     mock_report_g1 = {
         "report_type": "goal_decision_report",
@@ -77,12 +70,12 @@ def test_basket_report_service_build_report_and_generate_pdf():
         "provenance": {"strategy_run_id": "run-g2"},
     }
 
-    def mock_build_report(pu_id, run_id):
-        if run_id == "run-g1":
+    def mock_build_report(pu_id, strategy_version_id=None, strategy_run_id=None):
+        if strategy_version_id == "sv-g1":
             return mock_report_g1
-        elif run_id == "run-g2":
+        elif strategy_version_id == "sv-g2":
             return mock_report_g2
-        raise ValueError("Unknown run")
+        raise ValueError("Unknown strategy version")
 
     service.goal_report_service.build_report.side_effect = mock_build_report
 

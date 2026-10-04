@@ -271,13 +271,16 @@ class BasketReportService:
         missing: list[str] = []
 
         for goal_id in unique_goal_ids:
-            run = self.strategy_repo.get_latest_run(planning_unit_id, goal_id)
-            if not run or not run.strategy_run_id:
+            strategy_version_id = self.strategy_repo.get_selected_strategy_version_id(planning_unit_id, goal_id)
+            if not strategy_version_id:
                 missing.append(goal_id)
                 continue
             try:
                 goal_reports.append(
-                    self.goal_report_service.build_report(planning_unit_id, run.strategy_run_id)
+                    self.goal_report_service.build_report(
+                        planning_unit_id,
+                        strategy_version_id=strategy_version_id,
+                    )
                 )
             except HTTPException:
                 missing.append(goal_id)

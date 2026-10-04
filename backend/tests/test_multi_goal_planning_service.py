@@ -15,9 +15,7 @@ def test_multi_goal_planning_service_build_plan():
         {"goal_id": "goal-2", "goal_name": "Vacation", "priority": "low", "flexibility": "flexible"},
     ]
 
-    mock_run1 = MagicMock(strategy_run_id="run-1")
-    mock_run2 = MagicMock(strategy_run_id="run-2")
-    mock_strat_repo.get_latest_run.side_effect = [mock_run1, mock_run2]
+    mock_strat_repo.get_selected_strategy_version_id.side_effect = ["sv-1", "sv-2"]
 
     mock_report_service.build_report.side_effect = [
         {
@@ -90,3 +88,19 @@ def test_multi_goal_planning_service_build_plan():
     assert result.goals[1].allocated_monthly_contribution == 5000.0
     assert result.goals[1].funding_status == "partially_funded"
     assert result.goals[1].feasibility_status == "constrained"
+
+
+def test_multi_goal_planning_service_requires_selected_strategy_version():
+    mock_goal_repo = MagicMock()
+    mock_goal_repo.list_goals.return_value = [{"goal_id": "goal-1", "goal_name": "Retirement"}]
+    mock_strat_repo = MagicMock()
+    mock_strat_repo.get_selected_strategy_version_id.return_value = None
+    service = MultiGoalPlanningService(
+        goal_repo=mock_goal_repo,
+        strategy_repo=mock_strat_repo,
+        strategy_service=MagicMock(),
+        goal_report_service=MagicMock(),
+    )
+
+    with pytest.raises(Exception):
+        service.build_multi_goal_plan("pu-123")
