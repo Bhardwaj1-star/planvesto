@@ -204,6 +204,33 @@ def test_strategy_version_domain_requires_parent_for_investor_edit():
         )
 
 
+def test_strategy_version_goal_context_must_be_complete():
+    with pytest.raises(ValueError, match="Goal and DefinedGoal version context"):
+        StrategyVersion(
+            planning_unit_id="pu-1",
+            strategy_id="test-strategy",
+            version=1,
+            library_version="1.0",
+            implementation_version="1.0",
+            goal_id="goal-1",
+        )
+
+
+def test_goal_bound_strategy_version_requires_architecture_and_run_provenance():
+    with pytest.raises(ValueError, match="finalized architecture and StrategyRun provenance"):
+        StrategyVersion(
+            strategy_version_id="sv-goal",
+            planning_unit_id="pu-1",
+            strategy_id="test-strategy",
+            version=1,
+            library_version="1.0",
+            implementation_version="1.0",
+            goal_id="goal-1",
+            defined_goal_id="dg-1",
+            defined_goal_version=1,
+        )
+
+
 def test_repository_is_insert_read_only():
     public_methods = {
         name for name in dir(StrategyVersionRepository)

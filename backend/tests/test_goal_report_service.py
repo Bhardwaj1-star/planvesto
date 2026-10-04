@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 from models.strategy import (
     InvestorPriorities,
     Scenario,
@@ -20,7 +22,9 @@ def _financial_state_without_external_data(monkeypatch):
 
 
 class Goal:
+    planning_unit_id = "p1"
     goal_id = "g1"
+    defined_goal_id = "dg1"
     goal_name = "Dream Home"
     goal_type = "Dream Home"
     priority = "High"
@@ -143,10 +147,6 @@ def test_report_exposes_scenario_outputs(monkeypatch):
 
 def test_report_source_is_selected_strategy_version(monkeypatch):
     service = GoalReportService()
-    run = make_run()
-    run.strategy_run_id = "run-selected"
-    run.selected_strategy_version_id = "sv-selected"
-
     service.strategy_version_repo.get_by_id = lambda planning_unit_id, strategy_version_id: StrategyVersion(
         strategy_version_id=strategy_version_id,
         planning_unit_id=planning_unit_id,
@@ -155,11 +155,40 @@ def test_report_source_is_selected_strategy_version(monkeypatch):
         library_version="1.0.0",
         implementation_version="1.0.0",
         implementation_parameters={},
+        goal_id="g1",
+        defined_goal_id="dg1",
+        defined_goal_version=1,
+        architecture=make_run().selected_architecture,
+        decision_snapshot={
+            "selected_scenario_id": "scen-sip",
+            "applicable_strategies": [
+                item.model_dump(mode="json") for item in make_run().applicable_strategies
+            ],
+            "scenarios": [
+                item.model_dump(mode="json") for item in make_run().scenarios
+            ],
+            "what_if_scenarios": [
+                item.model_dump(mode="json") for item in make_run().what_if_scenarios
+            ],
+            "investor_priorities": make_run().investor_priorities.model_dump(mode="json"),
+            "rankings": [],
+            "recommendation": {
+                **make_run().recommendation.model_dump(mode="json"),
+                "recommended_strategy_id": "strat-goal-funding",
+                "architecture": None,
+            },
+        },
+        source_strategy_run_id="run-source",
     )
-    service.strategy_repo.get_run_by_strategy_version_id = lambda planning_unit_id, strategy_version_id: run
-    service._load = lambda planning_unit_id, strategy_run_id: (run, Goal(), {})
+    service.goal_repo.get_defined_goal_by_version = lambda *args: Goal()
+    service.strategy_repo.get_run_by_id = MagicMock(
+        side_effect=AssertionError("Version report must not read StrategyRun")
+    )
+    service.financial_state_service.current = lambda *args: None
 
     loaded_run, _, _ = service._load_by_strategy_version("p1", "sv-selected")
 
-    assert loaded_run.strategy_run_id == "run-selected"
-    assert loaded_run.selected_strategy_version_id == "sv-selected"
+    assert loaded_run["strategy_run_id"] == "run-source"
+    assert loaded_run["selected_strategy_id"] == "strat-goal-funding"
+    assert loaded_run["selected_architecture"]["architecture_id"] == "arch-g1"
+    service.strategy_repo.get_run_by_id.assert_not_called()

@@ -78,6 +78,7 @@ def _sample_retirement_run():
 def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
     """Verify retirement goals generate canonical Goal Decision Report and valid PDF without legacy renderer/exporter."""
     goal = DefinedGoal(
+        defined_goal_id="dg-ret-1",
         planning_unit_id="pu-ret-canonical-1",
         goal_id="goal-ret-1",
         goal_name="Retirement Corpus Planning",
@@ -116,6 +117,7 @@ def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
 def test_canonical_goal_report_service_works_for_non_retirement_goal():
     """Canonical GoalReportService generates PDF seamlessly for non-retirement goals."""
     goal = DefinedGoal(
+        defined_goal_id="dg-ret-1",
         planning_unit_id="pu-edu-1",
         goal_id="goal-edu-1",
         goal_name="Child College Education",
@@ -134,6 +136,8 @@ def test_canonical_goal_report_service_works_for_non_retirement_goal():
         required_monthly_contribution=12000.0,
     )
     run = _sample_retirement_run()
+    run.planning_unit_id = "pu-edu-1"
+    run.goal_id = "goal-edu-1"
 
     report_service = GoalReportService()
     report_service.strategy_repo.get_run_by_id = MagicMock(return_value=run)

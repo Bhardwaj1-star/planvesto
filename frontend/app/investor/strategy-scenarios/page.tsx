@@ -320,7 +320,7 @@ function StrategyScenariosContent() {
     setSuccess(null);
 
     try {
-      const finalizedRun = await finalizeImplementation(
+      const finalizedVersion = await finalizeImplementation(
         pu,
         run.strategy_run_id,
         run.defined_goal_version,
@@ -331,10 +331,7 @@ function StrategyScenariosContent() {
         fundingStructure,
         urlArchitectureId || undefined,
       );
-      setRun(finalizedRun);
-      const versionId = finalizedRun.selected_strategy_version_id;
-      if (!versionId) throw new Error("Implementation finalized but no Strategy Version was created.");
-      setSuccess("Implementation finalized. Your Strategy Version is now the source of truth.");
+      setSuccess(`Implementation finalized as Strategy Version ${finalizedVersion.strategy_version_id}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to finalize implementation.");
       setLocking(false);

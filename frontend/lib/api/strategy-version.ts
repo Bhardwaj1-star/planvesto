@@ -1,18 +1,7 @@
 import { apiRequest } from "./client";
+import type { StrategyVersion } from "./strategy";
 
-export type StrategyVersion = {
-  strategy_version_id: string | null;
-  planning_unit_id: string;
-  strategy_id: string;
-  version: number;
-  parent_version: number | null;
-  source: "library" | "investor_edit";
-  library_version: string;
-  implementation_version: string;
-  implementation_parameters: Record<string, unknown>;
-  status: "draft" | "approved" | "primary" | "archived" | "needs_review" | "provisional";
-  created_at: string;
-};
+export type { StrategyVersion } from "./strategy";
 
 export function getStrategyVersionById(planningUnitId: string, strategyVersionId: string) {
   return apiRequest<StrategyVersion>(

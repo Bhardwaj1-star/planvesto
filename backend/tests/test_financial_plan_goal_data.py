@@ -37,6 +37,13 @@ def test_complete_financial_plan_contains_goal_calculation_and_funding_options()
                 allocated_monthly_contribution=12000.0,
                 funding_status="fully_funded",
                 feasibility_status="feasible",
+                strategy_version_id="sv-1",
+                today_cost=100000.0,
+                future_target=133822.0,
+                funding_gap=90000.0,
+                projected_mapped_asset_value=43822.0,
+                available_monthly_surplus=25000.0,
+                funding_strategies=[{"strategy_id": "sip", "status": "feasible"}],
                 recommended_strategy_id="strat-goal-funding",
                 recommended_strategy_name="Goal Funding",
             )
@@ -44,7 +51,6 @@ def test_complete_financial_plan_contains_goal_calculation_and_funding_options()
     )
 
     strat_repo = MagicMock()
-    strat_repo.get_latest_run.return_value = None
     service = FinancialPlanService(
         goal_repo=goal_repo,
         strategy_repo=strat_repo,
@@ -59,6 +65,7 @@ def test_complete_financial_plan_contains_goal_calculation_and_funding_options()
     assert row["projected_mapped_asset_value"] == 43822.0
     assert row["available_monthly_surplus"] == 25000.0
     assert row["funding_strategies"] == [{"strategy_id": "sip", "status": "feasible"}]
+    goal_repo.get_latest_defined_goal.assert_not_called()
 
 
 def test_goal_plan_summary_preserves_strategy_and_funding_data():
@@ -74,7 +81,6 @@ def test_goal_plan_summary_preserves_strategy_and_funding_data():
         available_monthly_surplus=25000.0,
         funding_strategies=[{"strategy_id": "sip", "status": "feasible"}],
     )
-    strategy_repo.get_latest_run.return_value = SimpleNamespace(strategy_run_id="run-1")
     multi_goal.build_multi_goal_plan.return_value = MultiGoalPlanResult(
         planning_unit_id="pu-1",
         total_available_surplus=25000.0,
@@ -87,6 +93,13 @@ def test_goal_plan_summary_preserves_strategy_and_funding_data():
             target_date="2031-12", required_monthly_contribution=12000.0,
             allocated_monthly_contribution=12000.0,
             funding_status="fully_funded", feasibility_status="feasible",
+            strategy_version_id="sv-1",
+            today_cost=100000.0,
+            future_target=133822.0,
+            funding_gap=90000.0,
+            projected_mapped_asset_value=43822.0,
+            available_monthly_surplus=25000.0,
+            funding_strategies=[{"strategy_id": "sip", "status": "feasible"}],
             recommended_strategy_id="strat-goal-funding",
             recommended_strategy_name="Goal Funding",
         )],
@@ -100,7 +113,10 @@ def test_goal_plan_summary_preserves_strategy_and_funding_data():
     result = service.build_plan("pu-1")
     plan = result["goal_plans"][0]
 
-    assert plan["strategy_run_id"] == "run-1"
+    assert plan["strategy_version_id"] == "sv-1"
+    assert result["strategy_versions"] == ["sv-1"]
+    strategy_repo.get_latest_run.assert_not_called()
+    goal_repo.get_latest_defined_goal.assert_not_called()
     assert plan["strategy_id"] == "strat-goal-funding"
     assert plan["funding_gap"] == 90000.0
     assert plan["funding_strategies"] == [{"strategy_id": "sip", "status": "feasible"}]

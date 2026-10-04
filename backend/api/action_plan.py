@@ -4,6 +4,7 @@ from api.auth import authenticate_user, verify_action_ownership, verify_planning
 from data.action_plan_repository import ActionPlanRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.strategy_repository import StrategyRepository
+from data.strategy_version_repository import StrategyVersionRepository
 from models.action_plan import ActionPlanItem, ActionDecisionRecord
 from schemas.action_plan import ActionCompletionRequest, ActionCreateRequest, ActionDecisionRequest, ActionDecisionResponse
 from services.action_plan_service import ActionPlanService
@@ -65,6 +66,21 @@ def list_decision_history(planning_unit_id: str, action_id: str | None = None, a
 def create_action(request: ActionCreateRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_strategy_version_ownership(request.planning_unit_id, request.strategy_version_id, user_id)
+    strategy_repository = StrategyRepository()
+    version = StrategyVersionRepository(strategy_repository.db).get_by_id(
+        request.planning_unit_id, request.strategy_version_id
+    )
+    if (
+        not version
+        or not version.goal_id
+        or strategy_repository.get_selected_strategy_version_id(
+            request.planning_unit_id, version.goal_id
+        ) != request.strategy_version_id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Actions can only be created for the current StrategyVersion of the Goal.",
+        )
     try:
         return _service().build_action(**request.model_dump())
     except ValueError as exc:

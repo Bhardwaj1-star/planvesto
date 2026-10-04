@@ -2,6 +2,7 @@ from typing import Any
 
 from library.strategies.registry import get_strategy_by_id
 from models.strategy import StrategyDefinition
+from models.strategy import StrategyArchitecture
 from models.strategy_version import StrategyVersion
 from data.strategy_version_repository import StrategyVersionRepository
 
@@ -69,6 +70,12 @@ class StrategyVersionService:
         parent_version: int | None = None,
         source: str = "library",
         status: str = "draft",
+        goal_id: str | None = None,
+        defined_goal_id: str | None = None,
+        defined_goal_version: int | None = None,
+        architecture: StrategyArchitecture | None = None,
+        decision_snapshot: dict[str, Any] | None = None,
+        source_strategy_run_id: str | None = None,
     ) -> StrategyVersion:
         strategy = get_strategy_by_id(strategy_id)
         if strategy is None:
@@ -105,6 +112,12 @@ class StrategyVersionService:
                 library_version=strategy.library_version,
                 implementation_version=strategy.implementation_version,
                 implementation_parameters=validated,
+                goal_id=goal_id,
+                defined_goal_id=defined_goal_id,
+                defined_goal_version=defined_goal_version,
+                architecture=architecture,
+                decision_snapshot=decision_snapshot or {},
+                source_strategy_run_id=source_strategy_run_id,
                 status=status,  # type: ignore[arg-type]
             )
         )

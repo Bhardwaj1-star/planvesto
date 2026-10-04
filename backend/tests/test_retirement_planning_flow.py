@@ -33,6 +33,7 @@ client = TestClient(app)
 
 def _sample_retirement_goal(planning_unit_id="pu-ret-1", goal_id="goal-ret-1"):
     return DefinedGoal(
+        defined_goal_id=goal_id,
         planning_unit_id=planning_unit_id,
         goal_id=goal_id,
         goal_name="Retirement",

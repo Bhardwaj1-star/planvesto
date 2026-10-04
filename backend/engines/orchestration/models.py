@@ -46,6 +46,13 @@ class GoalResolution(BaseModel):
     feasibility_status: FeasibilityStatusType = "feasible"
     recommended_strategy_id: str | None = None
     recommended_strategy_name: str | None = None
+    strategy_version_id: str | None = None
+    today_cost: float | None = None
+    future_target: float | None = None
+    funding_gap: float | None = None
+    projected_mapped_asset_value: float | None = None
+    available_monthly_surplus: float | None = None
+    funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
     override_applied: bool = False
     override_reason: str | None = None
     reasons: list[str] = Field(default_factory=list)

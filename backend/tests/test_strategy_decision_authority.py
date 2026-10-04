@@ -41,6 +41,7 @@ def _financial_state_without_external_data(monkeypatch):
 
 def _sample_goal(goal_type="Child Education", duration=6.0, shortfall=500000.0, status="Shortfall"):
     return DefinedGoal(
+        defined_goal_id="dg-test-decision",
         goal_id="g-test-decision",
         planning_unit_id="pu-test-decision",
         version=1,
@@ -186,7 +187,6 @@ def test_end_to_end_goal_strategy_report_pdf_pipeline():
 
     service.strat_repo.save_run = MagicMock(side_effect=mock_save_run)
     service.strat_repo.get_run_by_id = MagicMock(side_effect=lambda pu, rid: saved_runs.get(rid))
-    service.strat_repo.update_selection = MagicMock()
     service.financial_state_repo.get_latest = MagicMock(return_value=None)
     run = service.build_strategy(
         planning_unit_id="pu-decision-e2e",

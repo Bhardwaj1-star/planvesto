@@ -93,8 +93,17 @@ class MultiGoalPlanningService:
             strategy_eval_map[goal_id] = {
                 "recommended_strategy_id": report.get("selected_strategy_id") or rec.get("recommended_strategy_id"),
                 "recommended_strategy_name": report.get("strategy", {}).get("name"),
+                "strategy_version_id": strategy_version_id,
                 "feasibility_status": rec.get("feasibility_status") or "feasible",
                 "required_monthly_contribution": req_monthly,
+                "today_cost": calc.get("today_cost"),
+                "future_target": calc.get("future_target"),
+                "funding_gap": calc.get("funding_gap"),
+                "projected_mapped_asset_value": calc.get("projected_mapped_asset_value"),
+                "available_monthly_surplus": report.get("feasibility", {}).get(
+                    "available_monthly_surplus"
+                ),
+                "funding_strategies": report.get("funding_solutions", []),
                 "reasons": rec.get("short_reasons", []),
             }
 

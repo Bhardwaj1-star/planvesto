@@ -35,11 +35,7 @@ def get_strategy_version_history(strategy_id: str, planning_unit_id: str = Query
 def get_selected_strategy_version(goal_id: str, planning_unit_id: str = Query(...), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(planning_unit_id, user_id)
-    strategy_repo = StrategyRepository()
-    strategy_version_id = strategy_repo.get_selected_strategy_version_id(planning_unit_id, goal_id)
-    if not strategy_version_id:
-        return None
-    return _repository().get_by_id(planning_unit_id, strategy_version_id)
+    return StrategyRepository().get_selected_strategy_version(planning_unit_id, goal_id)
 
 
 @router.get("/versions/by-id/{strategy_version_id}", response_model=StrategyVersion)

@@ -39,19 +39,21 @@ class GoalReportService:
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
         if not run:
             raise HTTPException(status_code=404, detail="Strategy run not found")
-        goal = (
-            self.goal_repo.get_defined_goal_by_version(
-                planning_unit_id, run.goal_id, run.defined_goal_version
-            )
-            or self.goal_repo.get_latest_defined_goal(planning_unit_id, run.goal_id)
+        goal = self.goal_repo.get_defined_goal_by_version(
+            planning_unit_id, run.goal_id, run.defined_goal_version
         )
+        if goal and goal.defined_goal_id != run.defined_goal_id:
+            goal = None
         if not goal:
             raise HTTPException(status_code=404, detail="Underlying goal not found")
+        return run, goal, self._financial_context(planning_unit_id, goal)
+
+    def _financial_context(self, planning_unit_id: str, goal: Any) -> dict[str, Any]:
         state = self.financial_state_service.current(planning_unit_id, "family")
         if hasattr(state, "model_dump"):
             state = state.model_dump()
         elif not isinstance(state, dict):
-            return run, goal, {}
+            return {}
 
         def metric_value(key: str):
             value = state.get(key)
@@ -82,40 +84,78 @@ class GoalReportService:
             "net_worth": net_worth,
             "retirement_assets": getattr(goal, "projected_mapped_asset_value", 0.0),
         })
-        return run, goal, context
+        return context
 
     def _load_by_strategy_version(self, planning_unit_id: str, strategy_version_id: str):
         version = self.strategy_version_repo.get_by_id(planning_unit_id, strategy_version_id)
         if not version:
             raise HTTPException(status_code=404, detail="Strategy Version not found")
-
-        run = self.strategy_repo.get_run_by_strategy_version_id(planning_unit_id, strategy_version_id)
-        if not run:
-            raise HTTPException(status_code=404, detail="No Strategy Run is linked to this Strategy Version")
-        if run.selected_strategy_version_id != strategy_version_id:
-            raise HTTPException(status_code=409, detail="Strategy Version is not the selected source for this Strategy Run")
-
-        run, goal, context = self._load(planning_unit_id, run.strategy_run_id)
-        implementation_context = (
-            version.implementation_parameters.get("__implementation_context__")
-            if isinstance(version.implementation_parameters, dict)
-            else None
+        if (
+            version.planning_unit_id != planning_unit_id
+            or not version.goal_id
+            or not version.defined_goal_id
+            or not version.defined_goal_version
+            or version.architecture is None
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Strategy Version is missing its finalized Goal and architecture context",
+            )
+        goal = self.goal_repo.get_defined_goal_by_version(
+            planning_unit_id, version.goal_id, version.defined_goal_version
         )
-        if isinstance(implementation_context, dict):
-            run.selected_implementation_parameters = version.implementation_parameters
-            final_scenario = implementation_context.get("final_scenario")
-            if isinstance(final_scenario, dict):
-                try:
-                    from models.strategy import Scenario
-                    final_scenario_model = Scenario(**final_scenario)
-                    run.scenarios = [
-                        item for item in run.scenarios
-                        if item.scenario_id != final_scenario_model.scenario_id
-                    ] + [final_scenario_model]
-                    run.selected_scenario_id = final_scenario_model.scenario_id
-                except Exception:
-                    pass
-        return run, goal, context
+        if (
+            not goal
+            or goal.defined_goal_id != version.defined_goal_id
+            or goal.goal_id != version.goal_id
+            or goal.planning_unit_id != planning_unit_id
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Strategy Version does not match its bound DefinedGoal version",
+            )
+        snapshot = version.decision_snapshot
+        recommendation = snapshot.get("recommendation") or {}
+        if recommendation.get("recommended_strategy_id") != version.strategy_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Strategy Version has no valid finalized decision snapshot",
+            )
+        selected_scenario_id = snapshot.get("selected_scenario_id")
+        if (
+            not selected_scenario_id
+            or recommendation.get("recommended_scenario_id") != selected_scenario_id
+            or not any(
+                row.get("scenario_id") == selected_scenario_id
+                for row in snapshot.get("scenarios", [])
+                if isinstance(row, dict)
+            )
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Strategy Version selected scenario is missing from its finalized snapshot",
+            )
+        run = {
+            "strategy_run_id": version.source_strategy_run_id,
+            "planning_unit_id": version.planning_unit_id,
+            "goal_id": version.goal_id,
+            "defined_goal_id": version.defined_goal_id,
+            "defined_goal_version": version.defined_goal_version,
+            "selected_strategy_id": version.strategy_id,
+            "selected_scenario_id": snapshot.get("selected_scenario_id"),
+            "selected_architecture": version.architecture.model_dump(mode="json"),
+            "selected_implementation_parameters": version.implementation_parameters,
+            "selection_timestamp": version.created_at,
+            "status": "finalized",
+            **snapshot,
+            "selected_strategy_id": version.strategy_id,
+            "selected_architecture": version.architecture.model_dump(mode="json"),
+            "recommendation": {
+                **recommendation,
+                "architecture": version.architecture.model_dump(mode="json"),
+            },
+        }
+        return run, goal, self._financial_context(planning_unit_id, goal)
 
     @staticmethod
     def _dump(value: Any) -> Any:
@@ -611,6 +651,8 @@ class GoalReportService:
                 "run_version": self._get(run, "run_version"),
                 "status": self._get(run, "status"),
                 "defined_goal_version": self._get(run, "defined_goal_version"),
+                "strategy_version_id": strategy_version_id,
+                "source_strategy_run_id": self._get(run, "strategy_run_id"),
             },
             "cash_flow_trajectory": cash_flow_trajectory,
             "product_architecture": product_architecture,
@@ -622,6 +664,7 @@ class GoalReportService:
             "goal_name": self._goal_label(goal),
             "goal_type": self._get(goal, "goal_type"),
             "strategy_run_id": strategy_run_id,
+            "strategy_version_id": strategy_version_id,
             "goal_details": {
                 "Target Amount": f"₹{goal_calculation.get('future_target') or goal_calculation.get('today_cost') or 0:,.0f}",
                 "Time Horizon": f"{self._get(goal, 'duration_years') or 0} years",
@@ -743,9 +786,11 @@ class GoalReportService:
                 },
                 "provenance": {
                     "strategy_run_id": strategy_run_id,
-                    "run_version": report.get("run_version", 1),
+                    "run_version": report.get("run_version"),
                     "status": report.get("status", "completed"),
                     "defined_goal_version": report.get("defined_goal_version", 1),
+                    "strategy_version_id": report.get("strategy_version_id"),
+                    "source_strategy_run_id": report.get("source_strategy_run_id"),
                 },
                 "cash_flow_trajectory": report.get("cash_flow_trajectory") or self._build_cash_flow_trajectory(goal_calculation, None, report.get("mapped_assets") or []),
                 "product_architecture": report.get("product_architecture") or self._build_product_architecture(goal_calculation),
@@ -966,14 +1011,22 @@ class GoalReportService:
 
         # 14. Data Provenance
         self._section(story, "14. Data Provenance & Traceability", styles)
-        story.append(self._table([
-            ["Metadata Item", "Value"],
-            ["Strategy Run ID", str(report["provenance"]["strategy_run_id"])],
-            ["Run Version", str(report["provenance"]["run_version"])],
-            ["Defined Goal Version", str(report["provenance"]["defined_goal_version"])],
-            ["Run Status", str(report["provenance"]["status"])],
+        provenance_rows = [["Metadata Item", "Value"]]
+        provenance = report["provenance"]
+        if provenance.get("strategy_version_id"):
+            provenance_rows.append(["Strategy Version ID", str(provenance["strategy_version_id"])])
+        if provenance.get("strategy_run_id"):
+            provenance_rows.append(["Strategy Run ID", str(provenance["strategy_run_id"])])
+        if provenance.get("source_strategy_run_id"):
+            provenance_rows.append(["Source Evaluation Run ID", str(provenance["source_strategy_run_id"])])
+        if provenance.get("run_version") is not None:
+            provenance_rows.append(["Run Version", str(provenance["run_version"])])
+        provenance_rows.extend([
+            ["Defined Goal Version", str(provenance["defined_goal_version"])],
+            ["Run Status", str(provenance["status"])],
             ["Report Version", str(report["report_version"])],
-        ], [180, 343]))
+        ])
+        story.append(self._table(provenance_rows, [180, 343]))
 
         doc.build(story)
         return buffer.getvalue()

@@ -95,7 +95,6 @@ def test_end_to_end_strategy_service_flow_with_mocks():
         return run.strategy_run_id
     service.strat_repo.save_run = MagicMock(side_effect=mock_save_run)
     service.strat_repo.get_run_by_id = MagicMock(side_effect=lambda pu, rid: saved_runs.get(rid))
-    service.strat_repo.update_selection = MagicMock()
     service.financial_state_repo.get_latest = MagicMock(return_value=None)
     mock_version = MagicMock(strategy_version_id="ver_mock_001", version=1, implementation_parameters={"equity_allocation": 0.7})
     service.strategy_version_service.create_version = MagicMock(return_value=mock_version)

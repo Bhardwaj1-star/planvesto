@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, Query
 from fastapi.responses import Response
 from api.auth import authenticate_user, verify_goal_ownership, verify_planning_unit_ownership, verify_strategy_run_ownership, verify_strategy_version_ownership
 from models.strategy import StrategyRun
+from models.strategy_version import StrategyVersion
 from schemas.strategy import CustomScenarioRequest, FinancialPlanBuildRequest, PriorityWeightsRequest, StrategyBuildRequest, StrategyImplementationFinalizeRequest, StrategyImplementationPreviewRequest, StrategySelectRequest
 from services.strategy_service import StrategyService
 from services.goal_report_service import GoalReportService
@@ -67,7 +68,7 @@ def preview_implementation(request: StrategyImplementationPreviewRequest, author
     return StrategyService().preview_implementation(request)
 
 
-@router.post("/implementation/finalize", response_model=StrategyRun)
+@router.post("/implementation/finalize", response_model=StrategyVersion)
 def finalize_implementation(request: StrategyImplementationFinalizeRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_strategy_run_ownership(request.planning_unit_id, request.strategy_run_id, user_id)

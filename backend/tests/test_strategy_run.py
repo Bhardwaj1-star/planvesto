@@ -154,7 +154,6 @@ class TestStrategyRunLifecycle:
         assert selected.selected_strategy_version_id is None
         assert selected.selected_strategy_version is None
         service.strategy_version_service.create_version.assert_not_called()
-        repo.update_selection.assert_not_called()
 
         row = {
             "strategy_run_id": selected.strategy_run_id,
@@ -275,7 +274,6 @@ class TestStrategyRunLifecycle:
             svc.select_strategy(req)
         assert exc_info.value.status_code == 400
         assert "does not match selected strategy" in exc_info.value.detail
-        strat_repo_mock.update_selection.assert_not_called()
 
     @patch("services.strategy_service.StrategyRepository")
     def test_select_strategy_with_nonexistent_strategy_rejected(self, MockStratRepo):
@@ -293,7 +291,6 @@ class TestStrategyRunLifecycle:
             svc.select_strategy(req)
         assert exc_info.value.status_code == 400
         assert "does not exist in this strategy run's applicable strategies" in exc_info.value.detail
-        strat_repo_mock.update_selection.assert_not_called()
 
     @patch("services.strategy_service.StrategyRepository")
     def test_select_strategy_with_nonexistent_scenario_rejected(self, MockStratRepo):
@@ -311,7 +308,6 @@ class TestStrategyRunLifecycle:
             svc.select_strategy(req)
         assert exc_info.value.status_code == 400
         assert "does not exist in this strategy run" in exc_info.value.detail
-        strat_repo_mock.update_selection.assert_not_called()
 
     @patch("services.strategy_service.StrategyRepository")
     def test_valid_strategy_and_scenario_selection_succeeds(self, MockStratRepo):
@@ -330,7 +326,6 @@ class TestStrategyRunLifecycle:
             planning_unit_id="pu-1", strategy_run_id="run-1", selected_strategy_id="strat-cap-preservation", selected_scenario_id="scen-test-1",
         )
         updated = svc.select_strategy(req)
-        strat_repo_mock.update_selection.assert_not_called()
         assert updated.selected_strategy_id == "strat-cap-preservation"
         assert updated.selected_scenario_id == "scen-test-1"
         assert updated.selected_strategy_version_id is None
@@ -342,13 +337,15 @@ class TestStrategyRunLifecycle:
     # ── 3. Selection Revalidation during Recalculation ────────────────────────
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")
-    def test_recalculation_preserves_still_valid_selection(self, MockStratRepo, mock_context):
+    def test_recalculation_does_not_carry_old_strategy_version_to_new_goal_revision(self, MockStratRepo, mock_context):
         strat_repo_mock = MockStratRepo.return_value
         prev_run = StrategyRun(
             strategy_run_id="run-1", planning_unit_id="pu-1", goal_id="g-1", defined_goal_id="dg-1", defined_goal_version=1, run_version=1,
             investor_priorities=InvestorPriorities(safety=0.7, liquidity=0.1, growth=0.1, flexibility=0.1),
             selected_strategy_id="strat-goal-funding",
             selected_scenario_id="scen-strat-goal-funding-sip",
+            selected_strategy_version_id="sv-old",
+            selected_strategy_version=1,
             selected_implementation_parameters={"existing_asset_utilisation_pct": 50},
             selection_timestamp="2026-09-09T10:00:00Z",
             recommendation=StrategyRecommendation(
@@ -365,10 +362,12 @@ class TestStrategyRunLifecycle:
         assert saved_run.run_version == 2
         assert saved_run.defined_goal_version == 2
         assert saved_run.status == "recalculated"
-        assert saved_run.selected_strategy_id == "strat-goal-funding"
-        assert saved_run.selected_scenario_id == "scen-strat-goal-funding-sip"
-        assert saved_run.selected_implementation_parameters == {"existing_asset_utilisation_pct": 50}
-        assert saved_run.selection_timestamp == "2026-09-09T10:00:00Z"
+        assert saved_run.selected_strategy_id is None
+        assert saved_run.selected_scenario_id is None
+        assert saved_run.selected_implementation_parameters == {}
+        assert saved_run.selection_timestamp is None
+        assert saved_run.selected_strategy_version_id is None
+        assert saved_run.selected_strategy_version is None
 
     @patch.object(StrategyService, "_financial_context", return_value={})
     @patch("services.strategy_service.StrategyRepository")

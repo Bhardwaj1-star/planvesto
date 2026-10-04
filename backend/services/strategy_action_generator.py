@@ -24,12 +24,23 @@ class StrategyActionGenerator:
         version = self.version_repository.get_by_id(planning_unit_id, strategy_version_id)
         if version is None:
             raise ValueError("Strategy Version not found")
+        if (
+            version.planning_unit_id != planning_unit_id
+            or not version.goal_id
+            or not version.defined_goal_id
+            or not version.defined_goal_version
+            or version.architecture is None
+        ):
+            raise ValueError("Strategy Version is missing its finalized Goal and architecture context")
+        if self.strategy_repository.get_selected_strategy_version_id(
+            planning_unit_id, version.goal_id
+        ) != strategy_version_id:
+            raise ValueError("Actions can only be generated from the current StrategyVersion for its Goal")
         strategy = get_strategy_by_id(version.strategy_id)
         if strategy is None:
             raise ValueError(f"Strategy is not available in the active Strategy Library: {version.strategy_id}")
 
-        run = self.strategy_repository.get_run_by_strategy_version_id(planning_unit_id, strategy_version_id)
-        architecture = run.selected_architecture if run else None
+        architecture = version.architecture
         strategy_ids = [strategy.strategy_id]
         technique_ids = list(strategy.technique_ids)
         if architecture:

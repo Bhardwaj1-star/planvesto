@@ -86,17 +86,8 @@ class FinancialPlanService:
             rule_overrides=rule_overrides,
         )
 
-        # Retrieve strategy run ids for auditability
-        goals = self.goal_repo.list_goals(planning_unit_id)
-        strategy_runs: list[str] = []
-        for g in goals:
-            run = self.strategy_repo.get_latest_run(planning_unit_id, g["goal_id"])
-            if run and run.strategy_run_id:
-                strategy_runs.append(run.strategy_run_id)
-
         rows: list[dict[str, Any]] = []
         for res in multi_plan.goals:
-            defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, res.goal_id)
             rows.append({
                 "goal_id": res.goal_id,
                 "goal_name": res.goal_name,
@@ -105,19 +96,20 @@ class FinancialPlanService:
                 "client_priority": res.client_priority,
                 "resolved_priority": res.resolved_priority,
                 "target_date": res.target_date,
-                "today_cost": getattr(defined_goal, "today_cost", None),
-                "future_target": getattr(defined_goal, "future_target", None),
-                "funding_gap": getattr(defined_goal, "funding_gap", None),
-                "projected_mapped_asset_value": getattr(defined_goal, "projected_mapped_asset_value", None),
+                "today_cost": res.today_cost,
+                "future_target": res.future_target,
+                "funding_gap": res.funding_gap,
+                "projected_mapped_asset_value": res.projected_mapped_asset_value,
                 "required_monthly_contribution": res.required_monthly_contribution,
                 "allocated_monthly_contribution": res.allocated_monthly_contribution,
                 "monthly_shortfall": res.shortfall,
                 "funding_status": res.funding_status,
+                "strategy_version_id": res.strategy_version_id,
                 "strategy_id": res.recommended_strategy_id,
                 "strategy_name": res.recommended_strategy_name,
                 "feasibility_status": res.feasibility_status,
-                "available_monthly_surplus": getattr(defined_goal, "available_monthly_surplus", None),
-                "funding_strategies": getattr(defined_goal, "funding_strategies", []),
+                "available_monthly_surplus": res.available_monthly_surplus,
+                "funding_strategies": res.funding_strategies,
                 "override_applied": res.override_applied,
                 "override_reason": res.override_reason,
                 "reasons": res.reasons,
@@ -215,14 +207,7 @@ class FinancialPlanService:
                     "target_amount": float(r.get("future_target") or r.get("today_cost") or 0.0),
                     "today_cost": r.get("today_cost"),
                     "target_date": r.get("target_date"),
-                    "strategy_run_id": next(
-                        (
-                            run.strategy_run_id
-                            for run in [self.strategy_repo.get_latest_run(planning_unit_id, r.get("goal_id"))]
-                            if run and run.strategy_run_id
-                        ),
-                        None,
-                    ),
+                    "strategy_version_id": r.get("strategy_version_id"),
                     "strategy_id": r.get("strategy_id"),
                     "strategy_name": r.get("strategy_name") or "Recommended Strategy",
                     "recommended_strategy_name": r.get("strategy_name") or "Recommended Strategy",
@@ -241,7 +226,11 @@ class FinancialPlanService:
                 }
                 for r in rows
             ],
-            "strategy_runs": strategy_runs,
+            "strategy_versions": [
+                r["strategy_version_id"]
+                for r in rows
+                if r.get("strategy_version_id")
+            ],
             "actions": multi_plan.action_plan,
             "action_plan": {
                 "actions": action_items,
@@ -664,4 +653,3 @@ class FinancialPlanService:
 
         doc.build(story)
         return buffer.getvalue()
-

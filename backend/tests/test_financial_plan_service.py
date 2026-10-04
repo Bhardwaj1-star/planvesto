@@ -45,7 +45,6 @@ def test_build_plan_consolidates_multi_goal_results():
     mock_multi_service = MagicMock()
 
     mock_goal_repo.list_goals.return_value = [{"goal_id": "g1"}, {"goal_id": "g2"}]
-    mock_strat_repo.get_latest_run.return_value = MagicMock(strategy_run_id="run-123")
 
     mock_multi_service.build_multi_goal_plan.return_value = MultiGoalPlanResult(
         planning_unit_id="pu-100",
@@ -110,7 +109,6 @@ def test_generate_pdf_produces_bytes():
     mock_multi_service = MagicMock()
 
     mock_goal_repo.list_goals.return_value = [{"goal_id": "g1"}]
-    mock_strat_repo.get_latest_run.return_value = MagicMock(strategy_run_id="run-1")
 
     mock_multi_service.build_multi_goal_plan.return_value = MultiGoalPlanResult(
         planning_unit_id="pu-200",
@@ -153,7 +151,6 @@ def test_generate_pdf_with_system_priority_override():
     mock_multi_service = MagicMock()
 
     mock_goal_repo.list_goals.return_value = [{"goal_id": "g1"}, {"goal_id": "g2"}]
-    mock_strat_repo.get_latest_run.return_value = MagicMock(strategy_run_id="run-1")
 
     mock_multi_service.build_multi_goal_plan.return_value = MultiGoalPlanResult(
         planning_unit_id="pu-300",
@@ -209,4 +206,3 @@ def test_generate_pdf_with_system_priority_override():
     assert isinstance(pdf_bytes, bytes)
     assert pdf_bytes.startswith(b"%PDF")
     assert len(pdf_bytes) > 1000
-
