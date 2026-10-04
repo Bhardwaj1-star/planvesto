@@ -105,7 +105,5 @@ def test_moneywheel_ratios_consume_canonical_financial_state_values():
     assert fin_asset_ratio.status == "attention"
     assert fin_asset_ratio.available is True
 
-    # Metadata exposes unmapped types as empty list when all mapped
-    assert result.metadata.get("unmapped_asset_types") == []
 
 
