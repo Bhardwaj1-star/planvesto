@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from models.defined_goal import DefinedGoal
 from models.strategy import InvestorPriorities, Scenario, StrategyArchitecture, StrategyDefinition
-from rules.goals import GOAL_TYPE_ALIASES, canonical_goal_type
+from rules.goals import canonical_goal_type
 from rules.strategy_decision import (
     calculate_component_score,
     calculate_feasibility_score,
