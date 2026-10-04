@@ -28,7 +28,7 @@ Onboarding owns raw-input capture and persistence. It does not own derived Finan
 
 ## 2. User / Request Inputs
 
-Current onboarding covers:
+The intended onboarding flow covers:
 
 - personal information
 - family / dependents
@@ -449,7 +449,7 @@ The following are directly observable implementation facts:
 ## 22. Regression Contract
 
 ### Navigation
-- Seven steps remain ordered.
+- Eight steps remain ordered after the correction.
 - Future steps remain inaccessible until the preceding step is completed.
 - Completed steps remain revisitable.
 - Resume behavior remains deterministic from persisted data.
@@ -494,6 +494,7 @@ PLANNING UNIT-SCOPED SUPABASE RECORDS
   ├── expenses
   ├── assets
   ├── liabilities
+  ├── insurance_policies
   └── goals + dynamic_details
   ↓
 DOWNSTREAM AUTHORITIES
