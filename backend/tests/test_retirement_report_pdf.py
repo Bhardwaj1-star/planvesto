@@ -82,7 +82,7 @@ def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
         planning_unit_id="pu-ret-canonical-1",
         goal_id="goal-ret-1",
         goal_name="Retirement Corpus Planning",
-        goal_type="Retirement",
+        goal_type="retirement",
         today_cost=5000000.0,
         target_month=12,
         target_year=2045,
