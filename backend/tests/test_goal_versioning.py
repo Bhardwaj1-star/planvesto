@@ -12,7 +12,7 @@ class TestGoalVersioningLogic:
             planning_unit_id="pu1",
             version=1,
             is_latest=True,
-            goal_type="Child Education",
+            goal_type="Education",
             goal_name="College",
             today_cost=500000.0,
             inflation_rate=0.06,
@@ -29,7 +29,7 @@ class TestGoalVersioningLogic:
             planning_unit_id="pu1",
             goal_id="g1",
             goal_name="College",
-            goal_type="Child Education",
+            goal_type="Education",
             today_cost=600000.0,  # Changed
             target_month=6,
             target_year=2030,
