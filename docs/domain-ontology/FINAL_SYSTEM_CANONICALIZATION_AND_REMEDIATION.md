@@ -147,7 +147,7 @@ Canonical taxonomy includes:
 Aliases normalize into these canonical values at the boundary.
 
 Example:
-Child Education → goal_type=education, goal_name=Child Education
+Education → goal_type=education, goal_name=Education
 
 Goal Name and Goal Type are not interchangeable.
 
