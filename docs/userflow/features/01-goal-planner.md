@@ -69,7 +69,6 @@ Canonical goal types currently implemented:
 
 Important identity rules:
 
-- `child education`, `children education`, and equivalent legacy labels normalize to `education`.
 - `child marriage` normalizes to `marriage`.
 - `passive income` / `financial freedom` normalize to `financial_independence`.
 - Retirement remains a separate goal from Financial Independence.
@@ -346,7 +345,7 @@ User Input
 ### Identity
 
 - legacy goal aliases resolve to canonical goal types;
-- child education is not a separate canonical goal type;
+- education is not a separate canonical goal type;
 - Retirement and Financial Independence remain distinct;
 - canonical goal names remain stable;
 - priority alias normalization remains deterministic.
