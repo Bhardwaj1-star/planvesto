@@ -59,21 +59,7 @@ class StrategyService:
         liabilities = self._metric_value(state, "total_liabilities")
         net_worth = self._metric_value(state, "net_worth")
 
-        # FinancialState is authoritative for state values; asset liquidity and
-        # financial classification remain owned by MoneywheelService.
-        try:
-            asset_rows = self.goal_repo.get_planning_unit_assets(planning_unit_id) if planning_unit_id else []
-            active_asset_types = FinancialDataRepository().get_active_asset_types()
-            liquid_assets = MoneywheelService._sum_assets(
-                asset_rows, "is_liquid", classifications=active_asset_types
-            )
-            financial_assets = MoneywheelService._sum_assets(
-                asset_rows, "is_financial", classifications=active_asset_types
-            )
-        except Exception:
-            liquid_assets = None
-
-        context.update({
+        # FinancialState is the sole authority for current financial facts.\n        liquid_assets = self._metric_value(state, "liquid_assets")\n        financial_assets = self._metric_value(state, "financial_assets")\n        essential_expenses = self._metric_value(state, "essential_monthly_expenses")\n        emi_monthly = self._metric_value(state, "emi_burden_monthly")\n\n        context.update({
             "annual_income": income_annual,
             "income": income_annual,
             "annual_expenses": expenses_annual,
@@ -81,7 +67,7 @@ class StrategyService:
             "monthly_surplus": surplus_monthly,
             "surplus": surplus_monthly,
             "financial_assets": financial_assets,
-            "liquid_assets": liquid_assets,
+            "liquid_assets": liquid_assets,\n            "essential_monthly_expenses": essential_expenses,\n            "monthly_debt_payments": emi_monthly,\n            "emi_burden_monthly": emi_monthly,
             "assets": assets,
             "liabilities": liabilities,
             "total_liabilities": liabilities,
