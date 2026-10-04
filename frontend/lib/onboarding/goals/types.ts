@@ -34,10 +34,6 @@ export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | 
   return goalTypes.some((goal) => goal.id === clean) ? (clean as CanonicalGoalType) : "";
 }
 
-(value?: string | null): CanonicalGoalType | string {
-  const clean = String(value ?? "").trim();
-  return canonicalGoalTypeByLabel[clean] ?? clean.toLowerCase().replace(/\\s+/g, "_");
-}
 
 export const goalTypeLabelByCanonical: Record<CanonicalGoalType, string> = Object.fromEntries(
   goalTypes.map(({ id, label }) => [id, label]),
