@@ -20,26 +20,19 @@ def _years(name: str, label: str, default: int, minimum: int = 1, maximum: int =
 BASE = dict(library_version="2.0", implementation_version="2.0")
 
 GOAL_TYPES = [
-    "emergency_fund",
-    "debt_freedom",
-    "education",
-    "marriage",
-    "home",
-    "home_improvement",
-    "vehicle",
-    "travel",
     "retirement",
-    "financial_independence",
-    "family_care",
-    "healthcare",
-    "business",
-    "lifestyle",
+    "marriage",
+    "vehicle",
+    "dream_home",
+    "education",
+    "vacation",
+    "debt_freedom",
     "wealth_creation",
-    "legacy_giving",
-    "other",
+    "fire_passive_income",
+    "others",
 ]
 
-CORPUS_GOAL_TYPES = [g for g in GOAL_TYPES if g not in {"emergency_fund", "debt_freedom"}]
+CORPUS_GOAL_TYPES = [g for g in GOAL_TYPES if g != "debt_freedom"]
 
 CANONICAL_STRATEGIES: list[StrategyDefinition] = [
     StrategyDefinition(
@@ -155,7 +148,7 @@ CANONICAL_STRATEGIES: list[StrategyDefinition] = [
         principles=["Credit is a funding lever, not a default solution.", "Borrowing must be assessed against repayment capacity and alternative funding paths.", "The strategy can be selected only when the financing trade-off improves overall goal feasibility."],
         required_inputs=["surplus", "liabilities", "emi_burden", "funding_gap"],
         applicable_goal_characteristics=["shortfall", "near_term", "fixed_timeline"],
-        applicable_goal_types=["education", "marriage", "home", "vehicle", "other"],
+        applicable_goal_types=["education", "marriage", "dream_home", "vehicle", "others"],
         technique_ids=["tech-cashflow-matching", "tech-goal-segmentation"],
         strategic_levers=["credit", "time", "existing_assets", "future_surplus"],
         component_ids=["component-credit"],
