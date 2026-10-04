@@ -2,31 +2,7 @@
 
 ```text
 USER
-  │
-  │ reviews selected strategy
-  ▼
-SELECTED STRATEGY
-  │
-  │ user approves
-  ▼
-APPROVED STRATEGY VERSION
-  │
-  ▼
-ACTIONS
-  │
-  ├── what should the user do?
-  ├── which strategy does it belong to?
-  └── what result is expected?
-          │
-          ▼
-USER COMPLETES ACTION
-          │
-          ▼
-ACTUAL FINANCIAL CHANGE
-          │
-          ▼
-CURRENT FINANCIAL STATE
-          │
-          ▼
-NEXT PLANNING CYCLE
+└── approval to action
+    └── System flow
+        └── See dependencies in order below
 ```
