@@ -29,7 +29,8 @@ export const onboardingSteps = [
   { number: 4, slug: "expenses", title: "Expenses" },
   { number: 5, slug: "assets", title: "Assets" },
   { number: 6, slug: "liabilities", title: "Liabilities" },
-  { number: 7, slug: "goals", title: "Goals" },
+  { number: 7, slug: "insurance", title: "Insurance" },
+  { number: 8, slug: "goals", title: "Goals" },
 ] as const;
 
 type OnboardingState = {
@@ -113,7 +114,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             data.expenses.length ? 4 : 0,
             data.assets.length ? 5 : 0,
             data.liabilities.length ? 6 : 0,
-            data.goals.length ? 7 : 0,
+            data.goals.length ? 8 : 0,
           ].filter(Boolean),
           isLoading: false,
           persistenceError: null,
@@ -239,8 +240,4 @@ export function useOnboardingNavigation(step: number) {
     goNext,
     goPrevious: () => goToStep(onboardingSteps[currentIndex - 1]?.number ?? currentStep),
   };
-}
-
-export function useOnboardingStore() {
-  return useOnboardingState();
 }
