@@ -6,6 +6,8 @@
 User
 └── Goal Planner
     ├── Goal identity
+    │   ├── planning_unit_id
+    │   ├── goal_id (optional for create/update)
     │   ├── goal_type
     │   └── goal_name
     │
@@ -29,286 +31,270 @@ User
     │       └── return_frequency
     │
     └── Context
-        ├── planning_unit_id
         ├── investor_id (optional)
         ├── dynamic_details
         └── specialized_data
 ```
 
-## 2. Canonical Rules
+## 2. Canonical Goal Identity
+
+Goal taxonomy is owned by `backend/rules/goals.py`.
 
 ```text
 Goal Input
-└── Canonicalization
-    ├── goal_type → canonical_goal_type()
-    │   └── e.g. "child education" → "education"
-    ├── goal_name → canonical_goal_name()
-    └── priority → canonical_goal_priority()
-        └── Canonical priority:
-            critical / high / medium / low
+└── canonical_goal_type()
+    └── canonical_goal_name()
+        └── DefinedGoal
 ```
 
-Other input rules enforced in code:
+Canonical goal types currently implemented:
+
+- `emergency_fund`
+- `debt_freedom`
+- `education`
+- `marriage`
+- `home`
+- `home_improvement`
+- `vehicle`
+- `travel`
+- `retirement`
+- `financial_independence`
+- `family_care`
+- `healthcare`
+- `business`
+- `lifestyle`
+- `wealth_creation`
+- `legacy_giving`
+- `other`
+
+Important identity rules:
+
+- `child education`, `children education`, and equivalent legacy labels normalize to `education`.
+- `child marriage` normalizes to `marriage`.
+- `passive income` / `financial freedom` normalize to `financial_independence`.
+- Retirement remains a separate goal from Financial Independence.
+- Beneficiary, sub-purpose and circumstances belong in `dynamic_details` / `specialized_data`; they are not new goal types.
+
+Canonical goal display names are also defined in `CANONICAL_GOAL_NAMES`.
+
+## 3. Priority Contract
+
+The canonical priority vocabulary is:
+
+```text
+critical / high / medium / low
+```
+
+`canonical_goal_priority()` owns the alias mapping:
+
+- `must-have` → `critical`
+- `important` → `high`
+- `moderate` / `aspirational` → `medium`
+- `nice-to-have` / `discretionary` → `low`
+
+**Current code gap:** `GoalService.save_and_define_goal()` canonicalizes goal type/name but does not canonicalize `request.priority` before `ensure_goal_record()` / persistence. Therefore the document does not claim priority persistence is fully canonicalized yet.
+
+## 4. Validation Contract
+
+`backend/schemas/goals.py` currently enforces:
 
 - `today_cost > 0`
 - `target_month = 1..12`
 - `target_year = 1900..2200`
-- `inflation_rate = 0..100%` when supplied
-- asset allocation type = `currency` or `percentage`
-- percentage allocation cannot exceed 100%
-- asset expected return = `-99%..100%` when supplied
-- asset return frequency = annual / semi-annual / quarterly / monthly variants
-- mapped asset must belong to the same Planning Unit
+- `inflation_rate = 0..1` when supplied
+- `allocation_type = currency | percentage`
+- percentage allocation cannot exceed 100
+- expected return = `-0.99..1.0`
+- return frequency = annual / semi-annual / semiannual / half-yearly / quarterly / monthly
+- asset mappings are bounded by request schema size
 
-## 3. Goal Calculations
+Repository lookup constrains mapped assets to the same Planning Unit.
+
+## 5. Goal Calculation Pipeline
 
 ```text
-Goal Inputs
-└── Duration
-    └── target date − reference date
-        └── duration_years
+GoalInput
+└── GoalEngine.calculate_defined_goal()
+    ├── canonical goal type/name
+    ├── inflation rate
+    ├── duration_years
+    ├── mapped asset projection
+    ├── funding return assumption
+    ├── future_target
+    ├── funding_gap
+    └── required_monthly_contribution
+        ↓
+    DefinedGoal
+```
 
-Duration + today_cost + inflation
-└── Future Target
-    └── future_target
+Generic target calculation:
 
-Mapped Assets
-└── Asset Projection
-    ├── allocated_amount
-    ├── allocated_percentage
-    └── projected_value
+```text
+today_cost + inflation + duration
+└── future_target
 
-Mapped Asset Returns
-└── Weighted Funding Return
-    └── funding_return_assumption
+mapped assets + expected return + duration
+└── projected_mapped_asset_value
 
-Future Target − Projected Mapped Assets
+future_target − projected_mapped_asset_value
 └── funding_gap
     ├── > 0 → Shortfall
     ├── ≈ 0 → On Track
     └── < 0 → Overfunded
-
-Funding Gap + return assumption + duration
-└── required_monthly_contribution
 ```
 
-### Retirement-specific calculation
+Funding status is owned by `backend/engines/goal/funding_gap.py` and the canonical calculation layer.
 
-For `retirement`, the code uses a separate retirement-corpus calculation:
+## 6. Asset Projection
+
+Asset projection is owned by:
+
+`backend/engines/goal/asset_projection.py`
+
+When an expected return is not supplied, the code uses `DEFAULT_ASSET_RETURNS` with an explicit fallback of 8%.
+
+Supported return-frequency normalization:
+
+- monthly → 12
+- quarterly → 4
+- semi-annual / semiannual / half-yearly → 2
+- annual → 1
+
+The projection output contains:
+
+- allocated amount
+- allocated percentage
+- projected value
+- expected return
+- return frequency
+
+The default asset-return table is a code-level calculation dependency, not a frontend-owned assumption.
+
+## 7. Retirement Calculation
+
+Retirement uses a specialized corpus calculation inside the same Goal Engine.
 
 ```text
-Current monthly expense
-+ current age
-+ life expectancy
-+ years to retirement
+today_cost / 12
 + inflation
-+ retirement return assumption (8%)
-└── retirement corpus / future_target
++ years_to_retirement
++ current_age
++ life_expectancy
++ retirement_return = 8%
+└── calculate_retirement_corpus()
+    ├── retirement_age
+    ├── retirement_years
+    └── future_target / required corpus
 ```
 
-For other goal types, the generic future-target calculation is used.
+**Important current-code boundary:** `GoalService._enrich_retirement_context()` returns immediately; its older DOB-enrichment code is unreachable. Therefore current retirement calculation requires `currentAge` and `lifeExpectancy` in `dynamic_details`; the service does not currently auto-fill current age from investor DOB.
 
-## 4. Feasibility Rules
+## 8. Goal Feasibility
 
-Feasibility is a **goal-funding check**, not a strategy decision.
+Feasibility is owned by:
+
+`backend/services/goal_service.py::_apply_feasibility()`
 
 ```text
-Defined Goal
-└── Current Financial State
+DefinedGoal
+└── FinancialStateService.get_current_snapshot()
     └── investable_surplus_monthly
-        ├── Financial State unavailable
-        │   └── feasibility = unknown
-        │
-        └── Financial State available
-            ├── funding_gap <= 0
-            │   └── feasible
-            │
-            ├── required_monthly_contribution <= surplus
-            │   └── feasible
-            │
-            ├── surplus > 0
-            │   └── constrained
-            │
-            └── surplus <= 0
-                └── infeasible
+        ├── unavailable → unknown
+        ├── funding_gap <= 0 → feasible
+        ├── required contribution <= surplus → feasible
+        ├── surplus > 0 but insufficient → constrained
+        └── no surplus → infeasible
 ```
 
-The feasibility result also records:
+The service also records:
 
 - available monthly surplus
 - required monthly contribution
 - monthly contribution surplus gap
 - reason
 - funding strategies
+- workflow readiness
 
-## 5. Final Goal Planner Output
+Feasibility is a goal-funding/planning check. It is not Strategy Builder eligibility or strategy selection.
+
+## 9. Preview vs Save
+
+### Preview
+
+POST `/api/goals/calculate`
 
 ```text
-User Input
-└── Canonical DefinedGoal
-    ├── Goal identity
-    ├── Target
-    ├── Funding projection
-    ├── funding_gap
-    ├── funding_status
-    ├── required_monthly_contribution
-    └── feasibility_status
-        ├── feasible
-        ├── constrained
-        ├── infeasible
-        └── unknown
-            └── Goal becomes input for downstream strategy planning
+GoalInput
+→ validation
+→ GoalEngine calculation
+→ feasibility
+→ preview DefinedGoal
 ```
 
-## Code Ownership
-
-- Input contract: `backend/schemas/goals.py`
-- Goal calculation orchestration: `backend/engines/goal/engine.py`
-- Target/duration calculation: `backend/engines/goal/target_calculator.py`
-- Asset projection: `backend/engines/goal/asset_projection.py`
-- Funding gap/contribution: `backend/engines/goal/funding_gap.py`
-- Goal taxonomy/priority rules: `backend/rules/goals.py`
-- Feasibility: `backend/services/goal_service.py::_apply_feasibility()`
-- Goal Planner UI: `frontend/app/investor/goal-planner/page.tsx`
-
-
-## 6. Input Source Boundary
-
-Goal Planner combines three sources:
-
-| Source | Examples | Authority |
-|---|---|---|
-| User goal input | goal type, target, priority, flexibility, inflation | Goal Planner request |
-| Existing financial data | assets, liabilities, Financial State, investable surplus | Existing Planning Unit / Financial State |
-| Goal context | specialized data, dynamic details | Goal Planner request |
-
-Goal Planner owns goal definition and goal-specific funding calculation. It consumes Financial State for feasibility but must not become a competing owner of Financial State metrics.
-
----
-
-## 7. Input Consumption Boundary
-
-Every Goal Planner input must be classified as calculation-driving, canonical/decision, or contextual.
-
-### Calculation-driving inputs
-
-- goal_type
-- today_cost
-- target_month
-- target_year
-- inflation_rate
-- asset_mappings: asset, allocation type/value, expected return, return frequency
-- retirement dynamic details used by the retirement-corpus calculation: current age, life expectancy, desired retirement monthly expense
-
-### Canonical / decision inputs
-
-- goal_name
-- priority
-- flexibility
-- status
-- goal_type
-
-### Contextual / specialized inputs
-
-The current UI exposes additional fields for education beneficiary, marriage beneficiary, home location, vehicle type/condition, travel frequency/geography, selected liability, legacy contribution, passive-income target, wealth target and other specialized metadata.
-
-These must not automatically be treated as calculation inputs merely because the UI collects them. A field is calculation-driving only when an explicit backend calculation consumer exists.
-
----
-
-## 8. Specialized Goal Planner Inputs
-
-The current Goal Planner UI exposes:
-
-- retirement: life expectancy, desired lifestyle monthly expense
-- financial independence: desired passive income amount
-- education: beneficiary
-- marriage: beneficiary
-- home: preferred location
-- vehicle: vehicle type and condition
-- travel: frequency and domestic/international
-- wealth creation: target wealth/corpus
-- debt freedom: selected liability
-- legacy giving: contribution amount
-
-Important boundary: specialized UI data and generic Goal Engine calculations are not automatically equivalent. Any specialized field not explicitly consumed by the calculation layer remains contextual metadata until its calculation semantics are implemented.
-
----
-
-## 9. Preview vs Save Lifecycle
-
-### Calculate / Preview
-
-POST /api/goals/calculate
-
-User input
-→ validation
-→ goal calculation
-→ preview result
-
-Preview calculates the goal but does not persist a DefinedGoal snapshot.
+No DefinedGoal database snapshot is persisted by the preview path.
 
 ### Save
 
-POST /api/goals
+POST `/api/goals`
 
-User input
-→ ownership validation
-→ canonicalization
-→ goal calculation
-→ persistence
-→ DefinedGoal version snapshot
+```text
+GoalInput
+→ canonical goal type/name
+→ goal record upsert/creation
+→ material-change check
+→ GoalEngine calculation
+→ feasibility
+→ DefinedGoal snapshot
+```
 
-The persisted DefinedGoal is the versioned goal definition consumed by downstream planning.
+## 10. DefinedGoal Versioning
 
----
+DefinedGoal is the versioned downstream goal snapshot.
 
-## 10. Goal Versioning and Revision Boundary
-
-DefinedGoal is versioned.
-
+```text
 Goal
 ├── DefinedGoal v1
-│   └── historical
 ├── DefinedGoal v2
-│   └── current
 └── ...
+```
 
-When a material goal change occurs:
+The repository marks the previous latest snapshot as non-latest and inserts the new snapshot as latest.
 
-1. the previous DefinedGoal remains history;
-2. a new DefinedGoal version is created;
-3. downstream planning uses the new current goal version;
-4. old strategy/action state must not silently become current for the revised goal.
+**Current code gap:** `GoalRepository.has_material_change()` only checks:
 
-### Current material-change implementation
+- `today_cost`
+- `target_month`
+- `target_year`
+- asset allocation type/value
+- `dynamic_details`
 
-The repository currently checks:
+It does not compare every persisted field, including:
 
-- today_cost
-- target_month
-- target_year
-- asset mapping allocation type/value
-- dynamic_details
+- `inflation_rate`
+- `priority`
+- `flexibility`
+- `status`
+- asset expected return
+- asset return frequency
+- `specialized_data`
 
-The current check does not visibly include every persisted goal field, including:
+Therefore those fields are not yet fully represented in material-revision detection.
 
-- inflation_rate
-- priority
-- flexibility
-- status
-- asset expected_return
-- asset return_frequency
-- specialized_data
+## 11. Revision → Strategy Boundary
 
-This is an implementation gap that must be explicitly resolved before declaring goal-revision semantics final.
+When a material new DefinedGoal version is saved, current code calls:
 
----
+`StrategyService.on_defined_goal_updated()`
 
-## 11. Ownership and Persistence Boundary
+to recalculate StrategyRun evaluation for the new goal version.
 
-Ownership chain:
+The old DefinedGoal remains historical.
 
+The current StrategyVersion authority is separately protected by exact DefinedGoal binding; a selection whose DefinedGoal ID/version no longer matches the latest goal is rejected by StrategyRepository.
+
+## 12. Ownership and Persistence
+
+```text
 Authenticated User
     ↓
 Planning Unit
@@ -317,124 +303,104 @@ Goal
     ↓
 DefinedGoal version
     ↓
-Asset mappings
+DefinedGoal asset mappings
+```
 
-The Goal API validates:
+Relevant ownership/persistence code:
 
-- Planning Unit ownership
-- investor ownership when supplied
-- mapped asset ownership / Planning Unit membership
+- API validation/routes: `backend/api/goals.py`
+- request schema: `backend/schemas/goals.py`
+- persistence/versioning: `backend/data/goal_repository.py`
+- model: `backend/models/defined_goal.py`
+- calculation orchestration: `backend/engines/goal/engine.py`
+- target calculation: `backend/engines/goal/target_calculator.py`
+- asset projection: `backend/engines/goal/asset_projection.py`
+- funding gap/contribution: `backend/engines/goal/funding_gap.py`
+- taxonomy: `backend/rules/goals.py`
+- feasibility: `backend/services/goal_service.py`
 
-Code ownership:
+## 13. Final Goal Planner Output
 
-- Input contract: backend/schemas/goals.py
-- API validation/routes: backend/api/goals.py
-- Goal persistence/versioning: backend/data/goal_repository.py
-- Goal model: backend/models/defined_goal.py
-- Goal calculation: backend/engines/goal/*
-- Goal taxonomy/priority: backend/rules/goals.py
-- Feasibility: backend/services/goal_service.py::_apply_feasibility()
-- UI: frontend/app/investor/goal-planner/page.tsx
-
----
-
-## 12. Final Goal Planner Output Contract
-
+```text
 User Input
 └── Canonical DefinedGoal
-    ├── Goal identity
-    ├── Target
-    ├── Duration
-    ├── Future target
-    ├── Funding projection
-    ├── funding_gap
-    ├── funding_status
-    ├── required_monthly_contribution
+    ├── goal identity
+    ├── target
+    ├── duration
+    ├── inflation
+    ├── future target
     ├── mapped assets
-    └── feasibility_status
-        ├── feasible
-        ├── constrained
-        ├── infeasible
-        └── unknown
-            └── Downstream Strategy Planning
+    ├── projected mapped asset value
+    ├── funding gap
+    ├── funding status
+    ├── required monthly contribution
+    ├── feasibility status
+    ├── feasibility reason
+    └── DefinedGoal version
+        ↓
+    Downstream Strategy Planning
+```
 
-The output must be sufficient to identify what the goal is, what it costs today, when it is required, what it is expected to cost in the future, what assets are mapped, what funding gap exists, what monthly contribution is required, whether it is currently fundable, and which DefinedGoal version is current.
-
----
-
-## 13. Goal Planner Regression Contract
-
-Tests should protect these invariants.
+## 14. Regression Contract
 
 ### Identity
 
-- goal-type aliases canonicalize to one canonical goal type;
-- child education does not become a separate canonical goal type;
-- retirement remains distinct from financial independence;
-- priority canonicalizes to critical/high/medium/low.
+- legacy goal aliases resolve to canonical goal types;
+- child education is not a separate canonical goal type;
+- Retirement and Financial Independence remain distinct;
+- canonical goal names remain stable;
+- priority alias normalization remains deterministic.
 
 ### Validation
 
 - invalid target month/year is rejected;
-- non-positive today_cost is rejected;
+- non-positive today cost is rejected;
 - invalid inflation is rejected;
-- invalid allocation type is rejected;
-- percentage allocation above 100% is rejected;
+- invalid asset allocation is rejected;
 - invalid expected return/frequency is rejected;
 - foreign Planning Unit assets are rejected.
 
 ### Calculation
 
-- duration is deterministic from target date;
-- future target uses the applicable inflation assumption;
-- mapped asset projections respect allocation and return frequency;
-- funding gap produces the correct funding status;
+- duration is deterministic from target date/reference date;
+- future target uses the selected/default inflation rate;
+- mapped asset projection respects allocation and compounding frequency;
+- funding gap returns the canonical funding status;
 - required monthly contribution is deterministic;
-- retirement uses retirement-specific corpus logic.
+- retirement requires current age and life expectancy and uses the retirement corpus calculation.
 
 ### Feasibility
 
-- missing Financial State → unknown;
+- unavailable Financial State → unknown;
 - fully funded goal → feasible;
-- required contribution within surplus → feasible;
+- contribution within surplus → feasible;
 - positive but insufficient surplus → constrained;
-- zero/negative surplus → infeasible.
+- zero available surplus → infeasible.
 
 ### Lifecycle
 
 - preview does not persist a DefinedGoal snapshot;
-- save persists the goal/DefinedGoal state;
-- material goal revision creates a new version;
-- historical versions remain history;
-- current planning reads the current DefinedGoal version.
+- save persists a DefinedGoal snapshot;
+- material revisions create new versions according to the current material-change implementation;
+- latest DefinedGoal is the current goal snapshot.
 
-### Ownership
+## 15. Current Implementation Gaps
 
-- Planning Unit ownership is enforced;
-- investor ownership is enforced when applicable;
-- mapped assets cannot cross Planning Unit boundaries.
+These are confirmed from the current code:
 
----
+1. Goal priority has a canonical function, but save/persistence does not currently apply it before storing the priority.
+2. Material-change detection does not cover all persisted goal fields.
+3. Retirement DOB auto-enrichment is currently unreachable; required retirement context must be supplied in `dynamic_details`.
+4. Specialized fields in `specialized_data` / `dynamic_details` are not automatically calculation-driving unless the Goal Engine explicitly consumes them.
 
-## 14. Current Implementation Gaps
+## 16. Goal Planner End-to-End Contract
 
-These are code-backed gaps, not new product assumptions.
-
-1. Priority canonicalization exists through canonical_goal_priority(), but save_and_define_goal() must be verified to normalize priority before persistence.
-2. Material-change detection does not visibly cover every persisted goal field. Revision semantics need an explicit final contract.
-3. Specialized UI inputs are broader than the currently explicit generic calculation path. Calculation-driving vs contextual fields must remain clearly separated.
-4. Default asset-class return assumptions exist in the calculation layer. They should have one authoritative owner and must not be duplicated in UI/business-rule code.
-5. Goal Planner owns funding and feasibility; Strategy Builder owns downstream strategy eligibility and strategy decision.
-
----
-
-## 15. Goal Planner End-to-End Contract
-
+```text
 USER INPUT
     ↓
-API VALIDATION
+SCHEMA VALIDATION
     ↓
-CANONICALIZATION
+CANONICAL GOAL TYPE / NAME
     ↓
 GOAL CALCULATION
     ├── duration
@@ -444,9 +410,9 @@ GOAL CALCULATION
     ├── funding gap
     └── required contribution
     ↓
-FINANCIAL STATE DEPENDENCY
+CURRENT FINANCIAL STATE
     ↓
-FEASIBILITY
+GOAL FEASIBILITY
     ├── feasible
     ├── constrained
     ├── infeasible
@@ -456,6 +422,7 @@ DEFINED GOAL SNAPSHOT
     ↓
 VERSIONED GOAL
     ↓
-DOWNSTREAM STRATEGY PLANNING
+STRATEGY PLANNING
+```
 
-Scope: this update is limited to Goal Planner. Other feature documents are intentionally untouched.
+Scope: this document is verified against the current Goal Planner backend contracts and records only code-supported behavior or explicitly confirmed implementation gaps.
