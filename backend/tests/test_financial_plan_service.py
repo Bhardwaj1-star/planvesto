@@ -100,7 +100,8 @@ def test_build_plan_consolidates_multi_goal_results():
     assert plan["consolidated_funding"]["required_monthly_contribution"] == 40000.0
     assert plan["consolidated_funding"]["allocated_monthly_contribution"] == 40000.0
     assert plan["consolidated_funding"]["funding_status"] == "within_surplus"
-    assert plan["actions"] == []\n    assert plan["action_plan"]["status"] == "delegated_to_action_plan"
+    assert plan["actions"] == []
+    assert plan["action_plan"]["status"] == "delegated_to_action_plan"
 
 
 def test_generate_pdf_produces_bytes():
