@@ -15,8 +15,8 @@ Onboarding
   ├── Income
   ├── Expenses
   ├── Assets
-  ├── Liabilities
   ├── Insurance
+  ├── Liabilities
   └── Goals
   ↓
 Financial Picture
@@ -35,8 +35,8 @@ Goal Planner / MoneyWheel / Strategy
 | Income | Money coming in |
 | Expenses | Money going out |
 | Assets | Financial resources |
-| Liabilities | Financial obligations |
 | Insurance | Financial protection and related commitments/value |
+| Liabilities | Financial obligations |
 | Goals | What the user wants to achieve |
 
 ## Core System Rules
@@ -50,7 +50,7 @@ Goal Planner / MoneyWheel / Strategy
 7. **Retirement and Financial Independence are separate goals.**
 8. A beneficiary or circumstance such as a child does not automatically create a separate goal category.
 9. Financial Measures, Goal Planner, MoneyWheel and Strategy must use the same underlying financial picture.
-10. Insurance is a dedicated onboarding step between Liabilities and Goals and uses the existing Insurance functionality.
+10. Insurance is a dedicated onboarding step between Assets and Liabilities and uses the existing Insurance functionality.
 
 ## Final Contract
 
