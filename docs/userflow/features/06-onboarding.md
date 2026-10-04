@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Onboarding collects the user's core financial information and creates the **single financial picture** used by the rest of Planvesto.
+Onboarding collects, validates and persists the user's core financial information and creates the **single financial picture** used by the rest of Planvesto.
 
 ## Flow
 
@@ -42,29 +42,15 @@ Goal Planner / MoneyWheel / Strategy
 ## Core System Rules
 
 1. **One user → one consistent Financial Picture.**
-2. Onboarding **collects facts**; it does not decide financial health, goal feasibility, or strategy.
-3. Income, expenses, assets, liabilities and insurance must contribute to the same financial picture.
-4. Goals describe the user's objectives; the system determines feasibility and strategy later.
-5. Goal meaning must remain consistent across the entire system.
-6. **Retirement and Financial Independence are separate goals.**
-7. A beneficiary or circumstance such as a child does not automatically create a separate goal category.
-8. Financial Measures, Goal Planner, MoneyWheel and Strategy must use the same underlying financial picture.
-
-## Insurance Correction
-
-**Current problem:** Insurance is already implemented in the system but is missing from the guided onboarding flow.
-
-**Required flow:**
-
-```text
-Liabilities
-    ↓
-Insurance
-    ↓
-Goals
-```
-
-Insurance must be a dedicated onboarding step and must use the existing Insurance functionality rather than creating a duplicate system.
+2. Onboarding **collects, validates and persists** financial data.
+3. Onboarding does not analyse financial health, determine goal feasibility, or choose strategies.
+4. Income, expenses, assets, liabilities and insurance contribute to the same financial picture.
+5. Goals describe the user's objectives; the system determines feasibility and strategy later.
+6. Goal meaning must remain consistent across the entire system.
+7. **Retirement and Financial Independence are separate goals.**
+8. A beneficiary or circumstance such as a child does not automatically create a separate goal category.
+9. Financial Measures, Goal Planner, MoneyWheel and Strategy must use the same underlying financial picture.
+10. Insurance is a dedicated onboarding step between Liabilities and Goals and uses the existing Insurance functionality.
 
 ## Final Contract
 
