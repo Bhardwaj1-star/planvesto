@@ -105,6 +105,7 @@ class MultiGoalPlanningService:
                 "future_target": calc.get("future_target"),
                 "funding_gap": calc.get("funding_gap"),
                 "projected_mapped_asset_value": calc.get("projected_mapped_asset_value"),
+                "funding_return_assumption": calc.get("funding_return_assumption"),
                 "available_monthly_surplus": report.get("feasibility", {}).get(
                     "available_monthly_surplus"
                 ),
