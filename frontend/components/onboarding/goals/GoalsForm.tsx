@@ -54,7 +54,7 @@ export default function GoalsForm() {
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-900"
           >
             <span aria-hidden="true">&larr;</span>
-            Back to Insurance
+            Back to Liabilities
           </button>
 
           <button
