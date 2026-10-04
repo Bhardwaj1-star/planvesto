@@ -154,19 +154,8 @@ class MultiGoalOrchestrator:
                 "allocation_reasoning": item.allocation_reasoning,
             })
 
-        # Step 5: Action Plan formulation
+        # Executable ActionPlan records are owned by ActionPlanService. CFP only exposes allocation results.
         actions = []
-        for index, res in enumerate(goal_resolutions, start=1):
-            actions.append({
-                "sequence": index,
-                "goal_id": res.goal_id,
-                "goal_name": res.goal_name,
-                "action": f"Allocate {res.allocated_monthly_contribution:.2f}/month to {res.goal_name} (Priority: {res.resolved_priority}).",
-                "monthly_contribution": res.allocated_monthly_contribution,
-                "required_contribution": res.required_monthly_contribution,
-                "target_date": res.target_date,
-                "funding_status": res.funding_status,
-            })
 
         planning_notes = [
             "Goals are prioritized by resolved priority and target date.",
@@ -190,7 +179,7 @@ class MultiGoalOrchestrator:
             goals=goal_resolutions,
             competing_resources_detected=alloc_result.competition_detected,
             trade_offs=alloc_result.trade_offs,
-            action_plan=actions,
+            action_plan=[],
             audit_trail=audit_trail,
             planning_notes=planning_notes,
         )
