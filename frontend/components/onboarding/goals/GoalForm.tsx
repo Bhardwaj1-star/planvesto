@@ -95,10 +95,10 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
     return () => { active = false; };
   }, [goal.goalType]);
 
-  const isOther = goal.goalType === "Other";
-  const isRetirement = goal.goalType === "Retirement";
-  const isFinancialFreedom = goal.goalType === "Financial Independence";
-  const isDebt = goal.goalType === "Debt Freedom";
+  const isOther = goal.goalType === "others";
+  const isRetirement = goal.goalType === "retirement";
+  const isFinancialFreedom = goal.goalType === "fire_passive_income";
+  const isDebt = goal.goalType === "debt_freedom";
   const needsTodayCost = !isRetirement && !isFinancialFreedom && !isDebt;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -126,11 +126,11 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
         <select
           id="goalType"
           value={goal.goalType}
-          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "Other" ? "" : e.target.value })}
+          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "others" ? "" : e.target.value })}
           className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
         >
           <option value="">Select a goal</option>
-          {goalTypes.map((name) => <option key={name} value={name}>{name}</option>)}
+          {goalTypes.map((goal) => <option key={goal.id} value={goal.id}>{goal.label}</option>)}
         </select>
         <ErrorMessage id="goalType-error" message={errors.goalType} />
       </div>
