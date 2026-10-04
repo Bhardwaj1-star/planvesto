@@ -22,9 +22,9 @@ def test_evaluate_ratios_standard_values(evaluator):
     ratios = evaluator.evaluate_ratios(financial_context)
     ratio_dict = {r.ratio_key: r for r in ratios}
 
-    assert "savings_ratio" in ratio_dict
-    assert ratio_dict["savings_ratio"].value == 50.0
-    assert ratio_dict["savings_ratio"].status == "excellent"
+    assert "savings_rate" in ratio_dict
+    assert ratio_dict["savings_rate"].value == 50.0
+    assert ratio_dict["savings_rate"].status == "excellent"
 
     assert "emergency_fund_coverage" in ratio_dict
     assert ratio_dict["emergency_fund_coverage"].value == 7.0
@@ -74,7 +74,7 @@ def test_critical_emergency_fund_overrides_discretionary_goal(evaluator):
     hc = assessment.hard_constraints[0]
     assert hc.goal_id == "g_vacation"
     assert hc.suggested_override_priority == "low"
-    assert "Emergency fund coverage is critical" in hc.message
+    assert "Emergency coverage is critical" in hc.message
     assert "Discretionary allocation constrained" in hc.override_reason
 
     # Suggested overrides dictionary must be populated
