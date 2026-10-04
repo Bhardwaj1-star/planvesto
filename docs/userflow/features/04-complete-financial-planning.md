@@ -695,13 +695,19 @@ It models, per year:
 - maturing goals;
 - closing balance.
 
-The current implementation uses a fixed 9% return assumption for this trajectory.
+The trajectory no longer uses a hardcoded universal return assumption.
 
-This is an important boundary:
+Phase 2 established a canonical planning-assumption authority in `backend/rules/assumptions.py`:
 
-**The trajectory is currently a planning/report projection helper, not a canonical financial-return assumption.**
+- `DEFAULT_FUNDING_RETURN_ASSUMPTION = 0.08` is the explicit planning baseline used only when no mapped capital carries an expected return;
+- goal-level `funding_return_assumption` is propagated through goal calculation, orchestration, and Complete Financial Planning;
+- mapped asset expected returns are weighted by allocated/projected capital;
+- the Complete Financial Plan trajectory opens from canonical `FinancialState.financial_assets`, with mapped goal assets used only as a bounded fallback when financial assets are unavailable/zero;
+- Basket reporting uses the same goal-level assumptions and capital-weighted return logic.
 
-It must not be confused with Goal Planner's asset-specific expected return or another canonical required-return calculation.
+Therefore, 8% is a canonical **planning fallback**, not a universal market-return promise. Asset-specific expected returns and goal assumptions remain authoritative when available.
+
+The trajectory remains a planning/report projection helper. It must not be confused with Goal Planner's asset-specific expected return or another canonical required-return calculation.
 
 ## 27. MoneyWheel Health Scan
 
@@ -959,9 +965,11 @@ The boundary must remain explicit to avoid duplicate action authorities.
 
 ### 36.6 Cash-flow trajectory assumption
 
-The current family trajectory uses a fixed 9% return assumption.
+**RESOLVED in Phase 2.**
 
-This is a projection helper and must not silently become a canonical return assumption.
+The family trajectory no longer contains a hardcoded 9% return. It uses the canonical planning-assumption authority and capital-weighted goal funding assumptions, with canonical `FinancialState.financial_assets` as the opening balance source.
+
+The remaining limitation is intentional: the 8% default is a planning fallback when no mapped capital carries an expected return. It is not a universal market-return forecast.
 
 ### 36.7 Complete plan report rendering
 
