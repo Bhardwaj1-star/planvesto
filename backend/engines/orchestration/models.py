@@ -51,6 +51,7 @@ class GoalResolution(BaseModel):
     future_target: float | None = None
     funding_gap: float | None = None
     projected_mapped_asset_value: float | None = None
+    funding_return_assumption: float | None = None
     available_monthly_surplus: float | None = None
     funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
     override_applied: bool = False
