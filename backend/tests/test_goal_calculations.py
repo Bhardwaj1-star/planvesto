@@ -150,7 +150,7 @@ class TestGoalEngineFull:
             planning_unit_id="pu-123",
             goal_id="goal-1",
             goal_name="Higher Education",
-            goal_type="Education",
+            goal_type="education",
             today_cost=1000000.0,
             target_month=1,
             target_year=2031,
@@ -186,7 +186,7 @@ class TestGoalEngineFull:
             planning_unit_id="pu-123",
             goal_id="retirement-1",
             goal_name="Retirement",
-            goal_type="Retirement",
+            goal_type="retirement",
             today_cost=1200000.0,
             target_month=1,
             target_year=2040,
@@ -219,6 +219,6 @@ class TestFinancialInputValidation:
 
     def test_invalid_goal_month_and_inflation_are_rejected(self):
         with pytest.raises(ValidationError):
-            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="General", today_cost=1000, target_month=13, target_year=2030)
+            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="others", today_cost=1000, target_month=13, target_year=2030)
         with pytest.raises(ValidationError):
-            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="General", today_cost=1000, target_month=1, target_year=2030, inflation_rate=1.01)
+            GoalInput(planning_unit_id="pu", goal_name="Goal", goal_type="others", today_cost=1000, target_month=1, target_year=2030, inflation_rate=1.01)
