@@ -92,7 +92,7 @@ def test_goal_plan_summary_preserves_strategy_and_funding_data():
             client_priority="medium", resolved_priority="medium",
             target_date="2031-12", required_monthly_contribution=12000.0,
             allocated_monthly_contribution=12000.0,
-            funding_status="fully_funded", feasibility_status="feasible",
+            funding_status="fully_funded", feasibility_status="pass",
             strategy_version_id="sv-1",
             today_cost=100000.0,
             future_target=133822.0,
