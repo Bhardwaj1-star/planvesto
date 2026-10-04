@@ -16,7 +16,7 @@ def test_individual_goal_report_exposes_complete_goal_funding_data():
         ),
         SimpleNamespace(
             goal_name="Vacation",
-            goal_type="Travel",
+            goal_type="vacation",
             today_cost=100000.0,
             inflation_rate=0.06,
             future_target=133822.0,
