@@ -28,7 +28,7 @@ def test_evaluate_ratios_standard_values(evaluator):
 
     assert "emergency_coverage" in ratio_dict
     assert ratio_dict["emergency_coverage"].value == 7.0
-    assert ratio_dict["emergency_fund_coverage"].status == "healthy"
+    assert ratio_dict["emergency_coverage"].status == "healthy"
 
     assert "debt_to_income_ratio" in ratio_dict
     assert ratio_dict["debt_to_income_ratio"].value == 25.0
