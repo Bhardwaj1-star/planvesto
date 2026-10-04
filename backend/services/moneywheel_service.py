@@ -4,7 +4,6 @@ from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
-from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
 from rules.protection import (
     calculate_required_insurance_cover,
@@ -19,7 +18,7 @@ class MoneywheelService:
     def __init__(
         self,
         repository,
-        data_repository: FinancialDataRepository | None = None,
+        data_repository=None,
         goal_repository: GoalRepository | None = None,
         engine: MoneywheelEngine | None = None,
         adapter: MoneywheelFinancialStateAdapter | None = None,
@@ -210,15 +209,3 @@ class MoneywheelService:
                 total += float(row.get("current_value") or 0)
         return total
 
-    @staticmethod
-    def _sum_liabilities(rows, allowed_types):
-        return sum(float(row.get("outstanding_amount") or 0) for row in rows if str(row.get("liability_type") or "Other") in allowed_types)
-
-    @staticmethod
-    def _sum_expenses(rows):
-        from engines.calculation.engine import monthly_amount
-        return sum(
-            monthly_amount(float(row.get("amount") or 0), str(row.get("frequency") or "")) or 0
-            for row in rows
-            if str(row.get("expense_type") or "Other") in ESSENTIAL_EXPENSE_TYPES
-        )
