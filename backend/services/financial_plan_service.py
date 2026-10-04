@@ -14,6 +14,7 @@ from data.strategy_repository import StrategyRepository
 from models.strategy import InvestorPriorities
 from services.goal_report_service import GoalReportService
 from rules.multi_goal import get_priority_rank
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 
@@ -100,6 +101,7 @@ class FinancialPlanService:
                 "future_target": res.future_target,
                 "funding_gap": res.funding_gap,
                 "projected_mapped_asset_value": res.projected_mapped_asset_value,
+                "funding_return_assumption": res.funding_return_assumption,
                 "required_monthly_contribution": res.required_monthly_contribution,
                 "allocated_monthly_contribution": res.allocated_monthly_contribution,
                 "monthly_shortfall": res.shortfall,
@@ -235,7 +237,7 @@ class FinancialPlanService:
             ],
             "audit_trail": multi_plan.audit_trail,
             "ratio_constraints": self._build_ratio_constraints(f_state),
-            "family_cash_flow_trajectory": self._build_family_cash_flow_trajectory(rows, total_allocated, f_state.get("net_worth")),
+            "family_cash_flow_trajectory": self._build_family_cash_flow_trajectory(rows, total_allocated, f_state),
             "moneywheel_health_scan": self._build_moneywheel_health_scan(f_state),
             "contingency_matrix": self._build_family_contingency_matrix(),
             "governance_protocol": self._build_governance_protocol(),
@@ -246,7 +248,7 @@ class FinancialPlanService:
         cls,
         goals: list[dict[str, Any]],
         total_monthly_allocated: float,
-        net_worth: Any,
+        financial_state: dict[str, Any],
     ) -> list[dict[str, Any]]:
         horizons = []
         for g in goals:
@@ -261,14 +263,23 @@ class FinancialPlanService:
         max_horizon = max(5, min(max_horizon, 30))
 
         try:
-            opening = float(net_worth or 0.0) * 0.4
+            opening = float(financial_state.get("financial_assets") or 0.0)
         except (ValueError, TypeError):
             opening = 0.0
 
         if opening <= 0:
             opening = sum(float(g.get("projected_mapped_asset_value") or 0.0) for g in goals)
 
-        return_rate = 0.09
+        weighted_value = 0.0
+        weighted_return = 0.0
+        for goal in goals:
+            mapped = max(0.0, float(goal.get("projected_mapped_asset_value") or 0.0))
+            if mapped <= 0:
+                continue
+            assumption = normalize_annual_return(goal.get("funding_return_assumption"))
+            weighted_value += mapped
+            weighted_return += mapped * assumption
+        return_rate = (weighted_return / weighted_value) if weighted_value > 0 else DEFAULT_FUNDING_RETURN_ASSUMPTION
         annual_contribution = float(total_monthly_allocated or 0.0) * 12.0
 
         trajectory: list[dict[str, Any]] = []
