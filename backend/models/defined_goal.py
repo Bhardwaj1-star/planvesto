@@ -42,7 +42,7 @@ class DefinedGoal(BaseModel):
     funding_gap: float
     funding_status: Literal["Shortfall", "On Track", "Overfunded"]
     required_monthly_contribution: float = 0.0
-    funding_return_assumption: float = 0.08
+    funding_return_assumption: float = DEFAULT_FUNDING_RETURN_ASSUMPTION
     feasibility_status: Literal["feasible", "constrained", "infeasible", "unknown"] = "unknown"
     workflow_readiness: WorkflowReadiness | None = None
     available_monthly_surplus: float | None = None
