@@ -6,6 +6,7 @@ import { supabase } from "../../../lib/supabase";
 import {
   goalFlexibilities,
   goalTypes,
+  goalTypeLabelByCanonical,
   type Goal,
   type GoalErrors,
   type GoalDynamicDetails,
@@ -75,7 +76,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
   const details = goal.dynamicDetails;
 
   useEffect(() => {
-    if (goal.goalType !== "Debt Freedom") return;
+    if (goal.goalType !== "debt_freedom") return;
     let active = true;
     async function loadLiabilities() {
       const planningUnitId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
@@ -126,7 +127,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
         <select
           id="goalType"
           value={goal.goalType}
-          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "others" ? "" : e.target.value })}
+          onChange={(e) => onChange({ goalType: e.target.value as Goal["goalType"], name: e.target.value === "others" ? "" : (goalTypeLabelByCanonical[e.target.value as keyof typeof goalTypeLabelByCanonical] || "") })}
           className={`${fieldClasses(Boolean(errors.goalType))} appearance-none`}
         >
           <option value="">Select a goal</option>
@@ -146,25 +147,25 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               <TextField id="desiredLifestyleMonthlyExpense" label="Desired Lifestyle Monthly Expense" value={details.desiredLifestyleMonthlyExpense} onChange={(value) => updateDetails(goal, { desiredLifestyleMonthlyExpense: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredLifestyleMonthlyExpense"]} />
             </>}
 
-            {goal.goalType === "Financial Independence" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
+            {goal.goalType === "fire_passive_income" && <TextField id="desiredPassiveIncomeAmount" label="Desired Passive Income Amount" value={details.desiredPassiveIncomeAmount} onChange={(value) => updateDetails(goal, { desiredPassiveIncomeAmount: value }, onChange)} type="number" placeholder="₹ per month" error={errors["desiredPassiveIncomeAmount"]} />}
 
-            {goal.goalType === "Education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
+            {goal.goalType === "education" && <ChoiceGroup label="For Whom" name="educationForWhom" value={details.educationForWhom} options={["Self", "Spouse", "Children"]} error={errors["educationForWhom"]} onChange={(value) => updateDetails(goal, { educationForWhom: value as GoalDynamicDetails["educationForWhom"] }, onChange)} />}
 
-            {goal.goalType === "Marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
+            {goal.goalType === "marriage" && <ChoiceGroup label="For Whom" name="marriageForWhom" value={details.marriageForWhom} options={["Self", "Spouse", "Child", "Other"]} error={errors["marriageForWhom"]} onChange={(value) => updateDetails(goal, { marriageForWhom: value as GoalDynamicDetails["marriageForWhom"] }, onChange)} />}
 
-            {goal.goalType === "Home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
+            {goal.goalType === "dream_home" && <TextField id="preferredLocation" label="Preferred Location" value={details.preferredLocation} onChange={(value) => updateDetails(goal, { preferredLocation: value }, onChange)} placeholder="City / area" error={errors["preferredLocation"]} />}
 
-            {goal.goalType === "Vehicle" && <>
+            {goal.goalType === "vehicle" && <>
               <TextField id="vehicleType" label="Vehicle Type" value={details.vehicleType} onChange={(value) => updateDetails(goal, { vehicleType: value }, onChange)} placeholder="e.g. SUV, Sedan, Bike" error={errors["vehicleType"]} />
               <ChoiceGroup label="Condition" name="vehicleCondition" value={details.vehicleCondition} options={["New", "Used"]} error={errors["vehicleCondition"]} onChange={(value) => updateDetails(goal, { vehicleCondition: value as GoalDynamicDetails["vehicleCondition"] }, onChange)} />
             </>}
 
-            {goal.goalType === "Travel & Experiences" && <>
+            {goal.goalType === "vacation" && <>
               <TextField id="vacationFrequency" label="Frequency" value={details.vacationFrequency} onChange={(value) => updateDetails(goal, { vacationFrequency: value }, onChange)} placeholder="e.g. Once a year" error={errors["vacationFrequency"]} />
               <ChoiceGroup label="Travel Type" name="vacationType" value={details.vacationType} options={["Domestic", "International"]} error={errors["vacationType"]} onChange={(value) => updateDetails(goal, { vacationType: value as GoalDynamicDetails["vacationType"] }, onChange)} />
             </>}
 
-            {goal.goalType === "Wealth Creation" && <TextField id="targetWealthCorpus" label="Target Wealth / Corpus" value={details.targetWealthCorpus} onChange={(value) => updateDetails(goal, { targetWealthCorpus: value }, onChange)} type="number" placeholder="₹" error={errors["targetWealthCorpus"]} />}
+            {goal.goalType === "wealth_creation" && <TextField id="targetWealthCorpus" label="Target Wealth / Corpus" value={details.targetWealthCorpus} onChange={(value) => updateDetails(goal, { targetWealthCorpus: value }, onChange)} type="number" placeholder="₹" error={errors["targetWealthCorpus"]} />}
 
             {isDebt && <div className="sm:col-span-2">
               <label htmlFor="selectedLiabilityId" className="mb-1.5 block text-xs font-semibold text-navy-900">Select Liability / Debt</label>
@@ -179,7 +180,7 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               })()}
             </div>}
 
-            {goal.goalType === "Legacy & Giving" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
+            {goal.goalType === "__removed_legacy__" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
 
             {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
 
