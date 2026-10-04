@@ -10,7 +10,7 @@ def _goal():
         planning_unit_id="pu-contract",
         version=1,
         is_latest=True,
-        goal_type="Child Education",
+        goal_type="Education",
         goal_name="Education Contract Test",
         today_cost=1_000_000.0,
         inflation_rate=0.06,
