@@ -37,7 +37,7 @@ def _dummy_defined_goal(version=1, target=1000000.0):
         planning_unit_id="pu-test-run",
         version=version,
         is_latest=True,
-        goal_type="Child Education",
+        goal_type="Education",
         goal_name="College Fund",
         today_cost=target,
         inflation_rate=0.06,
@@ -408,7 +408,7 @@ class TestGoalServiceStrategyRecalculationErrorHandling:
         goal_repo_mock.save_defined_goal_snapshot.return_value = "dg-uuid-v2"
         mock_on_updated.side_effect = RuntimeError("Database connection timed out during recalculation")
         req = GoalInput(
-            planning_unit_id="pu-test-run", goal_id="g-test-run", goal_name="College Fund", goal_type="Child Education",
+            planning_unit_id="pu-test-run", goal_id="g-test-run", goal_name="College Fund", goal_type="Education",
             today_cost=1200000.0, target_month=6, target_year=2032,
         )
         svc = GoalService()
