@@ -13,6 +13,7 @@ User
     ├── Expenses
     ├── Assets
     ├── Liabilities
+    ├── Insurance
     └── Goals
         ↓
     Raw Planning Unit Records
@@ -23,6 +24,28 @@ User
         ↓
     Goal Planner / MoneyWheel / Strategy Builder
 ```
+
+### Identified correction: Insurance is missing from guided onboarding
+
+Insurance is already implemented in the system, but it is not currently included in the guided onboarding flow.
+
+**Required change:**
+
+- Add **Insurance** as a dedicated onboarding step.
+- Position it **after Liabilities and before Goals**.
+- Reuse the existing Insurance implementation; do not create a duplicate domain or duplicate persistence.
+- Insurance must participate in onboarding navigation, resume logic, completion logic, and persistence.
+- Insurance data must remain Planning Unit-scoped and flow into the same downstream financial-planning pipeline as the other raw planning inputs.
+
+Existing Insurance implementation to reuse:
+
+- `frontend/components/onboarding/insurance/InsuranceSection.tsx`
+- `frontend/lib/onboarding/insurance/types.ts`
+- `frontend/lib/onboarding/insurance/persistence.ts`
+- `frontend/lib/onboarding/insurance/api.ts`
+- `insurance_policies` persistence
+
+This is an **onboarding integration correction**, not a request to redesign the Insurance domain.
 
 Onboarding owns raw-input capture and persistence. It does not own derived FinancialState calculations.
 
@@ -36,6 +59,7 @@ The intended onboarding flow covers:
 - expenses
 - assets
 - liabilities
+- insurance
 - goals
 
 The frontend is organized into dedicated onboarding steps and forms for these domains.
@@ -50,6 +74,7 @@ The frontend is organized into dedicated onboarding steps and forms for these do
 | Expenses | collect/persist raw input | FinancialStateService derives measures |
 | Assets | collect/persist raw input | FinancialStateService / Goal Planner consumers |
 | Liabilities | collect/persist raw input | FinancialStateService |
+| Insurance | collect/persist raw policy input | Insurance domain / FinancialState consumers |
 | Goals | collect/persist goal input | Goal Planner / DefinedGoal lifecycle |
 
 Onboarding must not become a second owner of derived financial metrics.
@@ -64,6 +89,7 @@ Inputs are classified as:
 - expenses
 - assets
 - liabilities
+- insurance policies
 - family/dependent records
 - personal information
 - goal inputs
@@ -91,6 +117,8 @@ These are not owned by onboarding:
 The frontend onboarding flow maintains step/navigation state and local form state while collecting inputs.
 
 The persisted raw records become the source of truth for downstream FinancialState construction.
+
+Insurance follows its existing persistence contract: the policy is stored in `insurance_policies`; premium synchronization creates/updates the linked Insurance expense, and current value is synchronized to a linked asset when applicable. Onboarding must reuse this contract.
 
 A completed onboarding step must not be interpreted as a completed financial plan; the downstream services still validate and derive their own authoritative state.
 
@@ -196,6 +224,7 @@ Validated / Persisted Raw Planning Data
     ├── Expenses
     ├── Assets
     ├── Liabilities
+    ├── Insurance
     └── Goals
     ↓
 FinancialState / DefinedGoal downstream construction
@@ -221,7 +250,13 @@ Scope: Onboarding only.
 
 ## 16. Code-Verified Step Contracts
 
-The current frontend implements exactly seven ordered onboarding steps:
+### Current implementation
+
+The current frontend implements **seven** ordered onboarding steps. Insurance is not yet part of that sequence.
+
+### Required target flow
+
+The corrected onboarding flow must contain **eight** steps, with Insurance inserted after Liabilities and before Goals:
 
 | Step | Route | State collection |
 |---|---|---|
@@ -231,7 +266,10 @@ The current frontend implements exactly seven ordered onboarding steps:
 | 4 | `/investor/onboarding/expenses` | `expenses[]` |
 | 5 | `/investor/onboarding/assets` | `assets[]` |
 | 6 | `/investor/onboarding/liabilities` | `liabilities[]` |
-| 7 | `/investor/onboarding/goals` | `goals[]` |
+| 7 | `/investor/onboarding/insurance` | existing Insurance policy state/persistence |
+| 8 | `/investor/onboarding/goals` | `goals[]` |
+
+**Implementation requirement:** the Insurance route/provider-state/navigation entry must be added. The implementation must reuse the existing Insurance component and persistence layer.
 
 The navigation authority is `frontend/components/onboarding/OnboardingProvider.tsx`. The provider calculates the resume step from persisted record presence and prevents access beyond the next available step.
 
@@ -248,6 +286,7 @@ incomeSources[]
 expenses[]
 assets[]
 liabilities[]
+insurance policy state
 goals[]
 completedSteps[]
 isLoading
@@ -265,8 +304,11 @@ incomeSources.length   → step 3
 expenses.length        → step 4
 assets.length          → step 5
 liabilities.length     → step 6
-goals.length           → step 7
+insurance completion   → step 7
+goals.length           → step 8
 ```
+
+Insurance completion must be determined from the existing Insurance persistence/data contract; do not invent a second completion flag only for onboarding.
 
 There is no separate persisted onboarding-completion field in the current provider/persistence implementation.
 
@@ -349,6 +391,30 @@ endDate
 
 Outstanding amount is required and positive. Interest rate and regular payment are optional. The current validator does not enforce frequency/endDate.
 
+### Insurance
+
+Insurance already has a dedicated UI and data model. The onboarding integration must reuse it.
+
+Existing policy fields include:
+
+```text
+policyName
+insurer
+policyNumber
+policyType
+premium
+premiumFrequency
+sumAssured
+currentValue
+surrenderValue
+maturityDate
+maturityValue
+```
+
+Existing policy types include Term Insurance, Endowment, Money Back, ULIP, Whole Life, Health Insurance and Other.
+
+The existing Insurance implementation also supports optional policy-document/PDF extraction.
+
 ### Goals
 
 The current frontend Goal model contains:
@@ -382,6 +448,7 @@ Income              → income
 Expenses            → expenses
 Assets              → assets
 Liabilities         → liabilities
+Insurance           → insurance_policies
 Goals               → goals
 ```
 
@@ -402,6 +469,18 @@ reload Planning Unit data
 ```
 
 Income additionally requires an investor row before it can be saved.
+
+Insurance persistence has an additional existing synchronization contract:
+
+```text
+Insurance Policy
+      ↓
+insurance_policies
+      ├── premium → Insurance expense
+      └── current value (> 0) → linked asset
+```
+
+The onboarding implementation must reuse this path. It must not duplicate policy storage or the linked expense/asset synchronization.
 
 ## 20. Goal-Specific Onboarding Boundary
 
@@ -445,15 +524,18 @@ The following are directly observable implementation facts:
 8. Persistence is performed directly from the frontend through Supabase.
 9. No field is described as calculation-driving merely because it exists in a frontend type.
 10. No downstream FinancialState, Goal Engine, DefinedGoal or Strategy Builder behavior is claimed as onboarding behavior.
+11. Insurance is already implemented but is missing from the guided onboarding sequence; this is the identified onboarding correction.
 
 ## 22. Regression Contract
 
 ### Navigation
-- Eight steps remain ordered after the correction.
+- The corrected flow contains eight ordered steps.
+- Insurance is step 7, after Liabilities and before Goals.
 - Future steps remain inaccessible until the preceding step is completed.
 - Completed steps remain revisitable.
 - Resume behavior remains deterministic from persisted data.
 - Successful persistence is required before a step advances.
+- Insurance must be successfully persisted before Goals can be entered.
 
 ### Input validation
 - Existing per-domain validators remain authoritative for frontend validation.
@@ -466,6 +548,7 @@ The following are directly observable implementation facts:
 - Removed list records are deleted.
 - Reloaded state matches persisted records.
 - Income requires an investor row.
+- Insurance uses `insurance_policies` and its existing linked expense/asset synchronization.
 - Goal dynamic details remain attached to the saved goal.
 
 ### Authority
@@ -473,6 +556,7 @@ The following are directly observable implementation facts:
 - FinancialState remains downstream.
 - Goal canonicalization/calculation remains downstream.
 - Strategy eligibility/selection remains downstream.
+- Insurance-derived financial effects remain owned by the existing Insurance/FinancialState authorities.
 
 ## 23. Final Onboarding Contract
 
