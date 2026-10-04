@@ -1,71 +1,46 @@
 import type { WorkflowReadiness } from "../../api/orchestration";
 
 export const goalTypes = [
-  "Emergency Fund",
-  "Debt Freedom",
-  "Education",
-  "Marriage",
-  "Home",
-  "Home Improvement",
-  "Vehicle",
-  "Travel & Experiences",
-  "Retirement",
-  "Financial Independence",
-  "Family Care",
-  "Healthcare",
-  "Business & Entrepreneurship",
-  "Lifestyle",
-  "Wealth Creation",
-  "Legacy & Giving",
-  "Other",
+  { id: "retirement", label: "Retirement" },
+  { id: "marriage", label: "Marriage" },
+  { id: "vehicle", label: "Vehicle" },
+  { id: "dream_home", label: "Dream Home" },
+  { id: "education", label: "Education" },
+  { id: "vacation", label: "Vacation" },
+  { id: "debt_freedom", label: "Debt Freedom" },
+  { id: "wealth_creation", label: "Wealth Creation" },
+  { id: "fire_passive_income", label: "FIRE / Passive Income" },
+  { id: "others", label: "Others" },
 ] as const;
 
 export type CanonicalGoalType =
-  | "emergency_fund"
-  | "debt_freedom"
-  | "education"
-  | "marriage"
-  | "home"
-  | "home_improvement"
-  | "vehicle"
-  | "travel"
   | "retirement"
-  | "financial_independence"
-  | "family_care"
-  | "healthcare"
-  | "business"
-  | "lifestyle"
+  | "marriage"
+  | "vehicle"
+  | "dream_home"
+  | "education"
+  | "vacation"
+  | "debt_freedom"
   | "wealth_creation"
-  | "legacy_giving"
-  | "other";
+  | "fire_passive_income"
+  | "others";
 
-export const canonicalGoalTypeByLabel: Record<string, CanonicalGoalType> = {
-  "Emergency Fund": "emergency_fund",
-  "Debt Freedom": "debt_freedom",
-  Education: "education",
-  Marriage: "marriage",
-  Home: "home",
-  "Home Improvement": "home_improvement",
-  Vehicle: "vehicle",
-  "Travel & Experiences": "travel",
-  Retirement: "retirement",
-  "Financial Independence": "financial_independence",
-  "Family Care": "family_care",
-  Healthcare: "healthcare",
-  "Business & Entrepreneurship": "business",
-  Lifestyle: "lifestyle",
-  "Wealth Creation": "wealth_creation",
-  "Legacy & Giving": "legacy_giving",
-  Other: "other",
-};
+export const canonicalGoalTypeByLabel: Record<string, CanonicalGoalType> = Object.fromEntries(
+  goalTypes.map(({ id, label }) => [label, id]),
+) as Record<string, CanonicalGoalType>;
 
-export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | string {
+export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | "" {
+  const clean = String(value ?? "").trim();
+  return goalTypes.some((goal) => goal.id === clean) ? (clean as CanonicalGoalType) : "";
+}
+
+(value?: string | null): CanonicalGoalType | string {
   const clean = String(value ?? "").trim();
   return canonicalGoalTypeByLabel[clean] ?? clean.toLowerCase().replace(/\\s+/g, "_");
 }
 
-export const goalTypeLabelByCanonical = Object.fromEntries(
-  Object.entries(canonicalGoalTypeByLabel).map(([label, value]) => [value, label]),
+export const goalTypeLabelByCanonical: Record<CanonicalGoalType, string> = Object.fromEntries(
+  goalTypes.map(({ id, label }) => [id, label]),
 ) as Record<CanonicalGoalType, string>;
 export const goalPriorities = ["Critical", "Important", "Aspirational"] as const;
 export const goalFlexibilities = ["Fixed", "Flexible"] as const;
