@@ -81,7 +81,7 @@ def test_competing_goals_with_partial_funding(allocation_engine):
     assert result.allocations[1].monthly_shortfall == 10000.0
     assert result.allocations[1].funding_percentage == 50.0
     assert result.allocations[1].funding_status == "partially_funded"
-    assert result.allocations[1].feasibility_status == "constrained"
+    assert result.allocations[1].feasibility_status == "conditional"
     assert "receives 10000.00 of 20000.00/mo (50.0% funded)" in result.trade_offs[0]
 
 
