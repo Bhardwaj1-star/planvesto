@@ -101,7 +101,7 @@ def test_competing_goals_sharing_limited_surplus(orchestrator):
     assert result.goals[1].allocated_monthly_contribution == 10000.0
     assert result.goals[1].shortfall == 15000.0
     assert result.goals[1].funding_status == "partially_funded"
-    assert result.goals[1].feasibility_status == "constrained"
+    assert result.goals[1].feasibility_status == "conditional"
     assert len(result.trade_offs) >= 1
 
 
@@ -239,7 +239,7 @@ def test_custom_strategy_evaluator_integration(orchestrator):
             "recommended_strategy_id": "growth_equity",
             "recommended_strategy_name": "Aggressive Growth Strategy",
             "required_monthly_contribution": 12000.0,
-            "feasibility_status": "feasible",
+            "feasibility_status": "pass",
             "reasons": ["Long-term compounder"],
         }
 
