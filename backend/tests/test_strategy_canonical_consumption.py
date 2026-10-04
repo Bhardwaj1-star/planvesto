@@ -7,7 +7,7 @@ from library.strategies.techniques_canonical import get_canonical_technique
 
 def test_strategy_applicability_consumes_canonical_strategy_registry():
     canonical_ids = {s.strategy_id for s in CANONICAL_STRATEGIES}
-    strategies = filter_applicable_strategies(goal_type="Retirement")
+    strategies = filter_applicable_strategies(goal_type="retirement")
     assert strategies
     assert {s.strategy_id for s in strategies} <= canonical_ids
 
