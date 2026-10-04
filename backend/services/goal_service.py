@@ -26,6 +26,9 @@ class GoalService:
     def __init__(self):
         self.repository = GoalRepository()
         self.financial_state_repository = FinancialStateSnapshotRepository()
+        self.financial_state_service = FinancialStateService(
+            snapshot_repository=self.financial_state_repository
+        )
         self.engine = GoalEngine()
 
     def _get_assets_lookup(self, planning_unit_id: str) -> dict[str, dict[str, Any]]:
@@ -129,29 +132,11 @@ class GoalService:
         This is a planning feasibility check, not a strategy or product decision.
         The financial-state snapshot is the source of the available surplus.
         """
-        try:
-            row = self.financial_state_repository.get_latest(defined_goal.planning_unit_id, "family")
-        except Exception as exc:
-            logger.warning(
-                "Financial-state snapshot unavailable for goal feasibility: %s",
-                exc,
-            )
-            row = None
+        row = self.financial_state_service.get_current_snapshot(
+            defined_goal.planning_unit_id,
+            scope="family",
+        )
         state = row.get("financial_state") if row else None
-        if row is None:
-            try:
-                financial_state_service = getattr(self, "financial_state_service", None)
-                if financial_state_service is None:
-                    financial_state_service = FinancialStateService()
-                state = financial_state_service.build(
-                    defined_goal.planning_unit_id,
-                    scope="family",
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Unable to build Financial State for goal feasibility: %s",
-                    exc,
-                )
         if hasattr(state, "model_dump"):
             state = state.model_dump()
         if not isinstance(state, dict):

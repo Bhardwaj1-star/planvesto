@@ -41,11 +41,24 @@ class _FinancialStateService:
             raise RuntimeError("Financial inputs are unavailable")
         return self.state
 
+    def get_current_snapshot(self, planning_unit_id, scope="family", investor_id=None):
+        self.calls.append((planning_unit_id, scope))
+        if self.state is not None:
+            return {"financial_state": self.state}
+        return None
+
 
 def _service(snapshot, financial_state=None):
     service = GoalService.__new__(GoalService)
+    state_service = _FinancialStateService(financial_state)
+    def get_current_snapshot(planning_unit_id, scope="family", investor_id=None):
+        if snapshot is not None:
+            return snapshot
+        state_service.calls.append((planning_unit_id, scope))
+        return {"financial_state": financial_state} if financial_state is not None else None
+    state_service.get_current_snapshot = get_current_snapshot
     service.financial_state_repository = _SnapshotRepository(snapshot)
-    service.financial_state_service = _FinancialStateService(financial_state)
+    service.financial_state_service = state_service
     return service
 
 
@@ -219,6 +232,9 @@ def test_missing_data_refresh_recalculates_feasibility_and_funding_strategies():
                 }
             }
             return snapshot_repository.row["financial_state"]
+
+        def get_current_snapshot(self, planning_unit_id, scope="family", investor_id=None):
+            return snapshot_repository.row
 
     service.financial_state_service = RefreshingFinancialStateService()
     service.financial_state_service.build("planning-unit-1", "family")

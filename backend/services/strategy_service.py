@@ -3,6 +3,7 @@ from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
+from services.financial_state_service import FinancialStateService
 from engines.strategy.engine import StrategyEngine
 from engines.strategy.composition import compose_architectures
 from engines.strategy.identity import canonical_architecture_id
@@ -28,6 +29,9 @@ class StrategyService:
         self.goal_repo = GoalRepository()
         self.strat_repo = StrategyRepository()
         self.financial_state_repo = FinancialStateSnapshotRepository()
+        self.financial_state_service = FinancialStateService(
+            snapshot_repository=self.financial_state_repo
+        )
         self.engine = StrategyEngine()
         self.rule_engine = RuleEngine()
         self.constraint_aggregator = ConstraintAggregator()
@@ -42,9 +46,7 @@ class StrategyService:
         return value
 
     def _financial_context(self, planning_unit_id: str, defined_goal: DefinedGoal) -> dict:
-        snapshot = self.financial_state_repo.get_latest(planning_unit_id, "family")
-        if not snapshot or not snapshot.get("financial_state"): return {}
-        state = snapshot["financial_state"]
+        state = self.financial_state_service.current(planning_unit_id, "family")
         if hasattr(state, "model_dump"): state = state.model_dump()
         elif not isinstance(state, dict): return {}
         context = dict(state)

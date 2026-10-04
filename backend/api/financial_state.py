@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from api.auth import authenticate_user, verify_investor_ownership, verify_planning_unit_ownership
-from data.financial_state_repository import FinancialStateSnapshotRepository
 from schemas.financial_state import FinancialStateRequest
 from services.financial_state_service import FinancialStateService
 
@@ -32,9 +31,11 @@ def build_financial_state(request: FinancialStateRequest, authorization: str | N
 def get_latest_financial_state_snapshot(planning_unit_id: str, scope: str = Query(default="family"), investor_id: str | None = Query(default=None), authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     _validate_scope(planning_unit_id, scope, investor_id, user_id)
-    snapshot = FinancialStateSnapshotRepository().get_latest(planning_unit_id, scope, investor_id)
-    if snapshot is None:
-        return FinancialStateService().build(planning_unit_id, scope, investor_id)
+    snapshot = FinancialStateService().get_current_snapshot(
+        planning_unit_id,
+        scope,
+        investor_id,
+    )
     # Keep the latest-snapshot endpoint contract identical to /build: callers receive
     # the Financial State itself, not the persistence wrapper row.
     financial_state = dict(snapshot.get("financial_state") or {})

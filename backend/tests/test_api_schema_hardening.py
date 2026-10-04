@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from models.moneywheel import MoneywheelInput
-from schemas.action_plan import ActionCreateRequest
+from schemas.action_plan import ActionCompletionRequest, ActionCreateRequest
 from schemas.goals import GoalInput
 from schemas.orchestration import PlanningOrchestrationRequest
 from schemas.strategy import CustomScenarioRequest, StrategySelectRequest
@@ -79,4 +79,11 @@ def test_action_and_strategy_edit_text_and_parameter_sizes_are_bounded():
             strategy_id="strategy-1",
             parent_version=1,
             implementation_parameters={str(i): i for i in range(101)},
+        )
+
+    with pytest.raises(ValidationError):
+        ActionCompletionRequest(
+            planning_unit_id="pu-1",
+            action_id="action-1",
+            completion_preview={"action": {"type": "complete"}},
         )

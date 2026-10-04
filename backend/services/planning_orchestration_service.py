@@ -1,6 +1,7 @@
 from typing import Any
 
 from data.financial_state_repository import FinancialStateSnapshotRepository
+from services.financial_state_service import FinancialStateService
 from models.orchestration import (
     ModuleAvailability,
     PlanningContext,
@@ -19,8 +20,15 @@ class PlanningOrchestrationService:
     Moneywheel aggregate status.
     """
 
-    def __init__(self, financial_state_repository: Any | None = None):
+    def __init__(
+        self,
+        financial_state_repository: Any | None = None,
+        financial_state_service: FinancialStateService | None = None,
+    ):
         self.financial_state_repository = financial_state_repository or FinancialStateSnapshotRepository()
+        self.financial_state_service = financial_state_service or FinancialStateService(
+            snapshot_repository=self.financial_state_repository
+        )
 
     @staticmethod
     def build_workflow_readiness(
@@ -58,7 +66,7 @@ class PlanningOrchestrationService:
         goal_version_ids: list[str] | None = None,
         strategy_version_id: str | None = None,
     ) -> PlanningOrchestrationContext:
-        snapshot = self.financial_state_repository.get_latest(
+        snapshot = self.financial_state_service.get_current_snapshot(
             planning_unit_id=planning_unit_id,
             scope=scope,
             investor_id=investor_id,

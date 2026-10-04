@@ -13,6 +13,7 @@ from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
 from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
+from services.financial_state_service import FinancialStateService
 
 
 class GoalReportService:
@@ -30,6 +31,9 @@ class GoalReportService:
         self.strategy_repo = StrategyRepository()
         self.strategy_version_repo = StrategyVersionRepository(self.strategy_repo.db)
         self.financial_state_repo = FinancialStateSnapshotRepository()
+        self.financial_state_service = FinancialStateService(
+            snapshot_repository=self.financial_state_repo
+        )
 
     def _load(self, planning_unit_id: str, strategy_run_id: str):
         run = self.strategy_repo.get_run_by_id(planning_unit_id, strategy_run_id)
@@ -43,10 +47,7 @@ class GoalReportService:
         )
         if not goal:
             raise HTTPException(status_code=404, detail="Underlying goal not found")
-        snapshot = self.financial_state_repo.get_latest(planning_unit_id, "family")
-        if not snapshot or not snapshot.get("financial_state"):
-            return run, goal, {}
-        state = snapshot["financial_state"]
+        state = self.financial_state_service.current(planning_unit_id, "family")
         if hasattr(state, "model_dump"):
             state = state.model_dump()
         elif not isinstance(state, dict):

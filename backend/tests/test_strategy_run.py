@@ -19,6 +19,18 @@ from services.goal_service import GoalService
 from services.strategy_service import StrategyService
 
 
+@pytest.fixture(autouse=True)
+def _financial_state_without_external_data(monkeypatch):
+    monkeypatch.setattr(
+        "services.strategy_service.FinancialStateService.current",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "services.goal_service.FinancialStateService.get_current_snapshot",
+        lambda *args, **kwargs: {"financial_state": {}},
+    )
+
+
 def _dummy_defined_goal(version=1, target=1000000.0):
     return DefinedGoal(
         goal_id="g-test-run",
@@ -44,15 +56,13 @@ class TestStrategyFinancialContext:
     @patch("services.strategy_service.StrategyRepository")
     def test_financial_context_normalizes_total_liabilities(self, MockStratRepo):
         service = StrategyService()
-        service.financial_state_repo.get_latest = MagicMock(return_value={
-            "financial_state": {
-                "total_liabilities": {"value": 125000.0},
-                "income_annual": {"value": 1200000.0},
-                "expenses_annual": {"value": 600000.0},
-                "investable_surplus_monthly": {"value": 50000.0},
-                "total_assets": {"value": 2500000.0},
-                "net_worth": {"value": 2375000.0},
-            }
+        service.financial_state_service.current = MagicMock(return_value={
+            "total_liabilities": {"value": 125000.0},
+            "income_annual": {"value": 1200000.0},
+            "expenses_annual": {"value": 600000.0},
+            "investable_surplus_monthly": {"value": 50000.0},
+            "total_assets": {"value": 2500000.0},
+            "net_worth": {"value": 2375000.0},
         })
         service.goal_repo.get_planning_unit_assets = MagicMock(return_value=[])
 

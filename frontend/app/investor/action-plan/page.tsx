@@ -8,6 +8,7 @@ import { getPlanningUnitId } from "../../../lib/api/client";
 import { getGoals, getLatestDefinedGoal, type GoalSummary } from "../../../lib/api/goals";
 import { getSelectedStrategyVersion } from "../../../lib/api/strategy";
 import { getStrategyVersionById, type StrategyVersion } from "../../../lib/api/strategy-version";
+import { getLatestFinancialState } from "../../../lib/api/financial-state";
 import {
   completeAction,
   getActions,
@@ -175,7 +176,9 @@ export default function ActionPlanPage() {
     try {
       const planningUnitId = getPlanningUnitId();
       if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
-      const updated = await completeAction(planningUnitId, action.action_id);
+      const actualState = await getLatestFinancialState(planningUnitId);
+      if (!actualState.snapshot_id) throw new Error("Current FinancialState snapshot is unavailable. Refresh before completing this action.");
+      const updated = await completeAction(planningUnitId, action.action_id, actualState);
       setActions((current) => current.map((item) => item.action_id === updated.action_id ? updated : item));
       await refreshGoalStates(planningUnitId);
       setMessage("Action marked as completed.");

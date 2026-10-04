@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import type { FinancialState } from "./financial-state";
 
 export type ActionStatus = "planned" | "confirmed" | "completed" | "cancelled";
 export type ActionDecision = "add" | "modify" | "delete" | "complete" | "cancel";
@@ -100,6 +101,7 @@ export function createAction(input: {
 export function completeAction(
   planningUnitId: string,
   actionId: string,
+  actualState: FinancialState,
   completionPreview?: Partial<ActionImpactPreview>,
 ) {
   const preview: ActionImpactPreview = {
@@ -116,7 +118,12 @@ export function completeAction(
     "/api/action-plan/actions/" + encodeURIComponent(actionId) + "/complete",
     {
       method: "POST",
-      body: JSON.stringify({ planning_unit_id: planningUnitId, action_id: actionId, completion_preview: preview }),
+      body: JSON.stringify({
+        planning_unit_id: planningUnitId,
+        action_id: actionId,
+        actual_state: actualState,
+        completion_preview: preview,
+      }),
     },
   );
 }

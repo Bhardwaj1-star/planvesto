@@ -185,7 +185,7 @@ def test_post_moneywheel_calculate_uses_server_financial_state():
          patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \
          patch("api.moneywheel.FinancialStateService") as mock_state_service, \
          patch("api.moneywheel._service", return_value=fake_service):
-        mock_state_service.return_value.build.return_value = fake_state
+        mock_state_service.return_value.current.return_value = fake_state
         response = client.post(
             "/api/moneywheel/calculate",
             headers={"Authorization": "Bearer test-token"},
@@ -196,7 +196,7 @@ def test_post_moneywheel_calculate_uses_server_financial_state():
         )
 
     assert response.status_code == 200
-    mock_state_service.return_value.build.assert_called_once_with("pu-1", "family")
+    mock_state_service.return_value.current.assert_called_once_with("pu-1", "family")
     fake_service.calculate_from_financial_state.assert_called_once_with(fake_state)
 
 
@@ -215,7 +215,7 @@ def test_post_moneywheel_calculate_success():
          patch("api.moneywheel.verify_planning_unit_ownership", return_value=True), \
          patch("api.moneywheel.FinancialStateService") as mock_state_service, \
          patch("api.moneywheel._service", return_value=fake_service):
-        mock_state_service.return_value.build.return_value = fake_state
+        mock_state_service.return_value.current.return_value = fake_state
 
         response = client.post(
             "/api/moneywheel/calculate",

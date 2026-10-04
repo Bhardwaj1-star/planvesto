@@ -13,9 +13,11 @@ router = APIRouter(prefix="/api/action-plan", tags=["Action Plan"])
 
 
 def _service():
+    snapshot_repository = FinancialStateSnapshotRepository()
     return ActionPlanService(
         ActionPlanRepository(StrategyRepository().db),
-        FinancialStateSnapshotRepository(),
+        snapshot_repository,
+        FinancialStateService(snapshot_repository=snapshot_repository),
     )
 
 
@@ -83,11 +85,29 @@ def complete_action(
     action = service.repository.get_action(request.planning_unit_id, action_id)
     if action is None:
         raise HTTPException(status_code=404, detail="Action not found")
-    actual_state = request.actual_state
-    if not actual_state:
-        actual_state = FinancialStateService().build(request.planning_unit_id).model_dump(mode="json")
+    verify_strategy_version_ownership(
+        request.planning_unit_id,
+        action.strategy_version_id,
+        user_id,
+    )
+    current_snapshot = service.financial_state_service.get_current_snapshot(
+        request.planning_unit_id,
+        "family",
+    )
+    source_snapshot_id = request.actual_state.get("snapshot_id")
+    if not source_snapshot_id or source_snapshot_id != current_snapshot.get("snapshot_id"):
+        raise HTTPException(
+            status_code=409,
+            detail="Submitted FinancialState is stale; refresh and retry action completion.",
+        )
     try:
-        updated, _, _ = service.complete_action_with_actual_state(action, actual_state, request.completion_preview)
+        updated, _, _ = service.complete_action_with_actual_state(
+            action,
+            request.actual_state,
+            request.completion_preview,
+            source_snapshot_id,
+            current_snapshot["authority"]["input_revision"],
+        )
         return updated
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

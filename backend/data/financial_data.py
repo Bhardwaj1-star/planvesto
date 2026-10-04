@@ -51,6 +51,39 @@ class FinancialDataRepository:
     def get_liabilities(self, planning_unit_id: str):
         return self._rows("liabilities", planning_unit_id)
 
+    def get_financial_state_inputs(self, planning_unit_id: str) -> dict[str, list[dict[str, Any]]]:
+        investors = self.get_investors(planning_unit_id)
+        income = self.get_income(planning_unit_id)
+        expenses = self.get_expenses(planning_unit_id)
+        assets = self.get_assets(planning_unit_id)
+        liabilities = self.get_liabilities(planning_unit_id)
+
+        asset_ids = [row["asset_id"] for row in assets if row.get("asset_id")]
+        liability_ids = [row["liability_id"] for row in liabilities if row.get("liability_id")]
+        expense_ids = [row["expense_id"] for row in expenses if row.get("expense_id")]
+
+        def related_rows(table: str, column: str, identifiers: list[str]) -> list[dict[str, Any]]:
+            if not identifiers:
+                return []
+            return self._execute(
+                self.db.table(table).select("*").in_(column, identifiers)
+            ).data or []
+
+        return {
+            "investors": investors,
+            "income": income,
+            "expenses": expenses,
+            "assets": assets,
+            "liabilities": liabilities,
+            "asset_owners": related_rows("asset_owners", "asset_id", asset_ids),
+            "liability_responsibilities": related_rows(
+                "liability_responsibilities", "liability_id", liability_ids
+            ),
+            "expense_participants": related_rows(
+                "expense_participants", "expense_id", expense_ids
+            ),
+        }
+
     def get_asset_owners(self, planning_unit_id: str):
         assets = self.get_assets(planning_unit_id)
         ids = [row["asset_id"] for row in assets]

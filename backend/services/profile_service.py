@@ -1,6 +1,7 @@
 from engines.profile.engine import ProfileEngine
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.profile_repository import ProfileRepository
+from services.financial_state_service import FinancialStateService
 
 
 class ProfileService:
@@ -9,24 +10,29 @@ class ProfileService:
     def __init__(self):
         self.repository = ProfileRepository()
         self.financial_repository = FinancialStateSnapshotRepository()
+        self.financial_state_service = FinancialStateService(
+            snapshot_repository=self.financial_repository
+        )
         self.engine = ProfileEngine()
 
     def build(self, request):
-        snapshot = None
-        if request.financial_snapshot_id:
-            from data.supabase import get_supabase
-            result = (get_supabase().table("financial_state_snapshots").select("*")
-                      .eq("snapshot_id", request.financial_snapshot_id)
-                      .eq("planning_unit_id", request.planning_unit_id).maybe_single().execute())
-            snapshot = result.data if result and result.data else None
-            if snapshot is None:
-                raise ValueError("Financial state snapshot not found")
-        else:
-            snapshot = self.financial_repository.get_latest(
-                request.planning_unit_id, "individual", request.investor_id
-            ) or self.financial_repository.get_latest(request.planning_unit_id, "family")
+        snapshot = self.financial_state_service.get_current_snapshot(
+            request.planning_unit_id,
+            "individual",
+            request.investor_id,
+        )
+        if (
+            request.financial_snapshot_id
+            and request.financial_snapshot_id != snapshot.get("snapshot_id")
+        ):
+            raise ValueError("Financial state snapshot is stale; rebuild the profile with the current snapshot")
 
         financial_state = snapshot.get("financial_state") if snapshot else None
+        if isinstance(financial_state, dict):
+            financial_state = {
+                key: value for key, value in financial_state.items()
+                if key != "__snapshot_authority"
+            }
         result = self.engine.build(
             financial_state=financial_state,
             declared_constraints=request.declared_constraints,

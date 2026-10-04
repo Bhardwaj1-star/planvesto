@@ -1,14 +1,18 @@
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Metric(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     value: float | None = None
     available: bool = True
     reason: str | None = None
 
 
 class FinancialState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     scope: str
     planning_unit_id: str
     investor_id: str | None = None

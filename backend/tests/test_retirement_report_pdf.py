@@ -9,6 +9,15 @@ from models.strategy import (
     Scenario,
 )
 from services.goal_report_service import GoalReportService
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _financial_state_without_external_data(monkeypatch):
+    monkeypatch.setattr(
+        "services.goal_report_service.FinancialStateService.current",
+        lambda *args, **kwargs: None,
+    )
 
 
 def _sample_retirement_run():

@@ -41,11 +41,9 @@ class StrategyActionGenerator:
         techniques = [get_technique_by_id(technique_id) for technique_id in technique_ids]
         techniques = [item for item in techniques if item is not None]
 
-        baseline = self.snapshot_repository.get_latest(planning_unit_id, "family")
-        if baseline and baseline.get("financial_state"):
-            financial_state = baseline["financial_state"]
-        else:
-            financial_state = FinancialStateService().build(planning_unit_id, "family").model_dump(mode="json")
+        financial_state = FinancialStateService(
+            snapshot_repository=self.snapshot_repository
+        ).current(planning_unit_id, "family").model_dump(mode="json")
 
         existing = self.action_repository.list_actions_for_strategy_version(planning_unit_id, strategy_version_id)
         existing_keys = {

@@ -19,7 +19,7 @@ def calculate_moneywheel(request: MoneywheelCalculateRequest, authorization: str
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(request.planning_unit_id, user_id)
     # Client-provided financial_state_snapshot is intentionally ignored.
-    financial_state = FinancialStateService().build(request.planning_unit_id, "family")
+    financial_state = FinancialStateService().current(request.planning_unit_id, "family")
     return MoneywheelResponse(result=_service().calculate_from_financial_state(financial_state))
 
 

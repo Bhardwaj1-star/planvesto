@@ -24,6 +24,19 @@ from engines.strategy.ranking import rank_scenarios
 from engines.strategy.recommendation import generate_recommendation
 from engines.strategy.engine import StrategyEngine
 from services.strategy_service import StrategyService
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _financial_state_without_external_data(monkeypatch):
+    monkeypatch.setattr(
+        "services.strategy_service.FinancialStateService.current",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "services.goal_report_service.FinancialStateService.current",
+        lambda *args, **kwargs: None,
+    )
 
 
 def _sample_goal(goal_type="Child Education", duration=6.0, shortfall=500000.0, status="Shortfall"):

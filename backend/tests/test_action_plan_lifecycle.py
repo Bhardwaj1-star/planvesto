@@ -1,6 +1,7 @@
 import pytest
 
 from models.action_plan import ActionImpactPreview, ActionPlanItem
+from models.financial_state import FinancialState, Metric
 from services.action_plan_service import ActionPlanService
 
 
@@ -32,12 +33,37 @@ def _preview():
 
 
 def _action(status="planned"):
+    state = _financial_state()
     return ActionPlanItem(
         action_id="action-1",
         planning_unit_id="pu-1",
         strategy_version_id="strategy-1",
         title="Build emergency reserve",
         status=status,
+        planned_impact={"financial_state": state.model_dump(mode="json")},
+    )
+
+
+def _financial_state(planning_unit_id="pu-1"):
+    metric = Metric(value=1000, available=True)
+    return FinancialState(
+        scope="family",
+        planning_unit_id=planning_unit_id,
+        investor_id=None,
+        income_monthly=metric,
+        income_annual=metric,
+        expenses_monthly=metric,
+        expenses_annual=metric,
+        investable_surplus_monthly=metric,
+        investable_surplus_annual=metric,
+        cash_flow_ratio=metric,
+        savings_investment_rate=metric,
+        total_assets=metric,
+        total_liabilities=metric,
+        emi_burden_monthly=metric,
+        net_worth=metric,
+        safety_reserve_months=metric,
+        safety_reserve_required_amount=metric,
     )
 
 
@@ -99,3 +125,71 @@ def test_terminal_actions_cannot_be_modified_or_cancelled():
             ActionPlanService(repo).confirm_decision(repo.actions["action-1"], "modify", _preview(), {"title": "x"})
         with pytest.raises(ValueError):
             ActionPlanService(repo).confirm_decision(repo.actions["action-1"], "cancel", _preview())
+
+
+def test_action_completion_persists_authoritative_state_with_lineage():
+    class SnapshotRepo:
+        pass
+
+    class FinancialStateAuthority:
+        def save_actual_state(self, state, action_id, strategy_version_id, source_snapshot_id, expected_input_revision):
+            return {"snapshot_id": "snapshot-1"}
+
+    repo = FakeRepository()
+    action = _action("confirmed")
+    repo.actions[action.action_id] = action
+    actual = _financial_state()
+    service = ActionPlanService(repo, SnapshotRepo(), FinancialStateAuthority())
+
+    updated, record, _ = service.complete_action_with_actual_state(
+        action,
+        actual.model_dump(mode="json"),
+        _preview(),
+        "source-snapshot-1",
+        "input-revision-1",
+    )
+
+    assert updated.status == "completed"
+    assert updated.actual_impact["financial_state_snapshot_id"] == "snapshot-1"
+    assert updated.actual_impact["strategy_version_id"] == "strategy-1"
+    assert record.after_state["financial_state_snapshot_id"] == "snapshot-1"
+
+
+def test_action_completion_rejects_cross_planning_unit_state():
+    repo = FakeRepository()
+    action = _action("confirmed")
+    repo.actions[action.action_id] = action
+    service = ActionPlanService(
+        repo,
+        object(),
+        type("StateAuthority", (), {"save_actual_state": lambda *args: {}})(),
+    )
+
+    with pytest.raises(ValueError, match="context does not match"):
+        service.complete_action_with_actual_state(
+            action,
+            _financial_state("other-pu").model_dump(mode="json"),
+            _preview(),
+            "source-snapshot-1",
+            "input-revision-1",
+        )
+
+
+def test_action_completion_rejects_incomplete_financial_state():
+    repo = FakeRepository()
+    action = _action("confirmed")
+    repo.actions[action.action_id] = action
+    service = ActionPlanService(
+        repo,
+        object(),
+        type("StateAuthority", (), {"save_actual_state": lambda *args: {}})(),
+    )
+
+    with pytest.raises(ValueError):
+        service.complete_action_with_actual_state(
+            action,
+            {"planning_unit_id": "pu-1"},
+            _preview(),
+            "source-snapshot-1",
+            "input-revision-1",
+        )
