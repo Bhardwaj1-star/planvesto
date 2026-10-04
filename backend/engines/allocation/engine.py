@@ -79,14 +79,14 @@ class ResourceAllocationEngine:
                     remaining_surplus = round(remaining_surplus - req, 2)
                     funding_status = "fully_funded"
                     funding_pct = 100.0 if req > 0 else 100.0
-                    feasibility = "feasible"
+                    feasibility = "pass"
                     reasoning = f"Fully funded from investable monthly surplus (Priority: {resolved_p})."
                 elif remaining_surplus > 0:
                     allocated = round(remaining_surplus, 2)
                     remaining_surplus = 0.0
                     funding_status = "partially_funded"
                     funding_pct = round((allocated / req) * 100.0, 1) if req > 0 else 0.0
-                    feasibility = "constrained"
+                    feasibility = "conditional"
                     trade_off_impact = (
                         f"Goal '{goal_name}' receives {allocated:.2f} of {req:.2f}/mo ({funding_pct}% funded). "
                         f"Monthly shortfall is {req - allocated:.2f}."
