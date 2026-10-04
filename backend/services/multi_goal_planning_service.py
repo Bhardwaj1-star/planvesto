@@ -27,6 +27,7 @@ class MultiGoalPlanningService:
         goal_report_service: GoalReportService | None = None,
         orchestrator: MultiGoalOrchestrator | None = None,
         constraint_evaluator: FinancialRatioConstraintEvaluator | None = None,
+        financial_state_service: FinancialStateService | None = None,
     ):
         self.goal_repo = goal_repo or GoalRepository()
         self.strategy_repo = strategy_repo or StrategyRepository()
@@ -35,7 +36,7 @@ class MultiGoalPlanningService:
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
         self.constraint_evaluator = constraint_evaluator or FinancialRatioConstraintEvaluator()
         self.constraint_aggregator = ConstraintAggregator(ratio_evaluator=self.constraint_evaluator)
-        self.financial_state_service = FinancialStateService()
+        self.financial_state_service = financial_state_service or FinancialStateService()
 
     def build_multi_goal_plan(
         self,
