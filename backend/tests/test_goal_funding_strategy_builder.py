@@ -7,7 +7,7 @@ from models.strategy import StrategyDefinition
 
 def test_goal_funding_strategy_becomes_strategy_builder_variants():
     goal = DefinedGoal(
-        goal_id="g1", planning_unit_id="pu1", goal_type="Education", goal_name="Education",
+        goal_id="g1", planning_unit_id="pu1", goal_type="education", goal_name="Education",
         today_cost=1000000, inflation_rate=0.06, target_month=1, target_year=2031,
         duration_years=5, future_target=1338225.58, priority="Critical", flexibility="Fixed",
         mapped_assets=[], projected_mapped_asset_value=0, funding_gap=1338225.58,
@@ -16,7 +16,7 @@ def test_goal_funding_strategy_becomes_strategy_builder_variants():
     )
     strategy = StrategyDefinition(
         strategy_id="strat-goal-funding", name="Goal Funding", tagline="Fund", description="Fund",
-        applicable_goal_types=["Education"], implementation_parameters=[]
+        applicable_goal_types=["education"], implementation_parameters=[]
     )
     scenarios = generate_baseline_scenarios(strategy, goal)
     ids = {s.funding_strategy_id for s in scenarios}
@@ -29,7 +29,7 @@ def test_goal_funding_decision_evaluates_every_variant():
     from models.strategy import StrategyArchitecture
 
     goal = DefinedGoal(
-        goal_id="g1", planning_unit_id="pu1", goal_type="Education", goal_name="Education",
+        goal_id="g1", planning_unit_id="pu1", goal_type="education", goal_name="Education",
         today_cost=1000000, inflation_rate=0.06, target_month=1, target_year=2031,
         duration_years=5, future_target=1338225.58, priority="Critical", flexibility="Fixed",
         mapped_assets=[], projected_mapped_asset_value=0, funding_gap=1338225.58,
@@ -38,7 +38,7 @@ def test_goal_funding_decision_evaluates_every_variant():
     )
     strategy = StrategyDefinition(
         strategy_id="strat-goal-funding", name="Goal Funding", tagline="Fund", description="Fund",
-        applicable_goal_types=["Education"], implementation_parameters=[],
+        applicable_goal_types=["education"], implementation_parameters=[],
     )
     scenarios = generate_baseline_scenarios(strategy, goal)
     architectures = [StrategyArchitecture(
