@@ -171,3 +171,48 @@ def test_informational_warning_without_hard_override(evaluator):
     # Warning exists for attention-level buffer
     assert len(assessment.warnings) >= 1
     assert any("WARN_EMERGENCY_RESERVE_ATTENTION" == w.rule_id for w in assessment.warnings)
+
+
+def test_constraint_messages_use_authoritative_thresholds(evaluator):
+    from rules.constraints import (
+        DEBT_TO_INCOME_CRITICAL_PERCENT,
+        DEBT_TO_INCOME_HEALTHY_PERCENT,
+        EMERGENCY_RESERVE_CRITICAL_MONTHS,
+        EMERGENCY_RESERVE_HEALTHY_MONTHS,
+    )
+
+    financial_context = {
+        "monthly_income": 100000.0,
+        "monthly_expenses": 50000.0,
+        "monthly_surplus": 50000.0,
+        "liquid_assets": 100000.0,
+        "emi_burden_monthly": 50000.0,
+    }
+    goals = [
+        GoalEvaluationInput(
+            goal_id="g_travel",
+            goal_name="Travel",
+            goal_type="travel",
+            client_priority="high",
+            required_monthly_contribution=10000.0,
+        )
+    ]
+
+    assessment = evaluator.assess_constraints(goals, financial_context)
+    messages = [c.message for c in assessment.hard_constraints]
+    overrides = [c.override_reason for c in assessment.hard_constraints]
+
+    assert any(
+        f"{EMERGENCY_RESERVE_CRITICAL_MONTHS}" in message
+        for message in messages
+    )
+    assert any(
+        f"{DEBT_TO_INCOME_CRITICAL_PERCENT}" in message
+        for message in messages
+    )
+    assert any(
+        f"{EMERGENCY_RESERVE_CRITICAL_MONTHS}" in reason
+        for reason in overrides
+    )
+    assert DEBT_TO_INCOME_HEALTHY_PERCENT < DEBT_TO_INCOME_CRITICAL_PERCENT
+    assert EMERGENCY_RESERVE_CRITICAL_MONTHS < EMERGENCY_RESERVE_HEALTHY_MONTHS
