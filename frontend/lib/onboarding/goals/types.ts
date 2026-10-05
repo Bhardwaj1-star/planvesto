@@ -43,7 +43,7 @@ export const goalFlexibilities = ["Fixed", "Flexible"] as const;
 export const targetModes = ["Date", "Age"] as const;
 export const inflationOptions = ["Yes", "No"] as const;
 
-export type GoalType = string;
+export type GoalType = CanonicalGoalType;
 export type GoalPriority = (typeof goalPriorities)[number];
 export type BackendGoalPriority = "critical" | "high" | "medium" | "low";
 
