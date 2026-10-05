@@ -48,7 +48,7 @@ class BehavioralRules:
 
         confidence = observation.get("confidence")
         if confidence is None:
-            from engines.profile.constraints import ConstraintRules
+            from engines.constraints.policy import ConstraintRules
             confidence = ConstraintRules.confidence("observed_behavior", len(evidence))
 
         return {
