@@ -198,7 +198,7 @@ def test_insufficient_resources_and_infeasible_goal(orchestrator):
         GoalEvaluationInput(
             goal_id="g1",
             goal_name="Home Purchase",
-            goal_type="home purchase",
+            goal_type="dream_home",
             client_priority="high",
             target_date="2030-01",
             required_monthly_contribution=30000.0,
