@@ -5,7 +5,6 @@ from fastapi import HTTPException
 
 from data.goal_repository import GoalRepository
 from data.strategy_repository import StrategyRepository
-from engines.constraints.evaluator import FinancialRatioConstraintEvaluator
 from engines.constraints.aggregator import ConstraintAggregator
 from engines.constraints.models import ConstraintSet
 from engines.orchestration.engine import MultiGoalOrchestrator
@@ -26,7 +25,6 @@ class MultiGoalPlanningService:
         strategy_service: StrategyService | None = None,
         goal_report_service: GoalReportService | None = None,
         orchestrator: MultiGoalOrchestrator | None = None,
-        constraint_evaluator: FinancialRatioConstraintEvaluator | None = None,
         financial_state_service: FinancialStateService | None = None,
     ):
         self.goal_repo = goal_repo or GoalRepository()
@@ -34,8 +32,7 @@ class MultiGoalPlanningService:
         self.strategy_service = strategy_service or StrategyService()
         self.goal_report_service = goal_report_service or GoalReportService()
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
-        self.constraint_evaluator = constraint_evaluator or FinancialRatioConstraintEvaluator()
-        self.constraint_aggregator = ConstraintAggregator(ratio_evaluator=self.constraint_evaluator)
+        self.constraint_aggregator = ConstraintAggregator()
         self.financial_state_service = financial_state_service or FinancialStateService()
 
     def build_multi_goal_plan(
@@ -142,15 +139,14 @@ class MultiGoalPlanningService:
             "emi_burden_monthly": metric_value("emi_burden_monthly"),
         })
 
-        # Evaluate financial health ratios and constraints
-        assessment = self.constraint_evaluator.assess_constraints(inputs, financial_context)
-        # Build centralized canonical ConstraintSet
+        # Single canonical constraint path: all ratio/rule-derived controls are
+        # evaluated and normalized by ConstraintAggregator into ConstraintSet.
         canonical_constraint_set = self.constraint_aggregator.aggregate(
             goals=inputs,
             financial_context=financial_context,
             planning_unit_id=planning_unit_id,
         )
-        effective_overrides = dict(assessment.suggested_overrides)
+        effective_overrides = canonical_constraint_set.suggested_overrides()
         if rule_overrides:
             effective_overrides.update(rule_overrides)
 
@@ -164,11 +160,11 @@ class MultiGoalPlanningService:
             rule_overrides=effective_overrides,
         )
 
-        # Attach ratio assessment diagnostics to notes
-        for warning in assessment.warnings:
-            plan.planning_notes.append(f"Ratio Warning: {warning.message}")
-        for hard in assessment.hard_constraints:
-            plan.trade_offs.append(f"Ratio Constraint: {hard.message}")
+        # Surface the canonical constraint output; no second evaluator path.
+        for warning in canonical_constraint_set.warnings:
+            plan.planning_notes.append(f"Constraint Warning: {warning.message}")
+        for hard in canonical_constraint_set.hard_constraints:
+            plan.trade_offs.append(f"Constraint: {hard.message}")
 
         # Attach the canonical constraint set to the plan's audit trail
         plan.audit_trail.append({
