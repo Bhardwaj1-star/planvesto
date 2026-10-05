@@ -125,26 +125,19 @@ A metric may have multiple presentation bands, but its underlying calculation mu
 
 Canonical Goal Type is owned by backend/rules/goals.py.
 
-Canonical taxonomy includes:
-- emergency_fund
-- debt_freedom
-- education
-- marriage
-- home
-- home_improvement
-- vehicle
-- travel
+Canonical taxonomy is exactly these 10 Goal Types:
 - retirement
-- financial_independence
-- family_care
-- healthcare
-- business
-- lifestyle
+- marriage
+- vehicle
+- dream_home
+- education
+- vacation
+- debt_freedom
 - wealth_creation
-- legacy_giving
-- other
+- fire_passive_income
+- others
 
-Aliases normalize into these canonical values at the boundary.
+No goal aliases, legacy goal types, alternate goal IDs, or goal-type normalization mappings are permitted. Unknown values must be rejected at the API/domain boundary.
 
 Example:
 Education → goal_type=education, goal_name=Education
