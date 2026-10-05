@@ -5,7 +5,7 @@ def test_individual_goal_pdf_is_generated_from_complete_goal_report_contract(mon
     service = GoalReportService()
     service.build_report = lambda planning_unit_id, strategy_run_id=None, strategy_version_id=None: {
         "goal_name": "My Vacation",
-        "goal_type": "Travel",
+        "goal_type": "Vacation",
         "goal_details": {},
         "mapped_assets": [],
         "strategy_run_id": strategy_run_id,
