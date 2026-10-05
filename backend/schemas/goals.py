@@ -3,6 +3,7 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from schemas.base import StrictRequestModel
+from rules.goals import GoalType
 
 
 class AssetMappingInput(StrictRequestModel):
@@ -24,7 +25,7 @@ class GoalInput(StrictRequestModel):
     goal_id: str | None = Field(default=None, min_length=1, max_length=100)
     investor_id: str | None = Field(default=None, min_length=1, max_length=100)
     goal_name: str = Field(min_length=1, max_length=200)
-    goal_type: str = Field(min_length=1, max_length=100)
+    goal_type: GoalType
     today_cost: float = Field(gt=0, allow_inf_nan=False)
     target_month: int = Field(ge=1, le=12)
     target_year: int = Field(ge=1900, le=2200)
