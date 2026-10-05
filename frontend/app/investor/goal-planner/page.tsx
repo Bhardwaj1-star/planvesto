@@ -30,12 +30,12 @@ import {
 type AssetRecord = { asset_id: string; asset_name: string; current_value: number };
 type LiabilityRecord = { id: string; name: string; outstandingAmount: number; interestRate: number | null; emi: number | null; endDate: string | null };
 type FormAssetMapping = { id: string; asset_id: string; allocation_type: AssetMappingAllocationType; allocation_value: string; expected_return: string; return_frequency: ReturnFrequency };
-type DynamicDetails = Pick<GoalDynamicDetails, "lifeExpectancy" | "desiredLifestyleMonthlyExpense" | "desiredPassiveIncomeAmount" | "educationForWhom" | "marriageForWhom" | "vacationFrequency" | "vacationType" | "selectedLiabilityId" | "philanthropyContributionAmount" | "otherGoalName">;
+type DynamicDetails = Pick<GoalDynamicDetails, "lifeExpectancy" | "desiredLifestyleMonthlyExpense" | "desiredPassiveIncomeAmount" | "educationForWhom" | "marriageForWhom" | "vacationFrequency" | "vacationType" | "selectedLiabilityId" | "otherGoalName">;
 type GoalFormData = { goal_id: string | null; goal_type: string; today_cost: string; target_date: string; priority: BackendGoalPriority; flexibility: GoalFlexibility | ""; status: GoalStatus; inflation_rate: string; dynamic_details: DynamicDetails; asset_mappings: FormAssetMapping[] };
 
 const DEFAULT_INFLATION_PERCENT = "6.0";
 const SPECIAL_GOALS = new Set(["retirement", "fire_passive_income", "debt_freedom"]);
-const emptyDynamicDetails = (): DynamicDetails => ({ lifeExpectancy: "", desiredLifestyleMonthlyExpense: "", desiredPassiveIncomeAmount: "", educationForWhom: "", marriageForWhom: "", vacationFrequency: "", vacationType: "", selectedLiabilityId: "", philanthropyContributionAmount: "", otherGoalName: "" });
+const emptyDynamicDetails = (): DynamicDetails => ({ lifeExpectancy: "", desiredLifestyleMonthlyExpense: "", desiredPassiveIncomeAmount: "", educationForWhom: "", marriageForWhom: "", vacationFrequency: "", vacationType: "", selectedLiabilityId: "", otherGoalName: "" });
 
 function createEmptyForm(): GoalFormData {
   return { goal_id: null, goal_type: "", today_cost: "", target_date: "", priority: "high", flexibility: "Flexible", status: "Active", inflation_rate: DEFAULT_INFLATION_PERCENT, dynamic_details: emptyDynamicDetails(), asset_mappings: [] };
