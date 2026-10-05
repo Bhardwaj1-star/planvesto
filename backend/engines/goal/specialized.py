@@ -85,7 +85,7 @@ def calculate_education_target(
     return round(target, 2), years
 
 
-def calculate_travel_schedule(
+def calculate_vacation_schedule(
     *,
     first_trip_cost: float,
     first_trip_date: date,
@@ -95,11 +95,11 @@ def calculate_travel_schedule(
     reference_date: date,
 ) -> tuple[float, float, list[dict[str, Any]]]:
     if first_trip_cost <= 0:
-        raise ValueError("Travel cost must be greater than zero")
+        raise ValueError("Vacation cost must be greater than zero")
     if repeat_every_years <= 0:
-        raise ValueError("Travel repeat interval must be greater than zero")
+        raise ValueError("Vacation repeat interval must be greater than zero")
     if number_of_trips < 1:
-        raise ValueError("Travel must contain at least one trip")
+        raise ValueError("Vacation must contain at least one trip")
 
     schedule: list[dict[str, Any]] = []
     total = 0.0
@@ -173,7 +173,7 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
             "dependent_id": data.get("dependent_id"),
         }
 
-    if kind == "travel":
+    if kind == "vacation":
         trip_cost = _positive(data, "current_trip_cost")
         trips = int(data.get("number_of_trips", 1) or 1)
         interval = _positive(data, "repeat_every_years")
