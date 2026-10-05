@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 import engines.calculation.canonical as canonical_calc
 from engines.profile.behavioral import BehavioralRules
-from engines.profile.constraints import ConstraintRules
+from engines.constraints.policy import ConstraintRules
 from engines.risk_profiler.models import (
     RiskAssessmentStatus,
     RiskDimension,
