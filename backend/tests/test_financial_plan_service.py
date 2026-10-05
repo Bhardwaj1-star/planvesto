@@ -177,7 +177,7 @@ def test_generate_pdf_with_system_priority_override():
             GoalResolution(
                 goal_id="g2",
                 goal_name="Luxury Trip",
-                goal_type="travel",
+                goal_type="vacation",
                 client_priority="critical",
                 resolved_priority="low",
                 required_monthly_contribution=15000.0,
