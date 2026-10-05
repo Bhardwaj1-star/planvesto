@@ -14,6 +14,8 @@ from engines.constraints.policy import (
     EMERGENCY_RESERVE_HEALTHY_MONTHS,
     RULE_DEBT_BURDEN_EXCEEDED,
     RULE_EMERGENCY_RESERVE_CRITICAL,
+    RULE_GOAL_POSITIVE_HORIZON,
+    RULE_GOAL_POSITIVE_TARGET,
     SAVINGS_RATIO_HEALTHY_PERCENT,
     WARN_DEBT_BURDEN_ATTENTION,
     WARN_EMERGENCY_RESERVE_ATTENTION,
@@ -171,7 +173,7 @@ class FinancialRatioConstraintEvaluator:
         goal_id = getattr(goal, "goal_id", None)
         if duration is not None:
             checks.append(ConstraintCheckResult(
-                rule_id="goal-positive-horizon",
+                rule_id=RULE_GOAL_POSITIVE_HORIZON,
                 goal_id=goal_id,
                 severity="hard",
                 passed=float(duration) > 0,
@@ -180,7 +182,7 @@ class FinancialRatioConstraintEvaluator:
             ))
         if target is not None:
             checks.append(ConstraintCheckResult(
-                rule_id="goal-positive-target",
+                rule_id=RULE_GOAL_POSITIVE_TARGET,
                 goal_id=goal_id,
                 severity="hard",
                 passed=float(target) > 0,
