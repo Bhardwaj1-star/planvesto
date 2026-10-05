@@ -229,6 +229,11 @@ class GoalService:
         # Normalize goal type to the canonical taxonomy while preserving a
         # real user-defined goal name; legacy type labels are canonicalized.
         request.goal_type = canonical_goal_type(request.goal_type)
+        if not request.goal_type:
+            raise HTTPException(
+                status_code=422,
+                detail="goal_type must be one of the 10 canonical Goal Domain types",
+            )
         request.goal_name = canonical_goal_name(request.goal_type, request.goal_name)
 
         goal_id = self.repository.ensure_goal_record(
