@@ -1,6 +1,6 @@
 # Planvesto Financial Planning Layer Map
 
-This document defines the current domain/layer boundaries for Planvesto's financial-planning system. It is based on the implemented onboarding, FinancialState, MoneyWheel, constraints, goal, strategy, multi-goal, action-plan, replanning, and reporting flows.
+This document defines the current domain/layer boundaries for Planvesto's financial-planning system. It is based on the implemented onboarding, FinancialState, MoneyWheel, constraints, goal, goal-basket, strategy, multi-goal, action-plan, replanning, and reporting flows.
 
 ## Layer Map
 
@@ -14,14 +14,15 @@ This document defines the current domain/layer boundaries for Planvesto's financ
 | 6 | Constraints / Rules | Decision-control layer | Identify financial limits, warnings, and hard constraints | FinancialState + canonical metrics + rule/threshold definitions |
 | 7 | Investor Profile / Risk | Customer suitability and preference layer | Capture risk information, preferences, priorities, and constraints for decisions | Investor profile + risk evidence + priorities |
 | 8 | Goal Planner | Individual-goal planning layer | Define goals, calculate requirements, and evaluate feasibility | Customer goals + DefinedGoal inputs + FinancialState + mapped assets |
-| 9 | Strategy Builder | Strategy decision layer | Filter, compare, evaluate, rank, and recommend strategies/scenarios for a goal | Current DefinedGoal + FinancialState + investor priorities + constraints/risk evidence |
-| 10 | Strategy Version / Approval | Strategy governance layer | Turn a selected/finalized strategy into an authoritative current strategy | Strategy Builder output + user selection + implementation preview/finalization + approval |
-| 11 | Multi-Goal Planning | Cross-goal planning layer | Allocate shared resources across goals and resolve priorities/trade-offs | Active goals + DefinedGoals + FinancialState + current StrategyVersions + constraints |
-| 12 | Complete Financial Plan | Cross-domain consolidation layer | Consolidate position, goals, funding, strategies, constraints, actions, trade-offs, trajectory, and governance | FinancialState + active goals + current StrategyVersions + constraints + funding/allocation + actions |
-| 13 | Action Plan | Execution layer | Convert approved strategy into executable actions | Approved current StrategyVersion |
-| 14 | Execution / Impact Update | Outcome and state-update layer | Capture decisions/completion and compare projected vs actual impact | Action completion + actual FinancialState snapshot |
-| 15 | Replanning | Continuous planning layer | Reassess planning when goals, profile, or financial state changes | Updated FinancialState + revised DefinedGoal/Profile + strategy context |
-| 16 | Dashboard / Reports | Presentation/reporting layer | Present consolidated financial position, goals, health, strategies, constraints, trajectory, and actions | Canonical downstream outputs |
+| 9 | Goal Basket | Logical goal-grouping / orchestration layer | Group existing goals together for combined planning and reporting | Existing goals + GoalBasket definition |
+| 10 | Strategy Builder | Strategy decision layer | Filter, compare, evaluate, rank, and recommend strategies/scenarios for a goal | Current DefinedGoal + FinancialState + investor priorities + constraints/risk evidence |
+| 11 | Strategy Version / Approval | Strategy governance layer | Turn a selected/finalized strategy into an authoritative current strategy | Strategy Builder output + user selection + implementation preview/finalization + approval |
+| 12 | Multi-Goal Planning | Cross-goal planning layer | Allocate shared resources across goals and resolve priorities/trade-offs | Active goals + DefinedGoals + FinancialState + current StrategyVersions + constraints |
+| 13 | Complete Financial Plan | Cross-domain consolidation layer | Consolidate position, goals, funding, strategies, constraints, actions, trade-offs, trajectory, and governance | FinancialState + active goals + current StrategyVersions + constraints + funding/allocation + actions |
+| 14 | Action Plan | Execution layer | Convert approved strategy into executable actions | Approved current StrategyVersion |
+| 15 | Execution / Impact Update | Outcome and state-update layer | Capture decisions/completion and compare projected vs actual impact | Action completion + actual FinancialState snapshot |
+| 16 | Replanning | Continuous planning layer | Reassess planning when goals, profile, or financial state changes | Updated FinancialState + revised DefinedGoal/Profile + strategy context |
+| 17 | Dashboard / Reports | Presentation/reporting layer | Present consolidated financial position, goals, health, strategies, constraints, trajectory, and actions | Canonical downstream outputs |
 
 ## Responsibility Boundaries
 
@@ -32,6 +33,7 @@ The following concepts are intentionally distinct:
 - Financial Health is an assessment of that position.
 - MoneyWheel is the diagnostic framework built from canonical financial metrics and coverage rules.
 - Constraints are decision controls evaluated from financial evidence and rule definitions.
+- Goal Planner defines individual goals; Goal Basket groups existing goals and does not replace them.
 - Strategy Builder consumes these contexts; it does not own the canonical FinancialState.
 - Complete Financial Plan consolidates domain outputs; it does not own the underlying canonical calculations or strategy identity.
 
@@ -47,6 +49,8 @@ Canonical Calculations
 Financial Health / MoneyWheel / Constraints
     ↓
 Goal Planner + Investor Profile / Risk
+    ↓
+Goal Basket (when grouping goals)
     ↓
 Strategy Builder
     ↓
@@ -65,5 +69,7 @@ Updated Financial State
 ```
 
 ## Implementation Note
+
+Goal Basket is a real implemented domain component, not just a UI label. The repository contains a canonical GoalBasket model, GoalBasketService, GoalBasketEngine, dedicated API endpoint, and basket-report flow.
 
 The architecture intends canonical calculations and centralized constraint evaluation. Current repository audits identify duplicated constraint thresholds/calculations in some areas (including the constraint evaluator/rules and FinancialPlanService), so this document describes the intended domain boundaries rather than claiming that every implementation is already a single-source-of-truth.
