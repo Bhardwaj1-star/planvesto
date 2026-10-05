@@ -98,7 +98,7 @@ class TestRemainingImplementationGapsClosure:
             GoalEvaluationInput(
                 goal_id="g2",
                 goal_name="Vacation Home",
-                goal_type="home purchase",
+                goal_type="dream_home",
                 client_priority="medium",
                 required_monthly_contribution=25000.0,
             ),
