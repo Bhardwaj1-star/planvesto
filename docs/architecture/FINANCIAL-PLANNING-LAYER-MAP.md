@@ -1,6 +1,6 @@
 # Planvesto Financial Planning Layer Map
 
-This document defines the current domain/layer boundaries for Planvesto's financial-planning system. It is based on the implemented onboarding, FinancialState, budgeting, MoneyWheel, constraints, goal, goal-basket, strategy, planning orchestration, multi-goal allocation, action-plan, replanning, and reporting flows.
+This document defines the current domain/layer boundaries for Planvesto's financial-planning system. It is based on the implemented onboarding, FinancialState, budgeting, MoneyWheel, constraints, goal, goal-basket, strategy, planning orchestration, multi-goal allocation, action-plan, replanning, financial memory, and reporting flows.
 
 ## Layer Map
 
@@ -25,7 +25,8 @@ This document defines the current domain/layer boundaries for Planvesto's financ
 | 17 | Action Plan | Execution layer | Convert approved strategy into executable actions | Approved current StrategyVersion |
 | 18 | Execution / Impact Update | Outcome and state-update layer | Capture decisions/completion and compare projected vs actual impact | Action completion + actual FinancialState snapshot |
 | 19 | Replanning | Continuous planning layer | Reassess planning when goals, profile, or financial state changes | Updated FinancialState + revised DefinedGoal/Profile + strategy context |
-| 20 | Dashboard / Reports / History | Presentation and historical-review layer | Present consolidated outputs and expose goal/strategy history and reporting views | Canonical downstream outputs + historical records |
+| 20 | Financial Memory / Investor Diary | User-authored financial context layer | Persist financial notes and decision context so important reasoning/context remains available across planning cycles | DiaryEntry + FinancialDecision |
+| 21 | Dashboard / Reports / History | Presentation and historical-review layer | Present consolidated outputs and expose goal/strategy history and reporting views | Canonical downstream outputs + historical records |
 
 ## Responsibility Boundaries
 
@@ -44,8 +45,12 @@ The following concepts are intentionally distinct:
 - Multi-Goal Planning coordinates cross-goal decisions; Resource Allocation performs the concrete allocation calculation.
 - Complete Financial Plan consolidates domain outputs; it does not own the underlying canonical calculations or strategy identity.
 - Action Plan executes an approved current strategy; execution updates the authoritative financial state for the next planning cycle.
+- **Financial Memory / Investor Diary stores user-authored notes and decision context; it is not an authoritative FinancialState, strategy authority, or calculated financial-history substitute.**
+- Dashboard / Reports / History presents and reviews canonical outputs; it does not become the owner of those outputs.
 
 ## High-Level Data Flow
+
+The Financial Memory / Investor Diary is a review/context layer rather than a mandatory computational step, so it is shown as cross-cutting around the planning cycle:
 
 ```text
 Customer Inputs
@@ -80,6 +85,10 @@ Execution / Actual Outcome
     ↓
 Updated Financial State
     ↺
+
+Financial Memory / Investor Diary
+    ↕
+Planning and review cycles
 ```
 
 ## Implementation Note
@@ -92,5 +101,8 @@ The following are confirmed implemented code components represented in this map:
 - **PrimaryStrategyState:** canonical current-primary strategy pointer and repository/API surface.
 - **Planning Orchestration:** PlanningOrchestrationService, PlanningOrchestrationContext, and orchestration API.
 - **Resource Allocation:** ResourceAllocationEngine and ConsolidatedAllocationResult.
+- **Financial Memory / Investor Diary:** `/investor/diary` UI, `backend/api/diary.py`, DiaryService, frontend diary API/types, DiaryEntry, and FinancialDecision; the UI explicitly labels this capability as a "Memory Layer".
 
 The architecture intends canonical calculations and centralized constraint evaluation. Current repository audits identify duplicated constraint thresholds/calculations in some areas (including the constraint evaluator/rules and FinancialPlanService), so this document describes the current domain boundaries while explicitly acknowledging those remaining implementation conflicts.
+
+Behavioral Profile remains intentionally outside this layer map as a separate layer: documentation defines the concept, but the repository audit did not find a dedicated canonical BehavioralProfile implementation comparable to the implemented layers above.
