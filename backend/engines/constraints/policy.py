@@ -24,3 +24,14 @@ DEBT_TO_INCOME_CRITICAL_PERCENT: float = 40.0
 DEBT_TO_INCOME_HEALTHY_PERCENT: float = 30.0
 
 SAVINGS_RATIO_HEALTHY_PERCENT: float = 20.0
+
+from rules.goals import is_discretionary_goal, is_essential_goal
+
+def can_discretionary_preempt_essential(
+    discretionary_goal_type: str,
+    essential_goal_type: str,
+) -> bool:
+    """Canonical constraint: discretionary goals cannot preempt essentials."""
+    if is_discretionary_goal(discretionary_goal_type) and is_essential_goal(essential_goal_type):
+        return False
+    return True
