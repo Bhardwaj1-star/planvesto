@@ -53,7 +53,7 @@ def test_multi_goal_planning_service_build_plan():
         {
             "goal_id": "goal-2",
             "goal_name": "Vacation",
-            "goal_type": "travel",
+            "goal_type": "vacation",
             "goal_calculation": {
                 "required_monthly_contribution": 10000.0,
                 "target_year": 2028,
