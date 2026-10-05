@@ -42,7 +42,7 @@ def _assessment():
 
 def test_education_rankings_each_have_a_matching_architecture():
     goal = _goal()
-    goal.goal_type = "Education"
+    goal.goal_type = "education"
     result = StrategyEngine().execute(goal, priorities=InvestorPriorities())
 
     architecture_strategy_ids = {architecture.primary_strategy_id for architecture in result.architectures}
