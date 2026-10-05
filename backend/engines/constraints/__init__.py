@@ -23,6 +23,7 @@ from engines.constraints.adapters import (
     build_constraint_set,
 )
 from engines.constraints.aggregator import ConstraintAggregator
+from engines.constraints.policy import ConstraintRules, PRIORITY_RANKS, can_discretionary_preempt_essential
 
 __all__ = [
     # Legacy (backward compatible)
@@ -50,4 +51,8 @@ __all__ = [
     "build_constraint_set",
     # Aggregator
     "ConstraintAggregator",
+    # Policy
+    "ConstraintRules",
+    "PRIORITY_RANKS",
+    "can_discretionary_preempt_essential",
 ]
