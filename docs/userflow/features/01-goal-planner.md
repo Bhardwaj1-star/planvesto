@@ -47,31 +47,23 @@ Goal Input
         └── DefinedGoal
 ```
 
-Canonical goal types currently implemented:
+Canonical goal types currently implemented — exactly 10:
 
-- `emergency_fund`
-- `debt_freedom`
-- `education`
-- `marriage`
-- `home`
-- `home_improvement`
-- `vehicle`
-- `travel`
 - `retirement`
-- `financial_independence`
-- `family_care`
-- `healthcare`
-- `business`
-- `lifestyle`
+- `marriage`
+- `vehicle`
+- `dream_home`
+- `education`
+- `vacation`
+- `debt_freedom`
 - `wealth_creation`
-- `legacy_giving`
-- `other`
+- `fire_passive_income`
+- `others`
 
 Important identity rules:
 
-- `child marriage` normalizes to `marriage`.
-- `passive income` / `financial freedom` normalize to `financial_independence`.
-- Retirement remains a separate goal from Financial Independence.
+- Goal types are exact canonical IDs; no aliases or legacy goal-type mappings are accepted.
+- Unknown goal types are rejected by the backend request contract.
 - Beneficiary, sub-purpose and circumstances belong in `dynamic_details` / `specialized_data`; they are not new goal types.
 
 Canonical goal display names are also defined in `CANONICAL_GOAL_NAMES`.
