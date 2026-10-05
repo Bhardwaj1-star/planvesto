@@ -186,7 +186,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   );
 }
 
-function useOnboardingState() {
+export function useOnboardingStore() {\n  return useOnboardingState();\n}\n\nfunction useOnboardingState() {
   const context = useContext(OnboardingContext);
   if (!context) throw new Error("useOnboardingState must be used within OnboardingProvider");
   return context;
