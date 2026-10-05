@@ -33,6 +33,34 @@ The Constraints layer evaluates financial and goal-level constraints that can re
 | Multi-Goal | Multi-goal Conflict Fit | Higher-priority goal/conflict evidence is checked against the candidate strategy. Missing evidence is Conditional; an actual conflict fails; an explicitly conditional conflict remains Conditional. |
 | Implementation | Implementation Fit | Implementation readiness/evidence is checked. Missing evidence is Conditional; ready/pass is Pass; conditional readiness is Conditional; an invalid implementation state fails. |
 
+## Constraint Failure and Strategy Selection
+
+A failed constraint does not mean the system blindly selects another strategy. The failure is evaluated against each candidate strategy, and only the affected strategy is removed when the failure becomes a strategy-level hard gate.
+
+| Step | What Happens | Result |
+|---|---|---|
+| 1. Applicable Strategies | Goal type and configured goal characteristics determine which canonical strategies enter the candidate set. | Multiple strategies may remain candidates. |
+| 2. Constraint Gate | Hard constraint failures are passed into the strategy eligibility gate for each candidate. | A candidate with a hard-gate failure becomes ineligible. |
+| 3. 8-Fit Evaluation | Every remaining candidate is evaluated against the same eight fits: Cash-flow, Liquidity, Debt, Asset Resource, Risk Capacity, Goal Constraint, Multi-goal Conflict, Implementation. | Each candidate gets Pass / Conditional / Fail. |
+| 4. Remove Failed Candidates | Any candidate with an overall Fail is excluded from the recommendation pool. | Failed strategy is not selected. Other eligible candidates remain. |
+| 5. Prefer Pass | If one or more candidates are Pass, only Pass candidates form the primary recommendation pool. | Conditional candidates are not preferred while a Pass exists. |
+| 6. Consider Conditional | If there are no Pass candidates, Conditional candidates form the recommendation pool. | A Conditional strategy may be recommended with required changes. |
+| 7. Rank | Candidates in the active pool are scored using Goal Fit, Horizon Fit, Funding Fit, Feasibility, Component Fit, and Technique Execution. | Highest-ranked eligible candidate wins. |
+| 8. No Candidate | If every candidate is Fail, no strategy is recommended. | Decision returns infeasible and exposes eligibility failures / required changes. |
+
+### Example: One Strategy Fails, Another Gets Selected
+
+| Candidate Strategy | Hard Constraint / 8-Fit Result | Overall Status | Selection Outcome |
+|---|---|---|---|
+| Goal Funding | Cash-flow Fit = Fail | FAIL | Removed from recommendation pool |
+| Progressive De-risking | All required fits Pass | PASS | Remains in primary pool |
+| Capital Preservation | Liquidity Fit = Conditional | CONDITIONAL | Kept, but not preferred while a Pass exists |
+| Debt Reduction | Goal Constraint Fit = Fail | FAIL | Removed from recommendation pool |
+| Credit Utilisation | All required fits Pass | PASS | Remains in primary pool |
+| Final Decision | Compare remaining Pass candidates by decision score | PASS pool exists | Highest-ranked Pass strategy is recommended |
+
+**Important distinction:** a financial constraint and an 8-fit failure are not always the same thing. A constraint becomes decisive for strategy selection when it is converted into a hard strategy eligibility reason. Warnings and Conditional fits do not automatically eliminate a strategy.
+
 ## Constraint Decision Flow
 
 | Goal / Planning Context | Financial Condition | Constraint Evaluation | Constraint Outcome | Strategy Impact |
