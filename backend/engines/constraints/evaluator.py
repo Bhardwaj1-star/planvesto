@@ -7,7 +7,7 @@ from engines.constraints.models import (
     RatioConstraintAssessment,
 )
 from engines.orchestration.models import GoalEvaluationInput
-from rules.constraints import (
+from engines.constraints.policy import (
     DEBT_TO_INCOME_CRITICAL_PERCENT,
     DEBT_TO_INCOME_HEALTHY_PERCENT,
     EMERGENCY_RESERVE_CRITICAL_MONTHS,
@@ -161,6 +161,33 @@ class FinancialRatioConstraintEvaluator:
             ))
 
         return results
+
+    @staticmethod
+    def evaluate_goal_constraints(goal: Any) -> list[ConstraintCheckResult]:
+        """Evaluate goal validity constraints in the canonical constraint layer."""
+        checks: list[ConstraintCheckResult] = []
+        duration = getattr(goal, "duration_years", None)
+        target = getattr(goal, "future_target", None)
+        goal_id = getattr(goal, "goal_id", None)
+        if duration is not None:
+            checks.append(ConstraintCheckResult(
+                rule_id="goal-positive-horizon",
+                goal_id=goal_id,
+                severity="hard",
+                passed=float(duration) > 0,
+                message="Goal horizon must be positive." if float(duration) <= 0 else "Goal horizon is valid.",
+                ratio_evidence={"duration_years": duration},
+            ))
+        if target is not None:
+            checks.append(ConstraintCheckResult(
+                rule_id="goal-positive-target",
+                goal_id=goal_id,
+                severity="hard",
+                passed=float(target) > 0,
+                message="Goal target must be positive." if float(target) <= 0 else "Goal target is valid.",
+                ratio_evidence={"future_target": target},
+            ))
+        return checks
 
     def assess_constraints(
         self,
