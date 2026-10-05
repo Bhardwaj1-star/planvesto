@@ -94,7 +94,6 @@ export type GoalDynamicDetails = {
   vacationType: "Domestic" | "International" | "";
   targetWealthCorpus: string;
   selectedLiabilityId: string;
-  philanthropyContributionAmount: string;
   otherGoalName: string;
   otherGoalDescription: string;
   otherAdditionalDetails: string;
@@ -133,7 +132,6 @@ export const emptyGoalDynamicDetails: GoalDynamicDetails = {
   vacationType: "",
   targetWealthCorpus: "",
   selectedLiabilityId: "",
-  philanthropyContributionAmount: "",
   otherGoalName: "",
   otherGoalDescription: "",
   otherAdditionalDetails: "",
