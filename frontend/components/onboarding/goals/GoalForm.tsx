@@ -180,8 +180,6 @@ export default function GoalForm({ goal, errors, isEditing, onChange, onSave, on
               })()}
             </div>}
 
-            {goal.goalType === "__removed_legacy__" && <TextField id="philanthropyContributionAmount" label="Contribution Amount" value={details.philanthropyContributionAmount} onChange={(value) => updateDetails(goal, { philanthropyContributionAmount: value }, onChange)} type="number" placeholder="₹" error={errors["philanthropyContributionAmount"]} />}
-
             {needsTodayCost && <TextField id="targetAmount" label="Today&apos;s Cost" value={goal.targetAmount} onChange={(value) => onChange({ targetAmount: value })} type="number" placeholder="₹" error={errors.targetAmount} />}
 
             <div>
