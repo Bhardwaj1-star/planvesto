@@ -10,7 +10,7 @@ export default function AssetsForm() {
 
   return (
     <OnboardingShell
-      currentStep={4}
+      currentStep={5}
       title="What do you own today?"
       subtitle="Cataloging your current savings, investments, and property establishes your balance sheet baseline."
       stepContext="Assets & Investments"
@@ -52,7 +52,7 @@ export default function AssetsForm() {
             Back to Expenses
           </button>
           <button type="button" onClick={assets.handleContinue} className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy-900 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-navy-800 focus:outline-none focus:ring-4 focus:ring-teal-100 disabled:cursor-not-allowed disabled:opacity-60">
-            Continue to Liabilities
+            Continue to Insurance
             <span aria-hidden="true">&rarr;</span>
           </button>
         </div>

@@ -1,20 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import InsuranceSection from "./InsuranceSection";
 import OnboardingShell from "../OnboardingShell";
 import { useOnboardingNavigation } from "../OnboardingProvider";
 
 export default function InsuranceForm() {
-  const router = useRouter();
-  const { completeStep, goPrevious } = useOnboardingNavigation(6);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(6);
   const [isComplete, setIsComplete] = useState(false);
 
   function handleContinue() {
     completeStep(6);
     setIsComplete(true);
-    router.push("/investor/onboarding/liabilities");
+    goNext();
   }
 
   return (

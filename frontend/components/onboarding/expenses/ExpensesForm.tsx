@@ -8,7 +8,7 @@ import OnboardingShell from "../OnboardingShell";
 export default function ExpensesForm() {
   const expenses = useExpenses();
   return (
-    <OnboardingShell currentStep={3} title="Where does your money go?" subtitle="Understanding your living costs and discretionary spending establishes your true investable surplus." stepContext="Expenses & Lifestyle Costs" badge={expenses.expenses.length > 0 ? `${expenses.expenses.length} categor${expenses.expenses.length > 1 ? "ies" : "y"} added` : undefined}>
+    <OnboardingShell currentStep={4} title="Where does your money go?" subtitle="Understanding your living costs and discretionary spending establishes your true investable surplus." stepContext="Expenses & Lifestyle Costs" badge={expenses.expenses.length > 0 ? `${expenses.expenses.length} categor${expenses.expenses.length > 1 ? "ies" : "y"} added` : undefined}>
       <div className="space-y-6">
         <ExpenseSummary expenses={expenses.expenses} onEdit={expenses.startEditing} onRemove={expenses.removeExpense} />
         {!expenses.editingExpenseId && <div className="flex justify-start"><button type="button" onClick={expenses.startAdding} className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-600 bg-white px-5 py-3 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-50">+ Add new expense</button></div>}

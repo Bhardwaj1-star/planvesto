@@ -12,7 +12,7 @@ import type { PersonalInformation } from "./personal-information/model";
 export type GoalFundingAllocation = { assetId: string; allocationPercentage: string };
 export type GoalPlannerGoal = { id: string; name: string; targetAmount: string; targetDate: string; priority: string; flexibility: string; funding: GoalFundingAllocation[] };
 export type GoalPlannerData = { goals: GoalPlannerGoal[]; assets: Array<{ id: string; name: string; currentValue: string }> };
-export type OnboardingData = { planningUnitId: string; investorId: string | null; personalInformation: PersonalInformation; familyMembers: FamilyMember[]; incomeSources: IncomeSource[]; expenses: Expense[]; assets: Asset[]; liabilities: Liability[]; goals: Goal[] };
+export type OnboardingData = { planningUnitId: string; investorId: string | null; personalInformation: PersonalInformation; familyMembers: FamilyMember[]; incomeSources: IncomeSource[]; expenses: Expense[]; assets: Asset[]; liabilities: Liability[]; goals: Goal[]; hasInsurancePolicies?: boolean };
 type Tables = Database["public"]["Tables"];
 
 function isUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
@@ -24,7 +24,7 @@ function encodeName(primary: string, description: string) { return description.t
 function decodeName(value: string, options: readonly string[]) { const option = options.find((item) => value === item || value.startsWith(`${item} - `)); return { primary: option || "", description: option ? value.slice(option.length).replace(/^ - /, "") : value }; }
 
 async function loadRows(planningUnitId: string) {
-  const [investors, dependents, income, expenses, assets, liabilities, goals] = await Promise.all([
+  const [investors, dependents, income, expenses, assets, liabilities, goals, insurance] = await Promise.all([
     supabase.from("investors").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("dependents").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("income").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
@@ -32,6 +32,7 @@ async function loadRows(planningUnitId: string) {
     supabase.from("assets").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("liabilities").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
     supabase.from("goals").select("*").eq("planning_unit_id", planningUnitId).order("created_at"),
+    supabase.from("insurance_policies").select("policy_id").eq("planning_unit_id", planningUnitId),
   ]);
   const result = [investors, dependents, income, expenses, assets, liabilities, goals].find((item) => item.error); if (result?.error) throw result.error;
   const investorRows = investors.data || []; const personal = investorRows[0];
@@ -46,6 +47,7 @@ async function loadRows(planningUnitId: string) {
     assets: (assets.data || []).map((row) => { const name = decodeName(row.asset_name, assetOptions); return { id: row.asset_id, assetType: name.primary as Asset["assetType"], description: name.description, currentValue: String(row.current_value), purchaseValue: row.purchase_value === null ? "" : String(row.purchase_value), purchaseDate: row.purchase_date || "" }; }),
     liabilities: (liabilities.data || []).map((row) => { const name = decodeName(row.liability_name, liabilityOptions); return { id: row.liability_id, liabilityType: name.primary as Liability["liabilityType"], description: name.description, outstandingAmount: String(row.outstanding_amount), interestRate: row.interest_rate === null ? "" : String(row.interest_rate), regularPayment: row.emi_amount === null ? "" : String(row.emi_amount), frequency: (row.frequency || "") as Liability["frequency"], endDate: row.end_date || "" }; }),
     goals: (goals.data || []).map((row) => ({ id: row.goal_id, name: row.goal_name, goalType: "" as Goal["goalType"], targetAmount: String(row.target_amount), targetMode: row.target_date ? "Date" as const : "", targetDate: row.target_date || "", targetAge: "", currentSavedAmount: "", monthlyContribution: "", priority: (row.priority || "") as Goal["priority"], flexibility: (row.flexibility || "") as Goal["flexibility"], inflationApplicability: "", notes: "", dynamicDetails: { ...emptyGoalDynamicDetails } })),
+    hasInsurancePolicies: (insurance.data || []).length > 0,
   } satisfies OnboardingData;
 }
 

@@ -104,6 +104,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     loadOnboardingData()
       .then((data) => {
         if (!active) return;
+        const step6Completed = Boolean(
+          data.hasInsurancePolicies ||
+          data.liabilities.length > 0 ||
+          data.goals.length > 0 ||
+          (typeof window !== "undefined" && data.planningUnitId && window.localStorage.getItem(`planvesto-step-6-completed-${data.planningUnitId}`) === "true")
+        );
+
         setState((current) => ({
           ...current,
           ...data,
@@ -113,6 +120,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             data.incomeSources.length ? 3 : 0,
             data.expenses.length ? 4 : 0,
             data.assets.length ? 5 : 0,
+            step6Completed ? 6 : 0,
             data.liabilities.length ? 7 : 0,
             data.goals.length ? 8 : 0,
           ].filter(Boolean),
@@ -160,7 +168,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     saveAssets: (value) => saveSection(() => saveAssets(value)),
     saveLiabilities: (value) => saveSection(() => saveLiabilities(value)),
     saveGoals: (value) => saveSection(() => saveGoals(value)),
-    completeStep: (step) => setState((current) => current.completedSteps.includes(step) ? current : { ...current, completedSteps: [...current.completedSteps, step] }),
+    completeStep: (step) => {
+      if (typeof window !== "undefined" && state.planningUnitId) {
+        window.localStorage.setItem(`planvesto-step-${step}-completed-${state.planningUnitId}`, "true");
+      }
+      setState((current) => current.completedSteps.includes(step) ? current : { ...current, completedSteps: [...current.completedSteps, step] });
+    },
   };
 
   if (pathname.startsWith("/investor/onboarding/") && state.isLoading) {
@@ -186,7 +199,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   );
 }
 
-export function useOnboardingStore() {\n  return useOnboardingState();\n}\n\nfunction useOnboardingState() {
+export function useOnboardingStore() {
+  return useOnboardingState();
+}
+
+function useOnboardingState() {
   const context = useContext(OnboardingContext);
   if (!context) throw new Error("useOnboardingState must be used within OnboardingProvider");
   return context;

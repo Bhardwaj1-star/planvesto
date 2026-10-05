@@ -8,7 +8,7 @@ import { validateLiability } from "../../../lib/onboarding/liabilities/validatio
 
 export function useLiabilities() {
   const { liabilities, setLiabilities, saveLiabilities } = useOnboardingStore();
-  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(6);
+  const { completeStep, goNext, goPrevious } = useOnboardingNavigation(7);
   const [draft, setDraft] = useState<Liability>({ id: createLiabilityId(), ...emptyLiability });
   const [editingLiabilityId, setEditingLiabilityId] = useState<string | null>(null);
   const [errors, setErrors] = useState<LiabilityErrors>({});
@@ -31,7 +31,7 @@ export function useLiabilities() {
     event.preventDefault(); setIsSubmitted(true); const liabilityErrors = liabilities.map((liability) => validateLiability(liability)); const invalidIndex = liabilityErrors.findIndex((e) => Object.keys(e).length > 0);
     if (invalidIndex >= 0) { setEditingLiabilityId(liabilities[invalidIndex].id); setDraft(liabilities[invalidIndex]); setErrors(liabilityErrors[invalidIndex]); return; }
     try { const data = await saveLiabilities(liabilities); setLiabilities(data.liabilities); } catch { return; }
-    setIsComplete(true); completeStep(6); goNext(); window.scrollTo({ top: 0, behavior: "smooth" });
+    setIsComplete(true); completeStep(7); goNext(); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   return { liabilities, draft, editingLiabilityId, errors, isComplete, startAdding, startEditing, updateDraft, saveLiability, removeLiability, cancelEditing, handleContinue, goPrevious };
 }
