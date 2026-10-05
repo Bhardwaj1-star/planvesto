@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from engines.profile.behavioral import BehavioralRules
-from engines.profile.constraints import ConstraintRules
+from engines.constraints.policy import ConstraintRules
 from engines.profile.identity import build_identity_profile
 from engines.profile.risk import build_risk_profile
 
