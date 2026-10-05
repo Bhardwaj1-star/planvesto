@@ -6,6 +6,7 @@ from models.defined_goal import DefinedGoal
 from models.strategy import StrategyDefinition
 from rules.goals import canonical_goal_priority, canonical_goal_type
 from rules.moneywheel import RULES, canonicalize_metric_key
+from engines.constraints.evaluator import FinancialRatioConstraintEvaluator
 
 
 class DecisionRole(str, Enum):
@@ -245,44 +246,17 @@ class RuleEngine:
         hard: list[RuleResult] = []
         soft: list[RuleResult] = []
 
-        if goal.duration_years <= 0:
+        # Constraint policy is owned by engines.constraints; RuleEngine only
+        # exposes the result for backward-compatible RuleAssessment consumers.
+        for check in FinancialRatioConstraintEvaluator.evaluate_goal_constraints(goal):
             hard.append(RuleResult(
-                "goal-positive-horizon",
-                False,
-                "hard",
-                "Goal horizon must be positive.",
-                {"duration_years": goal.duration_years},
+                check.rule_id,
+                check.passed,
+                check.severity,
+                check.message,
+                dict(check.ratio_evidence),
                 role=DecisionRole.HARD_CONSTRAINT,
             ))
-        else:
-            diagnostics.append(RuleResult(
-                "goal-positive-horizon",
-                True,
-                "diagnostic",
-                "Goal horizon is valid.",
-                {"duration_years": goal.duration_years},
-                role=DecisionRole.EXPLANATORY_EVIDENCE,
-            ))
-
-        if goal.future_target <= 0:
-            hard.append(RuleResult(
-                "goal-positive-target",
-                False,
-                "hard",
-                "Goal target must be positive.",
-                {"future_target": goal.future_target},
-                role=DecisionRole.HARD_CONSTRAINT,
-            ))
-        else:
-            diagnostics.append(RuleResult(
-                "goal-positive-target",
-                True,
-                "diagnostic",
-                "Goal target is valid.",
-                {"future_target": goal.future_target},
-                role=DecisionRole.EXPLANATORY_EVIDENCE,
-            ))
-
         if goal.priority.strip().lower() in {"critical", "high"}:
             soft.append(RuleResult(
                 "priority-sensitive",
