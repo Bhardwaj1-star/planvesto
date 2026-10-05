@@ -1,6 +1,6 @@
 # Planvesto Financial Planning Layer Map
 
-This document defines the current domain/layer boundaries for Planvesto's financial-planning system. It is based on the implemented onboarding, FinancialState, budgeting, MoneyWheel, constraints, goal, goal-basket, strategy, planning orchestration, multi-goal allocation, action-plan, replanning, financial memory, and reporting flows.
+This document defines the current domain/layer boundaries for Planvesto's financial-planning system. The layer map is anchored to the implemented frontend and backend code. The reference model for this map is the layer structure represented by this document; other documentation is not used as evidence for the code audit.
 
 ## Layer Map
 
@@ -12,7 +12,7 @@ This document defines the current domain/layer boundaries for Planvesto's financ
 | 4 | Financial Health | Financial-condition assessment layer | Assess financial strengths, weaknesses, risks, and conditions | Current FinancialState + canonical metrics |
 | 5 | MoneyWheel | Financial diagnostic framework | Measure financial health through canonical ratios and coverage rules | Current FinancialState + canonical calculation layer |
 | 6 | Constraints / Rules | Decision-control layer | Identify financial limits, warnings, and hard constraints | FinancialState + canonical metrics + rule/threshold definitions |
-| 7 | Investor Profile / Risk | Customer suitability and preference layer | Capture risk information, preferences, priorities, and constraints for decisions | Investor profile + risk evidence + priorities |
+| 7 | Investor Profile / Risk | Customer suitability, risk, behavioral, identity, and preference context layer | Build the decision context used by downstream planning | Investor profile + RiskProfile + behavioral evidence + identity evidence + priorities |
 | 8 | Budgeting | Cash-flow control layer | Set budget limits and compare actual spending against budget | Expenses + liabilities + budget_limits |
 | 9 | Goal Planner | Individual-goal planning layer | Define goals, calculate requirements, funding gap/contribution, and feasibility | Customer goals + DefinedGoal inputs + FinancialState + mapped assets |
 | 10 | Goal Basket | Logical goal-grouping layer | Group existing goals together for combined planning and reporting | Existing goals + GoalBasket definition |
@@ -28,11 +28,23 @@ This document defines the current domain/layer boundaries for Planvesto's financ
 | 20 | Financial Memory / Investor Diary | User-authored financial context layer | Persist financial notes and decision context so important reasoning/context remains available across planning cycles | DiaryEntry + FinancialDecision |
 | 21 | Dashboard / Reports / History | Presentation and historical-review layer | Present consolidated outputs and expose goal/strategy history and reporting views | Canonical downstream outputs + historical records |
 
+## Code-Verified Layer Boundaries
+
+- FinancialState != FinancialHealth != MoneyWheel != Constraints.
+- Investor Profile / Risk is a composite decision-context layer. The backend has ProfileEngine/ProfileService, a dedicated RiskProfilerEngine with RiskProfile and the dimensions risk_required, risk_capacity, and risk_tolerance, plus behavioral and identity profile components.
+- Behavioral Profile is implemented as an internal component of the profile/risk context through engines/profile/behavioral.py and BehavioralRules; it is not a separate top-level layer.
+- Suitability is not a separate completed layer. SuitabilityEngine exists as a rules-ready assessment boundary, but the code does not expose a separate end-to-end suitability planning workflow comparable to the 21 layers.
+- Investment Engine is not a separate top-level layer yet. engines/investment/engine.py and its models exist, but the current frontend/backend surface does not establish an independent end-to-end investment-planning layer with its own user workflow/API authority.
+- Insurance / Protection is not a separate top-level layer. Insurance has onboarding data/model/API and policy-PDF extraction, but it currently participates as financial input/protection context rather than an independent planning workflow.
+- Scenario Planning is part of Strategy Builder / StrategyRun. Strategy scenario UI and backend scenario logic exist, but do not constitute a separate domain layer.
+- Goal Feasibility is part of Goal Planner. The frontend has a dedicated feasibility view, while the backend goal engine owns the calculations.
+- Reports are part of Dashboard / Reports / History. Goal reports, basket reports, summary reports, and the complete-plan renderer are reporting outputs rather than independent planning layers.
+- PlanningUnit is a root planning context/entity, not a user-facing computational layer.
+- Strategy techniques/components are internal strategy mechanisms, not separate top-level layers.
+- Decision/audit trace is a cross-cutting governance concern around execution/history, not a separate planning layer.
+
 ## Responsibility Boundaries
 
-The following concepts are intentionally distinct:
-
-- **FinancialState != FinancialHealth != MoneyWheel != Constraints**
 - FinancialState is the authoritative current financial position.
 - Financial Health is an assessment of that position.
 - MoneyWheel is the diagnostic framework built from canonical financial metrics and coverage rules.
@@ -45,14 +57,13 @@ The following concepts are intentionally distinct:
 - Multi-Goal Planning coordinates cross-goal decisions; Resource Allocation performs the concrete allocation calculation.
 - Complete Financial Plan consolidates domain outputs; it does not own the underlying canonical calculations or strategy identity.
 - Action Plan executes an approved current strategy; execution updates the authoritative financial state for the next planning cycle.
-- **Financial Memory / Investor Diary stores user-authored notes and decision context; it is not an authoritative FinancialState, strategy authority, or calculated financial-history substitute.**
+- Financial Memory / Investor Diary stores user-authored notes and decision context; it is not an authoritative FinancialState, strategy authority, or calculated financial-history substitute.
 - Dashboard / Reports / History presents and reviews canonical outputs; it does not become the owner of those outputs.
 
 ## High-Level Data Flow
 
-The Financial Memory / Investor Diary is a review/context layer rather than a mandatory computational step, so it is shown as cross-cutting around the planning cycle:
+Financial Memory / Investor Diary is a review/context layer rather than a mandatory computational step, so it is shown as cross-cutting around the planning cycle:
 
-```text
 Customer Inputs
     ↓
 Financial State
@@ -89,20 +100,38 @@ Updated Financial State
 Financial Memory / Investor Diary
     ↕
 Planning and review cycles
-```
 
-## Implementation Note
+## Frontend / Backend Implementation Evidence
 
-The following are confirmed implemented code components represented in this map:
+- Onboarding: frontend onboarding routes cover personal information, family/dependents, income, expenses, assets, insurance, liabilities, and goals.
+- Financial State: financial_state API/service/model/engine provide the authoritative current-state path.
+- Calculations: engines/calculation/canonical.py and the calculation engine provide canonical measures consumed downstream.
+- MoneyWheel: dedicated frontend page plus backend API/service/engine.
+- Constraints: dedicated constraint engine with evaluator, aggregator, adapters, and models.
+- Profile / Risk: ProfileEngine, ProfileService, /api/profile, engines/risk_profiler/, RiskProfile, and profile history/latest APIs.
+- Budgeting: dedicated frontend investor budgeting page and budget persistence/API/types.
+- Goal Planner: goal frontend routes, goal API/service/model, and goal engines including target, funding-gap, asset-projection, and specialized calculations.
+- Goal Basket: GoalBasket model, service, engine, API, and basket reporting.
+- Strategy Builder / StrategyRun: strategy frontend routes plus strategy service/API and strategy engines for applicability, eligibility, composition, comparison, decision, ranking, recommendation, and scenarios.
+- Strategy Version / Primary Strategy: StrategyVersion model/service/API plus PrimaryStrategyState and its repository/persistence.
+- Planning Orchestration: orchestration frontend/backend context and service/API.
+- Multi-Goal Planning: multi-goal planning service plus allocation/rules integration.
+- Resource Allocation: ResourceAllocationEngine and allocation result models.
+- Complete Financial Plan: FinancialPlanService and summary/report rendering surface.
+- Action Plan / Execution: action-plan frontend/API/service/model plus impact engine and completion/update flow.
+- Replanning: implemented through goal/profile/financial-state changes feeding downstream recalculation and strategy context.
+- Financial Memory / Investor Diary: frontend /investor/diary, backend diary API/service/repository/model/schema, plus DiaryEntry and FinancialDecision.
+- Dashboard / Reports / History: dashboard, reports, goal-history, and strategy-history frontend routes with corresponding backend reporting services/APIs.
 
-- **Budgeting:** investor budgeting UI, budget API/types, and `budget_limits` persistence.
-- **Goal Basket:** GoalBasket model, GoalBasketService, GoalBasketEngine, dedicated API, and basket-report flow.
-- **StrategyRun:** persistent strategy evaluation/run entity and strategy API.
-- **PrimaryStrategyState:** canonical current-primary strategy pointer and repository/API surface.
-- **Planning Orchestration:** PlanningOrchestrationService, PlanningOrchestrationContext, and orchestration API.
-- **Resource Allocation:** ResourceAllocationEngine and ConsolidatedAllocationResult.
-- **Financial Memory / Investor Diary:** `/investor/diary` UI, `backend/api/diary.py`, DiaryService, frontend diary API/types, DiaryEntry, and FinancialDecision; the UI explicitly labels this capability as a "Memory Layer".
+## Code-Audit Conclusion
 
-The architecture intends canonical calculations and centralized constraint evaluation. Current repository audits identify duplicated constraint thresholds/calculations in some areas (including the constraint evaluator/rules and FinancialPlanService), so this document describes the current domain boundaries while explicitly acknowledging those remaining implementation conflicts.
+Using only the frontend and backend folders as implementation evidence, the current architecture has 21 top-level layers.
 
-Behavioral Profile remains intentionally outside this layer map as a separate layer: documentation defines the concept, but the repository audit did not find a dedicated canonical BehavioralProfile implementation comparable to the implemented layers above.
+No additional candidate was found that satisfies all three conditions for a separate top-level layer:
+1. a distinct domain responsibility,
+2. a distinct implemented backend capability, and
+3. a distinct frontend/end-user workflow or authoritative system surface.
+
+The main candidates that fail this test are Investment Engine, Suitability, Insurance/Protection, Behavioral Profile, Scenario Planning, Goal Feasibility, Reports, PlanningUnit, Strategy Techniques, and Decision/Audit Trace. They are implemented components or sub-capabilities, but not additional top-level layers.
+
+This conclusion is intentionally code-first and does not infer a layer merely from a folder, class, route, or documentation concept in isolation.
