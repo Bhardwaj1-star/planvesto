@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from rules.constraints import PRIORITY_RANKS
+from engines.constraints.policy import PRIORITY_RANKS, can_discretionary_preempt_essential
 from rules.goals import GoalPriority, canonical_goal_priority, is_discretionary_goal, is_essential_goal
 
 # Canonical multi-goal status vocabularies. Allocation and orchestration share these.
