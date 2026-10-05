@@ -145,7 +145,7 @@ def test_rule_driven_allocation_override_and_traceability(orchestrator):
         GoalEvaluationInput(
             goal_id="luxury_trip",
             goal_name="Luxury World Tour",
-            goal_type="travel",
+            goal_type="vacation",
             client_priority="critical",
             target_date="2026-12",
             required_monthly_contribution=25000.0,
