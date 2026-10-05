@@ -76,7 +76,7 @@ CANONICAL_RULES: Final[dict[str, CanonicalRule]] = {
         "Goal Positive Horizon",
         RuleScope.GOAL,
         RuleRole.HARD_CONSTRAINT,
-        "engines.rules.engine",
+        "engines.constraints.evaluator",
         "Goal duration must be positive.",
     ),
     "goal-positive-target": _rule(
@@ -84,7 +84,7 @@ CANONICAL_RULES: Final[dict[str, CanonicalRule]] = {
         "Goal Positive Target",
         RuleScope.GOAL,
         RuleRole.HARD_CONSTRAINT,
-        "engines.rules.engine",
+        "engines.constraints.evaluator",
         "Goal future target must be positive.",
     ),
 
@@ -276,7 +276,7 @@ CANONICAL_RULES: Final[dict[str, CanonicalRule]] = {
         "Discretionary Cannot Preempt Essential",
         RuleScope.CONSTRAINT,
         RuleRole.HARD_CONSTRAINT,
-        "rules.multi_goal",
+        "engines.constraints.policy",
         "Discretionary commitments must not preempt essential or safety-reserve funding.",
     ),
 
