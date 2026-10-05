@@ -53,12 +53,13 @@ The SummaryReport engine contains lightweight rule-based observation/action gene
 
 ## Canonical Report Types
 
-The current implementation exposes three investor-facing report surfaces. They operate at different planning scopes and must not be treated as interchangeable.
+The current implementation exposes four distinct investor-facing report surfaces. Multi-Goal Planning is not counted as a report; it is the orchestration/planning layer consumed by the Complete Financial Plan. They operate at different planning scopes and must not be treated as interchangeable.
 
 | Report | Scope | Primary Source / Service | Purpose |
 |---|---|---|---|
 | **Goal Report** | Single goal + its selected strategy decision | `backend/services/goal_report_service.py` | Explain one goal's funding position, financial context, selected strategy/scenario, alternatives, what-if scenarios, trade-offs, product architecture, contribution rules, action timeline and contingency context. |
 | **Goal Basket Report** | A client-defined grouping of existing goals | `backend/services/basket_report_service.py` | Produce a basket-level presentation across selected goals, including priority laddering, shared contribution architecture, consolidated cash-flow trajectory, basket product architecture, timeline and contingency matrix. |
+| **Complete Financial Plan** | Entire planning unit + all goals | `backend/services/financial_plan_service.py` | Build one consolidated plan from the Multi-Goal Planning result, including financial state, consolidated funding, resource allocation, goal plans, strategy versions, constraints, cash-flow trajectory, MoneyWheel health scan, contingency and governance outputs. |
 | **Summary Financial Planning Report** | Planning-unit / investor-level | `backend/services/summary_report_service.py` + `backend/engines/summary_report/engine.py` | Aggregate the overall financial snapshot, MoneyWheel/financial health context, risk profile, goals, investment output, observations and action items into one investor-facing summary. |
 
 ## Goal Basket vs Multi-Goal Planning
@@ -109,6 +110,41 @@ Therefore:
 
 They may operate on the same set of goals, but the current code gives them different responsibilities.
 
+## Multi-Goal Planning vs Complete Financial Plan
+
+These are also **different code concepts in the current repository**.
+
+### Multi-Goal Planning
+
+Multi-Goal Planning is the underlying planning/orchestration layer.
+
+Code:
+- `backend/services/multi_goal_planning_service.py`
+- `backend/engines/orchestration/engine.py`
+- `backend/rules/multi_goal.py`
+- `backend/schemas/multi_goal_planning.py`
+- `backend/api/orchestration.py`
+
+Its canonical output is `MultiGoalPlanResult`. It resolves priorities, evaluates shared-resource competition, allocates available monthly surplus through `ResourceAllocationEngine`, and returns per-goal resolutions, funding status, shortfalls, trade-offs and audit data.
+
+### Complete Financial Plan
+
+Complete Financial Plan is a consolidated planning/report output built **on top of** Multi-Goal Planning.
+
+Code:
+- `backend/services/financial_plan_service.py`
+- `backend/api/strategy.py`
+
+`FinancialPlanService.build_plan()` calls `MultiGoalPlanningService.build_multi_goal_plan()` and then composes a broader `complete_financial_plan` response containing financial state, consolidated funding, resource allocation, goal plans, strategy versions, constraints, constraint conflicts, cash-flow trajectory, MoneyWheel health scan, contingency matrix, governance protocol and audit trail.
+
+Therefore:
+
+**Multi-Goal Planning = planning/orchestration engine.**
+
+**Complete Financial Plan = consolidated financial-plan output/report built from that planning result.**
+
+Multi-Goal Planning should not be counted as a fifth report type.
+
 ## Report Relationships
 
 **Defined Goal → Goal Report**  
@@ -118,7 +154,10 @@ Explains the complete decision context for one goal.
 Presents the grouped basket-level view.
 
 **Multiple Goals → Multi-Goal Planning / Orchestration**  
-Resolves shared-resource competition and contribution allocation across goals. Its canonical output is `MultiGoalPlanResult`, exposed through `backend/api/orchestration.py`; it is not the same object as `GoalBasketSummary`.
+Resolves shared-resource competition and contribution allocation across goals. Its canonical output is `MultiGoalPlanResult`, exposed through `backend/api/orchestration.py`; it is not a report surface and is not the same object as `GoalBasketSummary`.
+
+**Multiple Goals + Multi-Goal Planning → Complete Financial Plan**  
+`FinancialPlanService` composes the orchestration result into the consolidated `complete_financial_plan` output.
 
 **Planning Unit → Summary Financial Planning Report**  
 Aggregates the broader investor-level financial and planning picture.
@@ -129,6 +168,7 @@ Aggregates the broader investor-level financial and planning picture.
 - **Goal Basket:** `backend/services/goal_basket_service.py`, `backend/api/goal_basket.py`
 - **Goal Basket Report:** `backend/services/basket_report_service.py`, `backend/api/basket_report.py`
 - **Multi-Goal Planning:** `backend/services/multi_goal_planning_service.py`, `backend/engines/orchestration/engine.py`, `backend/api/orchestration.py`
+- **Complete Financial Plan:** `backend/services/financial_plan_service.py`, `backend/api/strategy.py` (`/financial-plan/build`, `/financial-plan`, `/financial-plan.pdf`)
 - **Summary Financial Planning Report:** `backend/services/summary_report_service.py`, `backend/engines/summary_report/engine.py`, `backend/api/summary_report.py`
 - **Investor reports UI:** `frontend/app/investor/reports/page.tsx`
 
@@ -138,5 +178,6 @@ Aggregates the broader investor-level financial and planning picture.
 |---|---|---|
 | Individual Goal | `DefinedGoal` + selected Strategy Version / scenario | Goal Report |
 | Goal Basket | `GoalBasket` / `GoalBasketSummary` | Goal Basket Report |
-| Multi-Goal Planning | `MultiGoalPlanResult` | Multi-Goal Planning / Orchestration output |
+| Multi-Goal Planning | `MultiGoalPlanResult` | Planning/orchestration output — not a report |
+| Complete Financial Plan | `complete_financial_plan` | Complete Financial Plan |
 | Investor / Planning Unit | Financial State + MoneyWheel + Risk + Goals + Actions | Summary Financial Planning Report |
