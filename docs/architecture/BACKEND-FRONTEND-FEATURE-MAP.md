@@ -68,6 +68,7 @@ Supabase / persistence
 | backend/services/goal_service.py | Goal lifecycle/business operations |
 | backend/services/strategy_service.py | Strategy workflow and constraint/rule coordination |
 | backend/services/strategy_edit_service.py | Strategy editing and version operations |
+| backend/services/strategy_service.py | Builds the authoritative ConstraintSet and coordinates StrategyEngine inputs |
 | backend/services/multi_goal_planning_service.py | Multi-goal planning; consumes canonical ConstraintSet |
 | backend/services/goal_report_service.py | Goal report construction |
 | backend/services/financial_plan_service.py | Financial-plan workflow orchestration |
@@ -112,15 +113,16 @@ Canonical flow:
 \`\`\`
 Domain facts / evidence
       ↓
-constraints/policy.py
-      ↓
-constraints/evaluator.py
+Rules / Domain Evaluators
       ↓
 constraints/adapters.py
       ↓
 constraints/aggregator.py
       ↓
 Canonical ConstraintSet
+
+constraints/policy.py provides the authoritative IDs, thresholds and policy semantics
+used by evaluators/adapters/consumers; it is not a sequential processing stage.
       ↓
 Strategy / Multi-goal / downstream consumers
 \`\`\`
@@ -162,7 +164,8 @@ Risk/Profile engines produce domain evidence; canonical decision normalization h
 
 | File/folder | Responsibility | Features |
 |---|---|---|
-| backend/engines/strategy/engine.py | Strategy workflow coordinator | Strategy |
+| backend/engines/strategy/engine.py | Strategy workflow coordinator; consumes canonical ConstraintSet | Strategy |
+| backend/services/strategy_service.py | Builds authoritative ConstraintSet from rule, ratio, risk and strategy-domain outputs | Strategy |
 | backend/engines/strategy/applicability.py | Strategy applicability filtering | Strategy |
 | backend/engines/strategy/eligibility.py | Strategy eligibility | Strategy |
 | backend/engines/strategy/scenario.py | Baseline and what-if scenarios | Strategy Scenarios |
