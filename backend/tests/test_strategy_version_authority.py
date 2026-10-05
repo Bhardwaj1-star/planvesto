@@ -241,7 +241,7 @@ def test_finalization_persists_goal_bound_strategy_snapshot_and_selects_it(monke
         goal_id="goal-1",
         version=2,
         is_latest=True,
-        goal_type="Education",
+        goal_type="education",
         goal_name="Education",
         today_cost=1000,
         inflation_rate=0.05,
