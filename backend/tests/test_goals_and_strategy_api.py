@@ -15,7 +15,7 @@ class TestGoalsAndStrategyAPIRoutes:
         payload = {
             "planning_unit_id": "test-pu-123",
             "goal_name": "Vacation",
-            "goal_type": "Travel",
+            "goal_type": "Vacation",
             "today_cost": 200000.0,
             "target_month": 12,
             "target_year": 2027,
