@@ -1,27 +1,21 @@
-"""Authoritative constraint definitions and policy thresholds."""
-from __future__ import annotations
+"""Backward-compatible facade for the canonical constraint policy.
 
-# Canonical priority ordering used across multi-goal planning.
-PRIORITY_RANKS: dict[str, int] = {
-    "critical": 0,
-    "high": 1,
-    "medium": 2,
-    "low": 3,
-}
+Constraint policy is owned by engines.constraints.policy.  New code must
+import from that module; this facade exists only for legacy callers.
+"""
+from engines.constraints.policy import (
+    PRIORITY_RANKS,
+    RULE_EMERGENCY_RESERVE_CRITICAL,
+    WARN_EMERGENCY_RESERVE_ATTENTION,
+    RULE_DEBT_BURDEN_EXCEEDED,
+    WARN_DEBT_BURDEN_ATTENTION,
+    WARN_SAVINGS_RATE_DEFICIT,
+    EMERGENCY_RESERVE_CRITICAL_MONTHS,
+    EMERGENCY_RESERVE_HEALTHY_MONTHS,
+    DEBT_TO_INCOME_EXCELLENT_PERCENT,
+    DEBT_TO_INCOME_CRITICAL_PERCENT,
+    DEBT_TO_INCOME_HEALTHY_PERCENT,
+    SAVINGS_RATIO_HEALTHY_PERCENT,
+)
 
-# Rule IDs
-RULE_EMERGENCY_RESERVE_CRITICAL = "RULE_EMERGENCY_RESERVE_CRITICAL"
-WARN_EMERGENCY_RESERVE_ATTENTION = "WARN_EMERGENCY_RESERVE_ATTENTION"
-RULE_DEBT_BURDEN_EXCEEDED = "RULE_DEBT_BURDEN_EXCEEDED"
-WARN_DEBT_BURDEN_ATTENTION = "WARN_DEBT_BURDEN_ATTENTION"
-WARN_SAVINGS_RATE_DEFICIT = "WARN_SAVINGS_RATE_DEFICIT"
-
-# Thresholds (aligned with canonical Moneywheel ratios)
-EMERGENCY_RESERVE_CRITICAL_MONTHS: float = 3.0
-EMERGENCY_RESERVE_HEALTHY_MONTHS: float = 6.0
-
-DEBT_TO_INCOME_EXCELLENT_PERCENT: float = 20.0
-DEBT_TO_INCOME_CRITICAL_PERCENT: float = 40.0
-DEBT_TO_INCOME_HEALTHY_PERCENT: float = 30.0
-
-SAVINGS_RATIO_HEALTHY_PERCENT: float = 20.0
+__all__ = [name for name in globals() if name.isupper()]
