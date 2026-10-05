@@ -78,14 +78,54 @@ Service layer should orchestrate engines, not create competing financial or cons
 
 ## 4. Financial State and Calculation
 
-| File/folder | Responsibility | Features |
-|---|---|---|
-| backend/engines/financial_state/engine.py | Canonical financial-state construction/derivation | Financial State |
-| backend/engines/calculation/canonical.py | Deterministic financial calculations and ratios | Financial State, MoneyWheel, Risk, Strategy |
-| backend/engines/moneywheel/engine.py | MoneyWheel ratio/rule calculations | MoneyWheel |
-| backend/rules/moneywheel.py | MoneyWheel metric definitions, formulas and classification bands | MoneyWheel / diagnostics |
+Calculation is a distinct backend layer and should not be collapsed into the Constraint layer. The canonical shared-math owner is `backend/engines/calculation/canonical.py`; domain-specific calculations sit in their domain engines.
 
-Ownership rule: calculation modules produce facts/metrics; constraint policy belongs in the constraints layer.
+### Calculation infrastructure
+
+| File | Responsibility | Main outputs / calculations | Frontend features |
+|---|---|---|---|
+| backend/engines/calculation/canonical.py | **Canonical owner of shared financial mathematics and derived facts** | Cash-flow ratio, savings rate, liquid-asset ratio, expense coverage, emergency coverage, DTI, leverage, financial-asset ratio, insurance coverage, goal funding ratio, future funding ratio, required return / risk-required, portfolio concentration, future goal target, funding gap, required monthly contribution | Financial State, MoneyWheel, Goal Planner, Risk, Strategy |
+| backend/engines/calculation/engine.py | Calculation utilities | `round_money`, monthly/annual frequency conversion, percentage helper | Shared backend utility |
+| backend/engines/calculation/__init__.py | Public calculation API | Exposes canonical calculation functions and DerivedFact builders | Internal package boundary |
+| backend/engines/financial_state/engine.py | Builds/derives authoritative current financial state | Aggregated income, expenses, assets, liabilities, surplus and related state facts | Financial State, Dashboard |
+| backend/rules/financial_state.py | Compatibility/domain wrappers around canonical calculations | Financial-state ratios/reserve helpers | Internal compatibility layer |
+| backend/engines/moneywheel/engine.py | Applies canonical calculations to MoneyWheel domain inputs and classifications | Savings, liquidity, coverage, leverage, required return and other MoneyWheel metrics | MoneyWheel |
+| backend/services/moneywheel_service.py | Builds MoneyWheel result from authoritative FinancialState | Server-side calculation workflow | MoneyWheel |
+| backend/api/moneywheel.py | Exposes MoneyWheel calculation endpoint | `POST /api/moneywheel/calculate` | MoneyWheel page |
+
+### Goal-specific calculation layer
+
+| File | Responsibility | Main calculations | Frontend feature |
+|---|---|---|---|
+| backend/engines/goal/target_calculator.py | Goal target/time calculations | Duration, inflation-adjusted future target, retirement corpus, education target | Goal Planner |
+| backend/engines/goal/funding_gap.py | Goal funding calculations | Funding gap, required monthly contribution, weighted funding return assumption | Goal Feasibility |
+| backend/engines/goal/asset_projection.py | Asset projection | Allocated amount/percentage and projected future asset value | Goal Feasibility |
+| backend/engines/goal/specialized.py | Specialized goal mathematics | Retirement corpus, education target and other goal-specific targets | Goal Planner |
+| backend/engines/goal/engine.py | Goal calculation orchestration | Combines target, projection, funding-gap and feasibility calculations into DefinedGoal | Goal Planner |
+
+### Canonical calculation formulas
+
+| Calculation | Canonical function | Formula / meaning |
+|---|---|---|
+| Cash-flow ratio | `calculate_cash_flow_ratio` | Monthly Expenses / Monthly Income × 100 |
+| Savings rate | `calculate_savings_rate` | Monthly Surplus / Monthly Income × 100 |
+| Liquid asset ratio | `calculate_liquid_asset_ratio` | Liquid Assets / Total Assets × 100 |
+| Expense coverage | `calculate_expense_coverage` | Liquid Assets / Monthly Expenses, in months |
+| Emergency coverage | `calculate_emergency_coverage` | Liquid Assets / Essential Monthly Expenses, in months |
+| Debt-to-income | `calculate_debt_to_income_ratio` | Monthly Debt Payments / Gross Monthly Income, optionally × 100 |
+| Leverage | `calculate_leverage_ratio` | Total Liabilities / Total Assets × 100 |
+| Financial asset ratio | `calculate_financial_asset_ratio` | Financial Assets / Total Assets × 100 |
+| Insurance coverage | `calculate_insurance_coverage_ratio` | Existing Sum Assured / Required Insurance Cover × 100 |
+| Goal funding ratio | `calculate_goal_funding_ratio` | Current Goal Funding / Goal Target × 100 |
+| Future funding ratio | `calculate_future_funding_ratio` | Projected Goal Funding / Future Goal Target × 100 |
+| Required return | `calculate_required_rate_of_return` | CAGR needed to grow current funding to future target |
+| Future goal target | `calculate_goal_future_target` | Today Cost × (1 + Inflation)^Years |
+| Goal funding gap | `calculate_goal_funding_gap` | Future Target − Projected Mapped Asset Value |
+| Required monthly contribution | `calculate_required_monthly_contribution` | End-of-month contribution needed to close a positive funding gap |
+
+**Calculation ownership rule:** shared financial mathematics and derived facts belong to `engines/calculation/canonical.py`. Domain engines may orchestrate or add domain-specific mathematics, but they should reuse canonical shared calculations where the same financial fact already exists. Calculation produces facts/metrics; constraint policy and decision effects belong to `engines/constraints`.
+
+**Important distinction:** a calculation being used by a constraint evaluator does not make the calculation itself a constraint. Example: DTI calculation is canonical math; the decision that a DTI level constrains a discretionary goal belongs to `engines/constraints/evaluator.py` + `policy.py`.
 
 ## 5. Goal engine
 
@@ -294,6 +334,11 @@ INVESTOR EXPERIENCE
 │   ├── financial_state_service.py
 │   ├── goal_service.py
 │   └── summary_report/engine.py
+│
+├── Calculation Foundation (shared across features)
+│   ├── engines/calculation/canonical.py
+│   ├── engines/calculation/engine.py
+│   └── feeds Financial State, MoneyWheel, Goals, Risk and Strategy
 │
 ├── Onboarding
 │   ├── Personal Information
