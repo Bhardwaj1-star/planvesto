@@ -125,7 +125,7 @@ def test_critical_debt_to_income_constrains_discretionary_goal(evaluator):
         GoalEvaluationInput(
             goal_id="g_luxury_car",
             goal_name="Sports Car Purchase",
-            goal_type="car",
+            goal_type="vehicle",
             client_priority="high",
             required_monthly_contribution=10000.0,
         )
