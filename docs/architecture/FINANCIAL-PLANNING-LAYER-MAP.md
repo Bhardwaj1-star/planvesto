@@ -4,8 +4,6 @@ This document defines the current domain/layer boundaries for Planvesto's financ
 
 ## Layer Map
 
-## Layer Map
-
 | # | Layer | What it is | Purpose | Primary data source | Canonical / Centralized Data |
 |---|---|---|---|---|---|
 | 1 | Onboarding / Financial Inputs | Customer source-input layer | Collect the customer's financial picture | Personal information, family/dependents, income, expenses, assets, insurance, liabilities, goals | **Yes** — raw financial inputs are persisted in backend source records and are the upstream source data. |
