@@ -156,7 +156,7 @@ def test_informational_warning_without_hard_override(evaluator):
         GoalEvaluationInput(
             goal_id="g_travel",
             goal_name="Annual Holiday",
-            goal_type="travel",
+            goal_type="vacation",
             client_priority="medium",
             required_monthly_contribution=10000.0,
         )
@@ -192,7 +192,7 @@ def test_constraint_messages_use_authoritative_thresholds(evaluator):
         GoalEvaluationInput(
             goal_id="g_travel",
             goal_name="Travel",
-            goal_type="travel",
+            goal_type="vacation",
             client_priority="high",
             required_monthly_contribution=10000.0,
         )
