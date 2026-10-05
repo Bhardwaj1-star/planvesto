@@ -3,6 +3,18 @@ from __future__ import annotations
 
 from typing import Literal
 
+GoalType = Literal[
+    "retirement",
+    "marriage",
+    "vehicle",
+    "dream_home",
+    "education",
+    "vacation",
+    "debt_freedom",
+    "wealth_creation",
+    "fire_passive_income",
+    "others",
+]
 GoalPriority = Literal["critical", "high", "medium", "low"]
 GoalPriorityLevel = GoalPriority
 
