@@ -6,7 +6,7 @@ def _defined_goal() -> DefinedGoal:
     return DefinedGoal(
         goal_id="goal-1",
         planning_unit_id="planning-unit-1",
-        goal_type="Education",
+        goal_type="education",
         goal_name="Education",
         today_cost=100000,
         inflation_rate=0.06,
