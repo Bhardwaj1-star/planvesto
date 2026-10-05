@@ -1,10 +1,14 @@
 from typing import Any
+import logging
 
 from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
+from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
+logger = logging.getLogger(__name__)
+
 from rules.protection import (
     calculate_required_insurance_cover,
     is_health_insurance,
