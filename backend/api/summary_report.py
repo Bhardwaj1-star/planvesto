@@ -17,7 +17,9 @@ def get_summary_report(
     user_id = authenticate_user(authorization)
     verify_planning_unit_ownership(planning_unit_id, user_id)
     report = SummaryReportService.generate(planning_unit_id)
-    return JSONResponse(content=report.dict())
+    return JSONResponse(content=report.model_dump(mode="json"))
+
+
 
 @router.get("/pdf")
 def get_summary_report_pdf(

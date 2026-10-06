@@ -14,6 +14,7 @@ from data.strategy_repository import StrategyRepository
 from services.goal_report_service import GoalReportService
 from rules.multi_goal import get_priority_rank
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
+from report_engine.renderer import CommonPdfRenderer
 
 
 class BasketReportService:
@@ -128,6 +129,7 @@ class BasketReportService:
             "strategy_name": strat.get("selected_strategy_name") or strat.get("name") or "Goal Funding",
             "objective": strat.get("rationale") or strat.get("objective") or "",
             "trade_offs": trade_offs,
+            "variant": r.get("variant"),
         }
 
     @classmethod

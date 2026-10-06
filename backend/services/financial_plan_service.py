@@ -17,6 +17,7 @@ from rules.multi_goal import get_priority_rank
 from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
+from report_engine.renderer import CommonPdfRenderer
 from engines.calculation.canonical import (
     calculate_debt_to_income_ratio,
     calculate_emergency_coverage,

@@ -1,98 +1,90 @@
-from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from reportlab.lib import colors
+from __future__ import annotations
 
+from typing import Any
+from reportlab.platypus import Paragraph, Spacer
 from models.summary_report import SummaryReport
+from report_engine.renderer import CommonPdfRenderer
+
 
 class SummaryReportRenderer:
-    """Render a SummaryReport to PDF.
-    The implementation mirrors the existing GoalReportService PDF output –
-    sections are laid out as simple tables with minimal styling. The goal is
-    to provide a usable PDF without inventing any new business rules.
-    """
+    """Render a SummaryReport to PDF using the unified CommonPdfRenderer."""
 
-    @staticmethod
-    def _table(header: list[str], rows: list[list[str]]) -> Table:
-        data = [header] + rows
-        table = Table(data, colWidths=[120] * len(header))
-        style = TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("PADDING", (0, 0), (-1, -1), 5),
-            ]
-        )
-        table.setStyle(style)
-        return table
+    def __init__(self):
+        self.renderer = CommonPdfRenderer()
 
     def render(self, report: SummaryReport) -> bytes:
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=42, leftMargin=42, topMargin=42, bottomMargin=42)
-        styles = getSampleStyleSheet()
-        story = [
-            Paragraph("Summary Financial Planning Report", styles["Title"]),
-            Spacer(1, 12),
+        story: list[Any] = [
+            Paragraph("Summary Financial Planning Report", self.renderer.title_style),
+            Paragraph("Executive Snapshot & Diagnostic Assessment", self.renderer.h2_style),
+            Paragraph(
+                f"Planning Unit: {report.provenance.get('planning_unit_id') if report.provenance else 'N/A'}",
+                self.renderer.normal,
+            ),
+            Spacer(1, 10),
         ]
 
-        # Financial Snapshot – dump as preformatted JSON string
-        snapshot = report.financial_snapshot
+        # 1. Financial Snapshot
+        snapshot = report.financial_snapshot or {}
         if snapshot:
-            story.append(Paragraph("Financial Snapshot", styles["Heading2"]))
-            story.append(Paragraph(f"<pre>{snapshot}</pre>", styles["BodyText"]))
-            story.append(Spacer(1, 12))
+            self.renderer.add_section_header(story, "1. Family Financial Snapshot")
+            snap_rows = [["Metric", "Value"]]
+            for k, v in snapshot.items():
+                if isinstance(v, (int, float, str)):
+                    snap_rows.append([self.renderer.label_text(k), self.renderer.fmt_value(v, "₹" if isinstance(v, (int, float)) else "")])
+            if len(snap_rows) > 1:
+                story.append(self.renderer.create_table(snap_rows, [220, 303]))
 
-        # Goals
+        # 2. Goals Portfolio
         if report.goals:
-            story.append(Paragraph("Goals", styles["Heading2"]))
-            goal_rows = []
+            self.renderer.add_section_header(story, "2. Goal Portfolio & Funding Status")
+            goal_rows = [["ID", "Goal Name", "Target Amount", "Horizon", "Current Funding", "Net Gap", "Status"]]
             for g in report.goals:
                 goal_rows.append([
-                    str(g.id),
-                    g.name,
-                    f"{g.target_amount:.2f} {g.currency}",
-                    f"{g.horizon_years:.1f} yr",
-                    f"{g.current_funding:.2f}",
-                    f"{g.funding_gap:.2f}",
-                    g.feasibility,
+                    Paragraph(str(g.id), self.renderer.normal),
+                    Paragraph(str(g.name), self.renderer.normal),
+                    self.renderer.fmt_value(g.target_amount, "₹"),
+                    f"{g.horizon_years:.1f} Yrs",
+                    self.renderer.fmt_value(g.current_funding, "₹"),
+                    self.renderer.fmt_value(g.funding_gap, "₹"),
+                    self.renderer.label_text(g.feasibility),
                 ])
-            header = ["ID", "Name", "Target", "Horizon", "Funding", "Gap", "Feasibility"]
-            story.append(self._table(header, goal_rows))
-            story.append(Spacer(1, 12))
+            story.append(self.renderer.create_table(goal_rows, [60, 110, 85, 55, 80, 80, 53]))
 
-        # Observations
+        # 3. Observations
         if report.observations:
-            story.append(Paragraph("Observations", styles["Heading2"]))
-            obs_rows = [[obs.source, f"{obs.relevance:.2f}", obs.description] for obs in report.observations]
-            story.append(self._table(["Source", "Relevance", "Description"], obs_rows))
-            story.append(Spacer(1, 12))
+            self.renderer.add_section_header(story, "3. Diagnostic Observations & Health Scan")
+            obs_rows = [["Source", "Relevance", "Diagnostic Observation"]]
+            for obs in report.observations:
+                obs_rows.append([
+                    str(obs.source),
+                    f"{obs.relevance:.2f}",
+                    Paragraph(str(obs.description), self.renderer.normal),
+                ])
+            story.append(self.renderer.create_table(obs_rows, [90, 70, 363]))
 
-        # Actions
+        # 4. Actions
         if report.actions:
-            story.append(Paragraph("Recommended Actions", styles["Heading2"]))
-            act_rows = [[act.source, f"{act.priority:.2f}", act.description] for act in report.actions]
-            story.append(self._table(["Source", "Priority", "Description"], act_rows))
-            story.append(Spacer(1, 12))
+            self.renderer.add_section_header(story, "4. Recommended Prioritized Actions")
+            act_rows = [["Source", "Priority", "Recommended Action Step"]]
+            for act in report.actions:
+                act_rows.append([
+                    str(act.source),
+                    f"{act.priority:.2f}",
+                    Paragraph(str(act.description), self.renderer.normal),
+                ])
+            story.append(self.renderer.create_table(act_rows, [90, 70, 363]))
 
-        # Investment Allocation (if present)
-        if report.investment_allocation:
-            story.append(Paragraph("Investment Allocation", styles["Heading2"]))
-            # Simple key/value rendering
-            rows = [[k, str(v)] for k, v in report.investment_allocation.items()]
-            story.append(self._table(["Key", "Value"], rows))
-            story.append(Spacer(1, 12))
-
-        # Risk Profile (if present)
+        # 5. Risk Profile
         if report.risk_profile:
-            story.append(Paragraph("Risk Profile", styles["Heading2"]))
-            rows = []
-            for key, val in report.risk_profile.items():
-                rows.append([str(key), str(val)])
-            story.append(self._table(["Metric", "Value"], rows))
-            story.append(Spacer(1, 12))
+            self.renderer.add_section_header(story, "5. Risk Capacity & Boundary Profile")
+            risk_rows = [["Dimension / Metric", "Value / Assessment"]]
+            for k, val in report.risk_profile.items():
+                if isinstance(val, dict):
+                    v_str = str(val.get("value") or val.get("status") or val.get("score") or "Configured")
+                else:
+                    v_str = str(val)
+                risk_rows.append([self.renderer.label_text(k), v_str])
+            if len(risk_rows) > 1:
+                story.append(self.renderer.create_table(risk_rows, [220, 303]))
 
-        doc.build(story)
-        return buffer.getvalue()
+        return self.renderer.build_document(story)

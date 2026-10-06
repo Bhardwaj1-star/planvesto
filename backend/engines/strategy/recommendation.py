@@ -9,6 +9,7 @@ from models.strategy import (
     StrategyRecommendation,
 )
 from engines.strategy.decision import DecisionResult, evaluate_decision
+from engines.strategy.variant_selector import VariantSelector
 
 
 def generate_recommendation(
@@ -129,9 +130,32 @@ def generate_recommendation(
     if critical_notes:
         complete_reasoning += " Financial-state considerations: " + " ".join(critical_notes)
 
+    variant_id = None
+    variant_details = {}
+    if decision_result.recommended_strategy_id and defined_goal:
+        try:
+            baseline_scen = next((s for s in scenarios if s.scenario_id == decision_result.recommended_scenario_id), None)
+            var_def = VariantSelector.select_variant(
+                strategy_id=decision_result.recommended_strategy_id,
+                goal=defined_goal,
+                financial_context=financial_context,
+                baseline_scenario=baseline_scen,
+            )
+            variant_id = var_def.variant_id
+            variant_details = {
+                "variant_id": var_def.variant_id,
+                "name": var_def.name,
+                "description": var_def.description,
+                "variant_type": var_def.variant_type,
+            }
+        except Exception:
+            pass
+
     return StrategyRecommendation(
         recommended_strategy_id=decision_result.recommended_strategy_id,
         recommended_scenario_id=decision_result.recommended_scenario_id,
+        recommended_variant_id=variant_id,
+        variant_details=variant_details,
         short_reasons=short_reasons,
         complete_reasoning=complete_reasoning,
         architecture=arch,

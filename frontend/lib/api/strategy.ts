@@ -282,3 +282,7 @@ export function buildCompleteFinancialPlan(planningUnitId: string, priorities?: 
 export function downloadCompleteFinancialPlanPdf(planningUnitId: string): Promise<Blob> {
   return apiRequestBlob(`/api/strategy/financial-plan.pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
 }
+
+export function downloadSummaryReportPdf(planningUnitId: string): Promise<Blob> {
+  return apiRequestBlob(`/api/summary-report/pdf?planning_unit_id=${encodeURIComponent(planningUnitId)}`);
+}

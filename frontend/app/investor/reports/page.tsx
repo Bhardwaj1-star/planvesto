@@ -10,6 +10,7 @@ import {
   downloadGoalStrategyReportPdfByStrategyVersion,
   downloadCompleteFinancialPlanPdf,
   downloadBasketReportPdf,
+  downloadSummaryReportPdf,
 } from "../../../lib/api/strategy";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 
@@ -102,6 +103,13 @@ export default function ReportsPage() {
       available: Boolean(selectedVersion?.strategy_version_id),
       reason: "Finalize the implementation for this goal first.",
     },
+    {
+      id: "summary-planning-report",
+      title: "Summary Planning Report",
+      description: "Executive high-level snapshot aggregating portfolio goals, MoneyWheel health scan, and priority action items.",
+      available: true,
+      reason: "",
+    },
   ];
 
   async function download() {
@@ -117,6 +125,9 @@ export default function ReportsPage() {
       if (selectedReport === "complete-financial-plan") {
         blob = await downloadCompleteFinancialPlanPdf(planningUnitId);
         filename = "complete-financial-plan.pdf";
+      } else if (selectedReport === "summary-planning-report") {
+        blob = await downloadSummaryReportPdf(planningUnitId);
+        filename = "summary-planning-report.pdf";
       } else if (selectedReport === "basket-goal-report") {
         const basket = baskets.find((b) => b.id === selectedBasketId);
         const goalIds = basket ? basket.goalIds : (customBasketGoalIds.length >= 2 ? customBasketGoalIds : goals.slice(0, 3).map((g) => g.id));

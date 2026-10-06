@@ -161,6 +161,8 @@ class StrategyRankingItem(BaseModel):
 class StrategyRecommendation(BaseModel):
     recommended_strategy_id: str
     recommended_scenario_id: str
+    recommended_variant_id: str | None = None
+    variant_details: dict[str, Any] = Field(default_factory=dict)
     short_reasons: list[str] = Field(default_factory=list)
     complete_reasoning: str = ""
     architecture: StrategyArchitecture | None = None
@@ -188,6 +190,7 @@ class StrategyRun(BaseModel):
     architectures: list[StrategyArchitecture] = Field(default_factory=list)
     selected_strategy_id: str | None = None
     selected_scenario_id: str | None = None
+    selected_variant_id: str | None = None
     selected_strategy_version_id: str | None = None
     selected_strategy_version: int | None = None
     selected_implementation_parameters: dict[str, Any] = Field(default_factory=dict)
