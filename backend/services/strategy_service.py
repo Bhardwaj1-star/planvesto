@@ -500,6 +500,12 @@ class StrategyService:
                     "rankings",
                     "recommendation",
                     "architectures",
+                    "selected_strategy_id",
+                    "selected_scenario_id",
+                    "selected_strategy_version_id",
+                    "selected_strategy_version",
+                    "selected_implementation_parameters",
+                    "selected_architecture",
                 }
             ),
             applicable_strategies=result.applicable_strategies,
