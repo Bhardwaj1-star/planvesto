@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { downloadGoalStrategyReportPdfByStrategyVersion, getPlanningUnitId } from "../../../lib/api/strategy";
 
-export default function GoalReportPage() {
+function GoalReportContent() {
   const searchParams = useSearchParams();
   const strategyVersionId = searchParams.get("strategyVersionId");
   const goalId = searchParams.get("goalId");
@@ -78,5 +78,27 @@ export default function GoalReportPage() {
         )}
       </div>
     </main>
+  );
+
+function GoalReportFallback() {
+  return (
+    <main className="min-h-screen bg-[#f6f8fb] pb-10 text-slate-900">
+      <InvestorHeader
+        eyebrow="Goal Report"
+        title="Goal Strategy Report"
+        description="Loading your finalized goal strategy report."
+      />
+      <div className="mx-auto flex h-[70vh] max-w-7xl items-center justify-center p-4 text-sm text-slate-500 sm:p-6 lg:p-8">
+        Loading your goal report…
+      </div>
+    </main>
+  );
+}
+
+export default function GoalReportPage() {
+  return (
+    <Suspense fallback={<GoalReportFallback />}>
+      <GoalReportContent />
+    </Suspense>
   );
 }
