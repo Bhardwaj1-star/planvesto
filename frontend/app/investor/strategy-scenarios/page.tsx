@@ -409,7 +409,7 @@ function StrategyScenariosContent() {
             {run?.selected_strategy_version_id && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
-                  href="/investor/reports"
+                  href={`/investor/goal-report?goalId=${encodeURIComponent(goalId)}&strategyVersionId=${encodeURIComponent(run.selected_strategy_version_id)}`}
                   className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
                 >
                   View Report ↗
