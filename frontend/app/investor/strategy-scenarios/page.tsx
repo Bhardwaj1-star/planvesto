@@ -331,6 +331,10 @@ function StrategyScenariosContent() {
         fundingStructure,
         urlArchitectureId || undefined,
       );
+      setRun((current) => current
+        ? { ...current, selected_strategy_version_id: finalizedVersion.strategy_version_id }
+        : current,
+      );
       setSuccess(`Implementation finalized as Strategy Version ${finalizedVersion.strategy_version_id}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to finalize implementation.");
