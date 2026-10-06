@@ -30,8 +30,12 @@ export const canonicalGoalTypeByLabel: Record<string, CanonicalGoalType> = Objec
 ) as Record<string, CanonicalGoalType>;
 
 export function toCanonicalGoalType(value?: string | null): CanonicalGoalType | "" {
-  const clean = String(value ?? "").trim();
-  return goalTypes.some((goal) => goal.id === clean) ? (clean as CanonicalGoalType) : "";
+  const clean = String(value ?? "").trim().toLowerCase();
+  if (!clean) return "";
+  const found = goalTypes.find(
+    (goal) => goal.id.toLowerCase() === clean || goal.label.toLowerCase() === clean,
+  );
+  return found ? (found.id as CanonicalGoalType) : "";
 }
 
 

@@ -95,9 +95,13 @@ class GoalEngine:
             current_age_raw = dynamic_details.get("currentAge", dynamic_details.get("current_age"))
             life_expectancy_raw = dynamic_details.get("lifeExpectancy", dynamic_details.get("life_expectancy"))
             if current_age_raw is None or life_expectancy_raw is None:
-                raise ValueError(
-                    "Retirement planning requires currentAge and lifeExpectancy in dynamic_details"
-                )
+                if goal_input.status == "Cancelled":
+                    current_age_raw = current_age_raw if current_age_raw is not None else 30
+                    life_expectancy_raw = life_expectancy_raw if life_expectancy_raw is not None else 85
+                else:
+                    raise ValueError(
+                        "Retirement planning requires currentAge and lifeExpectancy in dynamic_details"
+                    )
             current_age = float(current_age_raw)
             life_expectancy = float(life_expectancy_raw)
             retirement_return = 0.08

@@ -12,12 +12,14 @@ import {
   goalStatuses,
   goalTypes,
   goalTypeLabelByCanonical,
+  toCanonicalGoalType,
   returnFrequencies,
   UI_PRIORITY_OPTIONS,
   toBackendPriority,
   toUiPriorityLabel,
   type AssetMappingAllocationType,
   type BackendGoalPriority,
+  type CanonicalGoalType,
   type DefinedGoal,
   type FundingStatus,
   type GoalDynamicDetails,
@@ -132,7 +134,23 @@ export default function GoalPlannerPage() {
           } catch (e) {
             if (e instanceof ApiError && e.status === 404) {
               const [year, month] = String(g.target_date || "").split("-");
-              const payload: GoalInput = { planning_unit_id: puId, goal_id: g.goal_id, goal_name: g.goal_name || "Untitled Goal", goal_type: goalTypes.find((goal) => goal.label === g.goal_name)?.id || "", today_cost: Number(g.target_amount) || 100000, target_month: Number(month) || 12, target_year: Number(year) || new Date().getFullYear() + 3, inflation_rate: 0.06, priority: "Important", flexibility: g.flexibility || "Flexible", status: "Active", asset_mappings: [], dynamic_details: {} };
+              const resolvedType = toCanonicalGoalType(g.goal_name) || "others";
+              const resolvedName = (g.goal_name && g.goal_name.trim()) || goalTypeLabelByCanonical[resolvedType] || "Untitled Goal";
+              const payload: GoalInput = {
+                planning_unit_id: puId,
+                goal_id: g.goal_id,
+                goal_name: resolvedName,
+                goal_type: resolvedType,
+                today_cost: Number(g.target_amount) || 100000,
+                target_month: Number(month) || 12,
+                target_year: Number(year) || new Date().getFullYear() + 3,
+                inflation_rate: 0.06,
+                priority: "Important",
+                flexibility: g.flexibility || "Flexible",
+                status: "Active",
+                asset_mappings: [],
+                dynamic_details: {},
+              };
               loaded.push(await apiRequest<DefinedGoal>("/api/goals", { method: "POST", body: JSON.stringify(payload) }));
             }
           }
@@ -150,15 +168,15 @@ export default function GoalPlannerPage() {
     if (!planningUnitId) { setFormError("Planning unit is missing. Please refresh the page."); return null; }
     const goalType = formData.goal_type;
     if (!goalType) { setFormError("Please select a goal."); return null; }
+    const canonicalType = toCanonicalGoalType(goalType) || (goalType as CanonicalGoalType);
     const d = formData.dynamic_details;
-    const goalName = goalType === "Other" ? d.otherGoalName.trim() : goalType;
+    const goalName = canonicalType === "others" ? (d.otherGoalName.trim() || "Other Goal") : (goalTypeLabelByCanonical[canonicalType] || goalType);
     if (!goalName) { setFormError("Please provide a goal name."); return null; }
     let costNum = Number(formData.today_cost);
-    if (isSpecialGoal(goalType)) {
-      if (goalType === "retirement") costNum = Number(d.desiredLifestyleMonthlyExpense) * 12;
-      if (goalType === "fire_passive_income") costNum = Number(d.desiredPassiveIncomeAmount) * 12;
-      
-      if (goalType === "Debt Freedom") costNum = liabilities.find((l) => l.id === d.selectedLiabilityId)?.outstandingAmount || 0;
+    if (isSpecialGoal(canonicalType)) {
+      if (canonicalType === "retirement") costNum = Number(d.desiredLifestyleMonthlyExpense) * 12;
+      if (canonicalType === "fire_passive_income") costNum = Number(d.desiredPassiveIncomeAmount) * 12;
+      if (canonicalType === "debt_freedom") costNum = liabilities.find((l) => l.id === d.selectedLiabilityId)?.outstandingAmount || 0;
     }
     if (!Number.isFinite(costNum) || costNum <= 0) { setFormError("Please enter the required goal amount."); return null; }
     if (!formData.target_date) { setFormError("Please select a target month and year."); return null; }
@@ -167,7 +185,27 @@ export default function GoalPlannerPage() {
     const inflationPercent = Number(formData.inflation_rate);
     if (!Number.isFinite(inflationPercent) || inflationPercent < 0) { setFormError("Please enter a valid inflation rate."); return null; }
     const inflation = inflationPercent / 100;
-    return { planning_unit_id: planningUnitId, goal_id: formData.goal_id, goal_name: goalName, goal_type: goalType, today_cost: costNum, target_month: month, target_year: year, inflation_rate: inflation, priority: formData.priority || "high", flexibility: formData.flexibility || "Flexible", status: formData.status || "Active", asset_mappings: formData.asset_mappings.map((m) => ({ asset_id: m.asset_id, allocation_type: m.allocation_type, allocation_value: Number(m.allocation_value), expected_return: m.expected_return ? Number(m.expected_return) / 100 : null, return_frequency: m.return_frequency })), dynamic_details: d };
+    return {
+      planning_unit_id: planningUnitId,
+      goal_id: formData.goal_id,
+      goal_name: goalName,
+      goal_type: canonicalType,
+      today_cost: costNum,
+      target_month: month,
+      target_year: year,
+      inflation_rate: inflation,
+      priority: formData.priority || "high",
+      flexibility: formData.flexibility || "Flexible",
+      status: formData.status || "Active",
+      asset_mappings: formData.asset_mappings.map((m) => ({
+        asset_id: m.asset_id,
+        allocation_type: m.allocation_type,
+        allocation_value: Number(m.allocation_value),
+        expected_return: m.expected_return ? Number(m.expected_return) / 100 : null,
+        return_frequency: m.return_frequency,
+      })),
+      dynamic_details: d,
+    };
   }
   function handleStartAdding() { setFormError(null); setPreviewResult(null); setFormData(createEmptyForm()); setIsFormOpen(true); }
   function handleStartEditing(goal: DefinedGoal) { setFormError(null); setPreviewResult(null); setFormData(definedGoalToForm(goal)); setIsFormOpen(true); }
@@ -186,9 +224,45 @@ export default function GoalPlannerPage() {
     catch (e) { setFormError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Unable to save goal."); } finally { setIsSaving(false); }
   }
   async function handleCancelGoal(goal: DefinedGoal) {
-    if (!window.confirm(`Are you sure you want to mark "${goal.goal_name}" as Cancelled?`)) return;
-    try { setCancellingGoalId(goal.goal_id); const payload: GoalInput = { planning_unit_id: goal.planning_unit_id, goal_id: goal.goal_id, investor_id: goal.investor_id, goal_name: goal.goal_name, goal_type: goal.goal_type, today_cost: goal.today_cost, target_month: goal.target_month, target_year: goal.target_year, inflation_rate: goal.inflation_rate, priority: toBackendPriority(goal.priority), flexibility: goal.flexibility, status: "Cancelled", asset_mappings: goal.mapped_assets.map((m) => ({ asset_id: m.asset_id, allocation_type: m.allocation_type, allocation_value: m.allocation_value, expected_return: m.expected_return, return_frequency: m.return_frequency })), dynamic_details: goal.version_metadata?.dynamic_details || {} }; const updated = await apiRequest<DefinedGoal>("/api/goals", { method: "POST", body: JSON.stringify(payload) }); setGoals((prev) => prev.filter((g) => g.goal_id !== updated.goal_id)); setSuccessMessage(`Goal "${goal.goal_name}" marked as Cancelled (v${updated.version}).`); }
-    catch (e) { setError(e instanceof Error ? e.message : "Unable to cancel goal."); } finally { setCancellingGoalId(null); }
+    const displayName = goal.goal_name || "this goal";
+    if (!window.confirm(`Are you sure you want to mark "${displayName}" as Cancelled?`)) return;
+    try {
+      setCancellingGoalId(goal.goal_id);
+      const safeGoalType = toCanonicalGoalType(goal.goal_type) || toCanonicalGoalType(goal.goal_name) || "others";
+      const safeGoalName = (goal.goal_name && goal.goal_name.trim()) || goalTypeLabelByCanonical[safeGoalType] || "Goal";
+      const payload: GoalInput = {
+        planning_unit_id: goal.planning_unit_id,
+        goal_id: goal.goal_id,
+        investor_id: goal.investor_id,
+        goal_name: safeGoalName,
+        goal_type: safeGoalType,
+        today_cost: Number(goal.today_cost) > 0 ? Number(goal.today_cost) : 100000,
+        target_month: goal.target_month || 12,
+        target_year: goal.target_year || (new Date().getFullYear() + 3),
+        inflation_rate: goal.inflation_rate ?? 0.06,
+        priority: toBackendPriority(goal.priority),
+        flexibility: goal.flexibility || "Flexible",
+        status: "Cancelled",
+        asset_mappings: (goal.mapped_assets || []).map((m) => ({
+          asset_id: m.asset_id,
+          allocation_type: m.allocation_type,
+          allocation_value: m.allocation_value,
+          expected_return: m.expected_return,
+          return_frequency: m.return_frequency,
+        })),
+        dynamic_details: goal.version_metadata?.dynamic_details || {},
+      };
+      const updated = await apiRequest<DefinedGoal>("/api/goals", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setGoals((prev) => prev.filter((g) => g.goal_id !== updated.goal_id));
+      setSuccessMessage(`Goal "${safeGoalName}" marked as Cancelled (v${updated.version}).`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to cancel goal.");
+    } finally {
+      setCancellingGoalId(null);
+    }
   }
   if (isLoading) return <main className="flex min-h-screen items-center justify-center bg-slate-25"><div className="text-sm font-semibold text-slate-500">Loading your goals...</div></main>;
   const shortfall = goals.filter((g) => g.funding_status === "Shortfall").length; const onTrack = goals.filter((g) => g.funding_status === "On Track").length; const overfunded = goals.filter((g) => g.funding_status === "Overfunded").length;

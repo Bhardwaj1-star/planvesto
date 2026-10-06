@@ -73,9 +73,16 @@ def canonical_goal_type(value: str | None) -> str:
     return _CANONICAL_BY_LOWER.get(clean, "")
 
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
-    """Return the canonical onboarding label for a canonical goal ID."""
+    """Return the canonical onboarding label for a canonical goal ID, or fallback if provided."""
     canonical = canonical_goal_type(goal_type)
-    return CANONICAL_GOAL_NAMES.get(canonical, "")
+    if canonical == "others" and fallback and str(fallback).strip():
+        return str(fallback).strip()
+    name = CANONICAL_GOAL_NAMES.get(canonical)
+    if name:
+        return name
+    if fallback and str(fallback).strip():
+        return str(fallback).strip()
+    return ""
 
 def canonical_goal_priority(value: str | None) -> GoalPriority:
     """Normalize UI/storage goal-priority vocabulary to the canonical backend contract."""
