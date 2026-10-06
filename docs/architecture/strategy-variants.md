@@ -322,3 +322,188 @@ A useful implementation boundary is:
 - **PDF Renderer** turns that structure into the final document.
 
 This also allows the same report model to support other outputs later, such as HTML, web views, client dashboards, or API responses, without duplicating financial logic.
+
+
+---
+
+## Current PDF System — Gap Analysis
+
+This section reflects the current repository implementation and should be treated as the baseline before the proposed PDF architecture is implemented.
+
+### Current state
+
+The repository already has a **canonical Goal Strategy Report path**:
+
+**Strategy Run / Strategy Version → GoalReportService → structured Goal Decision Report → PDF**
+
+GoalReportService is explicitly designed as a goal-agnostic presentation/decision-explanation layer and uses ReportLab for PDF generation. The current tests also validate the Goal Report PDF path.
+
+However, the PDF layer is **not yet fully consolidated** into the proposed single renderer + report-config architecture.
+
+### Current PDF/report implementations
+
+| Current implementation | Role | Current status / gap |
+|---|---|---|
+| GoalReportService | Goal Strategy Report + PDF | Strongest candidate for canonical goal-report path; already goal-agnostic |
+| FinancialPlanService | Complete Financial Plan + PDF | Separate PDF generation path; overlaps with reporting concerns |
+| BasketReportService | Goal Basket Report + PDF | Separate report/PDF path for basket-level output |
+| SummaryReportRenderer | Summary Financial Planning PDF rendering | Separate renderer and report model |
+| Retirement report API/UI path | Retirement-specific report/PDF access | Exists as a specialized surface and should be checked for consolidation into the canonical report architecture |
+
+The repository therefore has **multiple PDF entry points/rendering paths**, even though the newer Goal Report architecture is already moving toward a canonical structured report.
+
+### Main architectural gaps
+
+1. **Multiple PDF rendering authorities**
+   - PDF generation is currently distributed across multiple services/renderers.
+   - This creates a risk of duplicated layout logic and inconsistent report behaviour.
+
+2. **Report configuration is not yet a first-class layer**
+   - Goal/strategy-specific report differences are not yet cleanly represented as ReportConfig objects.
+   - Some report structure remains embedded directly in service/renderer code.
+
+3. **Goal-specific reporting and common rendering are not fully separated**
+   - The desired boundary is:
+     Calculations → Report Model → Report Config → PDF Renderer
+   - The current implementation contains a mixture of report assembly and rendering responsibilities across services.
+
+4. **Strategy Variant is not yet a first-class PDF selection input**
+   - The Strategy/Strategy Version architecture exists, but the newly defined Variant layer is not yet fully wired into report configuration and PDF rendering.
+   - This means the report can describe the selected architecture, but Variant-driven section selection is not yet the formal rendering mechanism.
+
+5. **Legacy/parallel report paths need consolidation**
+   - Existing Complete Financial Plan, Basket Report, Summary Report, and specialized report paths should not automatically be treated as obsolete.
+   - They need to be classified as either canonical reports, specialized views using the common renderer, or migration candidates.
+
+6. **Common rendering primitives are not yet centralized**
+   - Shared tables, section headers, typography, charts, page layouts, and reusable report blocks should eventually live in a common reporting engine rather than being reimplemented in individual services.
+
+### Target implementation
+
+The target state is:
+
+**Goal Data → Financial Calculations → Strategy Decision → Strategy Version / Variant → Canonical Report Model → Report Config → Common PDF Renderer**
+
+The important distinction is:
+
+- **Goal-specific:** what the report needs to say.
+- **Strategy/Variant-specific:** why the report is structured that way.
+- **Renderer-specific:** how the final PDF is visually produced.
+
+### Implementation plan
+
+#### Phase 1 — Inventory and classify existing reports
+
+Create a report registry containing every current report/PDF endpoint and classify each as:
+
+- Goal Strategy Report
+- Complete Financial Plan
+- Goal Basket Report
+- Summary Financial Planning Report
+- Specialized report/view
+- Legacy/migration candidate
+
+Do not delete or rewrite existing generators before their contracts and consumers are identified.
+
+#### Phase 2 — Establish canonical report model
+
+Define a normalized report model containing reusable sections such as:
+
+- Cover / report metadata
+- Financial snapshot
+- Goal summary
+- Strategy decision
+- Selected Strategy
+- Selected Variant
+- Funding analysis
+- Asset/resource allocation
+- De-risking / liquidity schedule
+- Debt / credit analysis
+- What-if scenarios
+- Trade-offs
+- Action plan
+- Assumptions / disclosures
+
+The model should contain data, not PDF layout instructions.
+
+#### Phase 3 — Introduce Report Config
+
+Create configuration/mapping for:
+
+Goal Type + Strategy + Variant → Report Sections
+
+A Report Config should control:
+
+- section inclusion
+- section order
+- section title/labels
+- required data fields
+- goal-specific tables
+- variant-specific schedules
+- narrative blocks
+- scenario presentation
+
+It should not perform financial calculations.
+
+#### Phase 4 — Build common PDF renderer
+
+Create a shared renderer that consumes the canonical report model + selected Report Config.
+
+The renderer owns:
+
+- page layout
+- typography
+- tables
+- charts
+- headers/footers
+- page numbering
+- reusable section components
+- PDF export
+
+Use ReportLab as the current repository PDF technology unless the implementation later establishes a deliberate reason to change it.
+
+#### Phase 5 — Migrate existing reports incrementally
+
+Recommended order:
+
+1. Goal Strategy Report
+2. Retirement-specific report surface
+3. Complete Financial Plan
+4. Goal Basket Report
+5. Summary Financial Planning Report
+
+Each migration should preserve the existing API contract where practical and move only rendering/report-assembly responsibilities behind the common architecture.
+
+#### Phase 6 — Wire Strategy Variants
+
+Once Report Config exists, map the defined variants into report structures.
+
+Example:
+
+Education + Progressive De-risking + Payment-Tranche Glide Path
+
+should resolve to a configuration containing:
+
+- education goal summary
+- corpus/funding gap
+- payment tranches
+- tranche-wise de-risking schedule
+- liquidity requirement
+- residual credit/loan requirement
+- what-if scenarios
+- action plan
+
+The same common renderer can then produce the PDF without an Education-specific PDF engine.
+
+### Definition of done
+
+The PDF architecture is considered migrated when:
+
+- There is one canonical common PDF renderer for financial planning reports.
+- Goal-specific report differences are represented through configuration/schema rather than separate PDF engines.
+- Strategy Variant is available to report generation as an explicit input.
+- Financial calculations remain outside the renderer.
+- Existing report APIs have a defined canonical ownership path.
+- Shared layout/components are centralized.
+- New goal types can be added without creating a new PDF generator.
+- Existing regression tests continue to validate report structure and valid PDF output.
