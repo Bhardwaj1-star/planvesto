@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Any
 
 from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
+from engines.calculation.canonical import calculate_net_worth
 from models.financial_state import FinancialState, Metric
 from rules.financial_state import MISSING_INPUT
 from rules.financial_metrics import is_essential_expense
@@ -50,6 +51,7 @@ class FinancialStateEngine:
             liability_breakdown=liabilities.breakdown,
             liability_allocation=liabilities.allocation,
             emi_burden_monthly=Metric(value=liabilities.emi, available=liabilities.emi_available, reason=None if liabilities.emi_available else MISSING_INPUT),
+            net_worth=self._metric(calculate_net_worth(assets.total, liabilities.total)),
             total_insurance_sum_assured=self._metric(insurance.total_sum_assured, insurance.available),
             total_insurance_annual_premium=self._metric(insurance.total_annual_premium, insurance.available),
             total_insurance_monthly_premium=self._metric(insurance.total_monthly_premium, insurance.available),
