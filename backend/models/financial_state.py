@@ -35,6 +35,7 @@ class FinancialState(BaseModel):
     liability_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     liability_allocation: list[dict[str, Any]] = Field(default_factory=list)
     emi_burden_monthly: Metric
+    net_worth: Metric
     total_insurance_sum_assured: Metric = Field(default_factory=Metric)
     total_insurance_annual_premium: Metric = Field(default_factory=Metric)
     total_insurance_monthly_premium: Metric = Field(default_factory=Metric)
