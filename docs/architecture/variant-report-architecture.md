@@ -1,10 +1,50 @@
-# Variant-Based Report Architecture
+# Variant-Based Reporting Architecture
 
 ## Purpose
 
-Make **Strategy Variant** a first-class input to financial-plan reporting without creating a separate PDF engine for every goal or variant.
+Make **Strategy Variant** a first-class input to Planvesto reporting while supporting all current reporting scopes:
 
-### Target flow
+- Individual Goal Report
+- Goal Basket Report
+- Complete Financial Plan / Multi-Goal Plan
+- Summary Financial Planning Report
+
+The architecture uses **one common reporting/rendering foundation**, while each report scope consumes the appropriate level of financial and strategic data.
+
+---
+
+## 1. Reporting Hierarchy
+
+Reporting is not only a Goal-level concern.
+
+```
+                 FINANCIAL PLANNING
+                        │
+          ┌─────────────┴─────────────┐
+          │                           │
+     Goal-level                  Portfolio-level
+          │                           │
+   Strategy + Variant          Multi-Goal Orchestration
+          │                           │
+          ├──────────────┐            ├──────────────┐
+          ↓              ↓            ↓              ↓
+     Goal Report     Goal Basket   Complete Plan   Summary
+```
+
+| Report | Scope | Primary purpose | Variant relationship |
+|---|---|---|---|
+| Goal Report | One goal | Explain one goal's strategy and implementation | **Direct** — one selected Variant |
+| Basket Report | Selected goals | Show joint funding, priority, cash flow and shared architecture | **Aggregates each goal's Variant** |
+| Complete Financial Plan | All goals + family financial state | Show consolidated allocation, constraints, trade-offs and plan | **Consumes all goal Variants + multi-goal decisions** |
+| Summary Report | Executive / cross-domain | Compact financial snapshot, goals, observations, actions, allocation and risk | **Consumes normalized outputs; Variant may be summarized** |
+
+**Key rule:** Variant belongs to the **goal strategy layer**. Composite reports do not invent a single Variant for the whole portfolio unless a separate portfolio-level architecture is explicitly defined.
+
+---
+
+## 2. Core Architecture
+
+### Goal-level pipeline
 
 ```
 Goal Data
@@ -13,82 +53,77 @@ Financial Calculations
    ↓
 Strategy Decision
    ↓
-Strategy Variant Selection
+Variant Selection
    ↓
-Canonical Report Model
+Canonical Goal Report Model
    ↓
-Report Config
+Goal Report Config
    ↓
-Common PDF Renderer
+Common Renderer
+```
+
+### Composite-report pipeline
+
+```
+Goal Reports / Goal Report Models
+            ↓
+   Multi-Goal Orchestration
+            ↓
+   Composite Report Model
+            ↓
+   Composite Report Config
+            ↓
+      Common Renderer
+```
+
+### Full system
+
+```
+Goal Data
    ↓
-PDF
+Financial Calculations
+   ↓
+Strategy Decision
+   ↓
+Variant Selection
+   ↓
+Goal Report Model
+   ↓
+        ┌──────────────────────┐
+        │                      │
+        ↓                      ↓
+   Goal Report          Multi-Goal Orchestration
+        │                      ↓
+        │               Basket / Complete Plan
+        │                      │
+        └──────────────┬───────┘
+                       ↓
+                Report Config
+                       ↓
+                Common Renderer
+                       ↓
+                      PDF
 ```
 
 ---
 
-## 1. Architecture Hierarchy
-
-```
-Goal Type → Strategy → Variant → Report Config → Report Model → Renderer
-```
+## 3. Architecture Layers
 
 | Layer | Responsibility |
 |---|---|
 | Goal Type | Goal-specific inputs, terminology, milestones and calculations |
 | Strategy | High-level strategic intent |
-| Variant | Implementation/funding architecture selected for the situation |
-| Report Config | Defines what the report should contain and in what order |
-| Report Model | Normalized financial/report data |
-| PDF Renderer | Common visual rendering and PDF export |
+| Variant | Implementation/funding/protection architecture for the goal |
+| Multi-Goal Orchestration | Priority, shared surplus, conflicts, trade-offs and allocation across goals |
+| Report Model | Normalized data required by a report |
+| Report Config | Defines report structure and section requirements |
+| Common Renderer | Visual rendering and PDF export |
 
-**Rule:** Variant decides the **report architecture**, not the PDF layout.
-
----
-
-## 2. Variant Selection
-
-Variant selection happens **after Strategy eligibility** and **before report/scenario generation**.
-
-### Selection inputs
-
-- Goal type
-- Goal horizon / target date
-- Funding gap
-- Payment structure
-- Recurring vs one-time requirement
-- Liquidity requirement
-- Debt / EMI constraint
-- Credit requirement
-- Income-transition requirement
-- Multi-goal conflicts
-
-### Selection pattern
-
-```
-Strategy eligible
-      ↓
-Identify funding/protection pattern
-      ↓
-Match Variant
-      ↓
-Validate Variant constraints
-      ↓
-Generate Report Config
-```
-
-### Example
-
-```
-Education
-→ Progressive De-risking
-→ Payment-Tranche Glide Path
-→ Education + tranche Report Config
-→ Common PDF Renderer
-```
+**Rule:** Variant determines **goal implementation architecture**. Report Config determines **what to show**. Renderer determines **how to render it**.
 
 ---
 
-## 3. Canonical Variant Set
+## 4. Canonical Variant Set
 
 ### Progressive De-risking
 
@@ -118,81 +153,312 @@ Education
 - EMI-Cap Financing
 - Timing-Bridge Financing
 
-These are **architecture labels**. SIP, Lumpsum, Bucketing, Laddering, Cash-flow Matching, etc. remain techniques/components—not Variants.
+These are architecture labels. SIP, Lumpsum, Bucketing, Laddering, Cash-flow Matching, etc. remain techniques/components.
 
 ---
 
-## 4. Report Config
+## 5. Variant Selection
 
-Report Config maps:
+Variant selection occurs **after Strategy eligibility** and before report/scenario generation.
 
 ```
-Goal Type + Strategy + Variant → Report Structure
+Strategy eligible
+      ↓
+Identify funding/protection pattern
+      ↓
+Select Variant
+      ↓
+Validate Variant constraints
+      ↓
+Build Goal Report Model
 ```
 
-A config can define:
+Example:
 
-- section inclusion
-- section order
-- section titles
-- required data fields
-- variant-specific schedules
-- tables/charts
-- narrative blocks
-- scenario presentation
-- action-plan presentation
+```
+Education
+→ Progressive De-risking
+→ Payment-Tranche Glide Path
+→ Goal Report Model
+```
+
+The selected Variant must be persisted or otherwise deterministically recoverable from the strategy/report context so composite reports can consume it.
+
+---
+
+## 6. Goal Report
+
+The Goal Report is the primary Variant-aware report.
+
+### Inputs
+
+```
+Goal
+Strategy Version / Run
+Selected Strategy
+Selected Variant
+Financial calculations
+Constraints
+Scenarios
+Actions
+```
+
+### Typical sections
+
+- Goal summary
+- Funding requirement / gap
+- Strategy decision
+- Selected Variant
+- Variant-specific schedule
+- Liquidity / de-risking
+- Debt / credit
+- Constraints
+- Scenarios
+- Trade-offs
+- Action plan
 
 ### Example
 
 **Education + Progressive De-risking + Payment-Tranche Glide Path**
 
-Config should request:
-
-1. Goal summary
-2. Funding requirement / gap
-3. Payment tranches
-4. Tranche-wise de-risking schedule
-5. Liquidity requirement
-6. Residual loan/credit requirement
-7. Scenarios
-8. Action plan
-
-The config should **not** perform financial calculations or PDF layout.
-
----
-
-## 5. Canonical Report Model
-
-The Report Model is the renderer-independent output.
-
-Typical sections:
-
 ```
-Report Metadata
 Goal Summary
-Strategy Decision
-Selected Variant
-Funding Analysis
-Liquidity / De-risking Schedule
-Debt / Credit Analysis
-Scenarios
-Trade-offs
-Action Plan
-Constraints / Assumptions
+→ Education Corpus
+→ Payment Tranches
+→ Tranche-wise De-risking
+→ Liquidity Requirement
+→ Residual Loan Requirement
+→ Scenarios
+→ Actions
 ```
-
-### Separation rule
-
-- **Calculations** produce financial outputs.
-- **Report Model** normalizes those outputs.
-- **Report Config** decides what is shown.
-- **Renderer** decides how it looks.
 
 ---
 
-## 6. Common PDF Renderer
+## 7. Goal Basket Report
 
-Use **one shared renderer** for financial planning reports.
+A Basket Report is **not a new Strategy Variant**.
+
+It is a composite report over selected goals.
+
+The current Basket Report already aggregates:
+
+- selected goals
+- priority ladder
+- shared pool allocation
+- combined cash-flow trajectory
+- product/bucket architecture
+- action timeline
+- contingency matrix
+- per-goal strategy summary
+
+### Target architecture
+
+```
+Goal A → Strategy A → Variant A ─┐
+Goal B → Strategy B → Variant B ─┼→ Basket Orchestration
+Goal C → Strategy C → Variant C ─┘
+                                  ↓
+                         Basket Report Model
+                                  ↓
+                         Basket Report Config
+                                  ↓
+                           Common Renderer
+```
+
+### Important rule
+
+The Basket Report should **show each goal's selected Variant** where relevant, but its own architecture is based on **cross-goal orchestration**, not a Goal Variant.
+
+---
+
+## 8. Complete Financial Plan / Multi-Goal Report
+
+The Complete Financial Plan is the **family/portfolio-level consolidated report**.
+
+The current implementation builds a consolidated plan through `MultiGoalPlanningService`, including:
+
+- all goals
+- financial state
+- consolidated funding
+- resource allocation
+- goal plans
+- strategy versions
+- constraints/conflicts
+- audit trail
+- family cash-flow trajectory
+- health/ratio scan
+- contingency/governance outputs
+
+### Target architecture
+
+```
+Goal A → Variant A ─┐
+Goal B → Variant B ─┼→ MultiGoalPlanningService
+Goal C → Variant C ─┘
+                         ↓
+              Priority / Resource Allocation
+                         ↓
+                 Trade-offs / Constraints
+                         ↓
+              Complete Plan Report Model
+                         ↓
+              Complete Plan Report Config
+                         ↓
+                  Common Renderer
+```
+
+The Complete Financial Plan therefore contains **Variant-aware goal rows/sections**, plus the multi-goal layer that explains how those goals compete for shared resources.
+
+---
+
+## 9. Summary Report
+
+The Summary Report is an executive-level reporting surface.
+
+It should consume the canonical normalized model rather than independently recalculating financial logic.
+
+Typical content:
+
+- Financial snapshot
+- Goals
+- Observations
+- Actions
+- Investment allocation
+- Risk profile
+
+Variant detail should normally be **summarized**, not reproduced in full.
+
+Example:
+
+```
+Goal: Education
+Strategy: Progressive De-risking
+Variant: Payment-Tranche Glide Path
+Status: On Track
+```
+
+Detailed tranche/de-risking schedules remain in the Goal Report.
+
+---
+
+## 10. Report Config Architecture
+
+Report Config must exist at two levels.
+
+### Goal Config
+
+```
+Goal Type + Strategy + Variant
+        ↓
+GoalReportConfig
+```
+
+Controls:
+
+- goal-specific sections
+- variant-specific schedules
+- section ordering
+- terminology
+- required fields
+- scenario presentation
+- action presentation
+
+### Composite Config
+
+```
+Report Scope + Composite Context
+        ↓
+CompositeReportConfig
+```
+
+Examples:
+
+```
+BasketReportConfig
+CompleteFinancialPlanConfig
+SummaryReportConfig
+```
+
+These configs control aggregation/presentation, not financial calculations.
+
+---
+
+## 11. Canonical Report Models
+
+Use separate logical models for separate scopes, with shared primitives.
+
+### Shared primitives
+
+- ReportMetadata
+- GoalSummary
+- StrategySummary
+- VariantSummary
+- FundingSummary
+- ConstraintSummary
+- ScenarioSummary
+- ActionSummary
+
+### Goal model
+
+```
+GoalReportModel
+├── GoalSummary
+├── StrategySummary
+├── VariantSummary
+├── Funding
+├── DeRisking / Liquidity
+├── Debt / Credit
+├── Constraints
+├── Scenarios
+└── Actions
+```
+
+### Basket model
+
+```
+BasketReportModel
+├── BasketMetadata
+├── GoalReportSummary[]
+├── PriorityLadder
+├── SharedPoolAllocation
+├── CombinedCashFlow
+├── BasketArchitecture
+├── Actions
+└── ContingencyMatrix
+```
+
+### Complete Plan model
+
+```
+CompleteFinancialPlanModel
+├── FinancialState
+├── GoalReportSummary[]
+├── ConsolidatedFunding
+├── ResourceAllocation
+├── MultiGoalTradeOffs
+├── Constraints
+├── CashFlowTrajectory
+├── HealthScan
+└── Governance
+```
+
+### Summary model
+
+```
+SummaryReportModel
+├── FinancialSnapshot
+├── GoalSummaries
+├── Observations
+├── Actions
+├── InvestmentAllocation
+└── RiskProfile
+```
+
+---
+
+## 12. Common Renderer
+
+All PDF scopes should converge on the same rendering foundation.
 
 Renderer owns:
 
@@ -206,149 +472,167 @@ Renderer owns:
 - page numbering
 - PDF export
 
-Renderer must **not** contain:
+Renderer must not own:
 
-- Education logic
-- Wedding logic
-- Retirement logic
-- Variant-selection logic
-- Financial calculations
+- goal calculations
+- strategy selection
+- variant selection
+- multi-goal allocation
+- debt calculations
+- financial rules
 
 ### Do not build
 
 ```
 education_pdf_generator.py
 wedding_pdf_generator.py
+basket_pdf_generator.py
 retirement_pdf_generator.py
-variant_x_pdf_generator.py
+complete_plan_pdf_generator.py
 ```
 
 ### Build
 
 ```
 report_engine/
-├── renderer
-├── section_components
-├── report_models
-├── report_configs
-└── strategy_variant_mappings
+├── renderer/
+├── section_components/
+├── models/
+├── configs/
+│   ├── goal/
+│   ├── basket/
+│   ├── complete_plan/
+│   └── summary/
+└── strategy_variant_mappings/
 ```
 
 ---
 
-## 7. Example Mappings
+## 13. Current Repository → Target
 
-| Goal | Strategy | Variant | Report Pattern |
-|---|---|---|---|
-| Education with staged tuition | Progressive De-risking | Payment-Tranche Glide Path | Corpus → tranches → de-risking → liquidity |
-| Recurring travel | Progressive De-risking | Recurring-Cashflow Glide Path | Reserve → withdrawal → refill |
-| Retirement | Progressive De-risking | Income-Transition Glide Path | Accumulation → transition → distribution |
-| Near-term wedding | Capital Preservation | Full-Goal Preservation | Required corpus → protection → payment readiness |
-| Wedding with residual loan | Credit Utilisation | Residual-Gap Bridge | Self-funding → residual gap → financing |
-| Home constrained by EMI | Credit Utilisation | EMI-Cap Financing | Down payment → loan capacity → EMI feasibility |
+### Verified current reporting paths
 
----
+The repository currently has separate PDF/report implementations:
 
-## 8. Current → Target
+| Current path | Current role |
+|---|---|
+| `GoalReportService` | Individual Goal Strategy Report |
+| `BasketReportService` | Selected-goal Basket Report |
+| `FinancialPlanService` | Complete Financial Plan / consolidated multi-goal report |
+| `SummaryReportRenderer` | Summary Financial Planning Report |
 
-### Current
+The APIs also expose separate PDF endpoints for Goal, Basket and Complete Financial Plan reports.
 
-```
-Goal
- ↓
-Strategy Version / Run
- ↓
-GoalReportService
- ↓
-PDF
-```
-
-The repository already has working goal-report PDF generation, but multiple report/PDF paths still exist and Variant is not yet a formal report input.
+Therefore the architecture must **not** treat GoalReportService as the only reporting system.
 
 ### Target
 
 ```
-Goal
- ↓
-Strategy
- ↓
-Variant
- ↓
-Canonical Report Model
- ↓
-Report Config
- ↓
-Common PDF Renderer
- ↓
-PDF
+                    Canonical Financial Outputs
+                              │
+              ┌───────────────┴────────────────┐
+              │                                │
+        Goal Strategy Layer              Multi-Goal Layer
+              │                                │
+      Strategy + Variant             Allocation / Conflicts
+              │                                │
+              └───────────────┬────────────────┘
+                              ↓
+                    Scope-specific Model
+                              ↓
+                    Scope-specific Config
+                              ↓
+                       Common Renderer
+                              ↓
+                             PDF
 ```
-
-Existing API contracts should be preserved where practical while migrating report assembly/rendering behind this architecture.
 
 ---
 
-## 9. Implementation Order
+## 14. Implementation Order
 
-### Phase 1 — Variant Selector
-Create a deterministic selector:
+### Phase 1 — Reporting Registry
+
+Inventory all report types and define ownership:
+
+- Goal Report
+- Basket Report
+- Complete Financial Plan
+- Summary Report
+
+### Phase 2 — Variant Selector
 
 ```
 select_variant(goal, strategy, financial_context) → Variant
 ```
 
-### Phase 2 — Report Config Registry
-Create:
+### Phase 3 — Shared Report Primitives
 
-```
-get_report_config(goal_type, strategy, variant) → ReportConfig
-```
+Define reusable:
 
-### Phase 3 — Canonical Report Model
-Normalize financial outputs into a renderer-independent model.
+- GoalSummary
+- StrategySummary
+- VariantSummary
+- FundingSummary
+- ConstraintSummary
+- ScenarioSummary
+- ActionSummary
 
-### Phase 4 — Common Renderer
+### Phase 4 — Goal Report Config + Model
+
+Make the existing Goal Report Variant-aware.
+
+### Phase 5 — Composite Models
+
+Create canonical models for:
+
+- Basket
+- Complete Financial Plan
+- Summary
+
+### Phase 6 — Common Renderer
+
 Move shared PDF layout/rendering into one engine.
 
-### Phase 5 — Migrate Goal Report
-Make the existing Goal Strategy Report use:
+### Phase 7 — Migrate Existing Services
 
-```
-Strategy → Variant → Report Config → Report Model → Renderer
-```
+Migrate incrementally:
 
-### Phase 6 — Migrate Other Reports
-Classify and progressively migrate:
+1. Goal Report
+2. Basket Report
+3. Complete Financial Plan
+4. Summary Report
 
-- Complete Financial Plan
-- Basket Report
-- Summary Report
-- Specialized report surfaces
+Preserve existing API contracts where practical.
 
 ---
 
-## 10. Non-Negotiable Rules
+## 15. Non-Negotiable Rules
 
-1. **No variant-specific PDF engines.**
-2. **No financial calculations inside the renderer.**
-3. **Variant must be explicit in report generation.**
-4. **Report Config controls structure, not business calculations.**
-5. **Report Model is renderer-independent.**
-6. **Techniques are not Variants.**
-7. **Existing API contracts should remain stable during migration.**
-8. **Adding a new goal/variant should normally require configuration and data mapping—not a new PDF engine.**
+1. **Variant belongs to the Goal Strategy layer.**
+2. **Basket and Complete Financial Plan are composite reports, not Goal Variants.**
+3. **Composite reports must consume each goal's Variant where relevant.**
+4. **Do not invent a single portfolio Variant unless a portfolio-level architecture is explicitly defined.**
+5. **No report-specific financial calculation logic inside the renderer.**
+6. **Report Config controls structure, not business calculations.**
+7. **Report Models are renderer-independent.**
+8. **One common PDF rendering foundation serves all report scopes.**
+9. **Adding a new Goal Variant must not require a new PDF engine.**
+10. **Existing report API contracts should remain stable during migration.**
 
 ---
 
 ## Definition of Done
 
-The architecture is complete when:
+The reporting architecture is complete when:
 
-- Variant is an explicit report-generation input.
-- Variant selection is deterministic and testable.
-- Goal + Strategy + Variant resolves to a Report Config.
-- Financial calculations remain outside reporting/rendering.
-- A canonical Report Model exists.
-- One common PDF renderer handles the report output.
-- Existing report endpoints continue to work.
-- New goal/variant combinations do not require new PDF generators.
-- Regression tests validate report structure and valid PDF output.
+- Goal Strategy Reports are Variant-aware.
+- Basket Reports aggregate per-goal Strategy + Variant information.
+- Complete Financial Plans consume per-goal Variants plus multi-goal orchestration outputs.
+- Summary Reports consume normalized outputs without duplicating financial calculations.
+- Each reporting scope has a canonical report model.
+- Report Config is separate from calculations.
+- One common renderer handles PDF layout/export.
+- Existing Goal, Basket and Complete Plan PDF endpoints continue to work.
+- New goal/variant combinations require configuration/data mapping—not a new PDF generator.
+- Regression tests cover all four reporting scopes.
