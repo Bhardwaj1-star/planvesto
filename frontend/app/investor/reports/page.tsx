@@ -112,6 +112,56 @@ export default function ReportsPage() {
     },
   ];
 
+  function viewIndividualGoalReport() {
+    if (!selectedVersion?.strategy_version_id || !selectedGoalId) {
+      setError("No finalized Strategy Version is available for this goal.");
+      return;
+    }
+
+    window.location.href =
+      "/investor/goal-report?goalId=" +
+      encodeURIComponent(selectedGoalId) +
+      "&strategyVersionId=" +
+      encodeURIComponent(selectedVersion.strategy_version_id);
+  }
+
+  async function viewPdfReport() {
+    setWorking(true);
+    setError(null);
+    const reportWindow = window.open("", "_blank");
+
+    try {
+      const planningUnitId = getPlanningUnitId();
+      if (!planningUnitId) throw new Error("Planning unit is not available. Please complete onboarding first.");
+
+      let blob: Blob;
+      if (selectedReport === "complete-financial-plan") {
+        blob = await downloadCompleteFinancialPlanPdf(planningUnitId);
+      } else if (selectedReport === "summary-planning-report") {
+        blob = await downloadSummaryReportPdf(planningUnitId);
+      } else if (selectedReport === "basket-goal-report") {
+        const basket = baskets.find((b) => b.id === selectedBasketId);
+        const goalIds = basket ? basket.goalIds : (customBasketGoalIds.length >= 2 ? customBasketGoalIds : goals.slice(0, 3).map((g) => g.id));
+        if (goalIds.length < 2) throw new Error("Please select at least 2 goals to view a Basket Report.");
+        blob = await downloadBasketReportPdf(planningUnitId, goalIds, basket?.name || "Goal Basket Planning Report");
+      } else {
+        throw new Error("No finalized Strategy Version is available for this goal.");
+      }
+
+      const url = URL.createObjectURL(blob);
+      if (reportWindow) {
+        reportWindow.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+    } catch (err) {
+      if (reportWindow) reportWindow.close();
+      setError(err instanceof Error ? err.message : "Unable to open report.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function download() {
     setWorking(true);
     setError(null);
@@ -264,19 +314,40 @@ export default function ReportsPage() {
                   : selectedGoal?.name || "Select a goal"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void download()}
-              disabled={
-                working ||
-                (selectedReport !== "complete-financial-plan" &&
-                  selectedReport !== "basket-goal-report" &&
-                  !selectedVersion?.strategy_version_id) ||
-                (selectedReport === "basket-goal-report" && customBasketGoalIds.length < 2 && !selectedBasketId)
-              }
-              className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
-              {working ? "Generating…" : "Download PDF"}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedReport === "goal-strategy-report") {
+                    viewIndividualGoalReport();
+                  } else {
+                    void viewPdfReport();
+                  }
+                }}
+                disabled={
+                  working ||
+                  (selectedReport !== "complete-financial-plan" &&
+                    selectedReport !== "basket-goal-report" &&
+                    !selectedVersion?.strategy_version_id) ||
+                  (selectedReport === "basket-goal-report" && customBasketGoalIds.length < 2 && !selectedBasketId)
+                }
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+                {working ? "Opening…" : "View Report"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void download()}
+                disabled={
+                  working ||
+                  (selectedReport !== "complete-financial-plan" &&
+                    selectedReport !== "basket-goal-report" &&
+                    !selectedVersion?.strategy_version_id) ||
+                  (selectedReport === "basket-goal-report" && customBasketGoalIds.length < 2 && !selectedBasketId)
+                }
+                className="rounded-xl bg-navy-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                {working ? "Generating…" : "Download PDF"}
+              </button>
+            </div>
           </div>
         </section>
       </div>
