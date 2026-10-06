@@ -13,10 +13,14 @@ FundingStatusType = Literal[
 FeasibilityStatusType = Literal["pass", "conditional", "infeasible"]
 
 
-def get_priority_rank(priority: str | None) -> int:
-    """Return canonical numeric priority rank (0 = Critical, 3 = Low)."""
+def get_priority_rank(priority: str | int | None) -> int:
+    """Return canonical numeric priority rank (1 = Top, 2 = Next...)."""
+    if isinstance(priority, int):
+        return priority
+    if isinstance(priority, str) and priority.strip().isdigit():
+        return int(priority.strip())
     clean = canonical_goal_priority(priority)
-    return PRIORITY_RANKS[clean]
+    return PRIORITY_RANKS.get(clean, 999)
 
 
 def is_higher_priority(priority_a: str | None, priority_b: str | None) -> bool:

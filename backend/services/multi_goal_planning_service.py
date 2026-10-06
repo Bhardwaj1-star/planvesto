@@ -40,6 +40,8 @@ class MultiGoalPlanningService:
         planning_unit_id: str,
         priorities: InvestorPriorities | None = None,
         rule_overrides: dict[str, dict[str, Any]] | None = None,
+        priority_ranks: dict[str, int] | None = None,
+        goal_order: list[str] | None = None,
     ) -> MultiGoalPlanResult:
         goals = self.goal_repo.list_goals(planning_unit_id)
         if not goals:
@@ -48,7 +50,7 @@ class MultiGoalPlanningService:
         inputs: list[GoalEvaluationInput] = []
         strategy_eval_map: dict[str, dict[str, Any]] = {}
 
-        for goal in goals:
+        for idx, goal in enumerate(goals):
             goal_id = goal["goal_id"]
             strategy_version_id = self.strategy_repo.get_selected_strategy_version_id(planning_unit_id, goal_id)
             if not strategy_version_id:
@@ -64,6 +66,15 @@ class MultiGoalPlanningService:
             calc = report.get("goal_calculation", {})
             rec = report.get("recommendation", {})
 
+            if goal_order and goal_id in goal_order:
+                rank = goal_order.index(goal_id) + 1
+            elif priority_ranks and goal_id in priority_ranks:
+                rank = int(priority_ranks[goal_id])
+            elif goal.get("priority_rank"):
+                rank = int(goal["priority_rank"])
+            else:
+                rank = idx + 1
+
             client_p = goal.get("priority") or calc.get("priority") or "medium"
             today_cost = float(calc.get("today_cost") or 0.0)
             future_target = float(calc.get("future_target") or 0.0)
@@ -78,6 +89,7 @@ class MultiGoalPlanningService:
                 goal_id=goal_id,
                 goal_name=report.get("goal_name") or goal.get("goal_name") or goal_id,
                 goal_type=report.get("goal_type") or goal.get("goal_type") or "general",
+                priority_rank=rank,
                 client_priority=client_p,
                 target_date=target_date,
                 target_year=t_year,

@@ -1,4 +1,4 @@
-from engines.profile.risk import build_risk_profile
+from engines.risk_profiler.engine import build_risk_profile
 
 
 def test_risk_profile_separates_capacity_exposure_need():

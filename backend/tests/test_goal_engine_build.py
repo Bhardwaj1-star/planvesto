@@ -33,7 +33,6 @@ def _input(goal_type: str, **overrides):
         "status": "Active",
         "asset_mappings": [],
         "dynamic_details": {"currentAge": 30, "lifeExpectancy": 85},
-        "specialized_data": {},
     }
     payload.update(overrides)
     return GoalInput(**payload)

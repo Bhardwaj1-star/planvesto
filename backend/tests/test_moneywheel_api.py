@@ -1,4 +1,5 @@
 from api.moneywheel import _canonical_result
+from rules.moneywheel import CANONICAL_RATIO_KEYS
 
 
 def _ratio(key: str, value: float = 10.0, unit: str = "%") -> dict:
@@ -26,82 +27,23 @@ def _snapshot(ratios: list[dict], metadata: dict | None = None) -> dict:
     }
 
 
-def test_legacy_twelve_ratio_snapshot_is_normalized_to_current_contract():
-    legacy_keys = [
-        "savings_ratio",
-        "expense_ratio",
-        "emergency_fund_coverage",
-        "current_liquidity_ratio",
-        "debt_to_income_ratio",
-        "leverage_ratio",
-        "liquid_asset_to_total_asset",
-        "solvency_ratio",
-        "financial_asset_ratio",
-        "insurance_gap_ratio",
-        "goal_funding_ratio",
-        "future_funding_ratio",
-    ]
-
-    result = _canonical_result(_snapshot([
-        _ratio(key, 10.0, "months" if key == "emergency_fund_coverage" else "%")
-        for key in legacy_keys
-    ]))
+def test_canonical_result_returns_strictly_nine_ratios():
+    canonical_ratios = [_ratio(key) for key in CANONICAL_RATIO_KEYS]
+    result = _canonical_result(_snapshot(canonical_ratios, {"rules": [{"key": "expense_coverage"}]}))
 
     assert len(result.ratios) == 9
-    assert [ratio.key for ratio in result.ratios] == [
-        "savings_rate",
-        "liquid_asset_ratio",
-        "debt_to_income_ratio",
-        "leverage_ratio",
-        "financial_asset_ratio",
-        "insurance_coverage_ratio",
-        "goal_funding_ratio",
-        "future_funding_ratio",
-        "required_rate_of_return",
-    ]
-    assert len(result.rules) == 2
-    assert result.rules[0].key == "expense_coverage"
-    assert result.rules[0].value == 10.0
-    assert result.rules[1].key == "emergency_coverage"
-    assert result.rules[1].available is False
-    assert result.metadata["legacy_normalization"]["applied"] is True
+    assert [ratio.key for ratio in result.ratios] == list(CANONICAL_RATIO_KEYS)
+    assert not hasattr(result, "rules")
+    assert "rules" not in result.metadata
+    assert result.metadata["snapshot_id"] == "snapshot-1"
 
 
-def test_current_snapshot_with_stored_rules_is_not_reconstructed():
-    ratios = [
-        _ratio("savings_rate"),
-        _ratio("liquid_asset_ratio"),
-        _ratio("debt_to_income_ratio"),
-        _ratio("leverage_ratio"),
-        _ratio("financial_asset_ratio"),
-        _ratio("insurance_coverage_ratio"),
-        _ratio("goal_funding_ratio"),
-        _ratio("future_funding_ratio"),
-        _ratio("required_rate_of_return"),
-    ]
-    stored_rules = [
-        {
-            "key": "expense_coverage",
-            "name": "Expense Coverage",
-            "value": 6.0,
-            "unit": "months",
-            "formula": "Liquid Assets / Monthly Expenses",
-            "explanation": "Expense Coverage is 6.00 months.",
-            "available": True,
-        },
-        {
-            "key": "emergency_coverage",
-            "name": "Emergency Coverage",
-            "value": 4.0,
-            "unit": "months",
-            "formula": "Liquid Assets / Essential Monthly Expenses",
-            "explanation": "Emergency Coverage is 4.00 months.",
-            "available": True,
-        },
-    ]
-
-    result = _canonical_result(_snapshot(ratios, {"rules": stored_rules}))
+def test_missing_ratios_are_populated_as_unavailable():
+    partial_ratios = [_ratio("savings_rate")]
+    result = _canonical_result(_snapshot(partial_ratios))
 
     assert len(result.ratios) == 9
-    assert [rule.model_dump() for rule in result.rules] == stored_rules
-    assert "legacy_normalization" not in result.metadata
+    assert result.ratios[0].key == "savings_rate"
+    assert result.ratios[0].available is True
+    assert result.ratios[1].key == "liquid_asset_ratio"
+    assert result.ratios[1].available is False

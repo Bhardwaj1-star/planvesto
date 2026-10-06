@@ -85,10 +85,18 @@ class MultiGoalOrchestrator:
                 f"{g.target_year}-{g.target_month:02d}" if g.target_year and g.target_month else None
             )
 
+            if override_applied:
+                rank = self.priority_rank(resolved_p)
+            elif g.priority_rank is not None:
+                rank = g.priority_rank
+            else:
+                rank = self.priority_rank(resolved_p or g.client_priority)
+
             allocation_items.append({
                 "goal_id": g.goal_id,
                 "goal_name": g.goal_name,
                 "goal_type": g.goal_type,
+                "priority_rank": rank,
                 "client_priority": g.client_priority,
                 "resolved_priority": resolved_p,
                 "required_monthly_contribution": req_contrib,
@@ -107,6 +115,8 @@ class MultiGoalOrchestrator:
         goal_resolutions: list[GoalResolution] = []
         audit_trail: list[dict[str, Any]] = []
 
+        rank_map = {item["goal_id"]: item["priority_rank"] for item in allocation_items}
+
         for item in alloc_result.allocations:
             s_info = strat_map.get(item.goal_id, {})
             reasons = list(s_info.get("reasons", []))
@@ -117,6 +127,7 @@ class MultiGoalOrchestrator:
                 goal_id=item.goal_id,
                 goal_name=item.goal_name,
                 goal_type=item.goal_type,
+                priority_rank=rank_map.get(item.goal_id, 1),
                 client_priority=item.client_priority,
                 resolved_priority=item.resolved_priority,
                 target_date=item.target_date,

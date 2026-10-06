@@ -18,6 +18,14 @@ Pure unit tests against engine logic only.
 """
 
 import pytest
+from engines.calculation.canonical import (
+    calculate_cash_flow_ratio,
+    calculate_net_worth,
+    calculate_safety_reserve_months,
+    calculate_safety_reserve_required_amount,
+    calculate_savings_rate,
+    fact_net_worth,
+)
 from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
 from engines.financial_state.engine import FinancialStateEngine
 from rules.financial_state import (
@@ -116,8 +124,11 @@ class TestIncomeFrequencyConversion:
     def test_yearly_variant(self):
         assert monthly_amount(1200000, "Yearly") == 100000.0
 
+    def test_quarterly_input_monthly_amount(self):
+        assert monthly_amount(30000, "Quarterly") == 10000.0
+
     def test_unknown_frequency_monthly_returns_none(self):
-        assert monthly_amount(100000, "Quarterly") is None
+        assert monthly_amount(100000, "Weekly") is None
 
     def test_empty_frequency_monthly_returns_none(self):
         assert monthly_amount(100000, "") is None
@@ -158,7 +169,7 @@ class TestExpenseFrequencyConversion:
 
     def test_unknown_expense_frequency_makes_unavailable(self):
         result = _build(
-            expense_rows=[{"expense_id": "e1", "expense_type": "Other", "amount": 5000, "frequency": "Quarterly"}]
+            expense_rows=[{"expense_id": "e1", "expense_type": "Other", "amount": 5000, "frequency": "Weekly"}]
         )
         assert result.expenses_monthly.available is False
 
@@ -286,27 +297,31 @@ class TestNetWorth:
             asset_rows=[{"asset_id": "a1", "asset_name": "Savings", "current_value": 1000000}],
             liability_rows=[{"liability_id": "l1", "liability_name": "Loan", "outstanding_amount": 300000, "emi_amount": None, "frequency": "Monthly"}],
         )
-        assert result.net_worth.value == 700000.0
-        assert result.net_worth.available is True
+        fact = fact_net_worth(result.total_assets.value, result.total_liabilities.value)
+        assert fact.value == 700000.0
+        assert fact.available is True
 
     def test_zero_net_worth(self):
         result = _build(
             asset_rows=[{"asset_id": "a1", "asset_name": "Savings", "current_value": 500000}],
             liability_rows=[{"liability_id": "l1", "liability_name": "Loan", "outstanding_amount": 500000, "emi_amount": None, "frequency": "Monthly"}],
         )
-        assert result.net_worth.value == 0.0
+        fact = fact_net_worth(result.total_assets.value, result.total_liabilities.value)
+        assert fact.value == 0.0
 
     def test_negative_net_worth(self):
         result = _build(
             asset_rows=[{"asset_id": "a1", "asset_name": "Savings", "current_value": 100000}],
             liability_rows=[{"liability_id": "l1", "liability_name": "Loan", "outstanding_amount": 600000, "emi_amount": None, "frequency": "Monthly"}],
         )
-        assert result.net_worth.value == -500000.0
+        fact = fact_net_worth(result.total_assets.value, result.total_liabilities.value)
+        assert fact.value == -500000.0
 
     def test_net_worth_no_assets_no_liabilities(self):
         result = _build()
         # both assets=0, liabilities=0 → net_worth = 0
-        assert result.net_worth.value == 0.0
+        fact = fact_net_worth(result.total_assets.value, result.total_liabilities.value)
+        assert fact.value == 0.0
 
 
 # ═══════════════════════════════════════════════
@@ -343,7 +358,7 @@ class TestFinancialStateEngine:
         assert result.expenses_monthly.value == 40000
         assert result.total_assets.value == 1000000
         assert result.total_liabilities.value == 300000
-        assert result.net_worth.value == 700000
+        assert calculate_net_worth(result.total_assets.value, result.total_liabilities.value) == 700000
         assert result.investable_surplus_monthly.available is True
         assert result.investable_surplus_monthly.value == 60000
 
@@ -396,32 +411,46 @@ class TestMissingDataHandling:
 
     def test_unavailable_income_frequency(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Business", "amount": 50000, "frequency": "Quarterly", "investor_id": "i1"}]
+            income_rows=[{"income_id": "in1", "income_type": "Business", "amount": 50000, "frequency": "Weekly", "investor_id": "i1"}]
         )
         assert result.income_monthly.available is False
 
     def test_cash_flow_ratio_unavailable_when_surplus_missing(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Weekly", "investor_id": "i1"}],
         )
-        assert result.cash_flow_ratio.available is False
+        surplus_val = result.investable_surplus_monthly.value if result.investable_surplus_monthly.available else None
+        income_val = result.income_monthly.value if result.income_monthly.available else None
+        cfr = calculate_cash_flow_ratio(surplus_val, income_val)
+        assert cfr is None
 
     def test_savings_rate_unavailable_when_surplus_missing(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Weekly", "investor_id": "i1"}],
         )
-        assert result.savings_investment_rate.available is False
+        surplus_val = result.investable_surplus_monthly.value if result.investable_surplus_monthly.available else None
+        income_val = result.income_monthly.value if result.income_monthly.available else None
+        sr = calculate_savings_rate(surplus_val, income_val)
+        assert sr is None
 
     def test_safety_reserve_unavailable_when_cfr_missing(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Weekly", "investor_id": "i1"}],
         )
-        assert result.safety_reserve_months.available is False
-        assert result.safety_reserve_required_amount.available is False
+        surplus_val = result.investable_surplus_monthly.value if result.investable_surplus_monthly.available else None
+        income_val = result.income_monthly.value if result.income_monthly.available else None
+        cfr = calculate_cash_flow_ratio(surplus_val, income_val)
+        months = calculate_safety_reserve_months(cfr)
+        required_amt = calculate_safety_reserve_required_amount(
+            result.expenses_monthly.value if result.expenses_monthly.available else None,
+            months,
+        )
+        assert months is None
+        assert required_amt is None
 
     def test_metric_reason_set_on_unavailable(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Weekly", "investor_id": "i1"}],
         )
         assert result.investable_surplus_monthly.reason is not None
         assert len(result.investable_surplus_monthly.reason) > 0
@@ -444,7 +473,7 @@ class TestNegativeInvesteableSurplus:
 
     def test_surplus_unavailable_on_unresolved_frequency(self):
         result = _build(
-            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Quarterly", "investor_id": "i1"}],
+            income_rows=[{"income_id": "in1", "income_type": "Salary", "amount": 100000, "frequency": "Weekly", "investor_id": "i1"}],
             expense_rows=[{"expense_id": "e1", "expense_type": "Living", "amount": 20000, "frequency": "Monthly"}],
         )
         assert result.investable_surplus_monthly.available is False

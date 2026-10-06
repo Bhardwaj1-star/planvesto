@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
-from pydantic import BaseModel, Field, field_validator
+from typing import Any, Literal
+from pydantic import BaseModel, Field
 
-from rules.goals import GoalPriorityLevel, canonical_goal_priority
-from rules.multi_goal import FundingStatusType, FeasibilityStatusType
+FundingStatusType = Literal[
+    "fully_funded", "partially_funded", "unfunded",
+    "within_surplus", "surplus_shortfall", "requires_review",
+]
+FeasibilityStatusType = Literal["pass", "conditional", "infeasible"]
 
 
 class GoalEvaluationInput(BaseModel):
     goal_id: str
     goal_name: str
     goal_type: str = "general"
-    client_priority: GoalPriorityLevel = "medium"
+    priority_rank: int | None = None
+    client_priority: str = "medium"
     target_date: str | None = None
     target_year: int | None = None
     target_month: int | None = None
@@ -24,20 +28,14 @@ class GoalEvaluationInput(BaseModel):
     defined_goal: Any = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("client_priority", mode="before")
-    @classmethod
-    def normalize_client_priority(cls, value):
-        if isinstance(value, str):
-            return canonical_goal_priority(value)
-        return value
-
 
 class GoalResolution(BaseModel):
     goal_id: str
     goal_name: str
     goal_type: str
-    client_priority: GoalPriorityLevel
-    resolved_priority: GoalPriorityLevel
+    priority_rank: int = 1
+    client_priority: str = "medium"
+    resolved_priority: str = "medium"
     target_date: str | None = None
     required_monthly_contribution: float = 0.0
     allocated_monthly_contribution: float = 0.0

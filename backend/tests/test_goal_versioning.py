@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from models.defined_goal import DefinedGoal, DefinedGoalAssetMapping
 from schemas.goals import GoalInput, AssetMappingInput
 from data.goal_repository import GoalRepository
@@ -103,7 +103,7 @@ class TestGoalVersioningLogic:
             planning_unit_id="pu1",
             goal_id="g1",
             goal_name="Dream House",
-            goal_type="Home Purchase",
+            goal_type="dream_home",
             today_cost=5000000.0,
             target_month=1,
             target_year=2035,
@@ -152,7 +152,7 @@ class TestGoalVersioningLogic:
             planning_unit_id="pu1",
             goal_id="g1",
             goal_name="Car",
-            goal_type="Vehicle",
+            goal_type="vehicle",
             today_cost=800000.0,
             target_month=10,
             target_year=2028,

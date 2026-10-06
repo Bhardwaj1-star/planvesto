@@ -9,6 +9,8 @@ from rules.goals import GoalPriority
 class MultiGoalPlanRequest(StrictRequestModel):
     planning_unit_id: str = Field(min_length=1, max_length=100)
     rule_overrides: dict[str, dict[str, Any]] | None = None
+    priority_ranks: dict[str, int] | None = None
+    goal_order: list[str] | None = None
 
 
 class GoalPriorityOverrideItem(StrictRequestModel):

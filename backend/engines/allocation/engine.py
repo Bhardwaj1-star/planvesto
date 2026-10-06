@@ -39,11 +39,11 @@ class ResourceAllocationEngine:
         if surplus is not None and len(goals) > 1 and total_required > surplus:
             competition = True
 
-        # Sort goals by resolved_priority, then target date
+        # Sort goals by numeric priority_rank (1 = top priority, 2 = next, ...), then target date
         sorted_goals = sorted(
             goals,
             key=lambda item: (
-                self.priority_rank(item.get("resolved_priority") or item.get("client_priority")),
+                item.get("priority_rank") if item.get("priority_rank") is not None else self.priority_rank(item.get("resolved_priority") or item.get("client_priority")),
                 item.get("target_date") or "9999-99",
             ),
         )

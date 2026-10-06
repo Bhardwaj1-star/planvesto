@@ -4,11 +4,12 @@ from api.auth import authenticate_user, verify_planning_unit_ownership
 from data.moneywheel_repository import MoneywheelRepository
 from schemas.moneywheel import MoneywheelCalculateRequest, MoneywheelResponse
 from models.moneywheel import MoneywheelResult
-from rules.moneywheel import CANONICAL_RATIO_KEYS, LEGACY_RATIO_ALIASES, RULES, RULE_DEFINITIONS
+from rules.moneywheel import CANONICAL_RATIO_KEYS, RULES
 from services.financial_state_service import FinancialStateService
 from services.moneywheel_service import MoneywheelService
 
 router = APIRouter(prefix="/api/moneywheel", tags=["Moneywheel"])
+
 
 def _service():
     return MoneywheelService(MoneywheelRepository())
@@ -32,107 +33,36 @@ def _unavailable_ratio(key: str) -> dict:
         "unit": rule["unit"],
         "status": "unavailable",
         "formula": rule["formula"],
-        "explanation": "This signal was not stored in the legacy Moneywheel snapshot.",
+        "explanation": "This signal was not available in the snapshot.",
         "available": False,
     }
 
 
-def _canonical_ratios(rows: list[dict]) -> tuple[list[dict], list[str]]:
+def _canonical_ratios(rows: list[dict]) -> list[dict]:
     by_key = {str(row.get("key")): row for row in rows if isinstance(row, dict) and row.get("key")}
     normalized: list[dict] = []
-    legacy_keys: list[str] = []
 
     for key in CANONICAL_RATIO_KEYS:
         row = by_key.get(key)
         if row is None:
-            for legacy_key, canonical_key in LEGACY_RATIO_ALIASES.items():
-                if canonical_key == key and legacy_key in by_key:
-                    row = dict(by_key[legacy_key])
-                    row["key"] = key
-                    legacy_keys.append(legacy_key)
-                    break
-        if row is None:
             row = _unavailable_ratio(key)
-
         normalized.append(row)
 
-    return normalized, legacy_keys
-
-
-def _rule_from_ratio(row: dict, key: str) -> dict:
-    definition = RULE_DEFINITIONS[key]
-    return {
-        "key": key,
-        "name": definition["name"],
-        "value": row.get("value"),
-        "unit": definition["unit"],
-        "formula": definition["formula"],
-        "explanation": row.get("explanation") or "Coverage was stored in the legacy Moneywheel snapshot.",
-        "available": bool(row.get("available", row.get("value") is not None)),
-    }
-
-
-def _unavailable_rule(key: str, reason: str) -> dict:
-    definition = RULE_DEFINITIONS[key]
-    return {
-        "key": key,
-        "name": definition["name"],
-        "value": None,
-        "unit": definition["unit"],
-        "formula": definition["formula"],
-        "explanation": reason,
-        "available": False,
-    }
-
-
-def _canonical_rules(rows: list[dict], metadata: dict) -> tuple[list[dict], bool]:
-    stored_rules = metadata.pop("rules", None)
-    if isinstance(stored_rules, list) and len(stored_rules) == 2:
-        return stored_rules, False
-
-    by_key = {str(row.get("key")): row for row in rows if isinstance(row, dict) and row.get("key")}
-    rules: list[dict] = []
-
-    expense_source = by_key.get("expense_coverage") or by_key.get("emergency_fund_coverage")
-    if expense_source is not None:
-        rules.append(_rule_from_ratio(expense_source, "expense_coverage"))
-    else:
-        rules.append(_unavailable_rule("expense_coverage", "Legacy snapshot did not store expense coverage."))
-
-    emergency_source = by_key.get("emergency_coverage")
-    if emergency_source is not None:
-        rules.append(_rule_from_ratio(emergency_source, "emergency_coverage"))
-    else:
-        rules.append(
-            _unavailable_rule(
-                "emergency_coverage",
-                "Legacy snapshot did not store essential-expense emergency coverage separately.",
-            )
-        )
-
-    return rules, True
+    return normalized
 
 
 def _canonical_result(row: dict) -> MoneywheelResult:
     metadata = dict(row.get("metadata") or {})
     metadata["snapshot_id"] = row.get("snapshot_id")
+    metadata.pop("rules", None)
 
     raw_ratios = row.get("ratios") or []
-    ratios, legacy_ratio_keys = _canonical_ratios(raw_ratios)
-    rules, rules_reconstructed = _canonical_rules(raw_ratios, metadata)
-
-    if legacy_ratio_keys or rules_reconstructed:
-        metadata["legacy_normalization"] = {
-            "applied": True,
-            "legacy_ratio_keys": legacy_ratio_keys,
-            "rules_reconstructed": rules_reconstructed,
-        }
+    ratios = _canonical_ratios(raw_ratios)
 
     return MoneywheelResult(
         planning_unit_id=row["planning_unit_id"],
         overall_status=row.get("overall_status"),
         ratios=ratios,
-        rules=rules,
         rule_set_version=row["rule_set_version"],
         calculated_at=row["calculated_at"],
         metadata=metadata,

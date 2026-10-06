@@ -48,7 +48,7 @@ export function useGoals() {
 
   async function handleContinue(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault(); setIsSubmitted(true);
-    const hasEnteredDraft = Boolean(draft.name.trim() || draft.dynamicDetails.otherGoalName.trim() || draft.targetAmount || draft.goalType || draft.targetDate || draft.targetAge || editingGoalId || goals.length === 0);
+    const hasEnteredDraft = Boolean(draft.name.trim() || draft.dynamicDetails.otherGoalName.trim() || draft.targetAmount || draft.goalType || draft.targetDate || editingGoalId || goals.length === 0);
     let goalsToSave = goals;
     if (hasEnteredDraft) {
       const nextErrors = validateGoal(draft); setErrors(nextErrors);

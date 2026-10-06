@@ -17,16 +17,11 @@ def make_state():
         essential_monthly_expenses=metric(30000),
         investable_surplus_monthly=metric(50000),
         investable_surplus_annual=metric(600000),
-        cash_flow_ratio=metric(0.5),
-        savings_investment_rate=metric(0.5),
         total_assets=metric(1000000),
         liquid_assets=metric(250000),
         financial_assets=metric(700000),
         total_liabilities=metric(200000),
         emi_burden_monthly=metric(10000),
-        net_worth=metric(800000),
-        safety_reserve_months=metric(6),
-        safety_reserve_required_amount=metric(300000),
     )
 
 

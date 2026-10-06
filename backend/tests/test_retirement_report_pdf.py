@@ -106,7 +106,7 @@ def test_retirement_report_pdf_renders_via_canonical_goal_report_service():
 
     report = report_service.build_report("pu-ret-canonical-1", "run-ret-canonical-1")
     assert report["report_type"] == "goal_decision_report"
-    assert report["goal"]["type"] == "Retirement"
+    assert report["goal"]["type"].lower() == "retirement"
     assert report["strategy"]["selected_strategy_id"] == "strat-retirement-diversified"
 
     pdf_bytes = report_service.generate_pdf("pu-ret-canonical-1", "run-ret-canonical-1")

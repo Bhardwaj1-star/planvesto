@@ -35,7 +35,8 @@ class DefinedGoal(BaseModel):
     target_year: int
     duration_years: float
     future_target: float
-    priority: str
+    priority: str = "Important"
+    priority_rank: int | None = None
     flexibility: str
     status: str = "Active"
     mapped_assets: list[DefinedGoalAssetMapping] = Field(default_factory=list)

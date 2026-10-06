@@ -9,7 +9,7 @@ from engines.risk_profiler.engine import build_risk_profile
 from engines.risk_profiler.models import RiskProfile
 from engines.goal.engine import GoalEngine
 from engines.investment.engine import InvestmentEngine
-from engines.moneywheel.engine import MoneyWheelEngine
+from engines.moneywheel.engine import MoneywheelEngine
 from models.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
 
 logger = logging.getLogger(__name__)
@@ -27,8 +27,8 @@ class SummaryReportEngine:
     # Core data fetch helpers (placeholder – replace with real service calls)
     # ---------------------------------------------------------------------
     def _fetch_moneywheel(self) -> dict:
-        # In production this would call MoneyWheelEngine.build(planning_unit_id)
-        return MoneyWheelEngine.build(self.planning_unit_id).dict()
+        # In production this would call MoneywheelEngine.build(planning_unit_id)
+        return MoneywheelEngine().build(self.planning_unit_id).model_dump()
 
     def _fetch_risk_profile(self) -> dict:
         # RiskProfilerEngine consumes the canonical risk required and builds a profile

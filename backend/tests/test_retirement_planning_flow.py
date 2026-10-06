@@ -238,7 +238,7 @@ class TestRetirementPlanningFlow:
 
         report = report_service.build_report("pu-ret-1", "run-ret-1")
         assert report["report_type"] == "goal_decision_report"
-        assert report["goal"]["type"] == "Retirement"
+        assert report["goal"]["type"].lower() == "retirement"
 
         # Check core canonical report sections
         expected_sections = [

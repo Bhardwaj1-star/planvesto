@@ -22,6 +22,7 @@ class MoneywheelFinancialStateAdapter:
             total_assets=financial_state.total_assets.value,
             total_liabilities=financial_state.total_liabilities.value,
             financial_assets=financial_state.financial_assets.value,
+            existing_sum_assured=financial_state.total_insurance_sum_assured.value,
         )
 
     @staticmethod

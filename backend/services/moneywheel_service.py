@@ -5,7 +5,6 @@ from models.financial_state import FinancialState
 from models.moneywheel import MoneywheelInput, MoneywheelResult
 from engines.moneywheel.engine import MoneywheelEngine
 from engines.moneywheel.financial_state_adapter import MoneywheelFinancialStateAdapter
-from data.financial_data import FinancialDataRepository
 from data.goal_repository import GoalRepository
 from rules.protection import (
     calculate_required_insurance_cover,
@@ -28,7 +27,7 @@ class MoneywheelService:
         adapter: MoneywheelFinancialStateAdapter | None = None,
     ):
         self.repository = repository
-        self.data_repository = data_repository or FinancialDataRepository()
+        self.data_repository = data_repository
         self.goal_repository = goal_repository or GoalRepository()
         self.engine = engine or MoneywheelEngine()
         self.adapter = adapter or MoneywheelFinancialStateAdapter()
@@ -53,13 +52,13 @@ class MoneywheelService:
     ) -> MoneywheelResult:
         """Calculate MoneyWheel exclusively from canonical FinancialState facts.
 
-        Policy/domain inputs such as insurance policies and goal funding remain
-        separate sources; shared financial facts must never be re-derived here.
+        Insurance facts and breakdown are sourced directly from FinancialState.
+        Goal funding remains sourced from GoalRepository.
         """
         planning_unit_id = financial_state.planning_unit_id
-        policies = self.data_repository.get_insurance_policies(planning_unit_id)
+        policies = financial_state.insurance_breakdown or []
 
-        total_sum_assured = sum(float(p.get("sum_assured") or 0) for p in policies)
+        total_sum_assured = float(financial_state.total_insurance_sum_assured.value or 0)
         total_life_cover = sum(
             float(p.get("sum_assured") or 0) for p in policies
             if is_life_insurance(p.get("policy_type"))
@@ -129,87 +128,3 @@ class MoneywheelService:
         if not found:
             return None, None, None, None
         return current_target, current_funding, future_target, projected_funding
-
-    @staticmethod
-    def _build_master_lookup(classifications: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        lookup: dict[str, dict[str, Any]] = {}
-        for item in classifications:
-            if not item.get("is_active", True):
-                continue
-            name = str(item.get("name") or "").strip().lower()
-            if name:
-                lookup[name] = item
-            code = str(item.get("code") or "").strip().lower()
-            if code:
-                lookup[code] = item
-        return lookup
-
-    @classmethod
-    def _resolve_asset_classification(
-        cls,
-        row: dict[str, Any],
-        lookup: dict[str, dict[str, Any]],
-    ) -> tuple[dict[str, Any] | None, str | None]:
-        """Resolves an asset row to its corresponding asset_type_master record.
-
-        Returns (master_record, raw_identifier).
-        - If resolved: (master_record, raw_identifier)
-        - If unmapped: (None, raw_identifier)
-        - If row has neither asset type nor asset name: (None, None)
-        """
-        raw_type = row.get("asset_type")
-        if raw_type is not None:
-            trimmed = str(raw_type).strip()
-            if not trimmed:
-                return None, None
-            lowered = trimmed.lower()
-            if lowered in lookup:
-                return lookup[lowered], trimmed
-            return None, trimmed
-
-        raw_name = row.get("asset_name")
-        if raw_name is not None:
-            trimmed_name = str(raw_name).strip()
-            if not trimmed_name:
-                return None, None
-            lowered_name = trimmed_name.lower()
-            if lowered_name in lookup:
-                return lookup[lowered_name], trimmed_name
-            if " - " in trimmed_name:
-                prefix = trimmed_name.split(" - ", 1)[0].strip()
-                lowered_prefix = prefix.lower()
-                if lowered_prefix in lookup:
-                    return lookup[lowered_prefix], prefix
-                return None, prefix
-            return None, trimmed_name
-
-        return None, None
-
-    @classmethod
-    def _sum_assets(
-        cls,
-        rows: list[dict[str, Any]],
-        flag: str,
-        classifications: list[dict[str, Any]] | None = None,
-        unmapped_accumulator: set[str] | list[str] | None = None,
-    ) -> float:
-        if classifications is None:
-            classifications = FinancialDataRepository().get_active_asset_types()
-
-        lookup = cls._build_master_lookup(classifications)
-        total = 0.0
-        for row in rows:
-            master, raw_identifier = cls._resolve_asset_classification(row, lookup)
-            if master is None:
-                if raw_identifier is not None:
-                    logger.warning("Unmapped or unknown asset type encountered: %s", raw_identifier)
-                    if unmapped_accumulator is not None:
-                        if isinstance(unmapped_accumulator, set):
-                            unmapped_accumulator.add(raw_identifier)
-                        elif isinstance(unmapped_accumulator, list) and raw_identifier not in unmapped_accumulator:
-                            unmapped_accumulator.append(raw_identifier)
-                continue
-            if master.get(flag) is True:
-                total += float(row.get("current_value") or 0)
-        return total
-

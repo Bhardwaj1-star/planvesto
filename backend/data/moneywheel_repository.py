@@ -38,7 +38,7 @@ class MoneywheelRepository:
             "ratios": [r.model_dump(mode="json") for r in result.ratios],
             "financial_state_snapshot": financial_state_snapshot,
             "calculated_at": result.calculated_at,
-            "metadata": {**result.metadata, "rules": [rule.model_dump(mode="json") for rule in result.rules]},
+            "metadata": dict(result.metadata),
         }
         response = self._execute(self.client.table(self.table).insert(payload).select("*"))
         rows = response.data

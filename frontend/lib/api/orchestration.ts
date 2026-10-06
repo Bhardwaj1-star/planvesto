@@ -39,6 +39,7 @@ export interface GoalResolution {
   goal_id: string;
   goal_name: string;
   goal_type: string;
+  priority_rank?: number;
   client_priority: GoalPriorityLevel;
   resolved_priority: GoalPriorityLevel;
   target_date: string | null;
@@ -94,6 +95,8 @@ export interface MultiGoalPlanResult {
 export interface MultiGoalPlanRequest {
   planning_unit_id: string;
   rule_overrides?: Record<string, { resolved_priority?: GoalPriorityLevel; reason?: string }>;
+  priority_ranks?: Record<string, number>;
+  goal_order?: string[];
 }
 
 export interface PlanningOrchestrationRequest {
@@ -110,13 +113,17 @@ export interface PlanningOrchestrationRequest {
  */
 export async function buildMultiGoalOrchestrationPlan(
   planningUnitId: string,
-  ruleOverrides?: Record<string, { resolved_priority?: GoalPriorityLevel; reason?: string }>
+  ruleOverrides?: Record<string, { resolved_priority?: GoalPriorityLevel; reason?: string }>,
+  priorityRanks?: Record<string, number>,
+  goalOrder?: string[]
 ): Promise<MultiGoalPlanResult> {
   return apiRequest<MultiGoalPlanResult>("/api/orchestration/plan", {
     method: "POST",
     body: JSON.stringify({
       planning_unit_id: planningUnitId,
       rule_overrides: ruleOverrides,
+      priority_ranks: priorityRanks,
+      goal_order: goalOrder,
     }),
   });
 }

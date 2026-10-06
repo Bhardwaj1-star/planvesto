@@ -18,17 +18,6 @@ class MoneywheelRatio(BaseModel):
     available: bool = True
 
 
-class MoneywheelRule(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    key: str
-    name: str
-    value: float | None = None
-    unit: str
-    formula: str
-    explanation: str
-    available: bool = True
-
-
 class MoneywheelInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     planning_unit_id: str = Field(min_length=1, max_length=100)
@@ -55,7 +44,6 @@ class MoneywheelResult(BaseModel):
     planning_unit_id: str
     overall_status: Literal["excellent", "healthy", "attention", "critical", "incomplete"] | None = None
     ratios: list[MoneywheelRatio] = Field(min_length=9, max_length=9)
-    rules: list[MoneywheelRule] = Field(min_length=2, max_length=2)
     rule_set_version: str
     calculated_at: str
     metadata: dict[str, Any] = Field(default_factory=dict, max_length=50)

@@ -25,8 +25,6 @@ class FinancialState(BaseModel):
     expense_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     investable_surplus_monthly: Metric
     investable_surplus_annual: Metric
-    cash_flow_ratio: Metric
-    savings_investment_rate: Metric
     total_assets: Metric
     liquid_assets: Metric = Field(default_factory=Metric)
     financial_assets: Metric = Field(default_factory=Metric)
@@ -37,6 +35,9 @@ class FinancialState(BaseModel):
     liability_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     liability_allocation: list[dict[str, Any]] = Field(default_factory=list)
     emi_burden_monthly: Metric
-    net_worth: Metric
-    safety_reserve_months: Metric
-    safety_reserve_required_amount: Metric
+    total_insurance_sum_assured: Metric = Field(default_factory=Metric)
+    total_insurance_annual_premium: Metric = Field(default_factory=Metric)
+    total_insurance_monthly_premium: Metric = Field(default_factory=Metric)
+    total_insurance_current_value: Metric = Field(default_factory=Metric)
+    insurance_breakdown: list[dict[str, Any]] = Field(default_factory=list)
+

@@ -14,9 +14,15 @@ from data.strategy_repository import StrategyRepository
 from models.strategy import InvestorPriorities
 from services.goal_report_service import GoalReportService
 from rules.multi_goal import get_priority_rank
-from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
+from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
+from engines.calculation.canonical import (
+    calculate_debt_to_income_ratio,
+    calculate_emergency_coverage,
+    calculate_financial_asset_ratio,
+    calculate_savings_rate,
+)
 
 
 class FinancialPlanService:
@@ -316,17 +322,43 @@ class FinancialPlanService:
         return trajectory
 
     @classmethod
-    def _build_moneywheel_health_scan(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
+    def _extract_canonical_ratios(cls, f_state: dict[str, Any]) -> tuple[float, float, float, float, float, float]:
         income = float(f_state.get("annual_income") or 0.0)
+        monthly_income = float(f_state.get("monthly_income") or (income / 12.0 if income > 0 else 0.0))
         expenses = float(f_state.get("annual_expenses") or 0.0)
-        monthly_exp = expenses / 12.0 if expenses > 0 else 1.0
-        liabilities = float(f_state.get("liabilities") or 0.0)
-        assets = float(f_state.get("assets") or 0.0)
-        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
+        monthly_exp = float(f_state.get("monthly_expenses") or (expenses / 12.0 if expenses > 0 else 0.0))
+        essential_exp = float(f_state.get("essential_monthly_expenses") or (monthly_exp if monthly_exp > 0 else 1.0))
+        monthly_surplus = float(f_state.get("monthly_surplus") or (monthly_income - monthly_exp if monthly_income > 0 else 0.0))
+        monthly_debt = float(f_state.get("monthly_debt_payments") or f_state.get("emi_burden_monthly") or 0.0)
 
-        savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
-        dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
-        emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
+        assets = float(f_state.get("assets") or f_state.get("total_assets") or 0.0)
+        liabilities = float(f_state.get("liabilities") or f_state.get("total_liabilities") or 0.0)
+        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
+        liquid_assets = float(f_state.get("liquid_assets") or 0.0)
+
+        savings_pct = calculate_savings_rate(monthly_surplus, monthly_income) if monthly_income > 0 else 0.0
+        if savings_pct is None:
+            savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
+
+        if monthly_debt > 0 and monthly_income > 0:
+            dti_pct = calculate_debt_to_income_ratio(monthly_debt, monthly_income) or 0.0
+        else:
+            dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
+
+        if liquid_assets > 0 and essential_exp > 0:
+            emergency_months = calculate_emergency_coverage(liquid_assets, essential_exp) or 6.0
+        else:
+            emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
+
+        fin_asset_pct = calculate_financial_asset_ratio(financial_assets, assets) if assets > 0 else 50.0
+        if fin_asset_pct is None:
+            fin_asset_pct = (financial_assets / assets * 100.0) if assets > 0 else 50.0
+
+        return savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, financial_assets
+
+    @classmethod
+    def _build_moneywheel_health_scan(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
+        savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, financial_assets = cls._extract_canonical_ratios(f_state)
 
         return [
             {
@@ -357,17 +389,7 @@ class FinancialPlanService:
 
     @classmethod
     def _build_ratio_constraints(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
-        income = float(f_state.get("annual_income") or 0.0)
-        expenses = float(f_state.get("annual_expenses") or 0.0)
-        monthly_exp = expenses / 12.0 if expenses > 0 else 1.0
-        liabilities = float(f_state.get("liabilities") or 0.0)
-        assets = float(f_state.get("assets") or 0.0)
-        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
-
-        savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
-        dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
-        emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
-        fin_asset_pct = (financial_assets / assets * 100.0) if assets > 0 else 50.0
+        savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, _ = cls._extract_canonical_ratios(f_state)
 
         return [
             {

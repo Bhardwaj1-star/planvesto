@@ -5,7 +5,7 @@ from typing import Any
 
 from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
 from models.financial_state import FinancialState, Metric
-from rules.financial_state import MISSING_INPUT, cash_flow_ratio, required_safety_reserve_months, savings_investment_rate
+from rules.financial_state import MISSING_INPUT
 from rules.financial_metrics import is_essential_expense
 
 
@@ -15,27 +15,19 @@ class FinancialStateEngine:
               liability_rows: list[dict[str, Any]], asset_owner_rows: list[dict[str, Any]],
               liability_responsibility_rows: list[dict[str, Any]], expense_participant_rows: list[dict[str, Any]],
               asset_type_master: list[dict[str, Any]] | None = None,
+              insurance_rows: list[dict[str, Any]] | None = None,
               scope: str = "family", investor_id: str | None = None) -> FinancialState:
         income = self._income(income_rows, scope, investor_id)
         expenses = self._expenses(expense_rows, scope, investor_id, expense_participant_rows)
         assets = self._assets(asset_rows, asset_owner_rows, asset_type_master or [], scope, investor_id)
         liabilities = self._liabilities(liability_rows, liability_responsibility_rows, scope, investor_id)
+        insurance = self._insurance(insurance_rows or [], scope, investor_id)
 
         surplus_m = None
         surplus_a = None
         if income.available and expenses.available:
             surplus_m = round_money(income.monthly - expenses.monthly)
             surplus_a = round_money(surplus_m * 12)
-
-        cfr = cash_flow_ratio(expenses.monthly, income.monthly) if surplus_m is not None else None
-        savings = savings_investment_rate(surplus_m, income.monthly) if surplus_m is not None else None
-        net_worth = round_money(assets.total - liabilities.total) if assets.available and liabilities.available else None
-
-        reserve_months = None
-        reserve_amount = None
-        if cfr is not None:
-            reserve_months = required_safety_reserve_months(cfr)
-            reserve_amount = round_money(expenses.monthly * reserve_months)
 
         return FinancialState(
             scope=scope, planning_unit_id=planning_unit_id, investor_id=investor_id,
@@ -48,8 +40,6 @@ class FinancialStateEngine:
             expense_breakdown=expenses.breakdown,
             investable_surplus_monthly=self._metric(surplus_m),
             investable_surplus_annual=self._metric(surplus_a),
-            cash_flow_ratio=self._metric(cfr),
-            savings_investment_rate=self._metric(savings),
             total_assets=self._metric(assets.total),
             liquid_assets=self._metric(assets.liquid_assets, assets.classification_available),
             financial_assets=self._metric(assets.financial_assets, assets.classification_available),
@@ -60,9 +50,11 @@ class FinancialStateEngine:
             liability_breakdown=liabilities.breakdown,
             liability_allocation=liabilities.allocation,
             emi_burden_monthly=Metric(value=liabilities.emi, available=liabilities.emi_available, reason=None if liabilities.emi_available else MISSING_INPUT),
-            net_worth=self._metric(net_worth),
-            safety_reserve_months=Metric(value=reserve_months, available=reserve_months is not None, reason=None if reserve_months is not None else MISSING_INPUT),
-            safety_reserve_required_amount=Metric(value=reserve_amount, available=reserve_amount is not None, reason=None if reserve_amount is not None else MISSING_INPUT),
+            total_insurance_sum_assured=self._metric(insurance.total_sum_assured, insurance.available),
+            total_insurance_annual_premium=self._metric(insurance.total_annual_premium, insurance.available),
+            total_insurance_monthly_premium=self._metric(insurance.total_monthly_premium, insurance.available),
+            total_insurance_current_value=self._metric(insurance.total_current_value, insurance.available),
+            insurance_breakdown=insurance.breakdown,
         )
 
     @staticmethod
@@ -160,6 +152,59 @@ class FinancialStateEngine:
         allocation=[{"liability_id":x["liability_id"],"name":x["name"],"percentage":percentage(x["outstanding_amount"],total)} for x in breakdown] if total else []
         return _LiabilityComponent(total,breakdown,allocation,emi if emi_available else None,emi_available)
 
+    def _insurance(self, rows, scope, investor_id):
+        selected = rows or []
+        if scope == "individual" and investor_id:
+            selected = [r for r in selected if not r.get("investor_id") or r.get("investor_id") == investor_id]
+        breakdown = []
+        total_sa = 0.0
+        total_m_prem = 0.0
+        total_a_prem = 0.0
+        total_cv = 0.0
+        available = True
+
+        for r in selected:
+            sa = float(r.get("sum_assured") or 0)
+            cv = float(r.get("current_value") or 0)
+            raw_premium = float(r.get("premium") or 0)
+            freq = str(r.get("premium_frequency") or "Monthly")
+
+            m_prem = monthly_amount(raw_premium, freq)
+            a_prem = annual_amount(raw_premium, freq)
+            if m_prem is None:
+                m_prem = round_money(raw_premium)
+            if a_prem is None:
+                a_prem = round_money(raw_premium * 12)
+
+            total_sa += sa
+            total_cv += cv
+            total_m_prem += m_prem
+            total_a_prem += a_prem
+
+            breakdown.append({
+                "policy_id": r.get("policy_id"),
+                "policy_name": r.get("policy_name"),
+                "insurer": r.get("insurer"),
+                "policy_type": r.get("policy_type"),
+                "premium": round_money(raw_premium),
+                "premium_frequency": freq,
+                "premium_monthly": round_money(m_prem),
+                "premium_annual": round_money(a_prem),
+                "sum_assured": round_money(sa),
+                "current_value": round_money(cv),
+                "maturity_date": r.get("maturity_date"),
+                "maturity_value": round_money(float(r.get("maturity_value") or 0)) if r.get("maturity_value") else None,
+            })
+
+        return _InsuranceComponent(
+            total_sum_assured=round_money(total_sa),
+            total_monthly_premium=round_money(total_m_prem),
+            total_annual_premium=round_money(total_a_prem),
+            total_current_value=round_money(total_cv),
+            available=available,
+            breakdown=breakdown,
+        )
+
 
 class _Component:
     def __init__(self, monthly, annual, available, reason, breakdown): self.monthly=monthly; self.annual=annual; self.available=available; self.reason=reason; self.breakdown=breakdown
@@ -169,3 +214,12 @@ class _AssetComponent:
     def __init__(self,total,liquid_assets,financial_assets,classification_available,breakdown,allocation,liquidity_breakdown): self.total=total; self.liquid_assets=liquid_assets; self.financial_assets=financial_assets; self.classification_available=classification_available; self.available=True; self.breakdown=breakdown; self.allocation=allocation; self.liquidity_breakdown=liquidity_breakdown
 class _LiabilityComponent:
     def __init__(self,total,breakdown,allocation,emi,emi_available): self.total=total; self.available=True; self.breakdown=breakdown; self.allocation=allocation; self.emi=emi; self.emi_available=emi_available
+class _InsuranceComponent:
+    def __init__(self, total_sum_assured, total_monthly_premium, total_annual_premium, total_current_value, available, breakdown):
+        self.total_sum_assured = total_sum_assured
+        self.total_monthly_premium = total_monthly_premium
+        self.total_annual_premium = total_annual_premium
+        self.total_current_value = total_current_value
+        self.available = available
+        self.breakdown = breakdown
+

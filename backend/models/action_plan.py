@@ -39,7 +39,7 @@ class ActionImpactPreview(BaseModel):
     financial_state_impact: dict[str, Any] = Field(default_factory=dict, max_length=50)
     goal_impacts: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
     strategy_impact: dict[str, Any] = Field(default_factory=dict, max_length=50)
-    financial_health_impact: dict[str, Any] = Field(default_factory=dict, max_length=50)
+    moneywheel_impact: dict[str, Any] = Field(default_factory=dict, max_length=50)
     alternatives: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
     cause_explanation: str | None = Field(default=None, max_length=5000)
 

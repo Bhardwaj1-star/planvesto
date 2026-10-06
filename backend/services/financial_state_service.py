@@ -67,6 +67,7 @@ class FinancialStateService:
             liability_responsibility_rows=inputs["liability_responsibilities"],
             expense_participant_rows=inputs["expense_participants"],
             asset_type_master=inputs["asset_type_master"],
+            insurance_rows=inputs.get("insurance_policies", []),
             scope=scope,
             investor_id=investor_id,
         )

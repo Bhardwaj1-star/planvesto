@@ -1,14 +1,12 @@
 from datetime import datetime, timezone
 import math
 
-from models.moneywheel import MoneywheelInput, MoneywheelRatio, MoneywheelResult, MoneywheelRule
-from rules.moneywheel import RULE_SET_VERSION, RULES, RULE_DEFINITIONS, classify
+from models.moneywheel import MoneywheelInput, MoneywheelRatio, MoneywheelResult
+from rules.moneywheel import RULE_SET_VERSION, RULES, classify
 
 
 from engines.calculation.canonical import (
     calculate_debt_to_income_ratio,
-    calculate_emergency_coverage,
-    calculate_expense_coverage,
     calculate_financial_asset_ratio,
     calculate_future_funding_ratio,
     calculate_goal_funding_ratio,
@@ -21,7 +19,7 @@ from engines.calculation.canonical import (
 
 
 class MoneywheelEngine:
-    """Calculates the final MoneyWheel ratios and separate coverage rules."""
+    """Calculates the 9 canonical MoneyWheel ratios."""
 
     def build(self, data: MoneywheelInput) -> MoneywheelResult:
         ratios = [
@@ -35,15 +33,10 @@ class MoneywheelEngine:
             self._ratio(data, "future_funding_ratio", calculate_future_funding_ratio(data.projected_goal_funding, data.future_goal_target), data.projected_goal_funding, data.future_goal_target),
             self._required_rate_of_return(data),
         ]
-        rules = [
-            self._coverage_rule(data, "expense_coverage", data.liquid_assets, data.monthly_expenses),
-            self._coverage_rule(data, "emergency_coverage", data.liquid_assets, data.essential_monthly_expenses),
-        ]
         return MoneywheelResult(
             planning_unit_id=data.planning_unit_id,
             overall_status="incomplete" if any(not r.available for r in ratios) else None,
             ratios=ratios,
-            rules=rules,
             rule_set_version=RULE_SET_VERSION,
             calculated_at=datetime.now(timezone.utc).isoformat(),
             metadata={"overall_status": "not_defined"},
@@ -77,58 +70,6 @@ class MoneywheelEngine:
         return self._make_ratio(key, calculated_value)
 
     @staticmethod
-    def _coverage_rule(
-        data: MoneywheelInput,
-        key: str,
-        numerator: float | None,
-        denominator: float | None,
-    ) -> MoneywheelRule:
-        rule = RULE_DEFINITIONS[key]
-        if numerator is None or denominator is None:
-            return MoneywheelRule(
-                key=key,
-                name=rule["name"],
-                value=None,
-                unit=rule["unit"],
-                formula=rule["formula"],
-                explanation="Required input is missing.",
-                available=False,
-            )
-        if denominator == 0:
-            return MoneywheelRule(
-                key=key,
-                name=rule["name"],
-                value=None,
-                unit=rule["unit"],
-                formula=rule["formula"],
-                explanation="Coverage denominator is zero; coverage is not defined.",
-                available=False,
-            )
-        if key == "emergency_coverage":
-            val = calculate_emergency_coverage(numerator, denominator)
-        else:
-            val = calculate_expense_coverage(numerator, denominator)
-        if val is None:
-            return MoneywheelRule(
-                key=key,
-                name=rule["name"],
-                value=None,
-                unit=rule["unit"],
-                formula=rule["formula"],
-                explanation="Coverage is not defined.",
-                available=False,
-            )
-        return MoneywheelRule(
-            key=key,
-            name=rule["name"],
-            value=val,
-            unit=rule["unit"],
-            formula=rule["formula"],
-            explanation=f"{rule['name']} is {val:.2f} months.",
-            available=True,
-        )
-
-    @staticmethod
     def _unavailable(key: str, reason: str) -> MoneywheelRatio:
         rule = RULES[key]
         return MoneywheelRatio(
@@ -147,7 +88,3 @@ class MoneywheelEngine:
             key=key, name=rule["name"], value=round(value, 4), unit=rule["unit"],
             status=status, formula=rule["formula"], explanation=explanation,
         )
-
-
-# Backward-compatible public alias for legacy imports.
-MoneyWheelEngine = MoneywheelEngine

@@ -1,9 +1,9 @@
 from typing import Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from schemas.base import StrictRequestModel
-from rules.goals import GoalType
+from rules.goals import GoalType, canonical_goal_type
 
 
 class AssetMappingInput(StrictRequestModel):
@@ -27,15 +27,24 @@ class GoalInput(StrictRequestModel):
     goal_name: str = Field(min_length=1, max_length=200)
     goal_type: GoalType
     today_cost: float = Field(gt=0, allow_inf_nan=False)
+
+    @field_validator("goal_type", mode="before")
+    @classmethod
+    def normalize_goal_type(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            canonical = canonical_goal_type(value)
+            if canonical:
+                return canonical
+        return value
     target_month: int = Field(ge=1, le=12)
     target_year: int = Field(ge=1900, le=2200)
     inflation_rate: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
-    priority: str = Field(default="Important", min_length=1, max_length=50)
+    priority: str | None = Field(default=None, max_length=50)
+    priority_rank: int | None = Field(default=None, ge=1)
     flexibility: str = Field(default="Flexible", min_length=1, max_length=50)
     status: str = Field(default="Active", min_length=1, max_length=30)
     asset_mappings: list[AssetMappingInput] = Field(default_factory=list, max_length=100)
     dynamic_details: dict[str, Any] = Field(default_factory=dict, max_length=100)
-    specialized_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class GoalCalculateRequest(GoalInput):

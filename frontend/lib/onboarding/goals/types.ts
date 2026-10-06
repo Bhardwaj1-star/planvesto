@@ -106,13 +106,8 @@ export type Goal = {
   targetAmount: string;
   targetMode: TargetMode | "";
   targetDate: string;
-  targetAge: string;
-  currentSavedAmount: string;
-  monthlyContribution: string;
   priority: GoalPriority | "";
   flexibility: GoalFlexibility | "";
-  inflationApplicability: InflationOption | "";
-  notes: string;
   dynamicDetails: GoalDynamicDetails;
 };
 
@@ -143,13 +138,8 @@ export const emptyGoal: Omit<Goal, "id"> = {
   targetAmount: "",
   targetMode: "",
   targetDate: "",
-  targetAge: "",
-  currentSavedAmount: "",
-  monthlyContribution: "",
   priority: "",
   flexibility: "",
-  inflationApplicability: "",
-  notes: "",
   dynamicDetails: emptyGoalDynamicDetails,
 };
 

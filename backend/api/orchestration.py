@@ -26,6 +26,8 @@ def build_multi_goal_plan(
     return MultiGoalPlanningService().build_multi_goal_plan(
         planning_unit_id=request.planning_unit_id,
         rule_overrides=request.rule_overrides,
+        priority_ranks=request.priority_ranks,
+        goal_order=request.goal_order,
     )
 
 

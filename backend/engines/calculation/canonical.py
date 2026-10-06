@@ -154,6 +154,55 @@ def calculate_emergency_coverage(liquid_assets: float | None, essential_monthly_
     return round(res, 4) if math.isfinite(res) else None
 
 
+def calculate_net_worth(total_assets: float | None, total_liabilities: float | None) -> float | None:
+    """Net Worth = Total Assets - Total Liabilities.
+
+    Returns None if any input is None.
+    """
+    if total_assets is None or total_liabilities is None:
+        return None
+    try:
+        assets = float(total_assets)
+        liabilities = float(total_liabilities)
+    except (TypeError, ValueError):
+        return None
+    res = assets - liabilities
+    return round(res, 2) if math.isfinite(res) else None
+
+
+def calculate_safety_reserve_months(cash_flow_ratio_val: float | None) -> int | None:
+    """Derive required safety reserve months from Cash Flow Ratio."""
+    if cash_flow_ratio_val is None:
+        return None
+    try:
+        cfr = float(cash_flow_ratio_val)
+    except (TypeError, ValueError):
+        return None
+    if cfr <= 50:
+        return 3
+    if cfr <= 70:
+        return 6
+    if cfr <= 85:
+        return 9
+    return 12
+
+
+def calculate_safety_reserve_required_amount(
+    monthly_expenses: float | None,
+    reserve_months: int | float | None,
+) -> float | None:
+    """Safety Reserve Required Amount = Monthly Expenses * Reserve Months."""
+    if monthly_expenses is None or reserve_months is None:
+        return None
+    try:
+        expenses = float(monthly_expenses)
+        months = float(reserve_months)
+    except (TypeError, ValueError):
+        return None
+    res = expenses * months
+    return round(res, 2) if math.isfinite(res) else None
+
+
 def calculate_debt_to_income_ratio(
     monthly_debt_payments: float | None,
     gross_monthly_income: float | None,
@@ -517,6 +566,37 @@ def fact_financial_asset_ratio(financial_assets: float | None, total_assets: flo
         available=available,
         data_quality="authoritative" if available else "unavailable",
         explanation=f"Financial asset ratio is {val:.2f}%." if available else "Financial assets or total assets are missing or non-positive.",
+    )
+
+
+def fact_net_worth(total_assets: float | None, total_liabilities: float | None) -> DerivedFact:
+    val = calculate_net_worth(total_assets, total_liabilities)
+    available = val is not None
+    return DerivedFact(
+        fact_id="net_worth",
+        value=val,
+        unit="currency",
+        formula="Total Assets - Total Liabilities",
+        inputs_used={"total_assets": total_assets, "total_liabilities": total_liabilities},
+        available=available,
+        data_quality="authoritative" if available else "unavailable",
+        explanation=f"Net worth is {val:,.2f}." if available else "Total assets or total liabilities are missing.",
+    )
+
+
+def fact_safety_reserve(monthly_expenses: float | None, cash_flow_ratio_val: float | None) -> DerivedFact:
+    months = calculate_safety_reserve_months(cash_flow_ratio_val)
+    amount = calculate_safety_reserve_required_amount(monthly_expenses, months)
+    available = amount is not None
+    return DerivedFact(
+        fact_id="safety_reserve",
+        value=amount,
+        unit="currency",
+        formula="Monthly Expenses * Required Safety Reserve Months",
+        inputs_used={"monthly_expenses": monthly_expenses, "cash_flow_ratio": cash_flow_ratio_val, "reserve_months": months},
+        available=available,
+        data_quality="authoritative" if available else "unavailable",
+        explanation=f"Safety reserve required is {amount:,.2f} ({months} months)." if available else "Monthly expenses or cash-flow ratio are missing.",
     )
 
 

@@ -38,25 +38,6 @@ class GoalService:
     def _enrich_retirement_context(self, request: GoalInput | GoalCalculateRequest) -> None:
         # Goal calculation is generic across all goal types; no goal type selects a specialized calculator.
         return
-        details = dict(request.dynamic_details or {})
-        if details.get("currentAge") is not None or details.get("current_age") is not None:
-            return
-
-        query = get_supabase().table("investors").select("date_of_birth").eq("planning_unit_id", request.planning_unit_id).limit(1).execute()
-        row = (query.data or [None])[0]
-        dob_value = row.get("date_of_birth") if row else None
-        if not dob_value:
-            raise ValueError("Retirement planning requires the investor date of birth in Personal Information")
-
-        try:
-            dob = datetime.fromisoformat(str(dob_value)).date()
-        except ValueError:
-            dob = date.fromisoformat(str(dob_value))
-
-        today = date.today()
-        current_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-        details["currentAge"] = current_age
-        request.dynamic_details = details
 
     @staticmethod
     def _metric_value(state: dict[str, Any], key: str):

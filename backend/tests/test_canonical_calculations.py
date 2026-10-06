@@ -51,7 +51,7 @@ from engines.calculation.canonical import (
 )
 from engines.moneywheel.engine import MoneywheelEngine
 from models.moneywheel import MoneywheelInput
-from engines.profile.risk import build_risk_profile
+from engines.risk_profiler.engine import build_risk_profile
 from engines.goal.funding_gap import calculate_funding_gap
 from engines.goal.target_calculator import calculate_future_target
 from rules.financial_state import savings_investment_rate

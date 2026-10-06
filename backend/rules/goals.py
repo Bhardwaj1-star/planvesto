@@ -64,10 +64,13 @@ ESSENTIAL_GOAL_TYPES: set[str] = {
     "fire_passive_income",
 }
 
+_CANONICAL_BY_LOWER: dict[str, str] = {k.lower(): k for k in CANONICAL_GOAL_NAMES}
+_CANONICAL_BY_LOWER.update({v.lower(): k for k, v in CANONICAL_GOAL_NAMES.items()})
+
 def canonical_goal_type(value: str | None) -> str:
-    """Accept only the canonical onboarding goal IDs; no aliases are supported."""
-    clean = str(value or "").strip()
-    return clean if clean in CANONICAL_GOAL_NAMES else ""
+    """Accept only canonical onboarding goal IDs or display names (case-insensitive); return canonical ID."""
+    clean = str(value or "").strip().lower()
+    return _CANONICAL_BY_LOWER.get(clean, "")
 
 def canonical_goal_name(goal_type: str | None, fallback: str | None = None) -> str:
     """Return the canonical onboarding label for a canonical goal ID."""

@@ -23,7 +23,7 @@ export type ActionImpactPreview = {
   financial_state_impact: Record<string, unknown>;
   goal_impacts: Array<Record<string, unknown>>;
   strategy_impact: Record<string, unknown>;
-  financial_health_impact: Record<string, unknown>;
+  moneywheel_impact: Record<string, unknown>;
   alternatives: Array<Record<string, unknown>>;
   cause_explanation: string | null;
 };
@@ -75,7 +75,7 @@ export function confirmActionDecision(
     financial_state_impact: {},
     goal_impacts: [],
     strategy_impact: {},
-    financial_health_impact: {},
+    moneywheel_impact: {},
     alternatives: [],
     cause_explanation: null,
     ...impactPreview,
@@ -109,7 +109,7 @@ export function completeAction(
     financial_state_impact: {},
     goal_impacts: [],
     strategy_impact: {},
-    financial_health_impact: {},
+    moneywheel_impact: {},
     alternatives: [],
     cause_explanation: null,
     ...completionPreview,

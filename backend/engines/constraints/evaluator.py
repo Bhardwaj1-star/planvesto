@@ -112,10 +112,14 @@ class FinancialRatioConstraintEvaluator:
         cov_val = calculate_emergency_coverage(liquid_assets, essential_monthly_expenses)
         if cov_val is not None:
             cov_val = round(cov_val, 2)
-            try:
-                status = classify("emergency_coverage", cov_val)
-            except ValueError:
+            if cov_val >= 9.0:
+                status = "excellent"
+            elif cov_val >= EMERGENCY_RESERVE_HEALTHY_MONTHS:
+                status = "healthy"
+            elif cov_val < EMERGENCY_RESERVE_CRITICAL_MONTHS:
                 status = "critical"
+            else:
+                status = "attention"
             results.append(FinancialRatioResult(
                 ratio_key="emergency_coverage",
                 name="Emergency Coverage",

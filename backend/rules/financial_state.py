@@ -13,10 +13,5 @@ def savings_investment_rate(investable_surplus: float, income: float) -> float |
 
 
 def required_safety_reserve_months(cash_flow_ratio_value: float) -> int:
-    if cash_flow_ratio_value <= 50:
-        return 3
-    if cash_flow_ratio_value <= 70:
-        return 6
-    if cash_flow_ratio_value <= 85:
-        return 9
-    return 12
+    from engines.calculation.canonical import calculate_safety_reserve_months
+    return calculate_safety_reserve_months(cash_flow_ratio_value) or 12

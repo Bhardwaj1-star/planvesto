@@ -34,8 +34,8 @@ class GoalRepository:
         res = self._execute(self.db.table("goals").select("*").eq("planning_unit_id", planning_unit_id).eq("goal_id", goal_id).maybe_single())
         return res.data if res else None
 
-    def ensure_goal_record(self, planning_unit_id: str, goal_id: str | None, goal_name: str, today_cost: float, target_month: int, target_year: int, priority: str, flexibility: str) -> str:
-        payload = {"planning_unit_id": planning_unit_id, "goal_name": goal_name, "target_amount": today_cost, "target_date": f"{target_year:04d}-{target_month:02d}-01", "priority": priority, "flexibility": flexibility}
+    def ensure_goal_record(self, planning_unit_id: str, goal_id: str | None, goal_name: str, today_cost: float, target_month: int, target_year: int, priority: str | None = None, flexibility: str = "Flexible") -> str:
+        payload = {"planning_unit_id": planning_unit_id, "goal_name": goal_name, "target_amount": today_cost, "target_date": f"{target_year:04d}-{target_month:02d}-01", "priority": priority or "Important", "flexibility": flexibility}
         if goal_id:
             existing = self.get_goal(planning_unit_id, goal_id)
             if existing:

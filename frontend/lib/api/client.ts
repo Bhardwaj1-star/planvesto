@@ -177,8 +177,5 @@ export async function apiRequestBlob(
  */
 export function getPlanningUnitId(): string | null {
   if (typeof window === "undefined") return null;
-  return (
-    window.localStorage.getItem("planvesto-planning-unit-id") ??
-    window.localStorage.getItem("planvesto_planning_unit_id")
-  );
+  return window.localStorage.getItem("planvesto-planning-unit-id");
 }

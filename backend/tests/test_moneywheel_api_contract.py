@@ -52,7 +52,6 @@ def test_canonical_result_matches_frontend_moneywheel_contract():
 
     assert result.planning_unit_id == "pu-1"
     assert len(result.ratios) == 9
-    assert len(result.rules) == 2
     assert result.metadata["snapshot_id"] == "mw-123"
     assert result.metadata["source"] == "test"
     assert "rules" not in result.metadata

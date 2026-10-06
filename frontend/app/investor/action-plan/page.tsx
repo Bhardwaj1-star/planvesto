@@ -250,7 +250,7 @@ export default function ActionPlanPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-                {goals.map((goal) => {
+                {goals.map((goal, index) => {
                   const selected = goal.goal_id === selectedGoalId;
                   const finalized = Boolean(goal.strategyVersionId);
                   const progress = goal.actionCount ? Math.round((goal.completedCount / goal.actionCount) * 100) : 0;
@@ -267,8 +267,11 @@ export default function ActionPlanPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-extrabold text-slate-900">{goal.goal_name}</h3>
-                          <p className="mt-1 text-xs text-slate-500">{goal.priority ?? "Medium"} priority · {goal.flexibility ?? "Flexible"}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-md bg-teal-50 px-2 py-0.5 text-xs font-black text-teal-800 border border-teal-200">#{index + 1}</span>
+                            <h3 className="font-extrabold text-slate-900">{goal.goal_name}</h3>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">Priority #{index + 1} · {goal.flexibility ?? "Flexible"}</p>
                         </div>
                         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${finalized ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
                           {finalized ? `Version ${goal.strategyVersionNumber}` : "No finalized plan"}

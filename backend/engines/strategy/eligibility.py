@@ -134,7 +134,8 @@ def evaluate_eligibility(strategy: StrategyDefinition, goal: GoalSnapshot | None
     reasons=list(goal_reasons)
     if constraint_set is not None:
         for constraint in constraint_set.hard_constraints:
-            reasons.append(constraint.message)
+            if not constraint.passed:
+                reasons.append(constraint.message)
     elif rule_assessment is not None:
         for r in getattr(rule_assessment,"hard_constraints",()):
             if not r.passed: reasons.append(r.message)

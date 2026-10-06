@@ -299,3 +299,89 @@ def test_profile_uses_current_financial_state_and_excludes_internal_authority_me
     request.financial_snapshot_id = "stale-snapshot"
     with pytest.raises(ValueError, match="snapshot is stale"):
         service.build(request)
+
+
+def test_four_frequencies_normalization():
+    from engines.calculation.engine import monthly_amount, annual_amount
+
+    # Monthly
+    assert monthly_amount(12000, "Monthly") == 12000.0
+    assert annual_amount(12000, "Monthly") == 144000.0
+
+    # Quarterly
+    assert monthly_amount(30000, "Quarterly") == 10000.0
+    assert annual_amount(30000, "Quarterly") == 120000.0
+
+    # Half-yearly
+    assert monthly_amount(60000, "Half-yearly") == 10000.0
+    assert annual_amount(60000, "Half-yearly") == 120000.0
+
+    # Yearly / Annual
+    assert monthly_amount(120000, "Yearly") == 10000.0
+    assert annual_amount(120000, "Yearly") == 120000.0
+
+
+def test_insurance_fact_and_breakdown_normalization():
+    engine = FinancialStateEngine()
+    policies = [
+        {
+            "policy_id": "pol-1",
+            "policy_name": "Term Shield",
+            "insurer": "HDFC Life",
+            "policy_type": "Term Insurance",
+            "premium": 15000,
+            "premium_frequency": "Quarterly",
+            "sum_assured": 10000000,
+            "current_value": 0,
+            "maturity_date": None,
+            "maturity_value": None,
+        },
+        {
+            "policy_id": "pol-2",
+            "policy_name": "Wealth Plus ULIP",
+            "insurer": "ICICI Prudential",
+            "policy_type": "ULIP",
+            "premium": 50000,
+            "premium_frequency": "Half-yearly",
+            "sum_assured": 2000000,
+            "current_value": 350000,
+            "maturity_date": "2035-12-31",
+            "maturity_value": 1500000,
+        },
+    ]
+
+    state = engine.build(
+        planning_unit_id="pu-test",
+        investors=[{"investor_id": "inv-1"}],
+        income_rows=[],
+        expense_rows=[],
+        asset_rows=[],
+        liability_rows=[],
+        asset_owner_rows=[],
+        liability_responsibility_rows=[],
+        expense_participant_rows=[],
+        insurance_rows=policies,
+        scope="family",
+    )
+
+    # 10,000,000 + 2,000,000 = 12,000,000
+    assert state.total_insurance_sum_assured.value == 12000000.0
+    # Quarterly 15000 -> monthly 5000, annual 60000
+    # Half-yearly 50000 -> monthly 8333.33, annual 100000
+    assert state.total_insurance_annual_premium.value == 160000.0
+    assert state.total_insurance_monthly_premium.value == 13333.33
+    assert state.total_insurance_current_value.value == 350000.0
+
+    # Breakdowns
+    assert len(state.insurance_breakdown) == 2
+    b1 = state.insurance_breakdown[0]
+    assert b1["policy_name"] == "Term Shield"
+    assert b1["premium_monthly"] == 5000.0
+    assert b1["premium_annual"] == 60000.0
+    assert b1["sum_assured"] == 10000000.0
+
+    b2 = state.insurance_breakdown[1]
+    assert b2["policy_name"] == "Wealth Plus ULIP"
+    assert b2["current_value"] == 350000.0
+    assert b2["premium_annual"] == 100000.0
+

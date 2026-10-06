@@ -56,14 +56,9 @@ def _financial_state(planning_unit_id="pu-1"):
         expenses_annual=metric,
         investable_surplus_monthly=metric,
         investable_surplus_annual=metric,
-        cash_flow_ratio=metric,
-        savings_investment_rate=metric,
         total_assets=metric,
         total_liabilities=metric,
         emi_burden_monthly=metric,
-        net_worth=metric,
-        safety_reserve_months=metric,
-        safety_reserve_required_amount=metric,
     )
 
 

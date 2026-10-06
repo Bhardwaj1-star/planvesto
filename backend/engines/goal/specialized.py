@@ -173,7 +173,7 @@ def calculate_specialized_target(goal_type: str, data: dict[str, Any], reference
             "dependent_id": data.get("dependent_id"),
         }
 
-    if kind == "vacation":
+    if kind in ("vacation", "travel"):
         trip_cost = _positive(data, "current_trip_cost")
         trips = int(data.get("number_of_trips", 1) or 1)
         interval = _positive(data, "repeat_every_years")

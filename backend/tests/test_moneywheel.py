@@ -115,12 +115,10 @@ def test_required_rate_of_return_is_calculated():
     assert ratio.available is True
 
 
-def test_coverage_rules_are_separate_from_ratios():
+def test_only_nine_canonical_ratios_present():
     result = MoneywheelEngine().build(_input())
-    assert [rule.key for rule in result.rules] == ["expense_coverage", "emergency_coverage"]
-    assert result.rules[0].value == 10.0
-    assert result.rules[1].value == round(500000 / 35000, 4)
     assert len(result.ratios) == 9
+    assert not hasattr(result, "rules")
 
 
 def test_required_rate_of_return_is_unavailable_without_duration():
