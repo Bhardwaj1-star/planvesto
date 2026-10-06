@@ -26,8 +26,16 @@ from engines.risk_profiler.models import (
 
 
 def _value(state: dict[str, Any] | None, key: str) -> tuple[Any, bool]:
-    item = (state or {}).get(key) or {}
-    return item.get("value"), bool(item.get("available", False))
+    item = (state or {}).get(key)
+    if isinstance(item, dict):
+        return item.get("value"), bool(item.get("available", False))
+    if hasattr(item, "value"):
+        value = getattr(item, "value", None)
+        available = getattr(item, "available", None)
+        return value, bool(value is not None if available is None else available)
+    if item is None:
+        return None, False
+    return item, True
 
 
 class RiskProfilerEngine:
