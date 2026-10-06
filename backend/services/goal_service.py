@@ -36,8 +36,49 @@ class GoalService:
         return {r["asset_id"]: r for r in rows}
 
     def _enrich_retirement_context(self, request: GoalInput | GoalCalculateRequest) -> None:
-        # Goal calculation is generic across all goal types; no goal type selects a specialized calculator.
-        return
+        """Fill retirement-only context from persisted investor data when absent.
+
+        The Goal Planner can rehydrate legacy goal rows that do not have a
+        DefinedGoal snapshot yet. In that path the frontend cannot reliably
+        supply current age, so derive it from the planning unit's investor DOB
+        at the backend boundary. Keep explicit request values authoritative.
+        """
+        canonical_type = canonical_goal_type(request.goal_type) or canonical_goal_type(request.goal_name)
+        if canonical_type != "retirement":
+            return
+
+        dynamic_details = dict(request.dynamic_details or {})
+        current_age = dynamic_details.get("currentAge", dynamic_details.get("current_age"))
+        if current_age is None:
+            investor = (
+                get_supabase()
+                .table("investors")
+                .select("date_of_birth")
+                .eq("planning_unit_id", request.planning_unit_id)
+                .order("created_at")
+                .limit(1)
+                .maybe_single()
+                .execute()
+            )
+            date_of_birth = (investor.data or {}).get("date_of_birth") if investor else None
+            if date_of_birth:
+                try:
+                    dob = datetime.fromisoformat(str(date_of_birth).replace("Z", "+00:00")).date()
+                    today = date.today()
+                    current_age = today.year - dob.year - (
+                        (today.month, today.day) < (dob.month, dob.day)
+                    )
+                except (TypeError, ValueError):
+                    current_age = None
+
+        if current_age is not None:
+            dynamic_details["currentAge"] = current_age
+
+        # 85 is already the GoalEngine's established retirement fallback.
+        if dynamic_details.get("lifeExpectancy", dynamic_details.get("life_expectancy")) is None:
+            dynamic_details["lifeExpectancy"] = 85
+
+        request.dynamic_details = dynamic_details
 
     @staticmethod
     def _metric_value(state: dict[str, Any], key: str):
