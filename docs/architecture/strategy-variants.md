@@ -212,3 +212,113 @@ The Strategy Architecture Matrix remains the authoritative matrix for:
 - Trade-offs
 
 This document provides the **detailed definition and report architecture of the Variant layer**. It should be referenced when populating or expanding the Variants column in the matrix.
+
+
+---
+
+## PDF Generation Architecture
+
+The PDF layer should **not** have a separate PDF generator for every goal type.
+
+The preferred architecture is:
+
+**Goal Type → Strategy → Variant → Report Config → Common PDF Renderer**
+
+### Core principle
+
+Use **one common PDF rendering engine** and make the report structure/configuration goal-aware and strategy/variant-aware.
+
+A goal type should not create its own independent PDF-generation implementation. Instead, it should provide the configuration and data required by the common renderer.
+
+### Responsibilities by layer
+
+| Layer | Responsibility |
+|---|---|
+| Goal Type | Defines goal-specific terminology, inputs, calculations, milestones, and required report sections |
+| Strategy | Defines the strategic objective and applicable decision framework |
+| Variant | Defines the implementation architecture and which report pattern should be used |
+| Report Config | Maps the selected goal + strategy + variant into sections, tables, schedules, narratives, and calculations |
+| Common PDF Renderer | Handles layout, typography, headers/footers, page breaks, tables, charts, styles, and final PDF generation |
+
+### Recommended flow
+
+`Client Data → Goal Analysis → Strategy Selection → Variant Selection → Report Config → Common PDF Renderer → PDF`
+
+The renderer should receive a structured report model rather than containing hard-coded logic for Education, Wedding, Vacation, Retirement, etc.
+
+### Example
+
+| Goal Type | Strategy | Variant | Report Config | Renderer |
+|---|---|---|---|---|
+| Education | Progressive De-risking | Payment-Tranche Glide Path | Education + tranche schedule | Common PDF Renderer |
+| Wedding | Progressive De-risking / Capital Preservation | Goal-Date / Full-Goal Preservation | Wedding + goal-date protection | Common PDF Renderer |
+| Vacation | Progressive De-risking | Recurring-Cashflow Glide Path | Recurring trip + refill cycle | Common PDF Renderer |
+| Retirement | Progressive De-risking | Income-Transition Glide Path | Accumulation + transition + distribution | Common PDF Renderer |
+| Home Purchase | Progressive De-risking / Credit Utilisation | Goal-Date / EMI-Cap Financing | Down payment + loan + EMI feasibility | Common PDF Renderer |
+
+### What should vary by goal
+
+The following can be goal-specific through configuration:
+
+- Section ordering
+- Goal-specific calculations
+- Required inputs
+- Goal milestones
+- Funding-gap presentation
+- De-risking schedule
+- Payment/tranche schedule
+- Debt or credit section
+- What-if scenarios
+- Action plan
+- Goal-specific terminology and explanatory text
+
+### What should remain common
+
+The following should remain in the shared PDF engine:
+
+- Page/layout system
+- Typography and styles
+- Header/footer
+- Tables
+- Charts
+- Page numbering
+- Cover/page templates
+- Reusable financial summary blocks
+- Section rendering primitives
+- PDF export
+- Validation of the final report model
+
+### Architectural rule
+
+**Do not create:**
+
+`education_pdf_generator.py`  
+`wedding_pdf_generator.py`  
+`vacation_pdf_generator.py`  
+`retirement_pdf_generator.py`
+
+as independent report engines.
+
+**Prefer:**
+
+`report_engine/`  
+→ common renderer  
+→ shared section components  
+→ report schemas  
+→ goal-specific report configs  
+→ strategy/variant mappings
+
+This keeps the reporting layer extensible: adding a new goal type should normally require a new configuration/schema and goal-specific sections, not a new PDF rendering engine.
+
+### Separation of concerns
+
+A useful implementation boundary is:
+
+**Calculations → Report Model → Report Config → PDF Renderer**
+
+- **Calculations** determine the financial outputs.
+- **Report Model** stores normalized outputs required by the report.
+- **Report Config** decides what should be shown and in what structure.
+- **PDF Renderer** turns that structure into the final document.
+
+This also allows the same report model to support other outputs later, such as HTML, web views, client dashboards, or API responses, without duplicating financial logic.
