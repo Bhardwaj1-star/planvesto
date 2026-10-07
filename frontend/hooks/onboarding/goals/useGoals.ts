@@ -7,6 +7,7 @@ import { createGoalId } from "../../../lib/onboarding/goals/goals";
 import { saveDynamicGoalDetailsForList } from "../../../lib/onboarding/goals/dynamicPersistence";
 import { emptyGoal, type Goal, type GoalErrors } from "../../../lib/onboarding/goals/types";
 import { validateGoal } from "../../../lib/onboarding/goals/validation";
+import { cancelOrRemoveGoal } from "../../../lib/onboarding/persistence";
 
 export function useGoals() {
   const { goals, setGoals, saveGoals } = useOnboardingStore();
@@ -41,10 +42,9 @@ export function useGoals() {
   }
 
   async function removeGoal(id: string) {
-    const nextGoals = goals.filter((goal) => goal.id !== id);
     try {
-      const data = await saveGoals(nextGoals);
-      setGoals(data.goals || nextGoals);
+      const data = await cancelOrRemoveGoal(id);
+      setGoals(data.goals);
     } catch {
       return;
     }
