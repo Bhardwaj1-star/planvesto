@@ -13,7 +13,7 @@ export default function GoalCard({ goal, onEdit, onRemove }: Props) {
         </div>
         <div className="flex shrink-0 gap-3 text-sm font-bold">
           <button type="button" onClick={onEdit} className="text-teal-700 underline decoration-teal-200 underline-offset-4 hover:text-teal-800">Edit</button>
-          <button type="button" onClick={onRemove} className="text-slate-500 underline decoration-slate-200 underline-offset-4 hover:text-red-600">Remove</button>
+          <button type="button" onClick={onRemove} className="text-slate-500 underline decoration-slate-200 underline-offset-4 hover:text-red-600">Cancel Goal</button>
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
