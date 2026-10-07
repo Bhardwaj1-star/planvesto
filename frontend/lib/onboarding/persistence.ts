@@ -108,7 +108,7 @@ export async function saveIncomeSources(values: IncomeSource[]) {
 async function saveSimpleList<T extends { id: string }>(values: T[], table: "expenses" | "assets" | "liabilities" | "goals", toInsert: (value: T, planningUnitId: string) => Tables[typeof table]["Insert"], idColumn: "expense_id" | "asset_id" | "liability_id" | "goal_id") {
   const planningUnitId = await getPlanningUnitId(); const { data: existing, error: existingError } = await supabase.from(table).select(idColumn).eq("planning_unit_id", planningUnitId); if (existingError) throw existingError;
   const ids = values.filter((value) => isUuid(value.id)).map((value) => value.id); const removed = (existing || []).map((row) => (row as unknown as Record<string, string>)[idColumn]).filter((id) => !ids.includes(id));
-  if (removed.length) { const { error } = await supabase.from(table).delete().in(idColumn, removed).eq("planning_unit_id", planningUnitId); if (error) throw error; }
+  if (removed.length) { const { error } = await supabase.from(table).delete().in(idColumn, removed).eq("planning_unit_id", planningUnitId); if (error) { if (table === "goals" && "code" in error && error.code === "23503") throw new Error("This goal is linked to strategy history and cannot be hard-deleted. Cancel the goal from Goal Planner instead."); throw error; } }
   for (const value of values) { const payload = toInsert(value, planningUnitId); const request = isUuid(value.id) ? supabase.from(table).update(payload).eq(idColumn, value.id).eq("planning_unit_id", planningUnitId) : supabase.from(table).insert(payload as never); const { error } = await request; if (error) throw error; }
   return loadRows(planningUnitId);
 }
