@@ -491,3 +491,19 @@ The target is not a larger Strategy Builder.
 The target is a **PlanVesto Canonical Decision Engine** in which the Strategy Builder becomes one decision domain and the final recommendation is simply the explainable output of that canonical decision.
 
 **Documentation phase complete: Steps 1–9. Next phase: Business Rule Freeze through real-life cases, followed by controlled refactor.**
+
+
+---
+
+## 27. Verification Corrections — Final Decision Boundary
+
+The full code verification confirms the following current-state corrections:
+
+1. `DecisionResult` remains the authoritative decision contract, but its upstream inputs are not yet fully canonical because legacy scoring IDs remain active.
+2. `InvestorPriorities` is persisted in the decision snapshot and passed into the decision function, but it currently has no effect inside `evaluate_decision()`; its current scoring effect is downstream in ranking.
+3. Variant selection currently occurs inside recommendation after strategy decision, so recommendation is not purely explanatory in the strict architectural sense yet.
+4. Architecture and technique execution already occur before `evaluate_decision()` in the current runtime, so the target flow in this document is a future design sequence, not a current execution trace.
+5. The final decision layer should therefore distinguish **current runtime authority** (`DecisionResult`) from **future canonical decision order**.
+
+These are documentation corrections to current-state description. They do not freeze the future business policy.
+
