@@ -497,3 +497,25 @@ The repository already has a strong architecture model and composition engine. T
 The next step is:
 
 **Step 8 — Stress / Resilience: Current State & Recommendation.**
+
+
+---
+
+## 26. Verification Correction — Candidate Architecture vs Final Architecture
+
+The full runtime verification confirms that architecture composition currently occurs **before** `evaluate_decision()` and technique execution also occurs before the authoritative strategy decision.
+
+Therefore the documented target sequence:
+
+**Strategy → Variant → Technique → Architecture → Final Decision**
+
+is not the current runtime sequence.
+
+This creates an important business/architecture question that must be resolved before refactoring:
+
+> Is the current architecture a candidate/evidence object used to evaluate a strategy, or should architecture only be composed after strategy, variant and technique selection?
+
+The existing code supports candidate architectures before final selection. The target document should therefore treat downstream-only architecture as a **proposed target**, not as an already-proven design fact.
+
+No code change is authorized by this clarification.
+
