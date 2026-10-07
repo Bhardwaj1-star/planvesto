@@ -1,22 +1,198 @@
-# Goal Funding — Concept Change Log
+# Case 1 — Goal Funding Concept Change Log
 
-**Location:** `docs/Decision tree/Real-Life Decision Cases/`
-**Purpose:** Preserve the business discussion and reasoning that changed the definition of Goal Funding before real-life decision cases are created.
+**Location:** `docs/Decision tree/Real-Life Decision Cases/`  
+**Purpose:** Preserve the complete business discussion that started from Real-Life Case 1 and led to the clarification of Goal Funding, Goal Planner feasibility, and Strategy Builder responsibilities.  
 **Status:** Business concept clarification — NOT yet implemented or frozen in code.
 
 ---
 
 ## 1. Why This Record Exists
 
-Before implementing or freezing Strategy Builder decision rules, we are validating the decision tree through real-life financial cases.
+We started the real-life validation process with a concrete financial case.
 
-During the first case discussion, an important conceptual clarification was reached about **Goal Funding**. This document preserves that reasoning so the original intent is not lost when the system is later changed.
+The purpose was not simply to create an example. The purpose was to look at the case, ask the financial questions that naturally arise from it, determine the correct mathematical/business answer, and use that discussion to identify what the Decision Tree should actually do.
 
-This is a **historical business decision record**, not a technical implementation specification.
+The discussion exposed an important boundary:
 
-## 2. Original Working Interpretation
+> **Goal Funding / Goal Feasibility belongs to the Goal Planner, not to the Strategy Builder.**
 
-The existing Strategy Builder model treated Goal Funding largely through funding variants such as:
+The Strategy Builder receives the feasibility result and designs the detailed strategy and execution path.
+
+This document preserves the case, the questions that arose from it, and the decisions reached during the discussion.
+
+---
+
+# 2. Real-Life Case 1
+
+## Client Situation
+
+A client is planning for **Retirement**.
+
+| Item | Case 1 |
+|---|---:|
+| Current age | 35 years |
+| Retirement age | 60 years |
+| Goal horizon | 25 years |
+| Current retirement corpus | ₹20 lakh |
+| Required retirement corpus | ₹2 crore |
+| Monthly income | ₹2,00,000 |
+| Monthly expenses | ₹1,20,000 |
+| Existing EMI | ₹10,000 |
+| Approx. monthly surplus after expenses and EMI | ₹70,000 |
+| Emergency fund | Adequate |
+| Liquidity | Adequate |
+| Debt burden | To be evaluated in context |
+| Risk capacity | To be evaluated from actual financial data |
+| Higher-priority goal conflict | None assumed for the case |
+| Implementation constraint | None assumed for the case |
+
+The case also introduced a home-loan decision context in which the loan interest rate was discussed as approximately **8%**, while investment-return scenarios could potentially be higher, depending on the assumptions used.
+
+The purpose was **not** to assume that 12%, 13% or 16% is guaranteed. Those are scenario assumptions that must be tested mathematically.
+
+---
+
+# 3. First Question: What Is the Correct Financial Decision?
+
+The initial temptation was to identify a strategy directly from the client's debt position.
+
+For example:
+
+> There is a home loan → debt burden must be evaluated → perhaps Debt Reduction.
+
+But the discussion immediately exposed a problem with making that decision in isolation.
+
+A debt metric by itself does not tell us whether repaying the debt is the best decision **for this particular retirement goal**.
+
+The real question became:
+
+> **What happens if the client's available financial capacity is used for debt repayment instead of retirement funding, and what happens if it is used for investment instead?**
+
+This led to the first major conclusion.
+
+### Decision reached
+
+**Do not decide Debt Reduction merely from the existence or level of debt.**
+
+The system must compare alternative financial paths in the context of the actual goal.
+
+---
+
+# 4. Second Question: What Does “Debt Burden” Actually Mean Here?
+
+The discussion examined the idea of saying that debt is “manageable” or “high.”
+
+That turned out to be insufficiently precise.
+
+A debt burden cannot be evaluated only as an isolated DTI/EMI number because the same debt position can have different consequences depending on:
+
+- the goal;
+- goal horizon;
+- available surplus;
+- loan interest rate;
+- remaining tenure;
+- liquidity;
+- investment opportunity;
+- required goal funding;
+- risk capacity;
+- competing goals.
+
+For example, an 8% home loan does not automatically mean:
+
+> “Repay the loan first.”
+
+The system must understand what the client gives up by using surplus cash to repay that loan.
+
+### Decision reached
+
+**Debt should be evaluated as part of the goal's financial scenario, not as an isolated decision rule.**
+
+---
+
+# 5. Third Question: What Is the Opportunity Cost?
+
+This became the central question of Case 1.
+
+Suppose the client has ₹70,000 monthly surplus.
+
+That money can have different uses.
+
+For example:
+
+```
+Use surplus for faster debt repayment
+                vs
+Use surplus for retirement investment
+                vs
+Change loan structure and invest the released EMI
+```
+
+Each choice produces a different future outcome.
+
+### Debt repayment path
+
+Potential benefits:
+
+- interest saved;
+- lower outstanding debt;
+- potentially shorter loan duration;
+- lower future debt obligation.
+
+Potential cost:
+
+- money that could otherwise have been invested for retirement is redirected toward debt.
+
+### Investment path
+
+Potential benefits:
+
+- greater retirement corpus if investment returns exceed the relevant debt cost;
+- increased goal funding.
+
+Potential cost:
+
+- loan continues;
+- interest continues;
+- investment outcome is uncertain;
+- additional risk may be taken.
+
+### Loan restructuring path
+
+For example:
+
+```
+Longer loan tenure
+        ↓
+Lower EMI
+        ↓
+Higher monthly surplus
+        ↓
+Additional retirement investment
+```
+
+But:
+
+```
+Longer tenure
+        ↓
+Higher total interest
+        ↓
+Debt remains outstanding longer
+```
+
+Therefore both sides must be calculated.
+
+### Decision reached
+
+> **The system should compare opportunity cost between alternative feasible financial paths instead of applying a one-dimensional “debt is high → repay debt” rule.**
+
+---
+
+# 6. Fourth Question: What Should Goal Funding Actually Mean?
+
+This question changed the original understanding of Goal Funding.
+
+The earlier working interpretation treated Goal Funding largely as predefined funding variants:
 
 - Existing Assets
 - SIP
@@ -25,17 +201,23 @@ The existing Strategy Builder model treated Goal Funding largely through funding
 - Lump Sum + Step-up SIP
 - Step-up SIP
 
-These are useful funding mechanisms, but the discussion established that they are **not sufficient to define Goal Funding as a complete financial decision process**.
+The discussion established that these are **funding mechanisms**, not the complete Goal Funding decision.
 
-> SIP, Lump Sum, Step-up SIP and similar mechanisms are ways of implementing funding. They should not by themselves define the Goal Funding decision.
+A SIP by itself does not answer:
 
-## 3. New Business Understanding of Goal Funding
+> “How can this client's retirement goal be made feasible?”
 
-**Goal Funding should determine how a client's goal can be made financially feasible from the client's actual financial situation.**
+The system first needs to understand the client's actual financial situation.
 
-The system should first understand the client's financial data and the goal, then create and compare scenarios before producing a goal-funding strategy.
+### Decision reached
 
-Conceptual flow:
+> **Goal Funding should determine how the client's goal can be made financially feasible using the client's actual financial data and alternative financial scenarios.**
+
+---
+
+# 7. Fifth Question: What Should Goal Funding Do?
+
+The resulting conceptual process is:
 
 ```
 Client Financial Data
@@ -46,232 +228,362 @@ Understand Current Financial Situation
         ↓
 Identify Goal Funding Gap
         ↓
-Create Alternative Scenarios
+Create Alternative Financial Scenarios
         ↓
 Calculate Financial Outcome of Each Scenario
         ↓
 Compare Feasibility / Opportunity Cost / Trade-offs
         ↓
-Produce Goal Funding Strategy or Strategies
+Produce Goal Funding / Feasibility Paths
         ↓
-Explain How the Goal Becomes Feasible
+Explain How the Goal Can Become Feasible
 ```
 
-The important change is that **Goal Funding becomes a financial feasibility and scenario-generation process**, rather than a predefined list of contribution methods.
+The scenarios can potentially consider:
 
-## 4. What the System Should Consider
-
-Goal Funding should use the client's relevant financial data rather than assuming that a new SIP is always the answer.
-
-Depending on the case, scenarios may consider:
-
-- existing investable assets;
-- current monthly surplus;
-- current expenses;
-- debt and EMI structure;
-- loan interest and remaining tenure;
-- liquidity/reserve position;
-- existing assets that may be earmarked for the goal;
+- existing assets;
+- existing monthly surplus;
+- expenses;
+- debt and EMI;
+- loan interest;
+- remaining loan tenure;
+- liquidity/reserves;
 - additional contribution capacity;
 - goal horizon;
-- goal amount and current funding;
-- required return / investment assumptions;
-- changes to debt structure;
-- changes to contribution pattern;
-- changes to goal timing where appropriate;
+- current goal funding;
+- required return;
+- alternative debt structures;
+- alternative contribution structures;
+- changes in goal timing;
 - combinations of multiple actions.
 
-The exact input set and decision rules remain to be validated through real-life cases.
+The exact calculation rules are **not yet frozen**.
 
-## 5. Goal Funding Is Not the Same as a Funding Mechanism
+---
 
-| Layer | Meaning |
-|---|---|
-| **Goal Funding** | Determine how the goal can become financially feasible given the client's situation. |
-| **Funding Strategy** | A scenario/path that makes the goal feasible. |
-| **Funding Mechanism / Variant** | The concrete way money is deployed, such as SIP, Lump Sum, Step-up SIP, or use of existing assets. |
-| **Financial Decision** | The broader decision about which path produces the best feasible outcome after constraints, risk and trade-offs are considered. |
+# 8. Sixth Question: Is Goal Funding a Strategy Builder Strategy?
 
-## 6. Opportunity Cost Is Central
+This was the next important clarification.
 
-The first real-life case also clarified that the system is fundamentally trying to identify **opportunity cost**.
+The answer is:
 
-When a client has a home loan and investable surplus, the system should not automatically conclude:
+> **No.**
 
-> Debt exists → repay debt.
+Goal Funding is **not a Strategy Builder strategy**.
 
-Instead, it should compare alternative uses of the available financial capacity.
+Goal Funding belongs to the **Goal Planner / Goal Feasibility function**.
+
+Its responsibility is to answer:
+
+> **Can this goal be made feasible, and what financial conditions/path make it feasible?**
+
+The result of that analysis becomes an **input to the Strategy Builder**.
+
+---
+
+# 9. Correct Boundary Between Goal Planner and Strategy Builder
+
+The correct architecture established by this discussion is:
+
+```
+CLIENT FINANCIAL DATA
+        ↓
+    GOAL PLANNER
+        ↓
+GOAL FEASIBILITY / GOAL FUNDING
+        ↓
+Feasible Financial Path
+        ↓
+========================
+THIS BECOMES INPUT
+========================
+        ↓
+  STRATEGY BUILDER
+        ↓
+Strategy Selection
+        ↓
+Variant
+        ↓
+Techniques
+        ↓
+Architecture
+        ↓
+Detailed Execution Steps
+```
+
+### Goal Planner / Goal Funding
+
+Answers:
+
+> **WHAT IS FEASIBLE?**
+
+It determines the financial conditions and path required to make the goal feasible.
+
+### Strategy Builder
+
+Answers:
+
+> **HOW DO WE EXECUTE THAT FEASIBLE PLAN?**
+
+It takes the feasibility output and creates the detailed financial strategy.
+
+For example, if Goal Planner determines that a retirement goal is feasible with a particular funding requirement, horizon, risk/return condition and asset structure, Strategy Builder can then determine the appropriate strategy and implementation structure.
+
+A **Bucket Strategy** can therefore make sense at the Strategy Builder level because it is an actual strategy/architecture for executing the already-established feasibility.
+
+---
+
+# 10. Seventh Question: What Happens to SIP, Lump Sum and Similar Variants?
+
+They should **not automatically be treated as the definition of Goal Funding**.
+
+They are possible mechanisms that may appear inside a generated feasibility/funding path.
+
+For example, Goal Planner might determine:
+
+```
+Goal Funding Requirement
+        ↓
+Existing Asset + Monthly Contribution
+        ↓
+Monthly Contribution implemented through SIP
+```
+
+Here:
+
+- **Goal Funding** = the feasibility solution;
+- **SIP** = one mechanism used to execute part of that solution.
+
+Therefore:
+
+> **SIP is not the Goal Funding strategy by itself.**
+
+The final role of the currently defined Goal Funding variants remains **TO BE VALIDATED**.
+
+---
+
+# 11. Eighth Question: Does Strategy Builder Decide How the Goal Becomes Feasible?
+
+Again, the answer is:
+
+> **No.**
+
+Strategy Builder should not independently recreate the Goal Planner's feasibility analysis.
+
+It should consume the feasibility result.
+
+The intended relationship is:
+
+```
+Goal Planner
+    ↓
+Goal Feasibility
+    ↓
+Goal Funding Path
+    ↓
+Strategy Builder
+    ↓
+Detailed Strategy
+    ↓
+Detailed Implementation
+```
+
+This prevents the two systems from independently making conflicting decisions about whether the goal is feasible.
+
+---
+
+# 12. What Strategy Builder Is Actually For
+
+The Strategy Builder is a **detailed strategy and execution design layer**.
+
+Once feasibility is established, it should answer questions such as:
+
+- Which strategy should execute the feasible plan?
+- Which variant fits?
+- Which techniques should be used?
+- How should the strategy be structured?
+- Which components should be used?
+- How should the execution be organized?
+- What detailed steps should the investor follow?
 
 For example:
 
-```
-Current Loan Structure
-        vs
-Faster Debt Repayment
-        vs
-Longer Tenure + Lower EMI + Investment of Released Cash Flow
-```
+> Goal Planner says the retirement goal is feasible under a defined funding path.
 
-For each scenario, the system should examine the mathematical consequences for the actual goal.
+Then Strategy Builder can determine:
 
-Conceptually:
+> Use a particular strategy, apply a Bucket Strategy, select appropriate techniques/components, and produce the detailed execution structure.
 
-```
-Scenario
-  ↓
-Debt Cost
-+ Investment Outcome
-+ Cash-flow Change
-+ Goal Funding Outcome
-+ Liquidity / Risk Consequences
-  ↓
-Opportunity Cost / Trade-off
-  ↓
-Feasibility Decision
-```
+This is fundamentally different from Goal Planner asking:
 
-The system should therefore evaluate **alternative financial paths**, rather than applying isolated rules such as “high DTI means repay debt.”
+> “Can the retirement goal be achieved at all, and what financial changes make it feasible?”
 
-## 7. Example from Case 1
+---
 
-The first case involved a retirement goal and a home loan.
+# 13. Ninth Question: What Is the Correct Overall Decision Flow?
 
-The discussion considered the possibility that:
-
-- the home loan interest rate is around 8%;
-- the client may have investment opportunities with higher expected returns under some scenarios;
-- the existing EMI reduces monthly investable surplus;
-- extending the loan tenure could reduce EMI;
-- the released monthly cash flow could potentially be directed toward the retirement goal;
-- extending tenure also increases total interest and keeps the debt outstanding longer.
-
-Therefore, the correct question is not simply:
-
-> “Should the client repay the debt?”
-
-The correct question is:
-
-> **“Which feasible financial structure produces the best overall outcome for the client's retirement goal after considering debt cost, investment outcome, cash flow, liquidity and risk?”**
-
-No final numerical answer was frozen from this discussion. The case must be fully calculated before any business rule is adopted.
-
-## 8. Consequence for the Strategy Builder
-
-This clarification changes how Goal Funding should be viewed inside the Strategy Builder.
-
-**Goal Funding should not be treated as merely one more predefined investment strategy.**
-
-Its role is to determine the feasibility of achieving the goal and generate the possible funding paths required to achieve it.
-
-The broader strategy decision can then use that information when determining the appropriate financial approach.
-
-Conceptually:
+The discussion therefore produced this separation:
 
 ```
-Goal
-  ↓
-Client Financial Situation
-  ↓
-Goal Funding Analysis
-  ↓
-Alternative Feasible Funding Paths
-  ↓
-Opportunity-Cost / Trade-off Analysis
-  ↓
-Strategy Decision
-  ↓
-Implementation Mechanism / Variant
+1. CLIENT FINANCIAL DATA
+          ↓
+2. GOAL
+          ↓
+3. GOAL PLANNER
+          ↓
+4. GOAL FEASIBILITY
+          ↓
+5. GOAL FUNDING / FEASIBLE FINANCIAL PATH
+          ↓
+6. OPPORTUNITY-COST / SCENARIO ANALYSIS
+          ↓
+7. STRATEGY BUILDER INPUT
+          ↓
+8. STRATEGY SELECTION
+          ↓
+9. VARIANT
+          ↓
+10. TECHNIQUES
+          ↓
+11. ARCHITECTURE
+          ↓
+12. DETAILED EXECUTION PLAN
 ```
 
-The exact placement in the final canonical Decision Tree is **not yet frozen**. It must be validated through real-life cases.
+The exact internal ordering and rule ownership of the Strategy Builder remains subject to the separate Decision Tree validation process.
 
-## 9. What This Means for Existing Variants
+---
 
-The existing Goal Funding variants should **not automatically be deleted** merely because the concept has changed.
+# 14. What Case 1 Actually Taught Us
 
-They should instead be treated as candidate implementation mechanisms until real-life validation determines their correct role.
+Case 1 did not merely teach us how to handle a retirement goal.
 
-Current examples:
+It exposed a system-level distinction:
 
-- Existing Assets
-- SIP
-- Lump Sum
-- Lump Sum + SIP
-- Lump Sum + Step-up SIP
-- Step-up SIP
+### Goal Planner
 
-Their final status is therefore **TO BE VALIDATED**.
+**Feasibility engine**
 
-## 10. What Is Now Explicitly Rejected as the Sole Definition
+> Can the goal be achieved, and what financial path makes it achievable?
 
-The following interpretation is rejected as an adequate definition of Goal Funding:
+### Strategy Builder
 
-> **Goal Funding = choosing between SIP, Lump Sum, Step-up SIP and similar contribution variants.**
+**Strategy/execution engine**
 
-Those mechanisms can be part of the solution, but they do not answer the larger question:
+> Given the feasible goal path, how should that path actually be implemented?
 
-> **How can this particular client's goal actually be made feasible?**
+### Opportunity Cost
 
-## 11. What Must Be Validated Next
+**Decision principle used when comparing alternative financial paths during feasibility analysis.**
 
-Real-life cases should test Goal Funding across:
+This distinction should be preserved going forward.
 
-1. sufficient existing surplus;
-2. insufficient monthly surplus;
-3. existing assets that can fund part of the goal;
-4. debt restructuring;
-5. different loan interest rates;
-6. different investment return assumptions;
-7. different goal horizons;
-8. combinations of debt, assets and contributions;
-9. competing goals;
-10. liquidity constraints;
-11. risk-capacity constraints;
-12. situations where multiple funding paths are feasible.
+---
 
-For each case, record:
+# 15. What Was Explicitly Rejected
+
+The following interpretations are rejected as the sole design:
+
+### Rejected 1
+
+> Debt exists → choose Debt Reduction.
+
+### Rejected 2
+
+> DTI is high → automatically stop investing and repay debt.
+
+### Rejected 3
+
+> Goal Funding = SIP/Lump Sum/Step-up SIP.
+
+### Rejected 4
+
+> Goal Funding is one of the Strategy Builder's investment strategies.
+
+### Rejected 5
+
+> Strategy Builder should independently determine whether the goal is feasible.
+
+The correct model is goal-centric, scenario-based and mathematically comparative.
+
+---
+
+# 16. What Was Established
+
+| Question | Decision |
+|---|---|
+| Should debt be evaluated in isolation? | **No** |
+| Is DTI alone enough to decide Debt Reduction? | **No** |
+| What is central to the decision? | **Opportunity cost and goal outcome** |
+| Should alternative financial scenarios be compared? | **Yes** |
+| Is Goal Funding just SIP/Lump Sum/etc.? | **No** |
+| Where does Goal Funding belong? | **Goal Planner / Goal Feasibility** |
+| What does Goal Funding produce? | **A feasible financial path / funding solution** |
+| What does Strategy Builder consume? | **Goal feasibility/funding output** |
+| What does Strategy Builder produce? | **Detailed strategy and execution structure** |
+| Can Bucket Strategy be a Strategy Builder strategy? | **Yes, where appropriate to the feasible goal path** |
+| Are exact Goal Funding rules frozen? | **No** |
+| Are existing Goal Funding variants' final roles frozen? | **No** |
+
+---
+
+# 17. What Must Happen Before Implementation
+
+The next real-life cases should follow the same method:
 
 ```
-Client Inputs
-→ Goal
-→ Current Funding Gap
-→ Candidate Scenarios
-→ Mathematical Outcome
-→ Opportunity Cost / Trade-off
-→ Goal Feasibility
-→ Expected Business Decision
-→ Current Code Decision
-→ Difference
-→ Rule Responsible
+CASE
+  ↓
+QUESTIONS CREATED BY THE CASE
+  ↓
+INDEPENDENT FINANCIAL / MATHEMATICAL ANALYSIS
+  ↓
+DECISION REACHED
+  ↓
+WHAT THIS MEANS FOR THE SYSTEM
+  ↓
+CANONICAL RULE TO FREEZE LATER
 ```
 
-This evidence should determine the final Goal Funding rules.
+For each case we should explicitly record:
 
-## 12. Business Principle Preserved from This Discussion
+1. **The client case**
+2. **The financial question**
+3. **Why the question matters**
+4. **Alternative scenarios**
+5. **Mathematical comparison**
+6. **Opportunity cost**
+7. **Expected financial decision**
+8. **Which system layer owns that decision**
+9. **Current code decision**
+10. **Difference, if any**
+11. **Rule that should eventually be frozen**
 
-> **Goal Funding is not simply a choice of SIP, Lump Sum or another contribution method. It is the process of using the client's financial data to understand the funding gap, create alternative financial scenarios, compare their mathematical consequences and determine how the goal can be made feasible.**
+---
 
-And, more broadly:
+# 18. Final Business Principle from Case 1
 
-> **A financial decision should be driven by the opportunity cost and consequences of alternative feasible paths, subject to the relevant constraints and risk—not by an isolated financial metric or rule of thumb.**
+> **Goal Funding is a Goal Planner / Goal Feasibility function. It uses the client's financial data to understand the goal, identify the funding gap, create alternative financial scenarios, compare their mathematical consequences and determine how the goal can be made feasible.**
 
-## 13. Change Status
+> **The resulting feasibility/funding path is an input to the Strategy Builder. The Strategy Builder then determines the detailed strategy, techniques, architecture and execution steps required to implement that feasible plan.**
+
+> **Financial decisions should be driven by the mathematical consequences and opportunity cost of alternative feasible paths, rather than by isolated rules or metrics.**
+
+---
+
+## Change Status
 
 | Item | Status |
 |---|---|
-| Original Goal Funding interpretation | Superseded |
-| Goal Funding as scenario/feasibility process | **Business direction established** |
-| SIP/Lump Sum/etc. as complete Goal Funding strategies | Rejected as sole definition |
-| Existing variants' final role | **Not yet frozen** |
-| Opportunity-cost comparison | **Core decision principle identified** |
-| Goal Funding implementation | **Not changed yet** |
-| Canonical V1 rule | **Not frozen** |
-| Real-life validation | **Next step** |
-
-## 14. Important Boundary
-
-This document records the business reasoning at the time of the change.
-
-It does **not** authorize immediate code changes.
-
-The next step is to use real-life financial cases to validate the concept, determine exact rules, and only then modify the canonical implementation.
+| Case 1 documented | **Complete** |
+| Original Goal Funding interpretation | **Superseded** |
+| Goal Funding = funding mechanisms only | **Rejected** |
+| Goal Funding = Goal Planner feasibility function | **Business direction established** |
+| Opportunity-cost comparison | **Core principle established** |
+| Goal Planner → Strategy Builder boundary | **Clarified** |
+| Strategy Builder as detailed execution layer | **Business direction established** |
+| Existing Goal Funding variants' final role | **Not yet frozen** |
+| Strategy Builder implementation changes | **Not made** |
+| Goal Funding implementation changes | **Not made** |
+| Canonical V1 rules | **Not frozen** |
+| Next phase | **Real-life case validation** |
