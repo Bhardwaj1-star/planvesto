@@ -41,9 +41,15 @@ export function useGoals() {
   }
 
   async function removeGoal(id: string) {
-    const nextGoals = goals.filter((goal) => goal.id !== id); setGoals(nextGoals);
-    try { await saveGoals(nextGoals); } catch { return; }
-    if (editingGoalId === id) cancelEditing(); setIsComplete(false);
+    const nextGoals = goals.filter((goal) => goal.id !== id);
+    try {
+      const data = await saveGoals(nextGoals);
+      setGoals(data.goals || nextGoals);
+    } catch {
+      return;
+    }
+    if (editingGoalId === id) cancelEditing();
+    setIsComplete(false);
   }
 
   async function handleContinue(event: React.MouseEvent<HTMLButtonElement>) {
