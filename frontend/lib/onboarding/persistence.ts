@@ -35,6 +35,14 @@ async function loadRows(planningUnitId: string) {
     supabase.from("insurance_policies").select("policy_id").eq("planning_unit_id", planningUnitId),
   ]);
   const result = [investors, dependents, income, expenses, assets, liabilities, goals].find((item) => item.error); if (result?.error) throw result.error;
+  const { data: cancelledDefinedGoals, error: cancelledGoalsError } = await supabase
+    .from("defined_goals")
+    .select("goal_id")
+    .eq("planning_unit_id", planningUnitId)
+    .eq("is_latest", true)
+    .eq("status", "Cancelled");
+  if (cancelledGoalsError) throw cancelledGoalsError;
+  const cancelledGoalIds = new Set((cancelledDefinedGoals || []).map((row) => row.goal_id));
   const investorRows = investors.data || []; const personal = investorRows[0];
   const assetOptions = ["Bank / Cash", "Fixed Deposits", "Mutual Funds", "Stocks / Equity", "Bonds / Debt", "EPF / PPF", "NPS", "Gold", "Real Estate", "Business Ownership", "Vehicle", "Other"] as const;
   const liabilityOptions = ["Home Loan", "Car Loan", "Personal Loan", "Education Loan", "Business Loan", "Credit Card", "Other"] as const;
@@ -46,7 +54,7 @@ async function loadRows(planningUnitId: string) {
     expenses: (expenses.data || []).map((row) => ({ id: row.expense_id, category: row.expense_type as Expense["category"], amount: String(row.amount), frequency: row.frequency as Expense["frequency"] })),
     assets: (assets.data || []).map((row) => { const name = decodeName(row.asset_name, assetOptions); return { id: row.asset_id, assetType: name.primary as Asset["assetType"], description: name.description, currentValue: String(row.current_value), purchaseValue: row.purchase_value === null ? "" : String(row.purchase_value), purchaseDate: row.purchase_date || "" }; }),
     liabilities: (liabilities.data || []).map((row) => { const name = decodeName(row.liability_name, liabilityOptions); return { id: row.liability_id, liabilityType: name.primary as Liability["liabilityType"], description: name.description, outstandingAmount: String(row.outstanding_amount), interestRate: row.interest_rate === null ? "" : String(row.interest_rate), regularPayment: row.emi_amount === null ? "" : String(row.emi_amount), frequency: (row.frequency || "") as Liability["frequency"], endDate: row.end_date || "" }; }),
-    goals: (goals.data || []).map((row) => ({ id: row.goal_id, name: row.goal_name, goalType: "" as Goal["goalType"], targetAmount: String(row.target_amount), targetMode: row.target_date ? "Date" as const : "", targetDate: row.target_date || "", priority: (row.priority || "") as Goal["priority"], flexibility: (row.flexibility || "") as Goal["flexibility"], dynamicDetails: { ...emptyGoalDynamicDetails } })),
+    goals: (goals.data || []).filter((row) => !cancelledGoalIds.has(row.goal_id)).map((row) => ({ id: row.goal_id, name: row.goal_name, goalType: "" as Goal["goalType"], targetAmount: String(row.target_amount), targetMode: row.target_date ? "Date" as const : "", targetDate: row.target_date || "", priority: (row.priority || "") as Goal["priority"], flexibility: (row.flexibility || "") as Goal["flexibility"], dynamicDetails: { ...emptyGoalDynamicDetails } })),
     hasInsurancePolicies: (insurance.data || []).length > 0,
   } satisfies OnboardingData;
 }
@@ -108,7 +116,7 @@ export async function saveIncomeSources(values: IncomeSource[]) {
 async function saveSimpleList<T extends { id: string }>(values: T[], table: "expenses" | "assets" | "liabilities" | "goals", toInsert: (value: T, planningUnitId: string) => Tables[typeof table]["Insert"], idColumn: "expense_id" | "asset_id" | "liability_id" | "goal_id") {
   const planningUnitId = await getPlanningUnitId(); const { data: existing, error: existingError } = await supabase.from(table).select(idColumn).eq("planning_unit_id", planningUnitId); if (existingError) throw existingError;
   const ids = values.filter((value) => isUuid(value.id)).map((value) => value.id); const removed = (existing || []).map((row) => (row as unknown as Record<string, string>)[idColumn]).filter((id) => !ids.includes(id));
-  if (removed.length) { const { error } = await supabase.from(table).delete().in(idColumn, removed).eq("planning_unit_id", planningUnitId); if (error) { if (table === "goals" && "code" in error && error.code === "23503") throw new Error("This goal is linked to strategy history and cannot be hard-deleted. Cancel the goal from Goal Planner instead."); throw error; } }
+  if (removed.length) { const { error } = await supabase.from(table).delete().in(idColumn, removed).eq("planning_unit_id", planningUnitId); if (error) throw error; }
   for (const value of values) { const payload = toInsert(value, planningUnitId); const request = isUuid(value.id) ? supabase.from(table).update(payload).eq(idColumn, value.id).eq("planning_unit_id", planningUnitId) : supabase.from(table).insert(payload as never); const { error } = await request; if (error) throw error; }
   return loadRows(planningUnitId);
 }
@@ -116,4 +124,65 @@ async function saveSimpleList<T extends { id: string }>(values: T[], table: "exp
 export function saveExpenses(values: Expense[]) { return saveSimpleList(values, "expenses", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, expense_type: value.category, amount: numeric(value.amount), frequency: value.frequency }), "expense_id"); }
 export function saveAssets(values: Asset[]) { return saveSimpleList(values, "assets", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, asset_name: encodeName(value.assetType, value.description), current_value: numeric(value.currentValue), purchase_value: numeric(value.purchaseValue, true), purchase_date: nullable(value.purchaseDate) }), "asset_id"); }
 export function saveLiabilities(values: Liability[]) { return saveSimpleList(values, "liabilities", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, liability_name: encodeName(value.liabilityType, value.description), outstanding_amount: numeric(value.outstandingAmount), interest_rate: numeric(value.interestRate, true), emi_amount: numeric(value.regularPayment, true), frequency: nullable(value.frequency), end_date: nullable(value.endDate) }), "liability_id"); }
-export function saveGoals(values: Goal[]) { return saveSimpleList(values, "goals", (value, planningUnitId) => ({ planning_unit_id: planningUnitId, goal_name: value.goalType === "others" ? value.dynamicDetails.otherGoalName : value.name, target_amount: numeric(value.targetAmount), target_date: nullable(value.targetDate), priority: nullable(value.priority), flexibility: nullable(value.flexibility) }), "goal_id"); }
+export async function saveGoals(values: Goal[]) {
+  const planningUnitId = await getPlanningUnitId();
+  const { data: existing, error: existingError } = await supabase.from("goals").select("goal_id").eq("planning_unit_id", planningUnitId);
+  if (existingError) throw existingError;
+  const { data: cancelledDefinedGoals, error: cancelledGoalsError } = await supabase
+    .from("defined_goals")
+    .select("goal_id")
+    .eq("planning_unit_id", planningUnitId)
+    .eq("is_latest", true)
+    .eq("status", "Cancelled");
+  if (cancelledGoalsError) throw cancelledGoalsError;
+  const cancelledGoalIds = new Set((cancelledDefinedGoals || []).map((row) => row.goal_id));
+  const activeExistingIds = (existing || []).map((row) => row.goal_id).filter((id) => !cancelledGoalIds.has(id));
+  const retainedIds = values.filter((value) => isUuid(value.id)).map((value) => value.id);
+  const removed = activeExistingIds.filter((id) => !retainedIds.includes(id));
+  if (removed.length) {
+    const { error } = await supabase.from("goals").delete().in("goal_id", removed).eq("planning_unit_id", planningUnitId);
+    if (error) throw error;
+  }
+  for (const value of values) {
+    const payload: Tables["goals"]["Insert"] = {
+      planning_unit_id: planningUnitId,
+      goal_name: value.goalType === "others" ? value.dynamicDetails.otherGoalName : value.name,
+      target_amount: numeric(value.targetAmount),
+      target_date: nullable(value.targetDate),
+      priority: nullable(value.priority),
+      flexibility: nullable(value.flexibility),
+    };
+    const request = isUuid(value.id)
+      ? supabase.from("goals").update(payload).eq("goal_id", value.id).eq("planning_unit_id", planningUnitId)
+      : supabase.from("goals").insert(payload);
+    const { error } = await request;
+    if (error) throw error;
+  }
+  return loadRows(planningUnitId);
+}
+
+export async function cancelOrRemoveGoal(goalId: string): Promise<OnboardingData> {
+  const planningUnitId = await getPlanningUnitId();
+  const { data: latestDefinedGoal, error: definedGoalError } = await supabase
+    .from("defined_goals")
+    .select("defined_goal_id")
+    .eq("goal_id", goalId)
+    .eq("planning_unit_id", planningUnitId)
+    .eq("is_latest", true)
+    .maybeSingle();
+  if (definedGoalError) throw definedGoalError;
+
+  if (latestDefinedGoal?.defined_goal_id) {
+    const { error } = await supabase
+      .from("defined_goals")
+      .update({ status: "Cancelled" })
+      .eq("defined_goal_id", latestDefinedGoal.defined_goal_id)
+      .eq("planning_unit_id", planningUnitId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("goals").delete().eq("goal_id", goalId).eq("planning_unit_id", planningUnitId);
+    if (error) throw error;
+  }
+
+  return loadRows(planningUnitId);
+}
