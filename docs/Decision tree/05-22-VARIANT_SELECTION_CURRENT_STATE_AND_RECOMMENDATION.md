@@ -484,3 +484,31 @@ The repository has a clean canonical definition registry for all 22 active varia
 The next step is to validate these rules with real-life cases before freezing them.
 
 **Next step: Step 6 — Technique Selection: Current State & Recommendation.**
+
+
+---
+
+## 23. Verification Correction — Goal Funding Reachability
+
+The full code verification confirms that the **22 variants are defined**, but definition does not mean every variant is independently reachable through the current selector.
+
+For Goal Funding, the fallback selector directly chooses only:
+
+- `existing_assets`
+- `lumpsum`
+- `step_up_sip`
+
+when no `baseline_scenario` is already bound to a variant.
+
+The remaining Goal Funding variants:
+
+- `sip`
+- `lumpsum_plus_sip`
+- `lumpsum_plus_step_up_sip`
+
+are reachable only when an existing scenario already supplies the corresponding `funding_strategy_id`.
+
+Therefore **22 active definitions ≠ 22 independently deterministic selector outcomes** in the current runtime.
+
+This is a current implementation finding. The correct business precedence for making all 22 variants directly reachable must be decided through real-life cases before refactoring.
+
