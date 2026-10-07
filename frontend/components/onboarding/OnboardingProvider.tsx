@@ -146,7 +146,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     try {
       return applySavedData(await save());
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unable to save onboarding data.";
+      const message = error instanceof Error ? error.message : (typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string" ? (error as { message: string }).message : "Unable to save onboarding data.");
       setState((current) => ({ ...current, persistenceError: message }));
       throw error;
     }
