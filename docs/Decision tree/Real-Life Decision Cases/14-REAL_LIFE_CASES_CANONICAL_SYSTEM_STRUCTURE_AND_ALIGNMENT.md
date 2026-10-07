@@ -966,16 +966,130 @@ The system should therefore be understood as:
 
 This structure is the baseline against which the existing Decision Tree documentation and then the implementation should be reconciled.
 
+
 ---
 
-## Status
+# 29. Product Management Guardrails
 
-**Real-life system structure: established for alignment purposes.**
+The canonical structure must be governed by the following product rules:
 
-**Existing Decision Tree: retained as the Strategy Decision subsystem.**
+1. **One business rule → one canonical owner.** The same decision must not be independently made by multiple layers.
+2. **Financial State represents financial reality.** It should not silently become the Strategy Decision Engine.
+3. **Goal Planner owns goal feasibility and funding-path analysis.**
+4. **Goal Funding is a Goal Planner / feasibility responsibility, not a fifth peer Strategy Builder strategy.**
+5. **Strategy Builder consumes the established planning context; it must not recreate Goal Planner feasibility independently.**
+6. **Applicability, viability and selection remain distinct questions.**
+7. **A measurement is not automatically a decision rule.** Ratios and health indicators require contextual interpretation.
+8. **The 8-Fit framework must be reconciled before it is retained as an independent gate.**
+9. **Scenario / What-If is not the accepted plan.** A scenario must never silently overwrite the active plan.
+10. **Investor acceptance is required before a proposed change becomes the active plan.**
+11. **Material changes trigger targeted revalidation, not automatic full replanning.**
+12. **Stress / resilience replays the same decision logic under changed assumptions; it is not a second decision engine.**
+13. **No Acceptable Path is a valid outcome.** The system must not force a recommendation.
+14. **Investor-designed strategies are supported and evaluated rather than artificially converted into a library strategy.**
+15. **Action Plan is downstream of the accepted plan.**
+16. **Monitoring feeds controlled revalidation and adaptation.**
+17. **Recommendation explains the decision; it must not become a hidden second decision-maker.**
+18. **Completed actions remain historical when future/active actions are revised.**
 
-**8-fit gate: role requires reconciliation before implementation.**
+---
 
-**Goal Funding ownership: requires reconciliation before implementation.**
+# 30. Canonical Product Ownership Map
 
-**Implementation plan: should be regenerated only after the three-layer comparison is complete.**
+| Product question | Canonical owner | Primary output |
+|---|---|---|
+| What is the investor's current financial reality? | Financial State | Financial reality |
+| What does the investor want? | Goal Planner / Goal Context | Goal context |
+| Is the goal/path feasible? | Goal Planner / Feasibility | Feasibility result |
+| Which funding paths are feasible? | Goal Planner / Feasibility | Funding paths |
+| What happens to all goals together? | Whole-Plan / Multi-Goal Impact | Whole-plan impact |
+| What is genuinely non-negotiable? | Hard Constraint Policy | Constraint result |
+| Which strategies can be considered? | Strategy Applicability | Candidate pool |
+| Can a candidate work here? | Strategy Viability / eligibility evidence | Viability evidence |
+| Which strategy is preferable? | Strategy Selection | Selected strategy |
+| Which variant applies? | Variant Selection | Selected variant |
+| Which techniques are needed? | Technique Selection | Technique set |
+| How are techniques assembled? | Architecture | Implementation architecture |
+| Does the plan survive changed assumptions? | Stress / Resilience | Resilience result |
+| What happens under a proposed change? | Impact / What-If | Scenario impact |
+| Does the current decision still hold? | Revalidation | Revalidation result |
+| What did the investor accept? | Plan / Adoption | Accepted plan |
+| What must be executed? | Action Plan | Actions |
+| What changed later? | Monitoring / Adaptation | Change trigger |
+| What if the investor proposes their own strategy? | Open Strategy / Impact | Evaluated investor strategy |
+
+This ownership map is the product-level contract. Lower-level documents may describe implementation detail, but they must not create competing business ownership.
+
+---
+
+# 31. Relationship to the Strategy Decision Tree
+
+This document defines the broader PlanVesto financial decision system.
+
+The separate strategy-decision-tree.md defines the Strategy Decision subsystem in detail, including:
+
+- the four canonical Strategy Builder strategies;
+- strategy applicability;
+- strategy viability;
+- strategy selection;
+- variants;
+- techniques;
+- technique conditions;
+- hard rejection rules;
+- goal-specific strategy situations;
+- decision output.
+
+Therefore:
+
+```
+PlanVesto Financial Decision System
+        │
+        ├── Financial State
+        ├── Goal Planning / Feasibility
+        ├── Whole-Plan Impact
+        │
+        └── Strategy Decision Subsystem
+              ├── Applicability
+              ├── Viability
+              ├── Selection
+              ├── Variant
+              ├── Technique
+              ├── Architecture
+              └── Stress / Resilience
+```
+
+The two documents are complementary, not competing.
+
+The implementation plan in 13-DECISION_TREE_SYSTEM_UPDATE_AND_FEATURE_IMPLEMENTATION_PLAN.md is the separate execution roadmap for bringing the repository toward this canonical product structure.
+
+---
+
+# 32. Canonical Product Principle
+
+PlanVesto should be treated as a **financial decision system**, not merely as a Strategy Builder.
+
+The product lifecycle is:
+
+**Financial Reality**
+
+→ **Goal / Whole-Plan Feasibility**
+
+→ **Strategy Decision**
+
+→ **Implementation Design**
+
+→ **Impact / What-If**
+
+→ **Revalidation**
+
+→ **Investor Choice**
+
+→ **Accepted Plan**
+
+→ **Action Plan**
+
+→ **Monitoring / Adaptation**
+
+Each stage has one primary responsibility and should consume the output of the preceding stage rather than recreating it.
+
+**This document is the consolidated canonical business/product reference for the Real-Life Decision Cases.**
