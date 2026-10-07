@@ -439,3 +439,23 @@ The next step is **not refactoring**.
 The next step is to validate these current rules with real-life cases, freeze the business behavior, and then move to:
 
 **Step 3 — 8 Eligibility Fits: Current State & Recommendation.**
+
+
+---
+
+## 18. Verification Correction — Declared Rule vs Active Enforcement
+
+The coding-agent verification found one important distinction that must be explicit in this document:
+
+`backend/engines/constraints/policy.py::can_discretionary_preempt_essential()` exists and the rule identity is present in the canonical registry, **but the function is not currently invoked by the financial constraint evaluator/aggregator path**.
+
+Therefore:
+
+- **Declared policy:** exists.
+- **Registered rule identity:** exists.
+- **Active enforcement in the current evaluator path:** not confirmed / currently absent.
+
+This rule must therefore not be described as fully enforced in the current runtime. Its intended business behavior remains a V1 decision for real-life validation.
+
+The emergency-reserve and DTI rules are likewise not universal blockers: current code can use `suggested_override_priority` to demote affected discretionary goals rather than stop all planning. This is current behavior, not a recommendation to preserve it unchanged.
+
