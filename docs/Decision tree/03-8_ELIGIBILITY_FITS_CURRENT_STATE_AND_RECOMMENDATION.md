@@ -545,3 +545,23 @@ Do not freeze solely from current code:
 The repository already has a clear eight-fit structure and a single execution module. The main remaining design work is to establish the exact business meaning, input contract, and boundary of each fit before moving its policy into the Canonical Decision Engine.
 
 **Next step:** Step 4 — Strategy Selection: Current State & Recommendation.
+
+
+---
+
+## 20. Verification Correction — Double Evaluation in Current Decision Path
+
+The full code verification confirms that the current decision path performs **two related eligibility checks**:
+
+1. `evaluate_eligibility_fits()` calculates the eight fit results.
+2. `evaluate_eligibility()` separately applies the goal/constraint eligibility gate.
+
+`backend/engines/strategy/decision.py` currently calls both and then combines their outcomes. This is an actual overlap in decision authority, not merely two presentation helpers.
+
+For V1, the business meaning of these two checks must be explicitly separated or consolidated. Until that is decided, the documentation should not imply that the eight-fit evaluator is the only eligibility authority.
+
+The previously documented asymmetry remains confirmed:
+- Liquidity Fit has no direct FAIL branch.
+- Asset Resource Fit has no direct FAIL branch.
+- Goal Constraint Fit has no CONDITIONAL branch.
+
