@@ -1012,3 +1012,21 @@ Only then should the code be refactored around those frozen rules.
 **Business Rules — Intentionally Not Frozen**
 
 **Next Phase — Real-Life Validation → Rule Freeze → V1 Canonical Rulebook → Code Refactor**
+
+
+---
+
+## 12. Coding-Agent Verification Corrections
+
+The full Decision Tree documentation set was cross-checked against the current backend implementation. The following findings must be treated as **current-state corrections/clarifications**, not frozen business rules:
+
+- `backend/rules/strategy_decision.py` still uses legacy strategy IDs in active Horizon Fit and Funding Fit calculations. With the current canonical IDs, those branches do not match and canonical strategies can fall back to the baseline horizon score.
+- `InvestorPriorities` is accepted by `evaluate_decision()` but is not currently used inside that selection calculation; its current effect is downstream in ranking. Therefore its final decision authority remains **TO DECIDE**.
+- Hard constraints are not uniformly binary blockers. Critical emergency-reserve/DTI conditions can demote affected discretionary goals through priority override behavior. The canonical flow must therefore not assume every hard constraint means “stop all planning.”
+- Eligibility is evaluated through both the eight-fit calculation and a separate eligibility/constraint gate in the current decision path. This overlap must be resolved before V1 freeze.
+- Goal Funding has 6 defined variants, but the current fallback selector directly reaches only 3 without a pre-bound scenario; the other 3 depend on an existing scenario binding.
+- Architecture composition and technique execution currently occur before `evaluate_decision()` in the runtime. The documented target sequence is therefore a **target design**, not the current execution order.
+- Stress/Resilience remains exploratory scenario/what-if functionality; there is no formal resilience gate or re-selection mechanism yet.
+
+These findings do not authorize code changes. They define what must be considered during real-life business validation before V1 is frozen.
+
