@@ -200,3 +200,34 @@ The repository already has a real strategy-selection authority in evaluate_decis
 The next step is to validate this selection behavior with real-life cases before freezing it.
 
 Next step: Step 5 — 22 Variant Selection: Current State & Recommendation.
+
+---
+
+## 23. Verification Corrections — Active Scoring Defects and Investor Priorities
+
+The full code verification confirms three important current-state facts that must not be mistaken for frozen policy.
+
+### 23.1 Legacy strategy IDs are active in scoring
+
+`backend/rules/strategy_decision.py` still checks legacy IDs such as `strat-dynamic-accumulation`, `strat-calibrated-growth`, `strat-high-liquidity-flex`, and `strat-cap-preservation`.
+
+The current canonical runtime IDs are different. As a result, the intended Horizon Fit branches do not match the current canonical strategies; affected strategies can receive the baseline Horizon Fit score instead of the intended optimal branch.
+
+This is an **active code defect**, not merely stale documentation.
+
+### 23.2 InvestorPriorities is currently ignored by strategy selection
+
+`evaluate_decision()` accepts `InvestorPriorities`, but the current selection calculation does not reference it. The priorities currently influence downstream ranking rather than the mathematical strategy-selection decision.
+
+Therefore the business question remains open:
+
+> Should InvestorPriorities select among eligible strategies, rank them after selection, or influence both?
+
+Do not freeze the answer from the current code.
+
+### 23.3 Architecture is pre-composed before final strategy selection
+
+The current `StrategyEngine.execute()` composes architectures and executes techniques before calling `evaluate_decision()`. Therefore the target sequence in this document is not the current runtime sequence.
+
+Before refactoring, real-life cases must determine whether architecture should be purely downstream or whether candidate architecture evidence is legitimately required during strategy selection.
+
