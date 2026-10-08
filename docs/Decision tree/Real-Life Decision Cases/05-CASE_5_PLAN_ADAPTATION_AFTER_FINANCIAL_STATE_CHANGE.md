@@ -1,5 +1,16 @@
 # Case 5 — Plan Adaptation After Financial State Change
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> A financial-state change triggers materiality assessment and targeted revalidation. Do not automatically rebuild the whole plan or replace a strategy.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 A financial plan has already been created for an investor.
