@@ -1,5 +1,16 @@
 # Case 9 — Execution Plan What-If and Impact Guidance
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> What-if is an isolated scenario against the Accepted Plan. It does not overwrite the active plan; after Impact Analysis the investor chooses whether to adopt the change.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 The investor has already selected an appropriate strategy.
@@ -42,7 +53,7 @@ The investor changes how the selected strategy is executed.
 
 Example:
 
-**Goal Funding Strategy**
+**Goal Planner / Feasibility**
 
 ↓
 
