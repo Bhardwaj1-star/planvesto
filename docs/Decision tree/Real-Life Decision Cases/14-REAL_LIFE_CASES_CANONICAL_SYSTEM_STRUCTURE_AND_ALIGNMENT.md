@@ -16,7 +16,9 @@ The existing Decision Tree documents describe the internal Strategy Decision seq
 
 The real-life cases establish a broader financial-planning lifecycle:
 
-> Financial State + Goals → Feasibility → Whole-Plan Impact → Strategy → Execution → What-If → Revalidation → Investor Decision → Action Plan
+> Financial State + Goals → Goal Feasibility → [when applicable] Whole-Plan / Multi-Goal Impact → Strategy → Execution → What-If → Revalidation → Investor Decision → Action Plan
+
+**Important boundary:** Whole-Plan / Multi-Goal Impact is conditional. It is not a mandatory input to the Strategy Decision Tree for an individual goal. It applies when the planning problem involves multiple goals, an existing accepted plan, a new goal against that plan, or a material cross-goal/resource conflict.
 
 These are not competing flows.
 
@@ -60,6 +62,7 @@ B. GOAL PLANNING / FEASIBILITY
         ├── Opportunity-cost comparison
         └── Alternative feasible paths
                 │
+                │  [Conditional: only when the planning problem is plan-level]
                 ▼
 C. WHOLE-PLAN / MULTI-GOAL IMPACT
         │
@@ -223,7 +226,7 @@ The current five canonical Strategy Builder strategies should therefore not be a
 
 # 5. Strategy Builder Decision Structure
 
-Once Goal Planner establishes the relevant feasible financial path, Strategy Builder becomes:
+Once Goal Planner establishes the relevant feasible financial path, Strategy Builder becomes. If the planning problem is plan-level, Whole-Plan / Multi-Goal Impact is evaluated before the Strategy Decision; it is not a mandatory step for an individual-goal Strategy Decision:
 
 ```Feasible Planning Path
         ↓
@@ -384,7 +387,7 @@ The comparison must expose trade-offs rather than silently replace the current p
 
 # 10. Multi-Goal Planning
 
-The real-life cases establish two distinct situations.
+The real-life cases establish two distinct situations. Whole-Plan / Multi-Goal Impact is used only for the plan-level situation; it is not inserted into every individual-goal Strategy Decision.
 
 ### Existing multi-goal plan
 
@@ -753,7 +756,7 @@ The resulting hierarchy is:
 │
 ├── 2. Goal Planning / Feasibility
 │
-├── 3. Whole-Plan / Multi-Goal Impact
+├── 3. [Conditional] Whole-Plan / Multi-Goal Impact
 │
 ├── 4. Strategy Decision Engine
 │     ├── Applicability
@@ -811,6 +814,8 @@ Instead:
 Financial State
      +
 Goal Feasibility
+     +
+[When applicable] Whole-Plan / Multi-Goal Impact
      +
 Hard Constraints
      +
@@ -938,7 +943,7 @@ This is the comparison that should drive the implementation plan.
 
 The most important conclusion from the real-life cases is:
 
-> **PlanVesto is not only a Strategy Builder. It is a financial decision system in which Goal Planning, Strategy Decision, Impact Analysis, Investor Choice, Action Planning and Adaptation form one connected lifecycle.**
+> **PlanVesto is not only a Strategy Builder. It is a financial decision system in which Goal Planning, conditional Whole-Plan / Multi-Goal Analysis, Strategy Decision, Impact Analysis, Investor Choice, Action Planning and Adaptation form one connected lifecycle.**
 
 The Strategy Decision Tree remains important, but it should sit inside this broader lifecycle.
 
@@ -946,7 +951,9 @@ The system should therefore be understood as:
 
 **Financial Reality**
 
-→ **Goal / Whole-Plan Feasibility**
+→ **Goal Feasibility**
+
+→ **[When applicable] Whole-Plan / Multi-Goal Impact**
 
 → **Strategy Decision**
 
@@ -1072,7 +1079,9 @@ The product lifecycle is:
 
 **Financial Reality**
 
-→ **Goal / Whole-Plan Feasibility**
+→ **Goal Feasibility**
+
+→ **[When applicable] Whole-Plan / Multi-Goal Impact**
 
 → **Strategy Decision**
 
