@@ -1,5 +1,16 @@
 # Case 7 — New Goal Against an Existing Financial Plan
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> A new goal is a proposal against the existing Accepted Plan: Goal Feasibility → Whole-Plan Impact → Investor Decision. Reject preserves the existing plan; accept triggers affected Strategy/Implementation work.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 An investor already has an established financial plan.
