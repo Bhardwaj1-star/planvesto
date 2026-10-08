@@ -508,41 +508,104 @@ Recommendation should **explain** the decision, not silently create a new one.
 
 # 5. The Recommended Canonical Decision Tree
 
-The nine documents collectively point to one target sequence:
+The nine audit documents define the **Strategy Decision subsystem**. They are not the complete end-to-end PlanVesto lifecycle.
+
+The canonical product lifecycle is **not one mandatory linear chain**. It has a core planning path plus conditional plan-level branches and an iterative revalidation loop.
+
+### Core planning path
 
 ```text
-1. GOAL
-   ↓
-2. GOAL CLASSIFICATION
-   ↓
-3. HARD CONSTRAINT GATE
-   ↓
-4. STRATEGY APPLICABILITY
-   ↓
-5. 8-FIT ELIGIBILITY
-   ↓
-6. STRATEGY SELECTION
-   ↓
-7. VARIANT SELECTION
-   ↓
-8. TECHNIQUE SELECTION
-   ↓
-9. ARCHITECTURE COMPOSITION
-   ↓
-10. STRESS / RESILIENCE
-   ↓
-11. RE-SELECTION IF REQUIRED
-   ↓
-12. FINAL DECISION
-   ↓
-13. INVESTOR RECOMMENDATION
+FINANCIAL STATE + INVESTOR INTENT / GOALS
+                ↓
+GOAL PLANNING / FEASIBILITY
+                ↓
+STRATEGY DECISION
+                ↓
+IMPLEMENTATION DESIGN
+                ↓
+STRESS / RESILIENCE
+                ↓
+DECISION / RECOMMENDATION
+                ↓
+INVESTOR DECISION / ADOPTION
+                ↓
+ACCEPTED PLAN
+                ↓
+ACTION PLAN
+                ↓
+EXECUTION
 ```
 
-The nine audit documents are therefore not nine independent decision systems.
+### Conditional plan-level branch
 
-They are nine documented domains of one future Decision Engine.
+Whole-Plan / Multi-Goal Impact is **not a mandatory input to every individual-goal Strategy Decision**. It is invoked when the decision itself is plan-level, such as a new goal against an existing plan, competing goals/resources, or a material cross-goal change.
+
+```text
+PROPOSED / CHANGED GOAL OR PLAN
+        ↓
+GOAL FEASIBILITY
+        ↓
+WHOLE-PLAN / MULTI-GOAL IMPACT
+        ↓
+INVESTOR DECISION
+        ├── REJECT → EXISTING ACCEPTED PLAN REMAINS
+        └── ACCEPT → AFFECTED STRATEGY / IMPLEMENTATION
+```
+
+### Iterative change loop
+
+```text
+ACCEPTED PLAN
+     ↓
+EXECUTION / EXECUTION CHANGE / WHAT-IF
+     ↓
+IMPACT ANALYSIS
+     ↓
+TARGETED REVALIDATION
+     ↓
+STILL VALID?
+  ├── YES → UPDATE/CONTINUE EXECUTION
+  └── NO  → AFFECTED PLANNING / STRATEGY DECISION
+                 ↓
+          INVESTOR DECISION
+                 ↓
+          UPDATED ACCEPTED PLAN
+                 ↓
+          UPDATED ACTION PLAN
+```
+
+The Strategy Decision subsystem itself remains:
+
+```text
+Goal Context + Financial State + Feasibility/Funding Evidence + Constraints
+        ↓
+Constraint / Safety Evaluation
+        ↓
+Strategy Applicability
+        ↓
+Candidate Viability
+        ↓
+Strategy Selection
+        ↓
+Variant
+        ↓
+Technique
+        ↓
+Method / Policy
+        ↓
+Architecture / Solution
+        ↓
+Stress / Resilience
+        ↓
+Decision Output
+```
+
+**Goal Funding is a Goal Planner / Goal Feasibility function, not a peer Strategy Builder strategy.**
+
+The nine audit documents remain valuable as current-state audits of the runtime. Their findings must be read as evidence of current implementation, not as permission to preserve the current architecture when it conflicts with the canonical business model.
 
 ---
+
 
 # 6. What Is Already Strong
 
