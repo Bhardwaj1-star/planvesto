@@ -2,7 +2,7 @@
 
 **Document Type:** User Journey  
 **Status:** CANONICAL DESIGN  
-**Purpose:** Show exactly what the investor does, what the system does, what is calculated, what the investor sees, and what happens next.
+**Purpose:** Show exactly what the investor does, what the system does, what is calculated, what the investor sees, and how Goal Planning establishes feasibility before Strategy Decision.
 
 ---
 
@@ -10,13 +10,17 @@
 
 Investor has an objective such as:
 
-> “I want to fund my child's education in 10 years.”
+> “I want to fund my retirement in 25 years.”
 
 Goal Planning answers:
 
-> **What exactly is the goal, how much will it require in the future, what resources are already available, what funding gap remains, and is that gap supportable from current financial capacity?**
+> **What exactly is the goal, what will it require, what resources are available, what funding gap exists, and what financial path can make the goal feasible?**
 
-It does **not** decide the Strategy.
+This is broader than simply comparing **Required Contribution vs Available Surplus**.
+
+Where alternative uses of the investor's financial capacity exist, Goal Planning must be able to compare the **financial consequences and opportunity cost of alternative feasible paths**.
+
+This does **not** mean that Goal Planning selects the Strategy Builder Strategy.
 
 ---
 
@@ -39,17 +43,19 @@ Asset projection
         ↓
 Funding gap
         ↓
-Required contribution
+Current financial capacity
         ↓
-Financial capacity
+Alternative feasible funding paths
         ↓
-Goal feasibility
+Financial outcome / opportunity-cost comparison
+        ↓
+Goal feasibility / funding path
         ↓
 Investor reviews result
         ↓
 Accept / Adjust / Stop
         ↓
-Defined Goal
+Defined Goal + Feasibility Evidence
         ↓
 Strategy Decision
 ```
@@ -60,18 +66,19 @@ Strategy Decision
 
 | Step | Investor does | System does | Investor sees | Output |
 |---|---|---|---|---|
-| 1. Start | Chooses **Education** | Maps input to canonical goal type | Education | `education` |
-| 2. Goal details | Enters goal name, beneficiary/context, current cost and other required details | Validates values and required fields | Entered goal details | Normalised Goal Input |
-| 3. Target date | Enters target month/year | Calculates time remaining | e.g. 10 years | Goal Timeline |
-| 4. Future target | Confirms/adjusts assumptions where permitted | Applies documented inflation/target assumptions | Future required amount | Future Target |
-| 5. Asset mapping | Selects assets intended for this goal | Validates mapping and ownership/eligibility as applicable | Mapped assets | Asset Mapping |
-| 6. Asset projection | Reviews assumptions | Projects mapped asset value to goal date | Expected asset value | Projected Asset Value |
-| 7. Funding gap | Reviews result | Calculates Future Target − Projected Mapped Assets | Shortfall / On Track / Overfunded | Funding Gap |
-| 8. Contribution | Reviews requirement | Calculates contribution needed when a positive gap exists | Required monthly contribution | Required Contribution |
-| 9. Capacity | Reviews available capacity | Reads current investable surplus / relevant capacity | Available monthly capacity | Financial Capacity |
-| 10. Feasibility | Reviews result | Compares required contribution with available capacity | Feasible / Constrained / Infeasible / Unknown | Goal Feasibility |
-| 11. Decision | Accepts assumptions, adjusts them, or stops | Recalculates only affected outputs | Updated result | Proposed Defined Goal |
-| 12. Handoff | Continues | Packages canonical goal + evidence | Ready for next stage | Defined Goal |
+| 1. Start | Chooses a goal | Maps input to canonical goal type | Goal | Canonical Goal Type |
+| 2. Goal details | Enters goal details, current cost and required context | Validates required fields and normalises input | Entered goal details | Normalised Goal Input |
+| 3. Target date | Enters target month/year | Calculates time remaining | Time to goal | Goal Timeline |
+| 4. Future target | Confirms/adjusts permitted assumptions | Calculates future target | Future requirement | Future Target |
+| 5. Asset mapping | Selects assets intended for the goal | Validates mapping | Mapped assets | Asset Mapping |
+| 6. Asset projection | Reviews assumptions | Projects mapped assets to goal date | Expected asset value | Projected Asset Value |
+| 7. Funding gap | Reviews result | Compares future target with projected mapped assets | Shortfall / On Track / Overfunded | Funding Gap |
+| 8. Capacity | Reviews current position | Determines available financial capacity and relevant constraints | Available capacity | Financial Capacity |
+| 9. Funding paths | Reviews possible ways to close the gap | Evaluates alternative financially feasible paths using actual financial data | Alternative paths | Funding / Feasibility Paths |
+| 10. Opportunity cost | Reviews trade-offs | Compares mathematical consequences of alternative uses of financial capacity | Benefits, costs, trade-offs | Opportunity-Cost Analysis |
+| 11. Feasibility | Reviews conclusion | Determines whether the goal can be made feasible under the analysed assumptions/path | Feasible / Constrained / Infeasible / Unknown | Goal Feasibility |
+| 12. Decision | Accepts assumptions, adjusts them, or stops | Recalculates affected outputs | Updated result | Proposed Defined Goal |
+| 13. Handoff | Continues | Packages goal + funding/feasibility evidence | Ready for Strategy Decision | Defined Goal |
 
 ---
 
@@ -90,28 +97,26 @@ Duration
 Example:
 
 **Today:** 2026  
-**Target:** 2036  
-**Duration:** 10 years
+**Target:** 2051  
+**Duration:** 25 years
 
-The system should store the calculated duration rather than repeatedly deriving it differently in downstream modules.
+The calculated duration becomes part of the Goal Planning evidence.
 
 ---
 
 ### 4.2 Future target
 
-If today's goal cost is ₹20 lakh and the approved inflation assumption is used:
-
 ```
 Today's Cost
      ↓
-Inflation Assumption
+Approved Assumption
      ↓
 Time to Goal
      ↓
 Future Target
 ```
 
-The exact calculation must use the canonical Goal Planner calculation already defined in the architecture.
+The exact calculation uses the canonical Goal Planner calculation.
 
 The User Journey does not create a second formula.
 
@@ -129,7 +134,7 @@ Projection Assumptions
 Projected Value at Goal Date
 ```
 
-Only assets actually mapped to the goal participate in this calculation.
+Only resources mapped to the goal participate in the mapped-asset projection.
 
 ---
 
@@ -149,11 +154,13 @@ Possible results:
 - **On Track** — target is supportable by mapped resources under the model
 - **Overfunded** — mapped resources exceed the target
 
+A shortfall is **not automatically a reason to select Credit Utilisation or Debt Reduction**.
+
 ---
 
 ### 4.5 Required contribution
 
-If a positive funding gap exists:
+Where a positive funding gap remains:
 
 ```
 Funding Gap
@@ -163,34 +170,185 @@ Time Remaining
 Required Contribution
 ```
 
-The result is an input to feasibility, **not automatically a Strategy**.
+This establishes one funding requirement.
+
+It is not, by itself, the complete feasibility decision.
 
 ---
 
-### 4.6 Feasibility
+## 5. Financial capacity and alternative funding paths
+
+Case 1 established an important requirement: the system should not treat debt, surplus or any single metric as an isolated decision.
+
+For example, where an investor has monthly surplus available:
 
 ```
-Required Contribution
-        vs
 Available Financial Capacity
-        ↓
-Goal Feasibility
+          ↓
+      Alternative Uses
+          │
+          ├── Additional Goal Funding / Investment
+          │
+          ├── Faster Debt Repayment
+          │
+          └── Loan / Financing Restructuring
 ```
 
-Result:
+The actual alternatives depend on the investor's financial situation and the goal.
+
+The system evaluates the relevant alternatives using:
+
+- goal requirement;
+- goal horizon;
+- available surplus/capacity;
+- existing assets;
+- debt and EMI;
+- debt cost;
+- remaining tenure;
+- liquidity/reserves;
+- required goal funding;
+- investment assumptions;
+- repayment capacity;
+- relevant constraints.
+
+The system must not invent an alternative merely to produce a comparison.
+
+---
+
+## 6. Opportunity-cost analysis
+
+**Opportunity cost is part of the feasibility/funding analysis when alternative uses of financial capacity materially change the goal or financial outcome.**
+
+The question is:
+
+> **What does the investor gain and give up by choosing one feasible financial path instead of another?**
+
+### Example from the real-life case
+
+A retirement client has approximately ₹70,000 monthly surplus and an existing home loan.
+
+The system may need to compare:
+
+```
+Path A
+Surplus → Faster Debt Repayment
+       ↓
+Interest Saving
+       ↓
+Lower Debt
+       ↓
+Less money deployed toward retirement during the period
+```
+
+versus:
+
+```
+Path B
+Surplus → Retirement Investment
+       ↓
+Potentially Higher Retirement Corpus
+       ↓
+Loan Continues
+       ↓
+Interest Continues
+       ↓
+Investment Outcome Is Uncertain
+```
+
+A further feasible scenario may be:
+
+```
+Path C
+Loan Restructuring
+       ↓
+Lower EMI
+       ↓
+Higher Monthly Investable Surplus
+       ↓
+Additional Retirement Investment
+       ↓
+But Potentially Higher Total Interest
+```
+
+The system compares the **mathematical consequences and trade-offs** of the relevant paths.
+
+It does **not** apply:
+
+> “Debt exists → Debt Reduction.”
+
+It also does **not** apply:
+
+> “Expected investment return is higher → Investment is automatically better.”
+
+Investment returns are assumptions/scenarios and must not be represented as guaranteed outcomes.
+
+---
+
+## 7. What Opportunity Cost produces
+
+Opportunity-cost analysis should make the trade-off visible rather than hide it inside a generic feasibility label.
+
+The investor should be able to see, where relevant:
+
+| Comparison | Path A | Path B | Path C |
+|---|---|---|---|
+| Use of surplus | Debt repayment | Goal investment | Restructuring + investment |
+| Debt outcome | Improved | Debt continues | Changed |
+| Interest outcome | Lower | Continues | May increase/decrease depending on structure |
+| Goal funding outcome | Changes | Changes | Changes |
+| Liquidity | Changes | Changes | Changes |
+| Investment outcome | Lower deployment | Higher deployment | Higher deployment possible |
+| Key risk | Goal funding trade-off | Market/return uncertainty | Higher debt cost / tenure risk |
+| Opportunity cost | Foregone goal investment | Foregone interest saving | Trade-off between both |
+
+The exact columns depend on the case.
+
+The system should show only calculations that are actually supported by the available evidence and assumptions.
+
+---
+
+## 8. Feasibility result
+
+Feasibility is therefore not merely:
+
+```
+Required Contribution vs Available Surplus
+```
+
+The relevant model is:
+
+```
+Goal Requirement
+      +
+Financial State
+      +
+Funding Gap
+      +
+Relevant Financial Alternatives
+      +
+Opportunity Cost / Trade-offs
+      +
+Constraints
+      ↓
+Goal Feasibility / Feasible Funding Path
+```
+
+Possible result:
 
 | Result | Meaning |
 |---|---|
-| **Feasible** | Current capacity supports the calculated requirement under stated assumptions |
-| **Constrained** | Goal may be possible but current capacity/assumptions create a constraint |
-| **Infeasible** | Current evidence does not support the requirement |
-| **Unknown** | Required evidence is missing or unreliable |
+| **Feasible** | A financially supportable path exists under the stated assumptions |
+| **Constrained** | A path may exist, but important financial constraints/trade-offs remain |
+| **Infeasible** | Current evidence does not identify a supportable path |
+| **Unknown** | Required evidence or assumptions are insufficient to establish feasibility |
+
+**Important:** Opportunity cost does not automatically make a goal Infeasible. It explains the economic trade-off between feasible alternatives.
 
 ---
 
-## 5. What happens when the investor changes something?
+## 9. What happens when the investor changes something?
 
-The system should **not recalculate everything blindly**.
+The system should recalculate the outputs affected by the change.
 
 ### Target date changes
 
@@ -205,7 +363,9 @@ Asset Projection
    ↓
 Funding Gap
    ↓
-Contribution
+Funding Paths
+   ↓
+Opportunity Cost
    ↓
 Feasibility
 ```
@@ -219,7 +379,9 @@ Future Target
    ↓
 Funding Gap
    ↓
-Contribution
+Funding Paths
+   ↓
+Opportunity Cost
    ↓
 Feasibility
 ```
@@ -233,36 +395,44 @@ Projected Asset Value
    ↓
 Funding Gap
    ↓
-Contribution
+Funding Paths
    ↓
 Feasibility
 ```
 
-### Financial capacity changes
+### Financial capacity / debt changes
 
 ```
-Financial Capacity
+Financial State Change
+   ↓
+Available Capacity
+   ↓
+Debt Economics / Financing Position
+   ↓
+Affected Funding Paths
+   ↓
+Opportunity-Cost Comparison
    ↓
 Feasibility
 ```
 
-This is important because later **targeted revalidation** depends on knowing which output is affected by which input.
+Not every change requires every analysis to be rebuilt.
 
 ---
 
-## 6. Feasibility branches
+## 10. Feasibility branches
 
 ### Feasible
 
 ```
-Feasible
-   ↓
+Feasible Path
+     ↓
 Investor reviews
-   ↓
+     ↓
 Continue
-   ↓
-Defined Goal
-   ↓
+     ↓
+Defined Goal + Feasibility Evidence
+     ↓
 Strategy Decision
 ```
 
@@ -273,15 +443,16 @@ Constraint / Infeasibility
         ↓
 Investor sees:
 • what caused it
-• which assumption matters
-• what can be changed
+• which assumptions matter
+• available alternatives
+• financial trade-offs
         ↓
-Investor changes assumption?
+Investor changes goal / assumptions / funding choice?
    ├── YES → Recalculate
    └── NO  → Keep result / stop
 ```
 
-The system must **not silently reduce the goal, extend the date, assume extra funding, or select credit** just to produce a feasible result.
+The system must **not silently reduce the goal, extend the date, assume extra funding, or select credit** merely to produce a feasible result.
 
 ### Unknown
 
@@ -299,7 +470,7 @@ Unknown is not Feasible and not Infeasible.
 
 ---
 
-## 7. What the investor should see at the end
+## 11. What the investor should see at the end
 
 A useful Goal Planning result should show:
 
@@ -316,37 +487,43 @@ A useful Goal Planning result should show:
 - Funding gap
 - Required contribution
 
-**Capacity**
-- Available financial capacity
+**Financial Capacity**
+- Available capacity
+- Relevant debt/EMI information where applicable
+- Relevant liquidity information
+
+**Feasibility / Funding Analysis**
+- Available feasible path(s)
+- Important assumptions
+- Opportunity-cost / trade-off analysis where material
+- Key risks and limitations
 - Goal feasibility
-- Key assumptions
-- Data limitations, if any
 
 The investor should be able to answer:
 
-> **“What do I need, what do I already have, what is the gap, and can my current financial position support it?”**
+> **“What do I need, what do I already have, what is the gap, what feasible paths are available, and what am I giving up by choosing one path over another?”**
 
 ---
 
-## 8. What happens next
+## 12. What happens next
 
-Goal Planning produces a **Defined Goal**.
-
-Conceptually:
+Goal Planning produces:
 
 ```
 Defined Goal
       +
 Financial State
       +
-Feasibility / Funding Evidence
+Funding / Feasibility Evidence
       +
 Relevant Constraints
+      +
+Material Trade-offs
       ↓
 Strategy Decision
 ```
 
-The Strategy Decision may later consider:
+Strategy Decision may later consider:
 
 - Progressive De-risking
 - Capital Preservation
@@ -354,23 +531,33 @@ The Strategy Decision may later consider:
 - Credit Utilisation
 - No acceptable Strategy
 
-Goal Planning itself does **not** select any of them.
+Goal Planning does **not** select the Strategy Builder Strategy.
 
 ---
 
-## 9. Important boundaries
+## 13. Important boundaries
 
 ### Goal Funding
 
-Goal Funding is part of Goal Planner / Goal Feasibility.
+Goal Funding is part of the **Goal Planner / Goal Feasibility function**.
+
+It determines the financial path/options by which the goal can become feasible.
 
 It is **not** a peer Strategy Builder Strategy.
 
+### Opportunity Cost
+
+Opportunity Cost is a **decision principle within feasibility/funding analysis when alternative financial paths are being compared**.
+
+It is not itself a Strategy, Variant, Technique or Solution.
+
 ### Whole-Plan Impact
 
-Not required for every goal.
+Whole-Plan Impact is not required for every goal.
 
-It becomes relevant when a new/changed goal materially competes with existing goals or resources.
+It becomes relevant when a new/changed goal materially competes with existing goals/resources or otherwise creates a plan-level decision.
+
+Opportunity-cost analysis can occur at Goal Planning level without requiring a Whole-Plan decision.
 
 ### What-If
 
@@ -382,7 +569,34 @@ Not created here. Investor adoption happens downstream.
 
 ---
 
-## 10. Example
+## 14. Real-life case connection
+
+The retirement case that established this requirement had:
+
+- 25-year retirement horizon;
+- ₹20 lakh current corpus;
+- ₹2 crore required corpus;
+- ₹2 lakh monthly income;
+- ₹1.2 lakh monthly expenses;
+- ₹10,000 EMI;
+- approximately ₹70,000 monthly surplus;
+- approximately 8% home-loan interest assumption.
+
+The key question was not:
+
+> “Does the client have debt?”
+
+It was:
+
+> **“What happens if the available financial capacity is used for debt repayment instead of retirement funding, or if the loan is restructured and the released EMI is invested?”**
+
+That comparison is what exposed **Opportunity Cost as a core feasibility/funding consideration**.
+
+The case established that the system should compare alternative feasible financial paths rather than apply a one-dimensional debt rule.
+
+---
+
+## 15. Example
 
 Investor says:
 
@@ -405,12 +619,16 @@ Calculate funding gap
    ↓
 Calculate required contribution
    ↓
-Read available monthly capacity
+Read financial capacity
+   ↓
+Identify relevant funding paths
+   ↓
+Compare financial consequences where alternatives matter
    ↓
 Feasibility
 ```
 
-Investor then sees something like:
+Investor sees:
 
 ```
 Future Target:              ₹X
@@ -418,10 +636,14 @@ Mapped Asset Projection:    ₹Y
 Funding Gap:                ₹Z
 Required Contribution:      ₹A/month
 Available Capacity:         ₹B/month
-Feasibility:                Feasible / Constrained / Infeasible / Unknown
+
+Feasible Path(s):           ...
+Trade-off / Opportunity
+Cost (if material):         ...
+Feasibility:                ...
 ```
 
-Only after this does the system hand the Defined Goal to Strategy Decision.
+Only after this does the system hand the Defined Goal and feasibility evidence to Strategy Decision.
 
 It does **not** say:
 
@@ -431,11 +653,11 @@ That is a downstream decision.
 
 ---
 
-## 11. Core rule
+## 16. Core rule
 
-**Goal Planning defines the goal and establishes its funding/feasibility evidence.**
+**Goal Planning defines the goal, establishes the funding requirement, evaluates relevant feasible financial paths, and compares their mathematical consequences and material opportunity costs.**
 
-**Strategy Decision decides how the goal should be approached.**
+**Strategy Decision decides how an established feasible path should be implemented through Strategy → Variant → Technique → Method/Policy → Architecture/Solution.**
 
 **Investor remains the owner of goal intent and the final decision.**
 
@@ -444,6 +666,7 @@ That is a downstream decision.
 ## References
 
 - `docs/architecture/goal-planner.md`
+- `docs/Decision tree/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
+- `docs/Decision tree/Real-Life Decision Cases/03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md`
 - `docs/Decision tree/00-DECISION_ENGINE_DESIGN_SUMMARY.md`
 - `docs/User Journeys/04-GOAL_FEASIBILITY_JOURNEY.md`
-- `docs/Decision tree/Real-Life Decision Cases/03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md`
