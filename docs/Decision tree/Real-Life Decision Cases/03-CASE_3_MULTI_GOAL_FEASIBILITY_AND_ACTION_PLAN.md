@@ -1,5 +1,16 @@
 # Case 3 — Multi-Goal Feasibility and Action Plan
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> Multi-goal planning is a plan-level layer. Individual-goal Strategy Decision remains downstream of Goal Feasibility; Action Plan is downstream of investor adoption.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 A client has multiple financial goals that compete for the same available monthly surplus.
