@@ -62,3 +62,64 @@ Asset mapping is not Product Selection. A mapped existing asset represents a pla
 | Funding gap | Goal Funding Gap |
 | Funding solution | Strategy/Goal Funding |
 
+## Canonical Boundary: Asset Mapping vs Asset Earmarking
+
+### Asset Mapping
+
+**Owner:** Goal Planner
+
+Asset Mapping answers:
+
+> **Which existing assets does the investor intend to associate with this goal?**
+
+It records the investor's stated goal-to-asset relationship and provides the planning resource used in future-value projection and funding-gap calculation.
+
+Asset Mapping is therefore **intent/input + planning calculation**. It is not a recommendation that the asset is the correct strategic allocation.
+
+### Asset Earmarking
+
+**Owner:** Strategy Builder / Strategy Technique layer
+
+Asset Earmarking answers:
+
+> **Given the selected strategy and variant, which assets should actually be reserved for this goal, and to what extent?**
+
+It evaluates the mapped assets against:
+- goal funding requirement;
+- time horizon;
+- liquidity requirement;
+- risk characteristics;
+- existing allocation;
+- competing goals;
+- constraints;
+- implementation feasibility.
+
+Its output can be:
+- **Confirm** the mapped asset;
+- **Partially earmark** it;
+- **Change/reallocate** the earmarked asset;
+- **Reject** the mapping for strategic use;
+- or identify that additional funding is required.
+
+### Canonical Relationship
+
+**Asset Mapping → Projection → Funding Gap → Feasibility → Strategy/Variant → Asset Earmarking → Method/Policy → Solution/Implementation**
+
+The Strategy layer must consume the Goal Planner's mapping evidence rather than recreate it. Asset Earmarking must not duplicate the Goal Planner's asset-projection or funding-gap calculation.
+
+### Why both concepts exist
+
+The investor may reasonably say:
+
+> "I want to use this existing asset for my Education goal."
+
+That is **Mapping**.
+
+The decision engine then asks:
+
+> "Is this actually appropriate to reserve for Education under the selected strategy, and should all or only part of it be earmarked?"
+
+That is **Earmarking**.
+
+This distinction is canonical and should be preserved across frontend, backend, decision-tree documentation, strategy rules, and implementation.
+
