@@ -1,5 +1,16 @@
 # Case 11 — Iterative Strategy, Execution and Revalidation
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> The iterative loop starts from the Accepted Plan. Execution/What-If → Impact → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan. Scenarios remain separate until adopted.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 The investor is working with the interactive planning environment established in the earlier cases.
@@ -224,7 +235,7 @@ The iterative process also applies to a multi-goal plan.
 
 For example:
 
-- Education → Goal Funding
+- Education → Goal Planner / Feasibility
 - Retirement → Progressive De-risking
 - Loan → Debt Reduction
 
