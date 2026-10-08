@@ -34,3 +34,28 @@ The Goal Planner converts user-defined goal inputs and mapped assets into a cano
 | Funding Status | Goal funding-gap calculation | Shortfall / On Track / Overfunded signal |
 | Feasibility Status | `GoalService._apply_feasibility()` | Goal-level funding feasibility; not a strategy decision |
 | Strategy Applicability | Strategy Library + `StrategyRuleEngine` | Downstream strategy candidate selection |
+
+## Asset Mapping vs Asset Earmarking — Canonical Boundary
+
+These are related but **not the same function**.
+
+**Asset Mapping** is a Goal Planner responsibility. It records the investor's intended relationship between an existing asset/resource and a goal and supplies that relationship to goal funding calculations.
+
+**Asset Earmarking** is a Strategy/Technique responsibility. It evaluates whether the mapped asset should actually be reserved for that goal within the selected funding strategy and variant, considering the goal requirement, time horizon, liquidity, risk, competing goals, constraints, and implementation implications.
+
+### Canonical handoff
+
+**Investor Asset Mapping → Goal Planner Projection → Funding Gap / Feasibility → Strategy + Variant Selection → Asset Earmarking → Method / Policy → Solution / Implementation**
+
+Therefore:
+- Mapping does **not** certify that an asset is strategically suitable.
+- Earmarking does **not** recreate the Goal Planner's mapping or projection calculation.
+- Earmarking may **confirm, modify, partially accept, or reject** the mapped relationship.
+- The final earmarked allocation is a strategy decision and must remain traceable to the original investor mapping.
+
+### Example
+
+If an investor maps an existing mutual-fund holding to the Education goal, the Goal Planner treats that holding as a mapped planning resource and projects its contribution. Later, Strategy Builder may determine that the full holding should not be earmarked for Education because of liquidity, risk, competing goals, or other constraints. The Strategy layer can therefore recommend partial earmarking, a different asset, or no earmarking.
+
+This boundary prevents **Asset Mapping** and **Asset Earmarking** from becoming duplicate concepts or duplicate calculations.
+
