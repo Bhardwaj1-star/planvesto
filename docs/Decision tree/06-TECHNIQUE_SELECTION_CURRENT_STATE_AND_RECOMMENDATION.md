@@ -428,3 +428,43 @@ The main missing layer is **canonical technique selection** — especially the m
 The next step is to validate these mappings and selection rules through real-life cases before freezing them.
 
 **Next step: Step 7 — Architecture Composition: Current State & Recommendation.**
+
+## 20. Asset Mapping vs Asset Earmarking
+
+**Asset Mapping and Asset Earmarking are not duplicate techniques. They operate at different decision layers.**
+
+### Asset Mapping — Goal Planner
+
+Asset Mapping captures the investor's intended goal-to-existing-asset relationship and feeds the mapped asset into goal projection and funding-gap calculations.
+
+### Asset Earmarking — Strategy Technique
+
+Asset Earmarking acts after strategy/variant selection. It evaluates the mapped relationship and determines whether the asset should actually be reserved for the goal, including whether the allocation should be confirmed, reduced, changed, or rejected.
+
+### Canonical sequence
+
+**Investor Mapping → Goal Projection → Funding Gap / Feasibility → Strategy → Variant → Asset Earmarking → Method / Policy → Solution / Action**
+
+### Selection rule
+
+The presence of a mapped asset is **evidence/input**, not automatic approval for earmarking.
+
+Asset Earmarking must not:
+- recreate Goal Planner asset mapping;
+- duplicate mapped-asset projection;
+- independently calculate the Goal Planner funding gap.
+
+It may, however, use those outputs to make the strategic earmarking decision.
+
+### Audit requirement
+
+Every Asset Earmarking decision should remain traceable to:
+1. the investor's original asset mapping;
+2. the selected strategy and variant;
+3. the applicable goal/financial constraints;
+4. the reason for confirming, changing, partially accepting, or rejecting the mapping.
+
+This establishes the canonical boundary:
+
+**Mapping = investor/planning intent. Earmarking = strategy-level allocation decision.**
+
