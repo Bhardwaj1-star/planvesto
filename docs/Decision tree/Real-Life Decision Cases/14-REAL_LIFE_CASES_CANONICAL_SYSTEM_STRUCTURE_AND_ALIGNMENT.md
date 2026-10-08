@@ -8,27 +8,22 @@
 
 ## 1. Why This Document Exists
 
-The Real-Life Decision Cases developed during validation exposed system responsibilities that cannot safely be inferred from the existing Strategy Builder Decision Tree alone.
+The Real-Life Decision Cases expose responsibilities that cannot safely be represented as one undifferentiated Strategy Builder flow.
 
-The existing Decision Tree documents describe the internal Strategy Decision sequence:
+The canonical distinction is:
 
-> Goal → Goal Classification → Hard Constraint Gate → Strategy Applicability → 8-Fit Eligibility → Strategy Selection → Variant → Technique → Architecture → Stress/Resilience → Final Decision → Recommendation
+### Broader product lifecycle
+**Financial State + Investor Intent/Goals → Goal Planning/Feasibility → [conditional] Whole-Plan / Multi-Goal Impact → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision/Adoption → Accepted Plan → Action Plan → Execution**
 
-The real-life cases establish a broader financial-planning lifecycle:
+### Individual-goal Strategy Decision subsystem
+**Goal Context + Financial State + Feasibility/Funding Evidence + Constraints → Applicability → Viability → Strategy Selection → Variant → Technique → Method/Policy → Architecture/Solution → Stress/Resilience → Decision/Recommendation**
 
-> Financial State + Goals → Goal Feasibility → [when applicable] Whole-Plan / Multi-Goal Impact → Strategy → Execution → What-If → Revalidation → Investor Decision → Action Plan
+### Change / adaptation loop
+**Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan**
 
-**Important boundary:** Whole-Plan / Multi-Goal Impact is conditional. It is not a mandatory input to the Strategy Decision Tree for an individual goal. It applies when the planning problem involves multiple goals, an existing accepted plan, a new goal against that plan, or a material cross-goal/resource conflict.
+**Whole-Plan / Multi-Goal Impact is conditional. It is not a mandatory input to every individual-goal Strategy Decision.**
 
-These are not competing flows.
-
-The first is the **Strategy Decision Tree**.
-
-The second is the **complete PlanVesto financial decision lifecycle** around it.
-
-This document creates the missing common structure so that future audits do not repeatedly rediscover the same boundaries.
-
----
+This document therefore aligns the real-life cases with the Strategy Decision audit without collapsing the three levels into one linear sequence.
 
 # 2. Simple Canonical System Structure From the Real-Life Cases
 
