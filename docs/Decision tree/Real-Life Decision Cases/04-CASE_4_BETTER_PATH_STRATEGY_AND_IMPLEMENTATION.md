@@ -1,5 +1,16 @@
 # Case 4 — Better-Path Strategy and Implementation
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> A better-path comparison is a proposal, not an active plan. The investor must choose before the alternative becomes the Accepted Plan and its Action Plan.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 The investor has a financial goal that is already feasible under the current financial state.
