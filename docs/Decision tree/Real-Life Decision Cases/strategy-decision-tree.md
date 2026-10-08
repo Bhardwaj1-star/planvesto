@@ -41,23 +41,30 @@ Example: Education may require Progressive De-risking when it is several years a
 
 # 3. Canonical Strategy Decision Tree
 
+This document defines the **individual-goal Strategy Decision subsystem**. It must not be confused with the broader PlanVesto lifecycle.
+
 | Step | Decision Layer | Purpose | Output |
 |---|---|---|---|
-| 1 | Canonical Goal | Identify the standardized goal | Canonical goal ID |
-| 2 | Goal Context | Understand the actual requirement | Timeline, target, payment pattern, priority |
-| 3 | Financial State | Understand the investor's position | Income, expenses, assets, liabilities, liquidity |
-| 4 | Goal Funding / Feasibility | Determine whether and how the goal can be funded | Funding status, gap, capacity |
-| 5 | Hard Constraints | Remove financially unacceptable paths | Constraint pass/fail |
-| 6 | Strategy Applicability | Determine which strategies legitimately fit | Candidate strategies |
-| 7 | Strategy Viability | Determine whether a candidate can actually work | Viable / Failed |
-| 8 | Strategy Selection | Compare viable candidates | Selected strategy |
-| 9 | Variant Selection | Select implementation architecture | Selected variant |
-| 10 | Technique Selection | Identify required/conditional techniques | Technique set |
-| 11 | Technique Conditions / Method | Determine how techniques operate | Method/policy |
-| 12 | Solution | Produce the concrete financial solution | Recommended solution |
-| 13 | Action | Translate solution into execution | Action plan |
+| 1 | Goal Context | Identify the actual requirement and situation | Goal context |
+| 2 | Financial State | Understand the investor's position | Financial reality |
+| 3 | Goal Feasibility / Funding Evidence | Consume Goal Planner output; do not recreate it | Feasibility/funding evidence |
+| 4 | Constraint / Safety Evaluation | Identify genuine blockers, overrides and non-negotiable conditions | Allowed / restricted decision space |
+| 5 | Strategy Applicability | Determine which strategies legitimately fit | Candidate strategies |
+| 6 | Strategy Viability | Determine whether a candidate can actually work | Viable / Failed |
+| 7 | Strategy Selection | Compare viable candidates | Selected strategy |
+| 8 | Variant Selection | Select implementation form | Selected variant |
+| 9 | Technique Selection | Identify required/conditional techniques | Technique set |
+| 10 | Technique Conditions / Method | Determine how techniques operate | Method / policy |
+| 11 | Architecture / Solution | Assemble the concrete implementation | Solution |
+| 12 | Stress / Resilience | Test robustness of the selected path | Resilience result |
+| 13 | Decision Output | Produce the authoritative decision and rationale | Decision / recommendation input |
 
----
+**Whole-Plan / Multi-Goal Impact is conditional and sits outside this individual-goal subsystem when the decision itself is plan-level.**
+
+**Investor Decision, Accepted Plan and Action Plan are downstream product layers, not internal Strategy Decision stages.**
+
+
+
 
 # 4. Canonical Strategy Set
 
@@ -472,51 +479,64 @@ This makes the recommendation explainable and auditable.
 
 # 18. Final Canonical Flow
 
-```
-CANONICAL GOAL
-      ↓
-GOAL CONTEXT
-      ↓
-FINANCIAL STATE
-      ↓
-GOAL FUNDING / FEASIBILITY
-      ↓
-HARD CONSTRAINTS
-      ↓
+```text
+GOAL CONTEXT + FINANCIAL STATE
+          +
+GOAL FEASIBILITY / FUNDING EVIDENCE
+          +
+CONSTRAINTS
+          ↓
 STRATEGY APPLICABILITY
-      ↓
-┌─────────────────────────────┐
-│ Progressive De-risking      │
-│ Capital Preservation        │
-│ Debt Reduction              │
-│ Credit Utilisation          │
-└─────────────────────────────┘
-      ↓
+          ↓
 STRATEGY VIABILITY
-      ↓
+          ↓
 STRATEGY SELECTION
-      ↓
-VARIANT SELECTION
-      ↓
-TECHNIQUE SELECTION
-      ↓
-TECHNIQUE CONDITIONS / METHOD
-      ↓
-SOLUTION
-      ↓
-ACTION
+          ↓
+VARIANT
+          ↓
+TECHNIQUE
+          ↓
+METHOD / POLICY
+          ↓
+ARCHITECTURE / SOLUTION
+          ↓
+STRESS / RESILIENCE
+          ↓
+DECISION / RECOMMENDATION
 ```
 
----
+Then the broader product lifecycle continues:
 
-# 18. Canonical Decision Principle
+```text
+DECISION / RECOMMENDATION
+        ↓
+INVESTOR DECISION / ADOPTION
+        ↓
+ACCEPTED PLAN
+        ↓
+ACTION PLAN
+        ↓
+EXECUTION
+```
 
-The Strategy Decision Tree does **not** answer:
+For change/what-if:
 
-> “Which strategy belongs to this goal?”
+```text
+ACCEPTED PLAN
+     ↓
+EXECUTION CHANGE / WHAT-IF
+     ↓
+IMPACT ANALYSIS
+     ↓
+TARGETED REVALIDATION
+     ↓
+INVESTOR DECISION
+     ↓
+UPDATED ACCEPTED PLAN
+     ↓
+UPDATED ACTION PLAN
+```
 
-It answers:
+**No Acceptable Strategy** is a valid Strategy Decision outcome. The system must not force a strategy merely to produce a recommendation.
 
-> **“Given this goal, this investor, this financial state, this funding situation, and these constraints, which strategy is applicable, viable, and most appropriate—and how should it be implemented?”**
 
-This document is the canonical business reference for the Strategy Decision Tree. Existing implementation must be audited against this reference before code changes are made.
