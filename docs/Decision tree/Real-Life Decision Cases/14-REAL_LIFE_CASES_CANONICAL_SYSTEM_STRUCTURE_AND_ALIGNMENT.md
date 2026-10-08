@@ -32,132 +32,106 @@ This document creates the missing common structure so that future audits do not 
 
 # 2. Simple Canonical System Structure From the Real-Life Cases
 
-The complete system should be understood in the following layers.
+The real-life cases establish a **core lifecycle plus conditional branches and loops**. They do not establish one mandatory linear sequence for every decision.
+
+## A. Core planning lifecycle
 
 ```text
-A. INPUT / CURRENT FINANCIAL REALITY
-        │
-        ├── Financial State
-        │     ├── Income
-        │     ├── Expenses
-        │     ├── Assets
-        │     ├── Liabilities
-        │     └── Insurance / related state
-        │
-        ├── Goals
-        ├── Investor Preferences / Priorities
-        └── Existing Accepted Plan
-                │
-                ▼
-B. GOAL PLANNING / FEASIBILITY
-        │
-        ├── Goal validity
-        ├── Funding requirement
-        ├── Goal feasibility
-        ├── Required return / funding gap
-        ├── Available resources
-        ├── Goal horizon / timing
-        ├── Debt economics
-        ├── Liquidity implications
-        ├── Opportunity-cost comparison
-        └── Alternative feasible paths
-                │
-                │  [Conditional: only when the planning problem is plan-level]
-                ▼
-C. WHOLE-PLAN / MULTI-GOAL IMPACT
-        │
-        ├── Existing goals
-        ├── New / changed goal
-        ├── Resource allocation
-        ├── Cross-goal conflicts
-        ├── Cash-flow impact
-        ├── Liquidity impact
-        └── Impact on accepted plan
-                │
-                ▼
-D. HARD CONSTRAINT / SAFETY GATE
-        │
-        ├── Genuine hard constraints
-        ├── Goal validity constraints
-        ├── Non-negotiable safety conditions
-        └── Constraint conflicts / governance
-                │
-                ▼
-E. STRATEGY DECISION
-        │
-        ├── Strategy Applicability
-        ├── Candidate Strategies
-        ├── Strategy Viability Evidence
-        ├── Strategy Selection
-        ├── Alternative Strategy / Better Path
-        └── Investor priorities / trade-offs
-                │
-                ▼
-F. STRATEGY IMPLEMENTATION DESIGN
-        │
-        ├── Variant
-        ├── Techniques
-        ├── Architecture
-        └── Detailed execution structure
-                │
-                ▼
-G. IMPACT / STRESS / WHAT-IF
-        │
-        ├── Execution what-if
-        ├── Strategy what-if
-        ├── Goal-change scenario
-        ├── New-goal scenario
-        ├── Financial-state-change scenario
-        └── Stress / resilience
-                │
-                ▼
-H. REVALIDATION
-        │
-        ├── Did the change materially affect the plan?
-        ├── Is current strategy still appropriate?
-        ├── Is variant still appropriate?
-        ├── Is architecture still appropriate?
-        └── Targeted re-selection where required
-                │
-                ▼
-I. INVESTOR DECISION / ADOPTION
-        │
-        ├── Accept proposed path
-        ├── Reject proposed path
-        ├── Modify inputs
-        ├── Select another strategy
-        └── Design own strategy
-                │
-                ▼
-J. ACCEPTED PLAN
-        │
-        ├── Accepted strategy set
-        ├── Accepted execution state
-        └── Accepted assumptions
-                │
-                ▼
-K. ACTION PLAN
-        │
-        ├── Active actions
-        ├── Future actions
-        ├── Completed actions / history
-        └── Revisions after accepted changes
-                │
-                ▼
-L. MONITOR / ADAPT
-        │
-        ├── Material financial-state change
-        ├── Goal change
-        ├── Execution change
-        ├── New goal proposal
-        └── Re-enter affected planning/decision layers
+FINANCIAL STATE
+      +
+INVESTOR INTENT / GOALS
+      ↓
+GOAL PLANNING / FEASIBILITY
+      ↓
+STRATEGY DECISION
+      ↓
+STRATEGY IMPLEMENTATION DESIGN
+      ↓
+STRESS / RESILIENCE
+      ↓
+DECISION / RECOMMENDATION
+      ↓
+INVESTOR DECISION / ADOPTION
+      ↓
+ACCEPTED PLAN
+      ↓
+ACTION PLAN
+      ↓
+EXECUTION
 ```
 
-This is the **system-level structure**.
+## B. Conditional Whole-Plan / Multi-Goal branch
 
-The Strategy Builder Decision Tree is only one part of it.
+Whole-Plan / Multi-Goal Impact is **not a mandatory input to every individual-goal Strategy Decision**.
 
----
+Invoke it when the decision is inherently plan-level, including:
+- multiple goals competing for the same resources;
+- a new goal proposed against an existing Accepted Plan;
+- a material cross-goal change;
+- an accepted-plan change whose consequences extend beyond the affected goal.
+
+```text
+PROPOSED / CHANGED GOAL OR PLAN
+        ↓
+GOAL FEASIBILITY
+        ↓
+WHOLE-PLAN / MULTI-GOAL IMPACT
+        ↓
+INVESTOR DECISION
+   ├── REJECT → EXISTING ACCEPTED PLAN REMAINS
+   └── ACCEPT → AFFECTED STRATEGY / IMPLEMENTATION
+```
+
+## C. Strategy Decision subsystem
+
+```text
+Goal Context + Financial State + Feasibility/Funding Evidence + Constraints
+        ↓
+Constraint / Safety Evaluation
+        ↓
+Strategy Applicability
+        ↓
+Candidate Viability
+        ↓
+Strategy Selection
+        ↓
+Variant
+        ↓
+Technique
+        ↓
+Method / Policy
+        ↓
+Architecture / Solution
+        ↓
+Stress / Resilience
+        ↓
+Decision Output
+```
+
+## D. Iterative adaptation loop
+
+```text
+ACCEPTED PLAN
+     ↓
+EXECUTION / EXECUTION CHANGE / WHAT-IF
+     ↓
+IMPACT ANALYSIS
+     ↓
+TARGETED REVALIDATION
+     ↓
+STILL VALID?
+  ├── YES → CONTINUE / UPDATE EXECUTION
+  └── NO  → AFFECTED PLANNING / STRATEGY DECISION
+                 ↓
+          INVESTOR DECISION
+                 ↓
+          UPDATED ACCEPTED PLAN
+                 ↓
+          UPDATED ACTION PLAN
+```
+
+This is the canonical system structure. Individual real-life cases instantiate different branches of it.
+
 
 # 3. The Most Important Boundary
 
@@ -744,47 +718,36 @@ The existing Decision Tree documents are valuable and should remain the **intern
 
 # 22. What the Existing Decision Tree Should Become
 
-The existing nine Decision Tree documents should not be discarded.
+The existing nine Decision Tree audit documents become the **Strategy Decision subsystem** inside the broader financial decision system.
 
-They should become the **Strategy Decision subsystem** inside the broader system.
+```text
+PLANVESTO FINANCIAL DECISION SYSTEM
 
-The resulting hierarchy is:
-
-```PLANVESTO FINANCIAL DECISION SYSTEM
-│
-├── 1. Financial State
-│
-├── 2. Goal Planning / Feasibility
-│
-├── 3. [Conditional] Whole-Plan / Multi-Goal Impact
-│
-├── 4. Strategy Decision Engine
-│     ├── Applicability
-│     ├── Constraint Gate
-│     ├── Candidate Viability
-│     ├── Strategy Selection
-│     ├── Variant
-│     ├── Technique
-│     ├── Architecture
-│     └── Stress / Resilience
-│
-├── 5. Implementation / Impact Engine
-│     ├── Execution What-If
-│     ├── Strategy What-If
-│     └── Whole-Plan Impact
-│
-├── 6. Investor Decision / Adoption
-│
-├── 7. Accepted Plan
-│
-├── 8. Action Plan
-│
-└── 9. Monitoring / Adaptation
+1. Financial State
+2. Investor Intent / Goals
+3. Goal Planning / Feasibility
+4. [Conditional] Whole-Plan / Multi-Goal Impact
+5. Strategy Decision Engine
+   ├─ Constraint / Safety Evaluation
+   ├─ Applicability
+   ├─ Candidate Viability
+   ├─ Strategy Selection
+   ├─ Variant
+   ├─ Technique
+   ├─ Method / Policy
+   ├─ Architecture / Solution
+   └─ Stress / Resilience
+6. Decision / Recommendation
+7. Investor Decision / Adoption
+8. Accepted Plan
+9. Action Plan
+10. Execution
+11. Monitoring / Adaptation
+12. Targeted Revalidation / Iteration
 ```
 
-This is the **simple system structure** that should be used as the reference for the next comparison.
+The Strategy Decision Engine must not absorb Goal Feasibility, investor adoption, or Action Plan ownership.
 
----
 
 # 23. Where the 8 Fits Should Sit After Reconciliation
 
@@ -941,40 +904,28 @@ This is the comparison that should drive the implementation plan.
 
 # 28. Final Structural Principle
 
-The most important conclusion from the real-life cases is:
+> **PlanVesto is a financial decision system, not merely a Strategy Builder.**
 
-> **PlanVesto is not only a Strategy Builder. It is a financial decision system in which Goal Planning, conditional Whole-Plan / Multi-Goal Analysis, Strategy Decision, Impact Analysis, Investor Choice, Action Planning and Adaptation form one connected lifecycle.**
+The canonical lifecycle is:
 
-The Strategy Decision Tree remains important, but it should sit inside this broader lifecycle.
-
-The system should therefore be understood as:
-
-**Financial Reality**
-
-→ **Goal Feasibility**
-
-→ **[When applicable] Whole-Plan / Multi-Goal Impact**
-
+**Financial State + Investor Intent/Goals**
+→ **Goal Planning / Feasibility**
+→ **[when applicable] Whole-Plan / Multi-Goal Impact**
 → **Strategy Decision**
-
 → **Implementation Design**
-
-→ **Impact / What-If**
-
-→ **Revalidation**
-
-→ **Investor Choice**
-
+→ **Stress / Resilience**
+→ **Decision / Recommendation**
+→ **Investor Decision / Adoption**
 → **Accepted Plan**
-
 → **Action Plan**
+→ **Execution**
 
-→ **Monitoring / Adaptation**
+And the controlled change loop is:
 
-This structure is the baseline against which the existing Decision Tree documentation and then the implementation should be reconciled.
+**Accepted Plan → Execution / What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan**
 
+This structure replaces any earlier representation that treated Strategy, Execution, What-If, Revalidation and Investor Decision as one undifferentiated straight line.
 
----
 
 # 29. Product Management Guardrails
 
@@ -1073,32 +1024,28 @@ The implementation plan in 13-DECISION_TREE_SYSTEM_UPDATE_AND_FEATURE_IMPLEMENTA
 
 # 32. Canonical Product Principle
 
-PlanVesto should be treated as a **financial decision system**, not merely as a Strategy Builder.
+PlanVesto should be treated as a **financial decision system**.
 
-The product lifecycle is:
+Its core lifecycle is:
 
 **Financial Reality**
-
-→ **Goal Feasibility**
-
-→ **[When applicable] Whole-Plan / Multi-Goal Impact**
-
+→ **Goal Planning / Feasibility**
+→ **[conditional] Whole-Plan / Multi-Goal Impact**
 → **Strategy Decision**
-
 → **Implementation Design**
-
-→ **Impact / What-If**
-
-→ **Revalidation**
-
-→ **Investor Choice**
-
+→ **Stress / Resilience**
+→ **Decision / Recommendation**
+→ **Investor Decision / Adoption**
 → **Accepted Plan**
-
 → **Action Plan**
+→ **Execution**
 
-→ **Monitoring / Adaptation**
+When circumstances or execution change:
 
-Each stage has one primary responsibility and should consume the output of the preceding stage rather than recreating it.
+**Accepted Plan → Impact / What-If → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan**
 
-**This document is the consolidated canonical business/product reference for the Real-Life Decision Cases.**
+Whole-Plan analysis is invoked only when the decision is plan-level. It is not a hidden mandatory gate inside every individual-goal Strategy Decision.
+
+**Goal Funding belongs to Goal Planner / Goal Feasibility. It is not a fifth peer Strategy Builder strategy.**
+
+This document is the consolidated canonical business/product reference for the Real-Life Decision Cases.
