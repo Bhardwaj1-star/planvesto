@@ -163,17 +163,30 @@ This is a **P0 architectural correction**.
 
 **Applicability → Scenarios → Architecture → Techniques → Decision → Ranking → Recommendation**
 
+This is a runtime finding, not the target architecture.
+
 ## Target
 
-**Planning / Feasibility → Applicability Gate → Candidate Strategies → 8-Fit Eligibility Gate → Strategy Decision / Ranking → Variant → Technique → Architecture → Stress/Resilience → Recommendation → Accepted Plan → Action Plan**
+The Strategy Decision subsystem should be:
 
-Important distinction:
+**Goal/Feasibility Evidence → Constraint/Safety Evaluation → Applicability → Candidate Viability → Strategy Selection → Variant → Technique → Method/Policy → Architecture/Solution → Stress/Resilience → Decision/Recommendation**
 
-- Candidate architecture may be generated as evidence if required.
-- But final architecture should not determine the strategy before the strategy decision is authoritative.
-- Recommendation should explain the already-made decision, not secretly make additional strategic decisions.
+The end-to-end product lifecycle is broader:
 
----
+**Financial State + Investor Intent/Goals → Goal Planning/Feasibility → [conditional Whole-Plan / Multi-Goal Impact] → Strategy Decision → Implementation Design → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution**
+
+Important boundaries:
+
+- Whole-Plan / Multi-Goal Impact is **conditional**, not a mandatory input to every individual-goal Strategy Decision.
+- Goal Funding belongs to Goal Planner / Goal Feasibility; it is not a fifth peer Strategy Builder strategy.
+- Strategy Decision must not silently recreate Goal Feasibility.
+- Recommendation explains an authoritative decision; it must not create a second decision.
+- Investor Decision / Adoption is a separate product layer.
+- Accepted Plan is the authoritative active plan after investor adoption.
+- Action Plan is downstream of the Accepted Plan.
+- Execution changes and what-if scenarios must be evaluated against the Accepted Plan and must not silently overwrite it.
+- Stress/Resilience is part of decision validation; current scenario generation is not equivalent to a resilience gate.
+
 
 # 7. Constraint and Money Wheel Separation
 
@@ -295,69 +308,62 @@ This is a **new feature capability**, not merely a wording change.
 
 # 10. Scenario / What-if Lifecycle
 
-Current scenario code already supports:
+Current scenario code already supports contribution sensitivity, goal-date sensitivity, target sensitivity, step-up sensitivity, custom investor scenarios, deterministic funding calculations, trade-off notes and constraint violations.
 
-- contribution sensitivity;
-- goal-date sensitivity;
-- target sensitivity;
-- step-up sensitivity;
-- custom investor scenarios;
-- deterministic funding calculations;
-- trade-off notes;
-- constraint violations.
+The canonical lifecycle is:
 
-That is valuable and should be retained.
+```text
+ACCEPTED PLAN
+     ↓
+EXECUTION / PROPOSED EXECUTION CHANGE
+     ↓
+WHAT-IF / SCENARIO
+     ↓
+IMPACT ANALYSIS
+     ↓
+TARGETED REVALIDATION
+     ↓
+INVESTOR DECISION
+     ├── REJECT → ACCEPTED PLAN REMAINS
+     └── ACCEPT → UPDATED ACCEPTED PLAN
+                         ↓
+                    UPDATED ACTION PLAN
+```
 
-The missing lifecycle is:
+A what-if is an **experimental scenario**, not an accepted plan. It must be isolated from the active plan until the investor adopts the change.
 
-**Create Scenario → Calculate Impact → Compare with Accepted Plan → Investor Accepts/Rejects → If Accepted, Update Plan → Revalidate Affected Decisions → Update Action Plan**
-
-A scenario must never silently overwrite the accepted plan.
-
----
 
 # 11. Revalidation Architecture
 
-The real-world cases require targeted revalidation.
-
-## Trigger types
+The real-world cases require **targeted revalidation**, not automatic full replanning.
 
 ### A. Financial State change
 
-Examples:
-
-- income;
-- expense;
-- asset;
-- liability;
-- liquidity;
-- surplus.
-
-Flow:
-
-**Change → Materiality Check → Affected Goals/Strategies → Recalculate → Revalidate → Update only affected plan elements**
+**Change → Materiality Check → Affected Goals/Plan Elements → Recalculate → Targeted Revalidation → Investor Decision if a proposed change results → Accepted Plan / Action Plan update**
 
 ### B. Goal change
 
-Flow:
+**Goal Intent Change → Recalculate Goal Feasibility → Determine affected plan elements → Revalidate affected Strategy Decision → Investor Decision → Accepted Plan / Action Plan update**
 
-**Goal Input Change → Recalculate Funding/Feasibility → Revalidate Strategy → Update Action Plan**
+A goal change does not automatically invalidate every strategy.
 
 ### C. Execution change
 
-Flow:
+**Execution Change / What-If → Impact Analysis → Revalidate current strategy → Keep current strategy OR re-enter affected Strategy Decision → Investor Decision → Accepted Plan / Action Plan update**
 
-**Execution What-if → Impact → Check Strategy Validity → Keep Strategy OR Re-enter Strategy Builder**
+An execution change does not automatically imply a strategy change.
 
 ### D. New goal
 
-Flow:
+**New Goal Proposal → Goal Feasibility → Whole-Plan / Multi-Goal Impact → Investor Decision**
 
-**Proposed Goal → Whole-Plan Impact Simulation → Investor Decision → Adopt / Reject**
+- Reject → existing Accepted Plan remains unchanged.
+- Accept → run affected Strategy/Implementation decisions → validate updated plan → create/update Accepted Plan and Action Plan.
 
-This should not automatically modify the existing plan.
+### E. Monitoring / Adaptation
 
----
+Monitoring identifies material changes and routes them into the **affected** planning/decision layer. It must not continuously re-optimize the entire plan without a material trigger.
+
 
 # 12. Investor Decision Authority
 
@@ -672,33 +678,39 @@ These are implementation decisions that should follow the canonical business beh
 
 # 19. Final Implementation Principle
 
-The updated system should behave as:
+PlanVesto should behave as a controlled decision lifecycle rather than a single linear strategy pipeline:
 
-**Financial State**
-→ **Goals / Investor Intent**
-→ **Feasibility & Whole-Plan Planning**
-→ **Candidate Strategies**
-→ **Eligibility**
-→ **Decision**
-→ **Variant**
-→ **Technique**
-→ **Architecture**
+**Financial State + Investor Intent/Goals**
+→ **Goal Planning / Feasibility**
+→ **[conditional] Whole-Plan / Multi-Goal Impact**
+→ **Strategy Decision**
+→ **Implementation Design**
 → **Stress / Resilience**
-→ **Recommendation**
-→ **Investor Decision**
+→ **Decision / Recommendation**
+→ **Investor Decision / Adoption**
 → **Accepted Plan**
 → **Action Plan**
-→ **Execution / What-if**
-→ **Targeted Revalidation**
+→ **Execution**
 
-with the ability to loop back when a material change occurs.
+Then, when an execution/financial-state/goal/new-goal change occurs:
+
+**Accepted Plan → Impact / What-If → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan**
 
 The system must remain investor-controlled:
 
-**PlanVesto recommends, calculates, compares, validates and explains.  
-The investor accepts, rejects or modifies.**
+**PlanVesto calculates, compares, validates and explains. The investor accepts, rejects or modifies the proposed change.**
 
----
+## Canonical ownership guardrail
+
+- Goal Planner owns Goal Feasibility / Goal Funding.
+- Strategy Builder owns Strategy → Variant → Technique → Method/Policy → Architecture/Solution.
+- Impact Engine evaluates scenarios and changes against the Accepted Plan.
+- Investor Decision makes a proposed change active.
+- Action Plan represents only the Accepted Plan.
+- Monitoring triggers targeted revalidation.
+- No Acceptable Path is a valid outcome.
+
+
 
 ## 20. Immediate Next Implementation Task
 
