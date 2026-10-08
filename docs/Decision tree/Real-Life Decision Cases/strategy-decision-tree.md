@@ -29,7 +29,9 @@ The system must not select a strategy merely because a goal belongs to a particu
 
 The decision is based on:
 
-**Goal + Goal Situation + Financial State + Funding Position + Constraints + Whole-Plan Impact**
+**Goal + Goal Situation + Financial State + Funding Position + Constraints**
+
+This is an **individual-goal Strategy Decision Tree**. Whole-Plan Impact is not a mandatory input to this decision. It is evaluated separately only when multiple goals, an existing accepted plan, or cross-goal resource conflicts require a plan-level decision.
 
 Therefore, the same goal can legitimately use different strategies in different situations.
 
@@ -45,16 +47,15 @@ Example: Education may require Progressive De-risking when it is several years a
 | 2 | Goal Context | Understand the actual requirement | Timeline, target, payment pattern, priority |
 | 3 | Financial State | Understand the investor's position | Income, expenses, assets, liabilities, liquidity |
 | 4 | Goal Funding / Feasibility | Determine whether and how the goal can be funded | Funding status, gap, capacity |
-| 5 | Whole-Plan Impact | Check interaction with other goals/resources | Conflicts and trade-offs |
-| 6 | Hard Constraints | Remove financially unacceptable paths | Constraint pass/fail |
-| 7 | Strategy Applicability | Determine which strategies legitimately fit | Candidate strategies |
-| 8 | Strategy Viability | Determine whether a candidate can actually work | Viable / Failed |
-| 9 | Strategy Selection | Compare viable candidates | Selected strategy |
-| 10 | Variant Selection | Select implementation architecture | Selected variant |
-| 11 | Technique Selection | Identify required/conditional techniques | Technique set |
-| 12 | Technique Conditions / Method | Determine how techniques operate | Method/policy |
-| 13 | Solution | Produce the concrete financial solution | Recommended solution |
-| 14 | Action | Translate solution into execution | Action plan |
+| 5 | Hard Constraints | Remove financially unacceptable paths | Constraint pass/fail |
+| 6 | Strategy Applicability | Determine which strategies legitimately fit | Candidate strategies |
+| 7 | Strategy Viability | Determine whether a candidate can actually work | Viable / Failed |
+| 8 | Strategy Selection | Compare viable candidates | Selected strategy |
+| 9 | Variant Selection | Select implementation architecture | Selected variant |
+| 10 | Technique Selection | Identify required/conditional techniques | Technique set |
+| 11 | Technique Conditions / Method | Determine how techniques operate | Method/policy |
+| 12 | Solution | Produce the concrete financial solution | Recommended solution |
+| 13 | Action | Translate solution into execution | Action plan |
 
 ---
 
@@ -77,7 +78,19 @@ Goal Funding belongs to the **Goal Planner / Goal Funding / Feasibility layer**.
 
 ---
 
-# 5. Strategy Applicability Rules
+# 5. Whole-Plan Impact Boundary
+
+Whole-Plan Impact is **not part of the individual-goal Strategy Decision Tree** and must not be used as a mandatory gate or input when selecting a strategy for one goal.
+
+It applies only when the decision itself is plan-level, for example:
+- multiple goals compete for the same resources;
+- an existing accepted plan is being changed;
+- a new goal is introduced against an existing plan; or
+- a change in one goal materially affects other goals or the overall resource allocation.
+
+In those cases, Whole-Plan / Multi-Goal Analysis evaluates cross-goal conflicts, resource trade-offs, priorities, and plan-level consequences. It can trigger targeted re-evaluation of affected goal decisions, but it does not become a hidden prerequisite inside every individual-goal Strategy Decision.
+
+# 6. Strategy Applicability Rules
 
 ## 5.1 Progressive De-risking
 
@@ -170,7 +183,7 @@ Example: a genuine education funding gap can make Credit Utilisation applicable.
 
 ---
 
-# 7. Strategy Variants
+# 18. Strategy Variants
 
 ## Progressive De-risking
 
@@ -210,7 +223,7 @@ Example: a genuine education funding gap can make Credit Utilisation applicable.
 
 ---
 
-# 8. Canonical Technique Set
+# 18. Canonical Technique Set
 
 A **Technique is not a Solution**.
 
@@ -239,7 +252,7 @@ The core Strategy Decision Tree technique set is:
 
 ---
 
-# 9. Technique Policy
+# 18. Technique Policy
 
 | Classification | Meaning |
 |---|---|
@@ -253,7 +266,7 @@ The core Strategy Decision Tree technique set is:
 
 ---
 
-# 10. Strategy → Variant → Technique Rules
+# 18. Strategy → Variant → Technique Rules
 
 ## Progressive De-risking
 
@@ -295,7 +308,7 @@ The core Strategy Decision Tree technique set is:
 
 ---
 
-# 11. Hard Rejection Rules
+# 18. Hard Rejection Rules
 
 ### Credit Utilisation
 
@@ -321,7 +334,7 @@ Progressive De-risking must not automatically be selected simply because a goal 
 
 ---
 
-# 12. No Acceptable Strategy
+# 18. No Acceptable Strategy
 
 The Decision Tree must support a legitimate outcome where no strategy is acceptable.
 
@@ -345,7 +358,7 @@ The system must never force a strategy merely to produce a recommendation.
 
 ---
 
-# 13. Goal-Specific Situation Logic
+# 18. Goal-Specific Situation Logic
 
 The following rules demonstrate how the same strategy framework is applied differently according to the actual situation.
 
@@ -405,7 +418,7 @@ The following rules demonstrate how the same strategy framework is applied diffe
 
 ---
 
-# 14. Technique ≠ Solution
+# 18. Technique ≠ Solution
 
 The canonical hierarchy is:
 
@@ -436,7 +449,7 @@ A technique must never be renamed or treated as a solution merely because it pro
 
 ---
 
-# 15. Decision Output Contract
+# 18. Decision Output Contract
 
 Every completed decision should be able to explain:
 
@@ -457,7 +470,7 @@ This makes the recommendation explainable and auditable.
 
 ---
 
-# 16. Final Canonical Flow
+# 18. Final Canonical Flow
 
 ```
 CANONICAL GOAL
@@ -467,8 +480,6 @@ GOAL CONTEXT
 FINANCIAL STATE
       ↓
 GOAL FUNDING / FEASIBILITY
-      ↓
-WHOLE-PLAN IMPACT
       ↓
 HARD CONSTRAINTS
       ↓
@@ -498,7 +509,7 @@ ACTION
 
 ---
 
-# 17. Canonical Decision Principle
+# 18. Canonical Decision Principle
 
 The Strategy Decision Tree does **not** answer:
 
