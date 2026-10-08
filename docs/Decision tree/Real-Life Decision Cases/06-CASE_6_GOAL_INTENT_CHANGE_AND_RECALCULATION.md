@@ -1,5 +1,16 @@
 # Case 6 — Goal / Intent Change and Feasibility Recalculation
 
+> **Canonical lifecycle alignment — 2026-10-08**
+> A goal-intent change first recalculates Goal Feasibility, then revalidates only affected strategy/plan elements. A changed goal does not automatically invalidate the existing strategy.
+
+> **Core:** Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+
+> **Conditional:** Whole-Plan/Multi-Goal Impact is invoked only when the decision is plan-level.
+
+> **Change loop:** Accepted Plan → Execution/What-If → Impact Analysis → Targeted Revalidation → Investor Decision → Updated Accepted Plan → Updated Action Plan.
+
+> Goal Funding is owned by Goal Planner/Goal Feasibility; it is not a peer Strategy Builder strategy.
+
 ## 1. Real-Life Financial Case
 
 An investor intentionally changes one of their financial goals or one of the inputs that define that goal.
