@@ -157,3 +157,7 @@ Budgeting supplies cash-flow facts; Strategy Builder designs a strategy-side imp
 - Case 6 leaves exact feasibility formulas, goal-input dependency rules, asset reassignment and strategy-update mechanics to validation.
 - Case 15 is not yet implemented in code.
 - These source statuses are retained as recorded; this feature document does not declare implementation or business rules finalized.
+
+
+### Case 7 — recorded new-goal scenario example
+The source example starts from an existing plan with Education Goal ₹50 lakh in 8 years and Retirement Goal ₹3 crore in 22 years, described as feasible with an active strategy and Action Plan. The investor proposes Dream Home ₹1 crore in 7 years. This proposal is initially a separate scenario. The documented alternatives include: (A) ₹1 crore over 7 years using current surplus; (B) reduce target to ₹80 lakh with the same timeline; (C) keep ₹1 crore but extend the timeline to 10 years; (D) deploy a specified portion of existing assets and recalculate monthly contribution; (E) change the funding mechanism while preserving selected assets where appropriate. The system recalculates each scenario's funding requirement, feasibility, effect on Education and Retirement, liquidity, debt and other relevant consequences. These are illustrative case values, not defaults.
