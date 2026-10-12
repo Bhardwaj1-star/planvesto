@@ -30,19 +30,26 @@
 - Metric unavailable ho to use zero ya healthy status maan kar treat nahi karna.
 - Dashboard data current Financial State se match karta hai ya nahi, har metric ke source ke saath verify hona chahiye.
 
-## 6. Related pages
+## 6. Real-Life Decision Case relationships
+- **Cases 1–2:** ratios aur summary metrics context dete hain; debt, goal funding ya credit use ka final decision sirf dashboard threshold se nahi nikalna.
+- **Cases 5–6:** financial-state ya goal-intent change ke baad dashboard summary refresh aur planning revalidation alag concerns hain. Refresh hone ka matlab Accepted Plan automatically update hona nahi.
+- **Cases 7–8:** single-goal status ko full multi-goal plan health samajhna nahi; shared resources aur other goals ka impact alag assess hota hai.
+- **Cases 9–11:** What-If/proposal, current Accepted Plan aur execution progress ko UI mein available data ke hisaab se distinguish karna chahiye; dashboard card ko adoption ka proof nahi maana ja sakta.
+
+## 7. Related pages
 - Financial State/Dashboard route: `/investor/financial-state`
 - Moneywheel: `/investor/moneywheel`
 - Budgeting: `/investor/budgeting`
 - Goal Planner: `/investor/goal-planner`
 
-## 7. Code evidence
+## 8. Code evidence
 - Frontend: `frontend/app/investor/financial-state/page.tsx`
 - API: `backend/api/dashboard.py`
 - Financial state engine: `backend/engines/financial_state/engine.py`
 
-## 8. Abhi unverified
+## 9. Abhi unverified
 - Har displayed metric ka exact formula and source.
 - Dashboard ke har card ka refresh/freshness guarantee.
 - Empty/missing data ke sab edge cases.
 - Displayed summary aur decision engine ke input data ke beech consistency.
+- Current financial-state snapshot, proposed scenario aur Accepted Plan ka explicit version/status display.

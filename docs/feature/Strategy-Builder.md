@@ -51,28 +51,49 @@
 - Strategy run history.
 - Comparison/edit/scenario views via supporting routes.
 
-## 8. Supporting routes
+## 8. Relationship to Accepted Plan and Action Plan
+- Generated recommendation, saved scenario, investor adoption, Accepted Plan and Action Plan are separate lifecycle states.
+- Canonical target lifecycle: goal feasibility/funding context → Strategy Decision → Variant → Technique/Method → Architecture → Solution → Stress/Resilience and targeted revalidation → Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+- A What-If scenario remains isolated from the active Accepted Plan until the investor adopts the revised path.
+- Execution changes do not automatically mean the canonical strategy has changed. Re-evaluate strategy only when the changed execution materially affects applicability, viability, constraints or outcomes.
+- No acceptable path is a valid outcome. An investor-designed strategy may be evaluated, but it must not be activated merely because no standard candidate passed.
+
+## 9. Taxonomy and decision boundary
+- **Strategy:** high-level financial responsibility selected for the situation.
+- **Variant:** structural form of the selected strategy.
+- **Technique:** reusable mechanism selected because the Strategy + Variant requires it.
+- **Method/Policy:** contextual rule for applying a technique.
+- **Architecture:** composed structure of selected elements and dependencies.
+- **Solution:** investor-specific implementation outcome; it must not merely duplicate a Variant or Technique under another label.
+- **Action:** concrete step derived from the accepted implementation.
+- Goal Planner owns goal funding feasibility and funding mechanisms. Action Plan owns accepted implementation actions and their execution status. History stores past versions/runs and does not prove current adoption.
+
+## 10. Supporting routes
 - Strategy comparison: `/investor/strategy-comparison`
 - Strategy edit: `/investor/strategy-edit`
 - Strategy history: `/investor/strategy-history`
 - Strategy scenarios: `/investor/strategy-scenarios`
 
-## 9. Decision boundary
-- Goal Planner: goal feasibility/funding requirement and possible paths.
-- Strategy Builder: strategy/execution approach for the relevant goal context.
-- Action Plan: actions and execution status.
-- History: stored versions/runs; not the same as current accepted plan.
-- Investor acceptance must not be inferred merely from a generated recommendation or saved scenario.
-
-## 10. Code evidence
+## 11. Code evidence
 - Frontend: `frontend/app/investor/strategy-builder/page.tsx`
 - API: `backend/api/strategy.py`, `backend/api/strategy_edit.py`, `backend/api/strategy_version.py`
 - Strategy engine: `backend/engines/strategies` and related engine modules; exact runtime order needs audit.
 
-## 11. Abhi unverified
+## 12. Real-Life Decision Case references
+- Case 1 and 2: Goal Funding ownership and Goal Planner → Strategy Builder boundary.
+- Cases 3–4: feasibility, strategy/implementation design and accepted Action Plan lifecycle.
+- Cases 5–8: changed financial state, changed goal intent, new goals and multi-strategy plans.
+- Cases 9–11: What-If isolation, impact analysis, targeted revalidation, investor adoption and iterative plan updates.
+- Case 12: no acceptable standard path and investor-designed strategy handling.
+- Case 15: Asset Mapping vs Asset Earmarking boundary.
+- Canonical source: `docs/Decision tree/Real-Life Decision Cases/strategy-decision-tree.md`.
+
+## 13. Abhi unverified
 - Exact strategy/variant selection rules and thresholds.
 - Opportunity Cost calculation/pass-through/decision impact.
 - Complete technique-to-solution mapping.
+- Whether Solution has one consistent meaning in the registry/runtime across all strategies.
 - Scenario persistence, acceptance and current-plan update.
 - Whether all target canonical variants and techniques are active in runtime.
-- Stress/resilience and multi-goal impact rules.
+- Stress/resilience, materiality and multi-goal impact rules.
+- Exact point at which architecture is composed relative to strategy selection in current runtime.

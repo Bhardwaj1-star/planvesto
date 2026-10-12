@@ -34,14 +34,21 @@
 - History ko current accepted plan ke saath confuse nahi karna.
 - Existing version ko immutable bataya gaya hai Goal History UI mein; exact persistence/integrity guarantees backend se verify honi chahiye.
 
-## 7. Code evidence
+## 7. Real-Life Decision Case relationships
+- **Cases 9–11:** What-If, recommendation, investor-adopted plan, and revised Accepted Plan are different states. History should not imply that a saved run/scenario was accepted unless an explicit status/link proves it.
+- A changed or superseded action/plan should remain inspectable as history where supported; it should not be confused with the currently active plan.
+- Completed actions remain historical records rather than being erased merely because the Accepted Plan later changes (Action Plan lifecycle rule; persistence needs verification).
+- **Case 6:** a changed goal definition/calculation may create a new version; that alone does not prove downstream strategy/action plan was recalculated or accepted.
+
+## 8. Code evidence
 - Goal History: `frontend/app/investor/goal-history/page.tsx`
 - Strategy History: `frontend/app/investor/strategy-history/page.tsx`
 - Goal version API/repository: `backend/api/goals.py`, `backend/data/goal_repository.py`
 - Strategy version API/repository: `backend/api/strategy_version.py`, `backend/data/strategy_version_repository.py`
 
-## 8. Abhi unverified
+## 9. Abhi unverified
 - Old version restore/rollback behavior.
 - Goal history aur strategy history ke retention rules.
 - Har record ka accepted/rejected/what-if status available hai ya nahi.
 - Goal version change se strategy/action plan automatically update hota hai ya nahi.
+- Accepted Plan ka explicit version pointer, adoption timestamp, and relationship to strategy run/action-plan version.

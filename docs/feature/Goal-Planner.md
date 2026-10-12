@@ -49,6 +49,7 @@
 - **Asset Earmarking:** asset ya hissa ko jaan-boojhkar goal ke liye reserve/protect karna.
 - Same asset ko multiple goals ke liye fully earmark karne ka conflict hide mat karo.
 - Goal cancel hone par asset Financial State se delete nahi hota.
+- Mapping is upstream feasibility evidence; earmarking is a separate commitment/protection concept and must not be treated as a synonym.
 
 ## 8. Goal changes and existing plans
 - Amount/date/corpus change ho to affected requirement/feasibility recalculate karo.
@@ -56,8 +57,15 @@
 - Investor acceptance se pehle existing Accepted Plan overwrite nahi hona chahiye.
 - Material financial changes par affected goals/decisions revalidate karo.
 - Exact materiality thresholds aur plan-version behavior abhi unverified.
+- No acceptable path ek valid outcome hai; investor ko constraints aur trade-offs explain karo, aur unaccepted proposal ko active plan mat banao.
 
-## 9. Output
+## 9. Relationship to Strategy Builder and Action Plan
+- Goal Planner answers **what is feasible / what funding conditions are required**; Strategy Builder designs **how to implement the feasible path**.
+- Strategy Builder ko Goal Planner ka feasibility/funding context consume karna chahiye, bina us feasibility ko silently independently redefine kiye.
+- A changed contribution/funding mechanism is not automatically a change to one of the four canonical Strategy Builder strategies.
+- Selected strategy/implementation becomes an Accepted Plan only after investor decision; Action Plan is generated/synchronized downstream from that accepted plan.
+
+## 10. Output
 - Goal requirement and timeline.
 - Available/mapped resources and funding gap.
 - Feasibility status or missing information.
@@ -66,18 +74,18 @@
 - Strategy Builder ko dene wala goal/funding context.
 - No acceptable path ho to forced recommendation ke bajay limitation clear karna.
 
-## 10. Related pages
+## 11. Related pages
 - Goal Planner: `/investor/goal-planner`
 - Goal feasibility detail: `/investor/goal-planner/[goalId]/feasibility`
 - Goal History: `/investor/goal-history`
 - Goal report: `/investor/goal-report`
 
-## 11. Code evidence
+## 12. Code evidence
 - Frontend: `frontend/app/investor/goal-planner/page.tsx`
 - Feasibility UI: `frontend/components/goals/GoalFeasibility`
 - Backend goal API/engine: `backend/api/goals.py`, `backend/engines/goal/engine.py`, `funding_gap.py`, `funding_strategies.py`
 
-## 12. Abhi unverified
+## 13. Abhi unverified
 - Exact feasibility and opportunity-cost formulas.
 - Alternative paths ka complete generation/comparison and save/accept behavior.
 - Multi-goal resource allocation rule.

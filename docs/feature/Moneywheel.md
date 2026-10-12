@@ -38,13 +38,20 @@
 - Opportunity Cost ka concept Moneywheel ke ratio se alag hai: alternative financial paths ke consequences compare karne ka kaam Goal Planner/feasibility analysis mein establish hua hai.
 - Required return projection/assumption hai; guaranteed investment return nahi.
 
-## 7. Code evidence
+## 7. Real-Life Decision Case relationships
+- **Cases 1–2:** DTI, leverage, liquidity and required-return measurements are evidence for analysis, not stand-alone strategy-selection rules. Debt existence or one ratio threshold does not automatically mean Debt Reduction.
+- **Cases 5–6:** changed financial data or goal intent can make prior metrics stale and may require recalculation. A refreshed ratio alone does not revalidate or replace the Accepted Plan.
+- **Case 15:** asset mapping and asset earmarking are distinct. A mapped asset is not necessarily locked, reserved, or unavailable for other uses; Moneywheel ratios must not silently treat mapping as earmarking.
+- Opportunity-cost comparison belongs to alternative-path analysis, not to a single Moneywheel ratio.
+
+## 8. Code evidence
 - Frontend: `frontend/app/investor/moneywheel/page.tsx`
 - API: `backend/api/moneywheel.py`
 - Engine/repository: `backend/engines/moneywheel`, `backend/data/moneywheel_repository.py`
 
-## 8. Abhi unverified
+## 9. Abhi unverified
 - Har ratio ka exact formula, denominator aur thresholds.
 - Status bands ka business approval.
 - Historical snapshots ki timing/retention.
 - Missing/partial inputs ke sab combinations.
+- Whether metric changes trigger downstream targeted revalidation, and whether displayed results are tied to a dated Financial State snapshot.
