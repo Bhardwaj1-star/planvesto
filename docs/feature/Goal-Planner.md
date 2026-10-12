@@ -175,3 +175,7 @@ The source example starts from an existing plan with Education Goal ₹50 lakh i
 
 ### Case 15 implementation-status distinction recorded by the audit
 The Full Audit Report says the Asset Mapping vs Asset Earmarking boundary is conceptually sound but implementation status is vague. It identifies separate status questions for definition, selection, execution, persistence and enforcement. The case itself is marked “not yet implemented in code”; no claim is made here that any of those stages is implemented.
+
+
+### Goal Funding mechanism list recorded in the change log
+The historical working list in `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` names: Existing Assets; SIP; Lump Sum; Lump Sum + SIP; Lump Sum + Step-up SIP; Step-up SIP. The same source explicitly states that these are funding mechanisms rather than the complete Goal Funding decision, and that the final role/classification of the existing Goal Funding variants remains **TO BE VALIDATED / not frozen**.
