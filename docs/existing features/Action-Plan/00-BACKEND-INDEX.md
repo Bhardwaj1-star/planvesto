@@ -28,4 +28,4 @@
 
 `frontend/app/investor/action-plan/page.tsx`, `frontend/lib/api/action-plan.ts`, `backend/api/action_plan.py`, `backend/services/action_plan_service.py`, `backend/services/strategy_action_generator.py`, `backend/data/action_plan_repository.py`, `backend/models/action_plan.py`, `backend/schemas/action_plan.py`, `backend/rules/action_plan.py`, `backend/engines/action_plan/impact_engine.py`.
 
-The existing [implementation audit](00-IMPLEMENTATION-AUDIT.md) is a compact overview. Action Plan is execution tracking for an approved Strategy Version; a generated/planned action is not itself investor acceptance of the strategy.
+Action Plan is execution tracking for an approved Strategy Version; a generated/planned action is not itself investor acceptance of the strategy. Component-specific evidence and verification gaps are documented in the files above.
