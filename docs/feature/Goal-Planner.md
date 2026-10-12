@@ -1,122 +1,86 @@
 # Goal Planner
 
 ## 1. Main kaam
-- Goal poora ho sakta hai ya nahi, check karna.
-- Required amount, available resources aur funding gap dikhana.
-- Goal feasible banane ke possible raaste compare karna.
-- Result Strategy Builder ko dena.
-- Sirf SIP calculate karna Goal Planner ka poora kaam nahi.
+- Goal define/update karna aur required amount/timeline capture karna.
+- Goal ke liye existing resources aur funding gap assess karna.
+- Goal feasibility aur possible funding paths samajhna.
+- Result ko Strategy Builder ke strategy/execution decision se alag rakhna.
 
 ## 2. Inputs
-- Goal, target amount aur deadline.
-- Goal ke liye existing corpus.
-- Income, expenses aur EMI ke baad monthly surplus.
-- Existing assets aur unka possible contribution.
-- Loans, interest rates, outstanding amount, EMI aur remaining tenure.
-- Emergency reserve aur liquidity ki zaroorat.
-- Doosre active goals aur unki funding needs.
-- Goal ya financial situation mein changes.
+- Goal type, current cost/target amount, target date, priority, flexibility aur status.
+- Inflation assumption aur goal-specific details.
+- Goal ke saath mapped assets.
+- Financial State se assets/liabilities aur related amounts.
+- Existing goal/financial information.
 
 ## 3. Process
-1. Goal aur requirements samjho.
-2. Required amount aur timeline calculate karo.
-3. Assets aur future contributions assess karo.
-4. Funding gap nikalo.
-5. Current situation mein feasibility check karo.
-6. Gap ho to possible funding paths banao.
-7. Paths ke assumptions aur projected results compare karo.
-8. Cash flow, debt, liquidity aur doosre goals par impact check karo.
-9. Goal feasible banane ke liye required changes dikhayo.
-10. Result Strategy Builder ko do.
+1. Investor goal create ya edit kare.
+2. Goal requirement aur target date capture ho.
+3. Available assets aur asset mappings review hon.
+4. Goal feasibility/funding view par projected requirement aur funding gap assess ho.
+5. Alternative funding paths aur unke assumptions compare karne ki zaroorat identify ho.
+6. Debt, liquidity, cash flow aur competing goals par relevant impact assess ho.
+7. Goal-related output Strategy Builder ke liye input ban sakta hai.
 
-## 4. Goal Funding
-- Goal Funding, Goal Planner ka hissa hai; Strategy Builder ki fifth strategy nahi.
-- Goal Funding ka output: required money aur possible funding path.
-- SIP, lump sum, step-up contribution aur combinations funding mechanisms hain.
-- Koi mechanism apne aap goal feasibility prove nahi karta.
+## 4. Goal Funding and feasibility
+- Goal Funding, Goal Planner/feasibility domain ka hissa hai; Strategy Builder ki fifth strategy nahi.
+- SIP, lump sum, step-up contribution aur combinations funding mechanisms hain; ye apne aap feasibility prove nahi karte.
+- Output mein feasibility, gap, assumptions aur goal ko feasible banane ke possible changes clear hone chahiye.
+- Exact formulas aur complete scenario workflow abhi verified/frozen nahi.
 
-## 5. Debt vs investment
-- Sirf karz hone se Debt Reduction automatic select mat karo.
-- Sirf expected investment return debt interest se zyada hone se investing ko automatic best mat bolo.
-- Compare karo:
-  - extra money debt repayment mein lagana;
-  - extra money goal ke liye invest karna;
-  - EMI ya loan structure badalna.
-- Interest saved, uncertain returns, goal funding, cash flow, liquidity aur risk dikhana.
-- Return assumptions guarantee nahi hain.
-- Money Wheel measurements dikhata hai; akela final decision nahi karta.
-- DTI ya interest rate ko automatic “karz chukao” rule mat banao.
-- Weighted Debt Rate aur Investment–Debt Spread candidate measurements hain; final formula/code status verified nahi.
+## 5. Opportunity Cost — documented business concept
+- Case 1 mein Opportunity Cost ko alternative financial paths compare karne ka central principle banaya gaya.
+- Example: extra surplus ko (a) debt prepayment, (b) goal investment, ya (c) loan/EMI structure change karke invest karne mein use karna.
+- Har path ke benefits aur costs compare karo: interest saved/paid, uncertain investment outcome, future goal corpus, cash flow, liquidity, risk aur debt duration.
+- Sirf debt hone se Debt Reduction automatic select mat karo.
+- Sirf assumed investment return debt rate se zyada hone se investing ko automatic best mat bolo.
+- **Ownership:** Goal Planner / Goal Feasibility ke alternative-path analysis ka business principle.
+- **Status:** Real-Life Decision Case mein documented; current runtime mein explicit Opportunity Cost calculation/decision use hona abhi verify nahi hua.
+- Source: `docs/Decision tree/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`, sections 5, 7, 13–16.
 
 ## 6. Multiple goals
-- Har goal alag feasible ho, phir bhi combined plan infeasible ho sakta hai.
-- Available money, goal funding needs aur resource competition check karo.
-- Ek goal ko zyada paisa dene ka doosre goals par impact dikhana.
-- Whole-plan impact check tab karo jab decision multiple goals ya accepted plan ko materially affect kare.
-- Har individual-goal decision mein bina wajah poora plan dobara calculate mat karo.
+- Har goal individually feasible ho sakta hai, par combined plan infeasible ho sakta hai.
+- Shared assets/surplus aur competing funding needs ka impact check karo.
+- Whole-plan analysis tab relevant hai jab multiple goals ya accepted plan materially affected ho.
+- Ek individual goal change par bina reason poora plan rebuild mat karo.
 
 ## 7. Asset Mapping vs Asset Earmarking
-- **Asset Mapping:** asset ko planning ke liye goal se associate karna; asset automatically sold, locked ya committed nahi hota.
-- **Asset Earmarking:** asset ya uske hisse ko jaan-boojhkar goal ke liye reserve/protect karna.
-- Dono alag decisions hain; mapped aur earmarked amount alag ho sakte hain.
-- Same asset ko competing goals ke liye fully earmark karne ka conflict chhupana nahi.
-- Mapping feasibility ka input hai, guarantee nahi.
-- Goal cancel hone par underlying asset Financial State se delete nahi hota.
-- Existing earmarking release karne ka decision alag se check karo.
+- **Asset Mapping:** asset ko planning ke liye goal se associate karna; asset automatically locked/sold/committed nahi hota.
+- **Asset Earmarking:** asset ya hissa ko jaan-boojhkar goal ke liye reserve/protect karna.
+- Same asset ko multiple goals ke liye fully earmark karne ka conflict hide mat karo.
+- Goal cancel hone par asset Financial State se delete nahi hota.
 
-## 8. Goal change/cancellation
-- Amount, date, horizon ya corpus badle to affected funding aur feasibility dobara calculate karo.
-- Har change par poora plan ya strategy automatically replace mat karo.
-- Goal cancel ho to planning requirement update karo; asset ko Financial State mein rehne do.
-- Asset ko remap, unallocated ya doosre use ke liye consider karo.
-- Earmarked asset ki protection release karne ka impact alag se check karo.
+## 8. Goal changes and existing plans
+- Amount/date/corpus change ho to affected requirement/feasibility recalculate karo.
+- New goal ko pehle what-if scenario ke roop mein assess karo.
+- Investor acceptance se pehle existing Accepted Plan overwrite nahi hona chahiye.
+- Material financial changes par affected goals/decisions revalidate karo.
+- Exact materiality thresholds aur plan-version behavior abhi unverified.
 
-## 9. Existing plan mein naya goal
-- Naye goal ko pehle separate what-if scenario mein assess karo.
-- Naye goal ki funding need aur existing goals par impact dikhana.
-- Monthly surplus, assets, liquidity aur debt par impact check karo.
-- Investor ke accept karne se pehle existing Accepted Plan overwrite mat karo.
-- Accept hone par multi-goal feasibility aur affected decisions re-check karo.
+## 9. Output
+- Goal requirement and timeline.
+- Available/mapped resources and funding gap.
+- Feasibility status or missing information.
+- Alternative paths and assumptions, where supported.
+- Debt/cash-flow/liquidity/other-goal trade-offs.
+- Strategy Builder ko dene wala goal/funding context.
+- No acceptable path ho to forced recommendation ke bajay limitation clear karna.
 
-## 10. Financial situation change
-- Income, expenses, assets, debt ya surplus change ka impact assess karo.
-- Chhota change ho aur current path suitable ho to full rebuild zaroori nahi.
-- Material change ho to affected goal aur decisions re-check karo.
-- Completed actions history mein rahen; active/future actions zaroorat par revise hon.
-- Materiality thresholds abhi final nahi.
+## 10. Related pages
+- Goal Planner: `/investor/goal-planner`
+- Goal feasibility detail: `/investor/goal-planner/[goalId]/feasibility`
+- Goal History: `/investor/goal-history`
+- Goal report: `/investor/goal-report`
 
-## 11. Output
-- Goal, target amount aur timeline.
-- Available resources aur funding gap.
-- Feasibility: feasible, infeasible, ya information missing.
-- Compared funding paths, assumptions aur projected results.
-- Debt, cash flow, liquidity aur other-goal impact.
-- Goal feasible banane ke liye required changes.
-- Investor ke decision points.
-- Strategy Builder ko dene wala feasibility/funding result.
-- Koi acceptable path na ho to clearly batao; forced recommendation mat do.
+## 11. Code evidence
+- Frontend: `frontend/app/investor/goal-planner/page.tsx`
+- Feasibility UI: `frontend/components/goals/GoalFeasibility`
+- Backend goal API/engine: `backend/api/goals.py`, `backend/engines/goal/engine.py`, `funding_gap.py`, `funding_strategies.py`
 
-## 12. Strategy Builder ke saath boundary
-- **Goal Planner:** kya mumkin hai aur goal feasible banane ke liye kya chahiye?
-- **Strategy Builder:** feasible path ko execute karne ke liye kaunsi strategy munasib hai?
-- Strategy Builder feasibility calculation ko independently dobara na banaye.
-- Strategy, variant aur technique select karna Strategy Builder ka kaam hai.
-- Action Plan investor ke accepted path ke actions dikhata hai.
-
-## 13. Abhi unverified
-- Exact feasibility formulas.
-- Multiple goals mein resources allocate karne ke rules.
-- Material change ki threshold.
-- Goal cancellation ke baad exact asset remapping behaviour.
-- Weighted Debt Rate aur Investment–Debt Spread ka final formula/code status.
-- Scenario save, compare aur accept karne ka implementation.
-- Yeh document business intent hai, code implementation ka proof nahi.
-
-## 14. Source documents
-- `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` — Goal Funding, debt-vs-investment aur Money Wheel.
-- `03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md` — multiple goals.
-- `05-CASE_5_PLAN_ADAPTATION_AFTER_FINANCIAL_STATE_CHANGE.md` — financial changes.
-- `06-CASE_6_GOAL_INTENT_CHANGE_AND_RECALCULATION.md` — goal change/cancellation.
-- `07-CASE_7_NEW_GOAL_AGAINST_EXISTING_PLAN.md` — new goal scenario.
-- `15-CANONICAL_ASSET_MAPPING_VS_ASSET_EARMARKING_DECISION_CASE.md` — mapping vs earmarking.
-- `strategy-decision-tree.md` and `FULL_AUDIT_REPORT.md` — decision boundaries and audit findings.
+## 12. Abhi unverified
+- Exact feasibility and opportunity-cost formulas.
+- Alternative paths ka complete generation/comparison and save/accept behavior.
+- Multi-goal resource allocation rule.
+- Goal cancellation par earmarking release/remapping.
+- Materiality thresholds and accepted-plan update behavior.
+- Is document mein business intent aur code evidence alag rakhe gaye hain; documented concept ko implemented feature nahi maana gaya.
