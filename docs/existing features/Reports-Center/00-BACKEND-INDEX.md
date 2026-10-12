@@ -23,4 +23,4 @@
 
 `frontend/app/investor/reports/page.tsx`, `frontend/lib/api/strategy.ts`, `backend/api/summary_report.py`, `backend/api/basket_report.py`, goal-report/financial-plan API modules, `backend/services/goal_report_service.py`, `basket_report_service.py`, `financial_plan_service.py`, `summary_report_service.py`, `summary_report_renderer.py`, `backend/engines/summary_report/engine.py`, `backend/report_engine/renderer.py`.
 
-The retained [implementation audit](00-IMPLEMENTATION-AUDIT.md) is a summary. Reports are output/presentation layers; they should not independently invent calculations or act as decision authority.
+Reports are output/presentation layers; they should not independently invent calculations or act as decision authority. Component-specific evidence and verification gaps are documented in the files above.
