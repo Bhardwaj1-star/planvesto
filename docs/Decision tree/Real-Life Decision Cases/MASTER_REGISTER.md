@@ -1,9 +1,9 @@
 # Real-Life Decision Cases — Master Register
 
 **Folder:** `docs/Decision tree/Real-Life Decision Cases/`  
-**Purpose:** One entry point for the case library: what each document establishes, how the cases connect, and which decisions still need reconciliation.  
-**Status:** REGISTER / NAVIGATION + ALIGNMENT — not a new business-rule authority and not proof that every rule is implemented.  
-**Reviewed folder contents:** 15 Markdown documents on the inspected `main` tree.  
+**Purpose:** Entry point to the case library, the consolidated business Source of Truth, and its cross-repository alignment audit.  
+**Status:** REGISTER / NAVIGATION. The binding consolidated business baseline is `00-CANONICAL_SOURCE_OF_TRUTH.md`; `SOURCE_OF_TRUTH_ALIGNMENT_AUDIT.md` records discrepancies against other documentation and active code. Neither implies that current code is already aligned.  
+**Reviewed folder contents:** 17 Markdown documents after adding the consolidated Source of Truth and alignment audit.  
 **Last checked:** 2026-10-12
 
 ---
@@ -12,7 +12,7 @@
 
 The files are not 15 unrelated examples. Together, they describe a financial-planning product from goal feasibility through strategy choice, implementation, investor approval, execution, and later plan changes.
 
-Use this register to find the right case and understand its role. For an unresolved rule, read the source case and the alignment audit; do not resolve conflicts just by counting how many documents repeat a statement.
+Use this register to navigate the cases. Use `00-CANONICAL_SOURCE_OF_TRUTH.md` for established cross-case business rules and `SOURCE_OF_TRUTH_ALIGNMENT_AUDIT.md` for mismatches with other folders/current code. The individual case documents preserve detailed evidence and examples. Do not resolve conflicts by counting how many documents repeat a statement.
 
 **Status distinction**
 - **Case/business direction:** what the real-life example says the system should do.
@@ -140,7 +140,7 @@ When a case is added or changed:
 
 ## 8. Folder file inventory
 
-- `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
+- `00-CANONICAL_SOURCE_OF_TRUTH.md`\n- `SOURCE_OF_TRUTH_ALIGNMENT_AUDIT.md`\n- `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
 - `03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md`
 - `04-CASE_4_BETTER_PATH_STRATEGY_AND_IMPLEMENTATION.md`
 - `05-CASE_5_PLAN_ADAPTATION_AFTER_FINANCIAL_STATE_CHANGE.md`
