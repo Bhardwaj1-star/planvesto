@@ -301,3 +301,7 @@ The source audit records these contradictions; they are preserved here as unreso
 
 ### Case 4 — better-path implementation comparison
 The source case compares a current/appropriate path with a proposed alternative after the goal is already feasible. Comparison fields are initial asset, return assumption, goal target, estimated goal date, difference in years, required contribution, liquidity, risk and other-goal impact. Its illustrative inputs are ₹20 lakh initial asset, 6% current-path return assumption, 10% alternative-path return assumption and ₹50 lakh goal target. These are scenario assumptions, not guaranteed returns. The investor can test implementation using their own financial numbers; generating the alternative does not adopt it.
+
+
+### Case 8 — recorded investor strategy-change example
+The source example uses an outstanding loan with an 18% cost. The system may give Debt Reduction strong advisory priority, but where that is not a genuine hard constraint, the investor may choose to invest instead after seeing the trade-offs. The comparison may include debt cost, expected investment outcome/assumption, liquidity, risk, goal funding, cash-flow impact, other-goal impact and resulting Action Plan changes. The system recalculates and revalidates the investor-selected path; it does not silently block the choice or replace the plan before adoption. The 18% rate is a case example, not a default threshold.
