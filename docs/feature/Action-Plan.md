@@ -158,3 +158,63 @@ Strategy Builder/Implementation Design compares concrete alternatives and produc
 
 ### Debt, cash-flow and multi-goal actions
 Actions can arise from accepted debt repayment/restructuring, EMI/cash-flow changes, goal-funding adjustments, resource allocation between goals or selected strategy implementation. A calculated debt/financing option is not an accepted instruction until adopted. When a revised plan changes future actions, reconcile active actions without erasing completed-action history; exact replacement/migration semantics remain unverified.
+
+
+## 17. Case-derived lifecycle details — Cases 7–12
+
+### New goal against an existing plan (Case 7)
+- A proposed new goal is first represented as a separate scenario against the existing plan.
+- The investor sees the incremental effect on the existing financial plan before adoption.
+- Goal/strategy implementation for one goal and Whole-Plan Impact Simulation are distinct views.
+- Rejection leaves the existing Accepted Plan and Action Plan unchanged. Acceptance updates the plan through the investor-decision/adoption path and synchronizes the relevant actions.
+
+### Multiple coordinated strategies (Case 8)
+- A financial plan can contain multiple strategies at the same time across different goals/financial requirements.
+- Two alternatives for one decision do not limit the complete plan to two strategies.
+- An investor-proposed strategy change is evaluated against the current accepted path, trade-offs and relevant goal/plan impacts.
+- Strategy change does not automatically replace the complete plan. If rejected, retain the existing accepted actions; if accepted, update the relevant implementation and future actions while preserving completed-action history.
+- Recommendation is guidance; investor choice determines the accepted path, subject to genuine hard constraints.
+
+### Execution What-If (Case 9)
+- Execution alternatives can include increasing SIP, reducing SIP, deploying an existing asset, or changing debt-related execution.
+- The system explains the expected effect of each execution change on the goal and, where relevant, the complete plan.
+- A What-If is a simulation, not an instruction. The existing Action Plan remains unchanged until the investor accepts the revised path.
+- An execution change does not by itself mean the Strategy has changed.
+
+### Execution change requiring strategy re-evaluation (Case 10)
+- Treat the input first as an execution change.
+- Re-evaluate the current strategy only if the consequences make that strategy no longer appropriate.
+- Explain the condition and trade-offs, then present alternatives for investor consideration; do not silently replace the strategy.
+- Re-evaluation is targeted to affected goals/strategies. Whole-Plan impact is invoked when plan-level or material cross-goal effects exist.
+
+### Iterative strategy and execution revalidation (Case 11)
+- The investor can iterate between strategy alternatives and execution What-Ifs using their own financial numbers.
+- Each scenario is evaluated against a known current/accepted baseline; scenario exploration remains separate from plan adoption.
+- After impact analysis, the investor can keep the current path, adopt an alternative, or change execution again.
+- The accepted Action Plan is not changed during exploration. When a revised path is accepted, update the relevant Action Plan and retain previous/completed-action history.
+- The sequence is iterative, not a one-time recommendation process.
+
+### No acceptable system path / investor-designed strategy (Case 12)
+- If the investor rejects all proposed paths, “No acceptable plan under your current preferences and constraints” is a valid outcome; do not force an Action Plan for an unaccepted proposal.
+- If the investor designs their own approach, preserve the investor-designed strategy and its execution as a separate proposal until accepted.
+- PlanVesto can structure the proposal, calculate numerical consequences, evaluate feasibility/constraints/impact/resilience and explain trade-offs. Investor-designed does not mean guidance-free or automatically acceptable.
+- Hard constraints still apply. If the investor accepts their own strategy, derive/update Action Plan actions from that accepted path; if it is modified, evaluate the modified version before adoption.
+
+### Shared lifecycle from Cases 7–12
+```text
+Accepted Plan
+    ↓
+Proposed Goal / Strategy / Execution Change
+    ↓
+Scenario or What-If
+    ↓
+Goal / Plan Impact Analysis
+    ↓
+Targeted Revalidation when required
+    ↓
+Investor Decision
+    ├── Reject / defer → existing Accepted Plan remains
+    └── Accept → Updated Accepted Plan → Updated Action Plan
+```
+
+The source documents do not freeze the exact acceptance states, materiality thresholds, version pointers, action migration rules or persistence mechanics. Those statuses remain unresolved as recorded in the source material.
