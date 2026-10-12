@@ -315,3 +315,12 @@ The source example uses an outstanding loan with an 18% cost. The system may giv
 - **Historical policy:** the audit records that the Goal Funding change log contains an older Goal Funding-as-strategy claim followed by a later correction. The historical claim is not treated as current canonical policy.
 - **Case authority/numbering:** the audit records numbering and authority gaps in the case series. This feature does not infer an authority hierarchy beyond the explicit canonical Strategy Decision Tree and the source-specific status labels already recorded.
 - **Target pipeline vs runtime:** the audit states that target business pipeline and current runtime are not clearly separated. The taxonomy and mappings in this feature describe the documented target model; they are not proof that the current runtime implements them.
+
+
+### Case 15 — asset-earmarking examples and rules
+- **Protected capital:** when Education is approaching and the selected strategy is Capital Preservation → Protected-Core Preservation, the strategy may require a defined amount to be intentionally protected from unrelated use and inappropriate risk. The source example distinguishes ₹10 lakh mapped to Education from ₹8 lakh deliberately ring-fenced for near-term payments; these are illustrative examples.
+- **Same asset, different meaning:** a ₹15 lakh portfolio can have ₹10 lakh mapped for Education at the planning stage, then ₹7 lakh earmarked after strategy selection. The two amounts answer different questions.
+- **Product boundary:** earmarking ₹5 lakh for a near-term Education payment means reserve/protect the capital; it does not select “product X”. Product implementation remains a separate downstream decision subject to relevant product, risk, liquidity, tax and regulatory rules.
+- **Technique role:** Asset Earmarking can be a Technique when a selected Strategy/Variant requires intentional resource designation/protection. It does not make Asset Mapping a Technique.
+- **Lifecycle:** Strategy → Variant → Technique (Asset Earmarking, when required) → Method/Policy → Architecture/Solution → Action → investor review and accept/reject/modify → Accepted Plan → Action Plan → execution.
+- **Canonical rules from Case 15:** earmarking requires an explicit strategic reason; the same asset must not be silently treated as fully earmarked for competing goals; earmarking does not itself select a product; a mapped asset may later be earmarked, partially earmarked, released or reassigned; cancellation of a goal does not delete the underlying asset.
