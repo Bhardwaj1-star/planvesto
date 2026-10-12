@@ -668,5 +668,5 @@ That is a downstream decision.
 - `docs/architecture/goal-planner.md`
 - `docs/Decision tree/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
 - `docs/Decision tree/Real-Life Decision Cases/03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md`
-- `docs/Decision tree/00-DECISION_ENGINE_DESIGN_SUMMARY.md`
+- `docs/existing features/Strategy-Builder/00-DECISION_ENGINE_DESIGN_SUMMARY.md`
 - `docs/User Journeys/04-GOAL_FEASIBILITY_JOURNEY.md`

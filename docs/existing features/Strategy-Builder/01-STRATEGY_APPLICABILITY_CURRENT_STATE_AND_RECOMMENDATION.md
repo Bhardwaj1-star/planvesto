@@ -1,6 +1,6 @@
 # Strategy Applicability — Current State & Recommended Decision Framework
 
-**Parent area:** `docs/Decision tree/`  
+**Parent area:** `docs/existing features/Strategy-Builder/`  
 **Decision Engine phase:** Step 1 — Strategy Applicability  
 **Status:** Analysis / design only — rules are **not frozen** and no refactor is authorized by this document.
 

@@ -1,6 +1,6 @@
 # 00 — Canonical Decision Engine Design Summary
 
-**Parent area:** `docs/Decision tree/`  
+**Parent area:** `docs/existing features/Strategy-Builder/`  
 **Purpose:** Navigation and consolidated design summary for Steps 1–9  
 **Status:** **DESIGN / AUDIT SUMMARY — RULES NOT FROZEN**
 
@@ -947,7 +947,7 @@ They should not be repeatedly rewritten into a giant final document.
 The recommended documentation structure is:
 
 ```text
-docs/Decision tree/
+docs/existing features/Strategy-Builder/
 │
 ├── 00-DECISION_ENGINE_DESIGN_SUMMARY.md
 │
@@ -965,7 +965,7 @@ docs/Decision tree/
 After business validation:
 
 ```text
-docs/Decision tree/
+docs/existing features/Strategy-Builder/
 │
 ├── 00-DECISION_ENGINE_DESIGN_SUMMARY.md
 ├── 01–09 detailed audit/design documents
