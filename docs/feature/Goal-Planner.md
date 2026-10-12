@@ -109,3 +109,57 @@ Goal Planner assesses the affected goal's requirement, available resources, fund
 Compare funding alternatives using explicit assumptions: contributions, debt prepayment, loan/EMI changes, timing, liquidity and competing-goal effects. Do not call an alternative better merely because debt exists or an assumed investment return exceeds a debt rate. A proposed alternative/What-If result is not an Accepted Plan until investor adoption. Runtime calculations and acceptance workflow remain unverified.
 
 Budgeting supplies cash-flow facts; Strategy Builder designs a strategy-side implementation; Impact Analysis evaluates cross-goal consequences where material; Action Plan converts an accepted path into actions.
+
+
+## 15. Source-derived case details — goal funding and multi-goal feasibility
+
+### Case 1–2: goal funding boundary
+- Goal Funding/Goal Feasibility belongs to Goal Planner, not to the Strategy Builder strategy set.
+- Goal Planner determines whether a goal can be made feasible, identifies the funding gap, compares alternative financial scenarios and produces feasibility/funding paths.
+- SIP, lump sum, step-up SIP and combinations of assets/contributions are funding mechanisms/options; they are not by themselves proof of feasibility or independent Strategy Builder strategies.
+- Strategy Builder consumes the feasibility/funding result and designs execution. It does not independently recreate Goal Planner feasibility.
+- Debt existence, DTI or another isolated metric does not by itself determine Debt Reduction. The Case 1 alternatives include faster debt repayment, retirement investment and changing loan structure/EMI then investing released cash flow. Each path has different interest, corpus, cash-flow, liquidity, risk and debt-duration consequences.
+- The Case 1 example uses a retirement goal with age 35 now, retirement age 60, ₹20 lakh current corpus, ₹2 crore target corpus, ₹2,00,000 monthly income, ₹1,20,000 expenses, ₹10,000 EMI, approximately ₹70,000 surplus, adequate emergency fund/liquidity, and a home-loan rate discussed at approximately 8%. Return rates such as 12%, 13% or 16% are scenario assumptions, not guaranteed outcomes.
+
+### Case 3: multi-goal feasibility
+- The case includes Education at ₹50 lakh over 8 years and Retirement at ₹3 crore over 22 years.
+- Individual-goal feasibility does not establish combined-plan feasibility where goals compete for shared surplus/assets.
+- Goal Planner / Goal Feasibility identifies what must change for goals to become feasible, including relevant funding gaps, debt/cash-flow constraints, shared resources and alternative paths.
+- Possible accepted actions recorded in Case 3 include prepaying/closing high-cost debt, increasing a specified monthly contribution, deploying a required lump sum, reallocating contributions between goals, restructuring a loan and redirecting released cash flow, using a financing path to preserve existing assets, executing strategy-specific actions, and sequencing multiple actions with timing/amount.
+- Whole-Plan / Multi-Goal Impact is conditional on a plan-level decision or material cross-goal effect; it is not an automatic mandatory stage for every individual-goal decision.
+
+### Case 4: already-feasible goal and alternative implementation
+- Strategy Builder may compare the current/appropriate path with a better-path alternative even when a goal is already feasible.
+- The case comparison includes initial asset, return assumption, goal target, estimated goal date, difference in years, required contribution, liquidity, risk and other-goal impact.
+- The case's illustrative comparison uses ₹20 lakh initial asset, a 6% return assumption on the current path and a 10% assumption on the alternative path for a ₹50 lakh goal. These are case assumptions, not guaranteed returns.
+- The investor can inspect what happens if the selected strategy is actually implemented using their own financial numbers. A proposed better path is not adopted merely because it is generated.
+
+### Case 6: goal intent change and cancellation
+- Recalculate affected funding requirement and feasibility when target amount, timeline, target date, existing goal corpus, funding assumptions or other relevant goal inputs change.
+- A goal change does not automatically invalidate the whole plan or existing strategy; recalculate first, then update only affected decisions as required.
+- Cancelling a goal removes that goal's funding requirement, not the underlying assets. Identify assets mapped to the cancelled goal, retain them in Financial State, determine their destination, remap to remaining goals where applicable, and recalculate affected feasibility.
+- Case 6 records the directional relationships: higher target generally increases funding need; longer timeline generally lowers periodic contribution need all else equal; earlier target date generally increases funding intensity; larger existing corpus generally lowers future funding need. Actual outcomes must be recalculated from complete inputs.
+
+### Case 7: new goal against existing plan
+- Treat a proposed new goal initially as a separate scenario against the existing financial plan, not as an automatically adopted goal.
+- Show incremental impact on the existing plan, including trade-offs and affected goals/resources. Investor decision precedes plan adoption.
+- Case 7 distinguishes goal/strategy implementation for a particular goal from whole-plan impact simulation after adding a goal or changing the financial situation.
+- If rejected, the existing Accepted Plan remains; if accepted, the plan and related actions are updated through the adoption workflow.
+
+## 16. Asset Mapping and Asset Earmarking — Case 15
+
+- **Asset Mapping** answers which existing resources are associated with a goal for planning/feasibility. It is a planning association and can exist before strategy selection.
+- **Asset Earmarking** answers which resources are intentionally reserved/protected for a goal as part of a selected strategy/technique/implementation. It is a strategic allocation/protection decision.
+- A mapped asset is not automatically locked, sold, committed, protected or unavailable for other uses. Mapping is not proof of feasibility or a product recommendation.
+- The same asset may be mapped to multiple goals for planning consideration; the system must not silently count it as fully available to each goal. Earmarking creates an intentional commitment and competing earmarks require conflict handling.
+- Earmarking usually requires strategy/implementation context; mapping belongs to Goal Planner. The projected contribution of mapped resources belongs to goal planning/asset projection; funding gap belongs to Goal Funding/feasibility; earmarking amount belongs to strategy/method/policy; concrete execution belongs to Architecture/Solution/Action; accepted action depends on Investor Decision/Accepted Plan.
+- Cancelling a goal does not delete the underlying asset. Goal-linked mapping and any earmark must be treated as distinct relationships; exact release/remapping lifecycle is not frozen.
+- Case 15 is marked **canonical business decision document — not yet implemented in code**.
+
+## 17. Source status and unresolved definitions
+- Case 1–2 states that exact Goal Funding rules and the final roles of existing funding variants are not frozen.
+- Case 3–4 states that optimization/comparison rules remain unfrozen.
+- Case 5 leaves materiality thresholds, adaptation algorithm and action-plan versioning rules to be validated.
+- Case 6 leaves exact feasibility formulas, goal-input dependency rules, asset reassignment and strategy-update mechanics to validation.
+- Case 15 is not yet implemented in code.
+- These source statuses are retained as recorded; this feature document does not declare implementation or business rules finalized.
