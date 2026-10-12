@@ -92,3 +92,20 @@
 - Goal cancellation par earmarking release/remapping.
 - Materiality thresholds and accepted-plan update behavior.
 - Is document mein business intent aur code evidence alag rakhe gaye hain; documented concept ko implemented feature nahi maana gaya.
+
+
+## 14. Cross-feature concept boundaries
+
+### Funding feasibility and debt economics
+Goal Planner owns goal-level funding requirements, funding-gap evidence and feasibility; it is not a fifth Strategy Builder strategy. Debt inputs that can affect feasibility include effective debt cost, EMI/payment burden, prepayment terms, repayment capacity, borrowing capacity and financing-cost comparison. Debt or a funding gap alone does not prove that Debt Reduction or Credit Utilisation is suitable. Shared calculation ownership across Goal Planner, Budgeting and Strategy Builder remains unverified.
+
+### Local impact vs Whole-Plan Impact
+Goal Planner assesses the affected goal's requirement, available resources, funding gap and feasibility. When a new/changed goal competes for shared resources or materially affects an Accepted Plan, Whole-Plan / Multi-Goal Impact Analysis is also needed. It is conditional, not mandatory for every individual-goal decision. Identify affected goals, resource conflicts, trade-offs and decisions requiring targeted revalidation; do not rebuild unrelated decisions without a material dependency. Materiality thresholds and dependency rules remain unfrozen.
+
+### Asset Mapping vs Asset Earmarking
+**Asset Mapping** associates a resource with a goal for planning/feasibility; it does not mean the resource is committed, protected, sold or sufficient. **Asset Earmarking** is a separate strategic/implementation choice to reserve or protect a resource for a goal/capital pool. Do not use the terms as synonyms. Mapping the same resource to multiple goals can reveal a conflict; do not silently count it as fully available to each. Cancelling a goal does not delete the underlying asset from Financial State; earmark release/remapping needs a defined lifecycle.
+
+### Opportunity Cost and alternative paths
+Compare funding alternatives using explicit assumptions: contributions, debt prepayment, loan/EMI changes, timing, liquidity and competing-goal effects. Do not call an alternative better merely because debt exists or an assumed investment return exceeds a debt rate. A proposed alternative/What-If result is not an Accepted Plan until investor adoption. Runtime calculations and acceptance workflow remain unverified.
+
+Budgeting supplies cash-flow facts; Strategy Builder designs a strategy-side implementation; Impact Analysis evaluates cross-goal consequences where material; Action Plan converts an accepted path into actions.
