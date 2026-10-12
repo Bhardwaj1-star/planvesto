@@ -52,3 +52,10 @@
 - Saved basket persistence: current page local storage key `planvesto:planning-baskets` use karti hai.
 - PDF generation errors/availability ke all cases.
 - Whether report data carries explicit proposal/Accepted Plan status, adoption timestamp, and financial-state snapshot identifiers.
+
+
+## 10. Scenario and Accepted Plan representation
+
+Reports Center presents a result; it does not perform investor adoption, approve a strategy or update the Accepted Plan. When source data supports it, identify whether a report represents a recommendation, What-If scenario, rejected/proposed alternative or Accepted Plan. Never label a scenario as adopted without explicit source evidence.
+
+For multi-goal reports, distinguish an individual-goal result from Whole-Plan / Multi-Goal Impact Analysis. One goal's feasibility does not prove combined-plan feasibility. Identify the relevant goal/strategy/plan version and Financial State snapshot/time when available, so stale reports can be recognized after material changes. Whether report payloads carry explicit scenario/adoption state, Accepted Plan version and snapshot identifiers remains unverified.
