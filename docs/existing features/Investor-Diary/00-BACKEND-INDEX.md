@@ -27,4 +27,4 @@
 
 `frontend/app/investor/diary/page.tsx`, `frontend/components/diary/DiaryBook.tsx`, `DecisionHistoryView.tsx`, `BackendWriteEntryModal.tsx`, `frontend/lib/diary/diaryStore.ts`, `frontend/lib/api/diary.ts`, `backend/api/diary.py`, `backend/services/diary_service.py`, `backend/data/diary_repository.py`, `backend/models/diary.py`, `backend/schemas/diary.py`, migration `009_investor_diary.sql`.
 
-The retained [implementation audit](00-IMPLEMENTATION-AUDIT.md) is a summary, not proof that notes are lifecycle state. A diary note and a structured decision record remain separate from authoritative goal, strategy, Financial State and Action Plan records.
+A diary note and a structured decision record remain separate from authoritative goal, strategy, Financial State and Action Plan records. Component-specific evidence and verification gaps are documented in the files above.
