@@ -143,3 +143,18 @@ Real-Life Decision Cases se nikle business concepts ka document mein hona unke c
 - Completed action undo/edit policy aur historical records ka final contract.
 - Due dates, reminders aur dependencies ka exact behavior.
 - Yeh document business-concept register hai; har concept ki complete code implementation ka claim nahi karta.
+
+
+## 16. Investor Decision, plan lifecycle and targeted revalidation
+
+### Investor Decision / Accepted Plan
+A recommendation, proposal, What-If scenario, Investor Decision, Accepted Plan and Action Plan are distinct states/objects. Action Plan represents actions derived from the currently adopted path; it must not activate a proposal merely because a strategy run or report exists. Investor acceptance must be explicit. The final set of decision states (accept/reject/defer/request changes and any partial or conditional acceptance) remains to be defined and verified. “No Acceptable Strategy” must not be bypassed to create an active Action Plan for an unaccepted path.
+
+### Materiality and targeted revalidation
+A financial-state, goal-intent or execution change may affect only part of a plan. Assess materiality and dependencies before deciding which goals, strategies, solutions and actions need refresh. Whole-Plan / Multi-Goal Impact applies when the decision is plan-level or a material cross-goal effect exists; it is not mandatory for every individual-goal decision. Revalidate affected decisions after material changes, preserve unrelated valid actions, and preserve completed actions as history. Exact thresholds, stale-result rules and dependency mapping remain unverified.
+
+### Implementation Design vs Action Plan
+Strategy Builder/Implementation Design compares concrete alternatives and produces a proposed solution. Action Plan translates the adopted solution/Accepted Plan into executable steps, with timing, amounts, sequencing and status where defined. A What-If scenario remains separate from the active Action Plan until explicit adoption. A proposed solution is not proof of adoption, and Action Plan does not independently select a strategy or recalculate goal feasibility.
+
+### Debt, cash-flow and multi-goal actions
+Actions can arise from accepted debt repayment/restructuring, EMI/cash-flow changes, goal-funding adjustments, resource allocation between goals or selected strategy implementation. A calculated debt/financing option is not an accepted instruction until adopted. When a revised plan changes future actions, reconcile active actions without erasing completed-action history; exact replacement/migration semantics remain unverified.
