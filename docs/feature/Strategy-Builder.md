@@ -287,3 +287,13 @@ Credit fails when borrowing capacity is insufficient, EMI is unsustainable, fina
 - This section records the target business taxonomy and case decisions; it does not assert implementation.
 - The Full Audit Report records an inconsistent meaning of `Solution` in runtime: Goal Funding solution records wrap a Variant, while records for the other four strategies wrap a Technique. This is a source-reported audit finding, not a claim of correction.
 - “Canonical/final” and “not frozen” statuses differ across source documents; preserve each source status until explicitly reconciled.
+
+
+### Source discrepancies recorded in the Full Audit Report
+
+The source audit records these contradictions; they are preserved here as unresolved source facts, not silently reconciled:
+- **Case 3:** its main body places Action Plan before Strategy Builder, while the canonical lifecycle places Strategy Decision/Implementation Design before Investor Decision, Accepted Plan and Action Plan.
+- **Case 8:** its header says Goal Funding is not a Strategy Builder strategy, while its body labels Goal Funding as “Strategy A”.
+- **Cases 10–11:** the bodies describe Goal Funding/funding-path changes using strategy-change language, although the audit says a funding-path change should first be modelled as such and not assumed to be a canonical strategy change.
+- **Solution taxonomy in current runtime:** the audit reports Goal Funding solution records wrap a Variant, while records for the other four strategies wrap a Technique. This is an implementation finding in the source audit, not a corrected runtime behavior.
+- **Status terminology:** the source set uses “canonical”, “final” and “not frozen” without a single shared status model; this feature does not infer a unified status beyond what each source explicitly states.
