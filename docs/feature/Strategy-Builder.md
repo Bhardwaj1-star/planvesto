@@ -305,3 +305,13 @@ The source case compares a current/appropriate path with a proposed alternative 
 
 ### Case 8 — recorded investor strategy-change example
 The source example uses an outstanding loan with an 18% cost. The system may give Debt Reduction strong advisory priority, but where that is not a genuine hard constraint, the investor may choose to invest instead after seeing the trade-offs. The comparison may include debt cost, expected investment outcome/assumption, liquidity, risk, goal funding, cash-flow impact, other-goal impact and resulting Action Plan changes. The system recalculates and revalidates the investor-selected path; it does not silently block the choice or replace the plan before adoption. The 18% rate is a case example, not a default threshold.
+
+
+### Additional findings recorded by the Full Audit Report
+
+- **Goal Funding classification conflict:** the audit records Goal Funding both inside and outside the canonical Strategy set, and identifies six Goal Funding “variants” as conflicting with the four-strategy target.
+- **Strategy matrix classification:** the audit records duplication/misclassification of Goal Funding mechanisms in the Strategy Matrix.
+- **Architecture vs Solution:** the audit records that these are combined in one place and separate in another; the canonical hierarchy in this feature preserves them as distinct layers.
+- **Historical policy:** the audit records that the Goal Funding change log contains an older Goal Funding-as-strategy claim followed by a later correction. The historical claim is not treated as current canonical policy.
+- **Case authority/numbering:** the audit records numbering and authority gaps in the case series. This feature does not infer an authority hierarchy beyond the explicit canonical Strategy Decision Tree and the source-specific status labels already recorded.
+- **Target pipeline vs runtime:** the audit states that target business pipeline and current runtime are not clearly separated. The taxonomy and mappings in this feature describe the documented target model; they are not proof that the current runtime implements them.
