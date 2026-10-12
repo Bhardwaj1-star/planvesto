@@ -297,3 +297,7 @@ The source audit records these contradictions; they are preserved here as unreso
 - **Cases 10–11:** the bodies describe Goal Funding/funding-path changes using strategy-change language, although the audit says a funding-path change should first be modelled as such and not assumed to be a canonical strategy change.
 - **Solution taxonomy in current runtime:** the audit reports Goal Funding solution records wrap a Variant, while records for the other four strategies wrap a Technique. This is an implementation finding in the source audit, not a corrected runtime behavior.
 - **Status terminology:** the source set uses “canonical”, “final” and “not frozen” without a single shared status model; this feature does not infer a unified status beyond what each source explicitly states.
+
+
+### Case 4 — better-path implementation comparison
+The source case compares a current/appropriate path with a proposed alternative after the goal is already feasible. Comparison fields are initial asset, return assumption, goal target, estimated goal date, difference in years, required contribution, liquidity, risk and other-goal impact. Its illustrative inputs are ₹20 lakh initial asset, 6% current-path return assumption, 10% alternative-path return assumption and ₹50 lakh goal target. These are scenario assumptions, not guaranteed returns. The investor can test implementation using their own financial numbers; generating the alternative does not adopt it.
