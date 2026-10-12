@@ -1,202 +1,122 @@
 # Goal Planner
 
-## 1. Is feature ka kaam
-
-Goal Planner ka kaam hai investor ko yeh samajhne mein madad dena ki uska financial goal **abhi ki financial situation mein poora ho sakta hai ya nahi**, aur agar nahi ho sakta to **kya badalne se woh goal poora karne layak ban sakta hai**.
-
-Seedha sawaal:
-
-> **Goal Planner batata hai: “Kya mumkin hai, kitne paise ki zaroorat hai, aur goal ko mumkin banane ke liye kya badalna padega?”**
-
-Yeh sirf target amount daalne ya SIP calculate karne ki jagah nahi hai. Isse goal aur investor ki poori financial situation ko saath dekhna hai.
-
-## 2. Goal Planner kya dekhega
-
-Goal Planner ko relevant information ek saath samajhni hogi:
-
-- Goal kya hai, kitna paisa chahiye aur kab chahiye.
-- Goal ke liye abhi kitna paisa jama hai.
-- Investor ki income, kharch aur EMI ke baad kitna paisa bach sakta hai.
-- Kaun se assets maujood hain aur unmein se kaun se goal ke liye consider kiye ja sakte hain.
-- Karz kitna hai, uska byaaj aur EMI kya hai, aur use badalne ka kya asar hoga.
-- Emergency ke liye aur rozmarra zarooraton ke liye kitna paisa available rehna chahiye.
-- Doosre goals bhi isi paisa aur assets par depend kar rahe hain ya nahi.
-- Goal ki date, target amount ya doosri zarooraton mein koi badlav hua hai ya nahi.
-
-Sirf ek ratio, jaise EMI ka income se anupaat, dekhkar final faisla nahi karna hai. Ratio financial situation ka ek signal hai; faisla goal aur baaki numbers ko saath dekhkar hoga.
-
-## 3. Goal Planner ka kaam karne ka tareeka
-
-1. Investor ka goal aur uski zarooratein samajhna.
-2. Goal ke liye required amount aur timing samajhna.
-3. Goal ke liye consider kiye ja sakne wale existing assets aur future contributions dekhna.
-4. Zaroori paisa aur available resources ke beech ka gap nikalna.
-5. Dekhna ki goal current situation mein poora ho sakta hai ya nahi.
-6. Agar gap hai, to ek se zyada possible raaste banana.
-7. Har raaste ka hisaab lagana aur unke beech ka farq dikhana.
-8. Yeh dekhna ki kisi raaste se doosre goals, monthly cash, karz ya zaroori bachat par kya asar padega.
-9. Investor ko samjhana ki goal ko poora karne ke liye kaun se badlav zaroori honge.
-10. Is result ko Strategy Builder ke liye tayyar karna.
-
-Exact formulas aur har situation ke liye final rules abhi in documents mein poori tarah fix nahi hain. Unhe bina validation ke final rule nahi maana jayega.
-
-## 4. Goal Funding ka matlab
-
-**Goal Funding, Goal Planner ka hissa hai. Yeh Strategy Builder ki alag strategy nahi hai.**
-
-Goal Funding ka matlab hai goal ko poora karne ke liye zaroori paisa aur us tak pahunchne ka mumkin raasta samajhna.
-
-SIP, ek baar mein paisa lagana, dheere-dheere contribution badhana, ya inka combination—yeh paisa jama karne ke tareeke hain. Inmein se koi ek tareeka apne aap mein yeh prove nahi karta ki goal poora ho jayega.
-
-Misal ke liye, Goal Planner yeh nikaal sakta hai ki maujooda asset ke saath har mahine kitna paisa jama karna padega. SIP us monthly contribution ko karne ka tareeka ho sakta hai; poora Goal Funding faisla nahi.
-
-## 5. Karz aur investment ka faisla kaise dekha jaye
-
-Sirf karz hone se yeh faisla nahi ho jana chahiye ki pehle saara karz chukao. Isi tarah, sirf investment ka mumkin return karz ke byaaj se zyada dikhne se investment ko automatic behtar nahi kehna chahiye.
-
-Goal Planner ko mumkin raaston ka hisaab compare karna chahiye, jaise:
-
-- zyada paisa karz chukane mein lagana;
-- usi paisa ko goal ke liye invest karna;
-- loan ki EMI ya structure badalna aur bacha hua paisa goal ke liye use karna.
-
-Comparison mein byaaj ki bachat, investment ke uncertain return, goal ki funding, available cash, liquidity aur risk ka asar samjhana chahiye. Return assumptions ko guarantee ki tarah nahi dikhana hai.
-
-Money Wheel ka kaam financial measurements dikhana hai. Woh apne aap final planning decision nahi karega. Misal ke liye, DTI ya karz ka byaaj ek input hai; usse akela “karz chukao” ka automatic rule nahi banana hai.
-
-Weighted Debt Rate aur Investment–Debt Spread jaise measurements ko cases mein candidate ideas kaha gaya hai. Inki final calculation aur code status ko confirmed nahi maana jayega.
-
-## 6. Ek goal aur kai goals
-
-### Jab ek goal ho
-
-Goal Planner us goal ka target, time, funding gap aur available resources dekhega. Phir mumkin funding paths compare karega.
-
-### Jab kai goals hon
-
-Har goal ko alag se feasible paana kaafi nahi. Agar Education aur Retirement dono ko poora monthly surplus chahiye, to dono ek saath feasible nahi ho sakte.
-
-Aise mein Goal Planner ko sabhi active goals aur poori financial situation ko saath dekhna hai:
-
-- har goal ko kitna paisa chahiye;
-- available paisa kitna hai;
-- ek goal ko zyada dene se doosre par kya asar hoga;
-- priority kya hai, lekin sirf priority ke naam par faisla na ho;
-- paisa, contribution, assets, loan ya timeline mein kya badlav mumkin hai;
-- aur poore plan ko feasible banane ke liye kya karna padega.
-
-Jab faisla poore plan ko affect karta ho, tab hi poore plan ka impact check zaroori hai. Har individual-goal decision mein bina wajah poore plan ko dobara solve karna zaroori nahi.
-
-## 7. Assets ko goal se jodna aur assets ko bachakar rakhna alag hai
-
-**Asset Mapping:** Investor ke existing asset ko planning ke liye kisi goal se jodna. Isse system estimate kar sakta hai ki asset goal mein kitna contribute kar sakta hai. Mapping ka matlab yeh nahi ki asset bech diya gaya, lock kar diya gaya ya ab kisi aur kaam mein use nahi ho sakta.
-
-**Asset Earmarking:** Strategy decide hone ke baad kisi asset ya uske ek hisse ko jaan-boojhkar kisi goal ke liye reserve ya protect karna.
-
-Dono ek cheez nahi hain. Mapped amount aur protected amount alag ho sakte hain. Ek hi paisa bina conflict dikhaye do competing goals ke liye poori tarah protected nahi maana ja sakta.
-
-Mapping feasibility ka evidence hai, feasibility ki guarantee nahi.
-
-## 8. Goal badalne par kya hoga
-
-Goal sirf target amount nahi hai. Ismein amount, date, kitne saal baad paisa chahiye, abhi ka corpus aur doosre relevant inputs shamil hain.
-
-Agar investor amount, date, time ya goal ki koi aur zaroori detail badalta hai, to affected funding requirement aur feasibility dobara calculate honi chahiye. Iska matlab yeh nahi ki har baar poora plan ya strategy automatically badal di jaye.
-
-Agar investor goal cancel karta hai:
-
-- goal ki planning requirement active plan se hat sakti hai;
-- us goal se mapped asset investor ki financial situation se delete nahi hota;
-- asset ko doosre goal se jodna, unallocated rakhna ya doosre use par vichar karna pad sakta hai;
-- agar asset pehle protected/earmarked tha, to us protection ko release karne ka faisla bhi alag se dekhna hoga.
-
-**Goal cancel hona, asset ke khatam hone ke barabar nahi hai.**
-
-## 9. Naya goal purane plan mein jodne se pehle
-
-Agar investor ke paas pehle se accepted plan hai aur woh naya goal add karna chahta hai, to naya goal pehle ek alag “what if” scenario hona chahiye.
-
-System ko dikhana chahiye ki naya goal add karne se:
-
-- us goal ke liye kitna paisa chahiye;
-- purane goals par kya asar padega;
-- monthly surplus, assets, liquidity aur karz mein kya badlav hoga;
-- aur kaun se alternatives ho sakte hain.
-
-Investor ke accept karne se pehle purana accepted plan apne aap nahi badalna chahiye. Agar investor naya goal accept karta hai, tab updated multi-goal feasibility aur zaroori aage ke decisions honge.
-
-## 10. Financial situation badalne par
-
-Income, kharch, asset, karz ya surplus badalne par har baar naya plan banana zaroori nahi.
-
-Pehle dekhna hai ki badlav purane plan ko sach mein kitna affect karta hai. Chhota badlav ho aur purana raasta abhi bhi theek ho, to use jaari rakha ja sakta hai. Bada badlav ho to affected goal ki feasibility dobara calculate karke aage ka raasta re-check karna chahiye.
-
-Purani completed actions ko history se mitana nahi hai. Sirf abhi chal rahi ya future actions ko zaroorat ke mutabik badalna hai.
-
-Iske exact thresholds abhi final nahi hain.
-
-## 11. Goal Planner ka result kya hona chahiye
-
-Har case mein, jahan relevant ho, Goal Planner ko saaf taur par batana chahiye:
-
-- goal aur uski zaroorat;
-- abhi ke resources aur funding gap;
-- goal feasible hai, infeasible hai, ya kuch information abhi missing hai;
-- kaun se funding paths compare kiye gaye;
-- har path ke assumptions aur projected results;
-- karz, cash, liquidity aur doosre goals par asar;
-- goal ko feasible banane ke liye kya badalna hoga;
-- kaun se decisions abhi investor ko lene hain;
-- aur Strategy Builder ko kaunsi feasibility/funding information deni hai.
-
-Agar current conditions aur investor ki pasand ke andar koi acceptable raasta nahi hai, to system ko yeh saaf kehna chahiye. Sirf jawab dene ke liye galat ya zabardasti ka solution nahi banana.
-
-## 12. Strategy Builder se rishta
-
-Goal Planner ka sawaal hai:
-
-> **“Kya mumkin hai, aur goal ko feasible banane ke liye kya chahiye?”**
-
-Strategy Builder ka sawaal hai:
-
-> **“Is feasible raaste ko kaunsi financial strategy se execute karna munasib hoga?”**
-
-Strategy Builder ko Goal Planner ka feasibility hisaab dobara apne tareeke se nahi banana chahiye. Use Goal Planner ka result input ke roop mein lena chahiye. Isse dono jagah alag-alag feasibility decisions ban kar aapas mein takraane ka risk kam hota hai.
-
-## 13. Goal Planner ki seema
-
-Goal Planner:
-
-- goal aur funding ki zaroorat samajhta hai;
-- feasibility aur funding gap nikalta hai;
-- alternatives ka hisaab compare karta hai;
-- individual aur zaroorat par multi-goal impact samajhta hai;
-- aur aage ke decision ke liye required financial path batata hai.
-
-Goal Planner apne aap final Strategy Builder strategy choose nahi karta. Strategy ke selection, uske variant aur techniques ka kaam Strategy Builder ka hai. Action Plan investor ke accept kiye gaye raaste ke baad usse karne wale actual kaamon ko dikhata hai.
-
-## 14. Abhi kya final nahi maana jayega
-
-Real-Life Decision Cases mein business direction di gayi hai, lekin in baaton ko abhi code mein final/verified nahi maana jayega:
-
-- har feasibility calculation ka exact formula;
-- multiple goals ke beech paisa baantne ka exact tareeka;
-- badlav ko “material” kehne ki exact limit;
-- Goal cancel hone par asset ko dobara map karne ke exact rules;
-- weighted debt rate aur investment–debt spread ka final status;
-- har scenario ka save, compare aur accept karne ka exact tareeka.
-
-Yeh document future design ke liye business intent ko simple language mein record karta hai. Yeh daawa nahi karta ki saari cheezein abhi code mein bani hui hain.
-
-## 15. Is document ke liye dekhe gaye source documents
-
-- `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` — Goal Funding ka meaning, karz-vs-investment aur Money Wheel ke measurements.
-- `03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md` — competing goals aur combined feasibility.
-- `05-CASE_5_PLAN_ADAPTATION_AFTER_FINANCIAL_STATE_CHANGE.md` — financial situation badalne par re-check.
-- `06-CASE_6_GOAL_INTENT_CHANGE_AND_RECALCULATION.md` — goal inputs badalna ya goal cancel karna.
-- `07-CASE_7_NEW_GOAL_AGAINST_EXISTING_PLAN.md` — naya goal pehle scenario, phir investor ka decision.
-- `15-CANONICAL_ASSET_MAPPING_VS_ASSET_EARMARKING_DECISION_CASE.md` — mapping aur protection ka farq.
-- `strategy-decision-tree.md` — Goal Planner aur Strategy Builder ki boundary.
-- `FULL_AUDIT_REPORT.md` — conflicting terminology aur target/current-state ko alag rakhne ki zaroorat.
-
-Yeh feature document in source documents ko simple language mein jodta hai; kisi unverified implementation ko existing code ka fact nahi batata.
+## 1. Main kaam
+- Goal poora ho sakta hai ya nahi, check karna.
+- Required amount, available resources aur funding gap dikhana.
+- Goal feasible banane ke possible raaste compare karna.
+- Result Strategy Builder ko dena.
+- Sirf SIP calculate karna Goal Planner ka poora kaam nahi.
+
+## 2. Inputs
+- Goal, target amount aur deadline.
+- Goal ke liye existing corpus.
+- Income, expenses aur EMI ke baad monthly surplus.
+- Existing assets aur unka possible contribution.
+- Loans, interest rates, outstanding amount, EMI aur remaining tenure.
+- Emergency reserve aur liquidity ki zaroorat.
+- Doosre active goals aur unki funding needs.
+- Goal ya financial situation mein changes.
+
+## 3. Process
+1. Goal aur requirements samjho.
+2. Required amount aur timeline calculate karo.
+3. Assets aur future contributions assess karo.
+4. Funding gap nikalo.
+5. Current situation mein feasibility check karo.
+6. Gap ho to possible funding paths banao.
+7. Paths ke assumptions aur projected results compare karo.
+8. Cash flow, debt, liquidity aur doosre goals par impact check karo.
+9. Goal feasible banane ke liye required changes dikhayo.
+10. Result Strategy Builder ko do.
+
+## 4. Goal Funding
+- Goal Funding, Goal Planner ka hissa hai; Strategy Builder ki fifth strategy nahi.
+- Goal Funding ka output: required money aur possible funding path.
+- SIP, lump sum, step-up contribution aur combinations funding mechanisms hain.
+- Koi mechanism apne aap goal feasibility prove nahi karta.
+
+## 5. Debt vs investment
+- Sirf karz hone se Debt Reduction automatic select mat karo.
+- Sirf expected investment return debt interest se zyada hone se investing ko automatic best mat bolo.
+- Compare karo:
+  - extra money debt repayment mein lagana;
+  - extra money goal ke liye invest karna;
+  - EMI ya loan structure badalna.
+- Interest saved, uncertain returns, goal funding, cash flow, liquidity aur risk dikhana.
+- Return assumptions guarantee nahi hain.
+- Money Wheel measurements dikhata hai; akela final decision nahi karta.
+- DTI ya interest rate ko automatic “karz chukao” rule mat banao.
+- Weighted Debt Rate aur Investment–Debt Spread candidate measurements hain; final formula/code status verified nahi.
+
+## 6. Multiple goals
+- Har goal alag feasible ho, phir bhi combined plan infeasible ho sakta hai.
+- Available money, goal funding needs aur resource competition check karo.
+- Ek goal ko zyada paisa dene ka doosre goals par impact dikhana.
+- Whole-plan impact check tab karo jab decision multiple goals ya accepted plan ko materially affect kare.
+- Har individual-goal decision mein bina wajah poora plan dobara calculate mat karo.
+
+## 7. Asset Mapping vs Asset Earmarking
+- **Asset Mapping:** asset ko planning ke liye goal se associate karna; asset automatically sold, locked ya committed nahi hota.
+- **Asset Earmarking:** asset ya uske hisse ko jaan-boojhkar goal ke liye reserve/protect karna.
+- Dono alag decisions hain; mapped aur earmarked amount alag ho sakte hain.
+- Same asset ko competing goals ke liye fully earmark karne ka conflict chhupana nahi.
+- Mapping feasibility ka input hai, guarantee nahi.
+- Goal cancel hone par underlying asset Financial State se delete nahi hota.
+- Existing earmarking release karne ka decision alag se check karo.
+
+## 8. Goal change/cancellation
+- Amount, date, horizon ya corpus badle to affected funding aur feasibility dobara calculate karo.
+- Har change par poora plan ya strategy automatically replace mat karo.
+- Goal cancel ho to planning requirement update karo; asset ko Financial State mein rehne do.
+- Asset ko remap, unallocated ya doosre use ke liye consider karo.
+- Earmarked asset ki protection release karne ka impact alag se check karo.
+
+## 9. Existing plan mein naya goal
+- Naye goal ko pehle separate what-if scenario mein assess karo.
+- Naye goal ki funding need aur existing goals par impact dikhana.
+- Monthly surplus, assets, liquidity aur debt par impact check karo.
+- Investor ke accept karne se pehle existing Accepted Plan overwrite mat karo.
+- Accept hone par multi-goal feasibility aur affected decisions re-check karo.
+
+## 10. Financial situation change
+- Income, expenses, assets, debt ya surplus change ka impact assess karo.
+- Chhota change ho aur current path suitable ho to full rebuild zaroori nahi.
+- Material change ho to affected goal aur decisions re-check karo.
+- Completed actions history mein rahen; active/future actions zaroorat par revise hon.
+- Materiality thresholds abhi final nahi.
+
+## 11. Output
+- Goal, target amount aur timeline.
+- Available resources aur funding gap.
+- Feasibility: feasible, infeasible, ya information missing.
+- Compared funding paths, assumptions aur projected results.
+- Debt, cash flow, liquidity aur other-goal impact.
+- Goal feasible banane ke liye required changes.
+- Investor ke decision points.
+- Strategy Builder ko dene wala feasibility/funding result.
+- Koi acceptable path na ho to clearly batao; forced recommendation mat do.
+
+## 12. Strategy Builder ke saath boundary
+- **Goal Planner:** kya mumkin hai aur goal feasible banane ke liye kya chahiye?
+- **Strategy Builder:** feasible path ko execute karne ke liye kaunsi strategy munasib hai?
+- Strategy Builder feasibility calculation ko independently dobara na banaye.
+- Strategy, variant aur technique select karna Strategy Builder ka kaam hai.
+- Action Plan investor ke accepted path ke actions dikhata hai.
+
+## 13. Abhi unverified
+- Exact feasibility formulas.
+- Multiple goals mein resources allocate karne ke rules.
+- Material change ki threshold.
+- Goal cancellation ke baad exact asset remapping behaviour.
+- Weighted Debt Rate aur Investment–Debt Spread ka final formula/code status.
+- Scenario save, compare aur accept karne ka implementation.
+- Yeh document business intent hai, code implementation ka proof nahi.
+
+## 14. Source documents
+- `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` — Goal Funding, debt-vs-investment aur Money Wheel.
+- `03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md` — multiple goals.
+- `05-CASE_5_PLAN_ADAPTATION_AFTER_FINANCIAL_STATE_CHANGE.md` — financial changes.
+- `06-CASE_6_GOAL_INTENT_CHANGE_AND_RECALCULATION.md` — goal change/cancellation.
+- `07-CASE_7_NEW_GOAL_AGAINST_EXISTING_PLAN.md` — new goal scenario.
+- `15-CANONICAL_ASSET_MAPPING_VS_ASSET_EARMARKING_DECISION_CASE.md` — mapping vs earmarking.
+- `strategy-decision-tree.md` and `FULL_AUDIT_REPORT.md` — decision boundaries and audit findings.
