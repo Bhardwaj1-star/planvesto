@@ -29,4 +29,4 @@
 
 `frontend/app/investor/financial-state/page.tsx`, `frontend/lib/api/dashboard.ts`, `frontend/lib/dashboard/realtime.ts`, `backend/api/dashboard.py`, `backend/services/dashboard_service.py`, `backend/schemas/dashboard.py`, `backend/engines/financial_state/engine.py`.
 
-The existing [implementation audit](00-IMPLEMENTATION-AUDIT.md) remains a short overview. This component set separates response assembly, metric meaning, presentation and verification. Dashboard is a presentation/aggregation surface; its response should not become an independent financial calculation authority.
+Dashboard is a presentation/aggregation surface; its response should not become an independent financial calculation authority. Component-specific evidence and verification gaps are documented in the files above.
