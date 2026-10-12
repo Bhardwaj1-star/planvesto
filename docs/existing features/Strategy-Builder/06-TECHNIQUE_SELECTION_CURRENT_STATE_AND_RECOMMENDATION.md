@@ -108,23 +108,31 @@ But there is not yet a distinct canonical **Technique Selection Policy**.
 `backend/engines/technique/engine.py` provides executable handlers for all 10 registered techniques.
 
 The engine returns:
+- `technique_id`: str,
+- `status`: Literal["calculated", "insufficient_inputs", "not_implemented"],
+- `inputs`: dict[str, Any],
+- `parameters`: dict[str, Any],
+- `outputs`: dict[str, Any],
+- `warnings`: list[str].
 
-- technique ID,
-- status,
-- inputs,
-- parameters,
-- outputs,
-- warnings.
+### Exact Execution Formulas & Mathematical Output Shapes:
+1. **Bucketing (`tech-bucketing`):** Partitions goal target into $N$ horizon tranches ($N \in [1, 5]$):
+   - Computes weights $w_i = \frac{1}{i+1}$, tranches target amount $T_i = \text{target} \times \frac{w_i}{\sum w_k}$.
+   - Progressively allocates existing assets $A$ across tranches and tracks tranche-wise funding gaps.
+2. **Contribution Escalation (`tech-contribution-escalation`):**
+   - Future value with compounding escalation:
+     $$\text{FV} = \sum_{y=0}^{Y-1} \left(S \times (1+e)^y \times \text{FV}_{\text{monthly}}(1 \text{ yr}) \times (1+r)^{Y-y-1}\right)$$
+   - Returns year-by-year projected cash flow schedules.
+3. **Glide Path (`tech-glide-path`):** Shifts allocation from growth to liquid as remaining duration $t$ drops below threshold.
+4. **Laddering (`tech-laddering`):** Staggers maturities across discrete annual intervals with equal tranche targets.
+5. **Cash-flow Matching (`tech-cashflow-matching`):** Direct match of projected asset cash inflows against required goal outflows.
 
-Supported execution statuses include:
-
-- `calculated`
-- `insufficient_inputs`
-- `not_implemented`
-
-The execution layer is deterministic and does not select financial products.
-
-It also explicitly avoids inventing unavailable tax/legal information.
+### Scoring Integration in Strategy Decision:
+Technique readiness feeds directly into `backend/rules/strategy_decision.py::calculate_technique_execution_score()`:
+- `status == "calculated"`: **+1.0 point**
+- `status == "insufficient_inputs"`: **+0.5 point**
+- `status == "not_implemented"`: **0.0 points**
+- Capped at `TECHNIQUE_EXECUTION_MAX_SCORE = 10.0`.
 
 ## 7. Current Execution Coverage
 

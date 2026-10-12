@@ -13,11 +13,26 @@
 
 The service records before-state, after-state and impact preview in decision history. A decision record is historical evidence; it is not the same object as the current action row.
 
-## Actual-state completion
+## Actual-state completion & ActionImpactEngine Execution
 
-The completion endpoint requires the submitted source snapshot ID to match the current family Financial State snapshot. The service requires a projected Financial State in the action's planned impact, validates both projected and actual Financial State against the same planning unit and family scope, and requires Financial State authority persistence.
+The completion endpoint (`POST /api/action-plan/{action_id}/complete`) requires:
+1. The submitted `source_financial_state_snapshot_id` to match the current family Financial State snapshot.
+2. A projected Financial State snapshot in the action's `planned_impact["financial_state"]`.
+3. Validation that both projected and actual snapshots belong to the same planning unit and family scope.
 
-`ActionImpactEngine.compare()` compares projected with actual state. The service saves actual state with action/version/source-snapshot lineage, updates the action with actual impact and variance analysis, then writes a completion decision record.
+`ActionImpactEngine.compare()` (`backend/engines/action_plan/impact_engine.py`) deterministically calculates variances across the following 8 tracked metrics:
+1. `income_monthly` (₹)
+2. `expenses_monthly` (₹)
+3. `investable_surplus_monthly` (₹)
+4. `total_assets` (₹)
+5. `total_liabilities` (₹)
+6. `emi_burden_monthly` (₹)
+7. `net_worth` (₹)
+8. `safety_reserve_months` (months)
+
+For each metric, it computes:
+$$\text{variance} = \text{actual} - \text{projected}$$
+If any metric is missing or not available in either state, that metric is skipped. The result is stored directly inside `actual_impact["projected_vs_actual"]` on the action item and saved to `ActionDecisionRecord.after_state`.
 
 ## Consistency risk to test
 

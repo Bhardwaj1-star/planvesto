@@ -59,8 +59,35 @@ Source: [backend/rules/multi_goal.py](`https://github.com/Bhardwaj1-star/planves
 
 The actual priority allocation order and resource allocation behavior are executed downstream by `MultiGoalOrchestrator` and associated engine modules, not solely by these helper functions.
 
-## 6. Related but separate Goal Basket preview
+## 6. Goal Basket Engine, APIs and Basket Summary Contracts
 
-`POST /api/goal-baskets/preview` uses `GoalBasketService` and `GoalBasketEngine` to validate that requested goal IDs exist in the planning unit and summarize their names, count, priorities, required monthly contribution and funding gap.
+Implemented across `backend/api/goal_basket.py`, `backend/services/goal_basket_service.py`, `backend/engines/basket/engine.py`, and `backend/models/goal_basket.py`:
 
-The basket engine reads the goal list and sums `required_monthly_contribution` and `funding_gap` when those keys are available, defaulting missing values to zero. The base `GoalRepository.list_goals` query shown selects only goal identity, target, priority and flexibility fields, so those funding totals can be zero when the supplied rows do not contain those keys. This behavior is visible in [backend/engines/basket/engine.py](`https://github.com/Bhardwaj1-star/planvesto/blob/5a3b060e1b27915ede226f5173364e23dca1263e/backend/engines/basket/engine.py#L1-L40`) and [backend/data/goal_repository.py](`https://github.com/Bhardwaj1-star/planvesto/blob/5a3b060e1b27915ede226f5173364e23dca1263e/backend/data/goal_repository.py#L25-L31`); it is recorded as an integration observation, not changed here.
+### Dedicated API Endpoints (`/api/goal-baskets`):
+- `POST /api/goal-baskets/preview`: Previews aggregated basket totals without saving.
+- `POST /api/goal-baskets`: Creates and persists a new Goal Basket.
+- `GET /api/goal-baskets`: Lists all saved baskets for the planning unit.
+- `GET /api/goal-baskets/{basket_id}`: Retrieves basket by ID.
+- `DELETE /api/goal-baskets/{basket_id}`: Removes a saved basket.
+- Integrated Reporting: `POST /api/basket-report` and `POST /api/basket-report/pdf` (`backend/api/basket_report.py`) render complete multi-goal comparison reports and downloadable PDFs for any custom basket.
+
+### Data Models (`models/goal_basket.py`):
+- **`GoalBasket`:** `basket_id` (UUID), `planning_unit_id`, `name`, `goal_ids: list[str]` (min 1 goal), `created_at`.
+- **`GoalBasketSummary`:**
+  - `basket_id`: str
+  - `planning_unit_id`: str
+  - `name`: str
+  - `goal_count`: int
+  - `goal_ids`: list[str]
+  - `total_required_monthly_contribution`: float (rounded to 2 decimal places)
+  - `total_funding_gap`: float (rounded to 2 decimal places)
+  - `priorities`: list[str] (deduplicated ordered list of goal priorities)
+  - `goal_names`: list[str]
+
+### Exact Engine Calculation Rules (`engines/basket/engine.py`):
+1. **Validation:** Raises `ValueError("A goal basket must contain at least one goal.")` if `goal_ids` is empty.
+2. **Goal Existence:** Checks that every ID in `basket.goal_ids` exists in the planning unit; raises `ValueError("Goals not found in planning unit: ...")` with sorted missing IDs if any are absent.
+3. **Deterministic Aggregation Formulas:**
+   $$\text{total\_required\_monthly\_contribution} = \text{round}\left(\sum_{g \in \text{basket}} \text{float}(g.\text{required\_monthly\_contribution} \lor 0.0), 2\right)$$
+   $$\text{total\_funding\_gap} = \text{round}\left(\sum_{g \in \text{basket}} \text{float}(g.\text{funding\_gap} \lor 0.0), 2\right)$$
+4. **Preserved Order:** Retains the exact caller-specified ordering of goals from `basket.goal_ids`.
