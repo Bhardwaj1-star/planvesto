@@ -52,3 +52,10 @@
 - Har record ka accepted/rejected/what-if status available hai ya nahi.
 - Goal version change se strategy/action plan automatically update hota hai ya nahi.
 - Accepted Plan ka explicit version pointer, adoption timestamp, and relationship to strategy run/action-plan version.
+
+
+## 10. Cross-feature plan and scenario lifecycle records
+
+History should distinguish strategy runs, What-If scenarios, recommendations, investor decisions, Accepted Plan versions and Action Plan versions whenever the source data supports those distinctions. A saved version or scenario is not evidence of investor acceptance. Do not infer accepted/rejected status, adoption timestamp or active-plan pointer when the source record does not provide it.
+
+When an Accepted Plan is revised, superseded versions and completed actions should remain historically inspectable under the final retention policy; the active plan must remain distinguishable from historical versions. A changed goal version does not by itself prove that strategy, impact analysis or Action Plan was recalculated or accepted. The authoritative plan-version link, scenario baseline, adoption timestamp, retention and rollback rules remain unverified.
