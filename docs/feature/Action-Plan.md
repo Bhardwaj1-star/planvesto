@@ -218,3 +218,7 @@ Investor Decision
 ```
 
 The source documents do not freeze the exact acceptance states, materiality thresholds, version pointers, action migration rules or persistence mechanics. Those statuses remain unresolved as recorded in the source material.
+
+
+### Case 9 — recorded execution What-If examples
+The source example starts with a ₹50 lakh goal, an 8-year target and SIP of ₹50,000/month. The investor tests ₹60,000/month, ₹40,000/month, deploying ₹5 lakh from an existing asset, or a later step-up contribution. The system recalculates projected goal corpus, funding gap, time to target, surplus and affected goals where relevant. For Debt Reduction execution, the tested alternatives include increasing EMI, lump-sum prepayment, using part of an existing asset, changing repayment timing, or using released EMI for another goal. These scenarios do not change active actions unless the investor accepts the resulting execution path. These are illustrative case inputs, not defaults.
