@@ -59,3 +59,15 @@
 History should distinguish strategy runs, What-If scenarios, recommendations, investor decisions, Accepted Plan versions and Action Plan versions whenever the source data supports those distinctions. A saved version or scenario is not evidence of investor acceptance. Do not infer accepted/rejected status, adoption timestamp or active-plan pointer when the source record does not provide it.
 
 When an Accepted Plan is revised, superseded versions and completed actions should remain historically inspectable under the final retention policy; the active plan must remain distinguishable from historical versions. A changed goal version does not by itself prove that strategy, impact analysis or Action Plan was recalculated or accepted. The authoritative plan-version link, scenario baseline, adoption timestamp, retention and rollback rules remain unverified.
+
+
+## 11. Case-derived history distinctions — Cases 7–12
+
+- **New goal scenario (Case 7):** a proposed goal and its whole-plan simulation are not the current plan. Record/label scenario status separately from adoption where source data supports it.
+- **Strategy change (Case 8):** preserve the prior accepted path and its actions as history when a revised strategy is accepted; a generated recommendation or investor-proposed path alone is not adoption.
+- **Execution What-If (Case 9):** increasing/reducing SIP, deploying an asset or changing debt execution creates a scenario for impact comparison; it does not by itself create an accepted plan version.
+- **Strategy re-evaluation (Case 10):** an execution change may cause strategy re-evaluation, but it is not automatically a strategy replacement or a new accepted-plan version.
+- **Iteration (Case 11):** retain the distinction between the accepted baseline and each experimental scenario/iteration; identify which iteration, if any, was adopted.
+- **No acceptable path / investor-designed strategy (Case 12):** a rejected proposal or an investor-designed proposal remains distinct from an accepted plan. If the investor later accepts a modified path, that accepted version must be distinguishable from earlier rejected/experimental states where the underlying data supports it.
+- Case 5 requires completed actions to remain historical records when Financial State changes; active/future actions may be revised after revalidation. Case 6 states that a changed goal version alone does not prove that strategy, impact analysis or Action Plan was recalculated or accepted.
+- Do not invent status, adoption timestamp, active-plan pointer, version linkage, rollback behavior or retention semantics when the underlying record does not supply it.
