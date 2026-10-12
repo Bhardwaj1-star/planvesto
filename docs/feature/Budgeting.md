@@ -57,3 +57,10 @@
 - Annual view current month ko 12 se multiply karke present karta hai; true annual actuals ka source alag verify hona chahiye.
 - Variance status thresholds ka business approval.
 - Budget change se Goal Planner, Strategy Builder aur Accepted Plan tak ka exact event/revalidation behavior.
+
+
+## 10. Cross-feature change and debt-analysis boundary
+
+Budgeting provides income, expenses, surplus/deficit, budget variance and cash-flow facts. It does not itself decide Strategy Applicability, Strategy Viability, debt-prepayment priority or financing suitability. Debt/EMI changes and material income/expense changes may affect Goal Planner feasibility, Debt Reduction/Credit Utilisation analysis and an existing Accepted Plan. Identify affected downstream decisions and apply targeted revalidation where warranted.
+
+Surplus is a shared resource, not proof that the full amount is available for one goal. Competing goals, liquidity needs, debt obligations and timing may change the result. Whole-Plan Impact Analysis is conditional on material plan-level/cross-goal consequences, not a mandatory stage for every individual-goal decision. Authoritative debt calculations, change triggers, materiality thresholds and downstream revalidation events remain unverified.
