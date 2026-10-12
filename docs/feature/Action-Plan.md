@@ -229,3 +229,16 @@ The source example starts with a ₹50 lakh goal, an 8-year target and SIP of �
 - **Case 10 / Debt Reduction example:** if the investor does not make the planned lump-sum prepayment, recalculate outstanding principal, interest cost, repayment timeline, released cash flow, goal funding, liquidity and other consequences. Re-evaluation is not automatic replacement.
 - **Case 11 / Iteration example:** start with Education / Goal Funding at ₹50,000 per month. Reducing to ₹40,000 may leave the goal underfunded; the investor reviews alternatives, selects a path, then tests ₹40,000 to ₹45,000 per month. The result may make the goal feasible while reducing surplus available for another goal. Further execution parameters may be tested before a final path is accepted.
 - Only the final accepted path becomes active. During each iteration, the current Accepted Plan and its Action Plan remain unchanged; after acceptance, update relevant future actions and retain completed-action history.
+
+
+### Case 3 — source-recorded action examples
+The multi-goal case lists the following possible actions when the corresponding financial finding exists:
+- High-cost debt is reducing overall feasibility → prepay/close the high-cost loan.
+- Monthly goal contribution is insufficient → increase monthly contribution by a specified amount.
+- Available lump sum can close a funding gap → deploy the required lump sum.
+- Multiple goals compete for surplus → reallocate contributions between goals.
+- Loan restructuring improves goal feasibility → restructure the loan and redirect released cash flow.
+- Existing assets should be preserved → use an appropriate financing path rather than liquidating assets.
+- Strategy Builder selects a strategy → execute the strategy-specific actions.
+- Multiple actions are required → sequence actions and specify timing/amount.
+These are source-case examples, not unconditional actions; they depend on the accepted financial path. Case 3's source status is business concept established, with implementation not changed by the case document.
