@@ -97,3 +97,29 @@
 - Whether all target canonical variants and techniques are active in runtime.
 - Stress/resilience, materiality and multi-goal impact rules.
 - Exact point at which architecture is composed relative to strategy selection in current runtime.
+
+
+## 14. Cross-feature concepts within Strategy Builder
+
+### Implementation Design
+Strategy Builder owns the strategy-side design from selected Strategy/Variant through Technique, Method/Policy, Architecture and a concrete Solution proposal. The proposal may compare resource use, contributions, timing, liquidity, debt effects and competing-goal consequences where relevant data exists. A Technique is not a Solution, and a Solution proposal is not an Action Plan. Active plan state changes only after explicit investor adoption.
+
+### What-If / Scenario
+A What-If scenario is an alternative evaluated against a known baseline. It must remain separate from the active Accepted Plan while being explored. Record baseline, changed inputs/assumptions, projected outcomes and validation status where supported. A saved scenario or report does not prove investor acceptance. The existing scenario route does not by itself prove runtime isolation or persistence.
+
+### Constraint / Safety Evaluation
+Constraints define the allowed/restricted decision space before strategy evaluation. Distinguish hard constraints from preferences, blockers from warnings, and failed checks from insufficient inputs. Applicability asks whether a strategy fits; viability asks whether it can work under actual conditions. Exact runtime gates remain to be audited.
+
+### Stress / Resilience Evaluation
+The canonical decision tree includes Stress / Resilience before final decision output. It tests whether the proposed path remains acceptable under defined adverse/changed assumptions, including relevant funding, liquidity, debt/EMI and goal-timing effects. It is distinct from applicability, viability and impact analysis. Stress cases, thresholds, warnings versus hard failures, and missing-input behavior remain unverified.
+
+### Investor-designed strategy path
+If all standard strategies fail, “No Acceptable Strategy” remains valid; do not force a standard recommendation. Where policy permits, an investor-designed path can be captured as a separate proposal and evaluated against constraints, feasibility, impact and resilience. It is not automatically safe, viable or accepted, and must not be relabelled as one of the four canonical strategies. It becomes active only through the explicit Investor Decision / Accepted Plan lifecycle.
+
+### Technique policy and hierarchy
+Technique policy statuses are **Required**, **Conditional**, **Optional**, **Not Applicable** and **Insufficient Inputs**; the last two are not equivalent. Preserve **Strategy → Variant → Technique → Method/Policy → Architecture → Solution → Action**. Goal Funding and Contribution Escalation remain Goal Planner responsibilities; Duration/Horizon Matching is a method, not a separate core technique.
+
+### Impact analysis and debt economics
+Whole-Plan / Multi-Goal Impact is conditional when a new goal, existing Accepted Plan, shared-resource conflict or material cross-goal effect makes it relevant; it is not a mandatory gate for every individual-goal strategy decision. Material changes may require targeted revalidation of affected decisions. Debt Reduction/Credit Utilisation analysis may require effective debt cost, repayment terms, EMI capacity, borrowing capacity, financing cost and a credible repayment path. Calculation ownership, materiality thresholds and invalidation rules remain unverified.
+
+Canonical lifecycle: Goal Planner feasibility/funding → Strategy/Variant/Technique/Method → Architecture/Solution proposal → relevant impact and resilience checks → recommendation → explicit Investor Decision → Accepted Plan → Action Plan → execution. This is a business contract, not proof of runtime implementation.
