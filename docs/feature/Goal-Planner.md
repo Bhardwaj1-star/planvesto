@@ -128,12 +128,6 @@ Budgeting supplies cash-flow facts; Strategy Builder designs a strategy-side imp
 - Possible accepted actions recorded in Case 3 include prepaying/closing high-cost debt, increasing a specified monthly contribution, deploying a required lump sum, reallocating contributions between goals, restructuring a loan and redirecting released cash flow, using a financing path to preserve existing assets, executing strategy-specific actions, and sequencing multiple actions with timing/amount.
 - Whole-Plan / Multi-Goal Impact is conditional on a plan-level decision or material cross-goal effect; it is not an automatic mandatory stage for every individual-goal decision.
 
-### Case 4: already-feasible goal and alternative implementation
-- Strategy Builder may compare the current/appropriate path with a better-path alternative even when a goal is already feasible.
-- The case comparison includes initial asset, return assumption, goal target, estimated goal date, difference in years, required contribution, liquidity, risk and other-goal impact.
-- The case's illustrative comparison uses ₹20 lakh initial asset, a 6% return assumption on the current path and a 10% assumption on the alternative path for a ₹50 lakh goal. These are case assumptions, not guaranteed returns.
-- The investor can inspect what happens if the selected strategy is actually implemented using their own financial numbers. A proposed better path is not adopted merely because it is generated.
-
 ### Case 6: goal intent change and cancellation
 - Recalculate affected funding requirement and feasibility when target amount, timeline, target date, existing goal corpus, funding assumptions or other relevant goal inputs change.
 - A goal change does not automatically invalidate the whole plan or existing strategy; recalculate first, then update only affected decisions as required.
