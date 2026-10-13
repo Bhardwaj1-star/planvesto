@@ -467,7 +467,7 @@ export default function PlanPage() {
                 href="#financial-health"
                 className="text-sm font-semibold text-slate-500 transition hover:text-navy-900"
             >
-                Financial Health
+                Moneywheel
             </a>
 
             <a
@@ -519,7 +519,7 @@ export default function PlanPage() {
             <div>
 
                 <p className="text-sm font-bold uppercase tracking-widest text-teal-700">
-                    01 · Financial health
+                    01 · Moneywheel
                 </p>
 
                 <h2 className="mt-4 text-4xl font-extrabold tracking-[-0.03em] text-navy-900 sm:text-5xl">
