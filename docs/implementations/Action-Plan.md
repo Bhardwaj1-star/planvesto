@@ -4,7 +4,7 @@
 **Scope:** Accepted-path actions, action generation, investor decisions on actions, execution tracking, impact comparison, and action-history preservation  
 **Status:** Feature definition aur existing-feature audit se consolidated implementation contract. User Journey sirf flow alignment ke liye aur Real-Life Decision Cases business boundaries/examples ke liye use hote hain. Current code evidence, required behavior aur unresolved points alag rakhe gaye hain; document yeh claim nahi karta ki har requirement implemented hai.
 
-## Design references
+## 2. Design references
 
 This specification keeps business requirements, user-flow alignment, Real-Life Decision Cases, and inspected code evidence distinct.
 
@@ -15,7 +15,7 @@ This specification keeps business requirements, user-flow alignment, Real-Life D
 - **Conflict rule:** keep code-evidenced current behavior, required business behavior, and unresolved policy separate. Do not invent missing rules or claim an unverified implementation exists.
 
 
-## 1. Purpose and ownership
+## 2. Purpose and ownership
 
 Action Plan is the bridge between an investor's **Accepted Plan** and real-world execution. It translates an adopted financial path into concrete actions, makes each action's purpose and relationship to the plan clear, and tracks the action's lifecycle and actual impact where supported.
 
@@ -27,7 +27,7 @@ Action Plan is not:
 
 Goal Planner / Goal Feasibility identifies goal requirements, funding gaps and feasible funding paths. Strategy Builder designs the implementation structure for the selected path. Investor Decision / Accepted Plan determines which proposal is adopted. Action Plan translates the adopted path into executable steps and tracks execution.
 
-## 2. Sources of actions and scope
+## 3. Sources of actions and scope
 
 Action Plan is not limited to Strategy Builder-generated actions. Actions may arise from the accepted financial path, including:
 - goal-funding or feasibility-related changes;
@@ -38,7 +38,7 @@ Action Plan is not limited to Strategy Builder-generated actions. Actions may ar
 
 Examples from the documented cases include increasing a goal contribution by a specified amount, deploying an available lump sum, reallocating contributions between competing goals, restructuring a liability and redirecting released cash flow, or executing a selected strategy. These are conditional examples, not unconditional actions: an action must follow from the accepted path and its evidence.
 
-## 3. Inputs and outputs
+## 4. Inputs and outputs
 
 ### Inputs
 - Planning unit and authoritative current Financial State.
@@ -58,7 +58,7 @@ Examples from the documented cases include increasing a goal contribution by a s
 
 Do not invent amounts, deadlines, priorities, sources, destinations or dependencies when the accepted decision does not provide them. Represent unavailable details explicitly according to the data contract.
 
-## 4. Action generation and authority checks
+## 5. Action generation and authority checks
 
 The existing audit identifies action generation in `backend/services/strategy_action_generator.py::StrategyActionGenerator.generate()` and action-spec rules in `backend/rules/action_plan.py::build_action_specs()`.
 
@@ -80,7 +80,7 @@ These are current-code audit findings for the inspected baseline, not a declarat
 
 The audit documents a deterministic `generation_key` based on strategy version, action index and title, used to skip duplicate actions when generation is repeated. Preserve safe repeat-generation behavior and verify that edits or changed accepted versions do not cause stale actions to be silently treated as current.
 
-## 5. Action data contract and lifecycle
+## 6. Action data contract and lifecycle
 
 The audited model in `backend/models/action_plan.py` defines:
 - **ActionStatus:** `planned`, `confirmed`, `completed`, `cancelled`.
@@ -94,7 +94,7 @@ These are the audited current model contracts, not a substitute for verifying th
 
 An action's status, an investor's decision about that action, the action's execution, and the financial outcome are separate facts. Marking an action complete does not by itself prove that the expected financial or goal result was achieved.
 
-## 6. Action review, confirmation and execution
+## 7. Action review, confirmation and execution
 
 The canonical journey is:
 
@@ -124,7 +124,7 @@ Each action should make clear, where defined:
 
 The investor may review actions, confirm practical execution, adjust timing where permitted, and track completion. Exact validation rules for changes to amounts, dates, priorities, dependencies and other execution parameters must follow the existing approved contract; do not assume every field is freely editable.
 
-## 7. Planned impact, actual impact and completion
+## 8. Planned impact, actual impact and completion
 
 The audited model records `planned_impact`, including generation lineage, strategy/architecture identifiers, implementation parameters and a baseline Financial State. The audited `actual_impact` can contain variance analysis from the Action Impact Engine.
 
@@ -137,7 +137,7 @@ The audited completion endpoint compares projected and actual Financial State sn
 
 Completing an action must not automatically mark a goal achieved, assert a projected return was realized, or silently change the Accepted Plan. Where actual evidence is unavailable, do not fabricate a successful outcome.
 
-## 8. Accepted Plan, proposals and What-If isolation
+## 9. Accepted Plan, proposals and What-If isolation
 
 Keep these states separate:
 1. Strategy decision/recommendation generated.
@@ -151,7 +151,7 @@ A recommendation, saved scenario, report, historical strategy version or generat
 
 If the investor rejects or defers an alternative, the existing Accepted Plan and its applicable actions remain unchanged. If the investor adopts a revised path, reconcile the affected actions only after the adoption transition is recorded.
 
-## 9. Impact analysis, execution changes and targeted revalidation
+## 10. Impact analysis, execution changes and targeted revalidation
 
 The documented change loop is:
 
@@ -179,7 +179,7 @@ Whole-Plan / Multi-Goal Impact is conditional: invoke it for a plan-level decisi
 
 Exact materiality thresholds, dependency mapping and invalidation triggers remain unverified/not frozen.
 
-## 10. Reconciliation after an adopted plan change
+## 11. Reconciliation after an adopted plan change
 
 After explicit investor adoption:
 - add actions required by the newly accepted path;
@@ -191,7 +191,7 @@ After explicit investor adoption:
 
 The audit/feature source leaves the exact old-action migration, revision/deactivation mechanics and historical version model not yet frozen. Do not invent a replacement policy or delete completed actions to make the new plan look clean.
 
-## 11. Multiple goals and plan-level actions
+## 12. Multiple goals and plan-level actions
 
 A complete financial plan may contain multiple coordinated strategies and actions across different goals. Action Plan must not assume that one goal or one Strategy Builder run represents the entire financial plan.
 
@@ -199,7 +199,7 @@ When goals compete for the same surplus or assets, the Goal Planner / Multi-Goal
 
 A new goal against an existing plan is initially a proposal/scenario. Rejection leaves the existing plan/actions unchanged. Acceptance updates the plan through the investor-decision lifecycle and reconciles only the relevant actions.
 
-## 12. Code evidence and API surface
+## 13. Code evidence and API surface
 
 ### Code references identified by the existing audit
 - Frontend: `frontend/app/investor/action-plan/page.tsx`
@@ -223,7 +223,7 @@ A new goal against an existing plan is initially a proposal/scenario. Rejection 
 
 These are API contracts reported by the inspected audit baseline. Confirm current `main` behavior before treating the route list as a current runtime guarantee.
 
-## 13. Unverified implementation facts
+## 14. Unverified implementation facts
 
 The feature definition and audit leave the following unresolved:
 - Completeness of action generation for goal funding, debt, cash-flow, multi-goal allocation and strategy implementation.
