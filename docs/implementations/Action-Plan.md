@@ -4,7 +4,7 @@
 **Scope:** Accepted-path actions, action generation, investor decisions on actions, execution tracking, impact comparison, and action-history preservation  
 **Status:** Feature definition aur existing-feature audit se consolidated implementation contract. User Journey sirf flow alignment ke liye aur Real-Life Decision Cases business boundaries/examples ke liye use hote hain. Current code evidence, required behavior aur unresolved points alag rakhe gaye hain; document yeh claim nahi karta ki har requirement implemented hai.
 
-## 2. Design references
+## 1. Design references
 
 This specification keeps business requirements, user-flow alignment, Real-Life Decision Cases, and inspected code evidence distinct.
 
