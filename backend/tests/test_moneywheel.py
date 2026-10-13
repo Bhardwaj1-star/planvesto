@@ -239,3 +239,52 @@ def test_post_moneywheel_calculate_success():
         assert "result" in data
         assert len(data["result"]["ratios"]) == 9
         assert data["result"]["metadata"]
+
+
+
+def test_build_from_financial_state_does_not_persist_a_second_snapshot():
+    from services.moneywheel_service import MoneywheelService
+    from models.financial_state import FinancialState, Metric
+
+    class EmptyGoalRepository:
+        def list_goals(self, planning_unit_id):
+            return []
+
+    state = FinancialState(
+        scope="family",
+        planning_unit_id="pu-pure-moneywheel",
+        income_monthly=Metric(value=100000),
+        income_annual=Metric(value=1200000),
+        expenses_monthly=Metric(value=70000),
+        expenses_annual=Metric(value=840000),
+        essential_monthly_expenses=Metric(value=35000),
+        investable_surplus_monthly=Metric(value=30000),
+        investable_surplus_annual=Metric(value=360000),
+        total_assets=Metric(value=2000000),
+        liquid_assets=Metric(value=500000),
+        financial_assets=Metric(value=1500000),
+        total_liabilities=Metric(value=400000),
+        emi_burden_monthly=Metric(value=20000),
+    )
+
+    service = MoneywheelService(repository=None, goal_repository=EmptyGoalRepository())
+    result = service.build_from_financial_state(state)
+
+    assert len(result.ratios) == 9
+    assert result.planning_unit_id == "pu-pure-moneywheel"
+    assert "snapshot_id" not in result.metadata
+    assert service.repository is None
+
+
+def test_consolidated_report_uses_canonical_moneywheel_results_without_fake_values():
+    from services.financial_plan_service import FinancialPlanService
+
+    result = MoneywheelEngine().build(_input(liquid_assets=None))
+    scan = FinancialPlanService._build_moneywheel_health_scan(result)
+
+    assert len(scan) == 9
+    liquid_ratio = next(item for item in scan if item["metric_key"] == "liquid_asset_ratio")
+    assert liquid_ratio["available"] is False
+    assert liquid_ratio["current_value"] == "Not available"
+    assert liquid_ratio["status"] == "Unavailable"
+    assert liquid_ratio["rule_set_version"] == result.rule_set_version
