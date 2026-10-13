@@ -38,7 +38,10 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 | GP-BR-12 | “No acceptable path” is a valid result. | Explain the gap, constraints, assumptions, and possible changes; never force a recommendation. |
 | GP-BR-13 | Material changes require targeted recalculation/revalidation of affected goals and decisions. | Do not rebuild unrelated decisions without a material dependency. |
 | GP-BR-14 | Goal cancellation does not delete the underlying asset from Financial State. | Treat earmark release/remapping as a separate lifecycle action. |
-| GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |\n| GP-BR-16 | Goal-Level Return Required is scenario-specific and distinct from required contribution and expected return. | Calculate and expose it in Goal Planner when the cash-flow inputs support a valid solution. |\n| GP-BR-17 | Constraints bound feasibility search; a high required return must not justify silently exceeding the investor's risk limit or inventing surplus. | Evaluate explicit What-If adjustments and allow no acceptable path. |\n| GP-BR-18 | Target date/amount adjustments are proposals, not automatic edits to the canonical goal. | Recalculate each scenario and require explicit investor adoption. |
+| GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |
+| GP-BR-16 | Goal-Level Return Required is scenario-specific and distinct from required contribution and expected return. | Calculate and expose it in Goal Planner when the cash-flow inputs support a valid solution. |
+| GP-BR-17 | Constraints bound feasibility search; a high required return must not justify silently exceeding the investor's risk limit or inventing surplus. | Evaluate explicit What-If adjustments and allow no acceptable path. |
+| GP-BR-18 | Target date/amount adjustments are proposals, not automatic edits to the canonical goal. | Recalculate each scenario and require explicit investor adoption. |
 
 ## 3. Goal inputs and canonical context
 
@@ -260,7 +263,11 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 13. Material changes trigger targeted recalculation/revalidation under a shared, explicit policy.
 14. Strategy Builder receives a typed feasibility/funding context and does not silently recreate feasibility.
 15. Tests cover calculation boundaries, missing/invalid inputs, asset resolution, shared-resource conflicts, funding-path comparisons, version history, ownership, and non-mutation before adoption.
-16. Test results, live database/RLS state, and deployment status are reported only when actually verified.\n17. Goal-Level Return Required is scenario-specific, traceable to cash-flow timing and assumptions, and distinct from required contribution and expected return.\n18. Constraint violations are not bypassed to manufacture feasibility; an unacceptable/no-path result is supported.\n19. Target-date and target-amount adjustments are evaluated as separate scenarios and do not mutate the canonical goal before explicit adoption.\n20. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
+16. Test results, live database/RLS state, and deployment status are reported only when actually verified.
+17. Goal-Level Return Required is scenario-specific, traceable to cash-flow timing and assumptions, and distinct from required contribution and expected return.
+18. Constraint violations are not bypassed to manufacture feasibility; an unacceptable/no-path result is supported.
+19. Target-date and target-amount adjustments are evaluated as separate scenarios and do not mutate the canonical goal before explicit adoption.
+20. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
 
 ## 12. Source authority and evidence
 

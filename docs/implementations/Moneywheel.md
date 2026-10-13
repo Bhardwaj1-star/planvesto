@@ -23,14 +23,15 @@ Moneywheel is the canonical calculation owner for these metrics. Downstream cons
 |---|---|---|
 | MW-BR-01 | Use authoritative server-side Financial State; client-supplied snapshots must not override it. | Preserve existing API behavior. |
 | MW-BR-02 | Missing input, invalid denominator, or non-finite result is unavailable, not zero and not healthy. | Preserve existing engine contract. |
-| MW-BR-03 | Preserve the nine existing canonical metrics, formulas, units, and thresholds unless separately approved. | Preserve and regression-test. |
+| MW-BR-03 | Preserve the current nine-metric runtime contract until an explicit compatibility change is approved. The target contract retires Moneywheel's legacy `required_rate_of_return` calculation because Goal Planner owns goal-level required return, and introduces `portfolio_level_return_required` as the portfolio-level measure. | Keep the current API/snapshot compatible during transition; explicitly migrate schema, persistence, history, frontend, tests, and old snapshots before changing the contract. |
 | MW-BR-04 | Add Weighted Debt Rate, Investment–Debt Spread, and Portfolio-Level Return Required as Moneywheel measurements. | Required additions; portfolio-return calculation contract must be finalized before implementation. |
 | MW-BR-05 | Debt existence, DTI, leverage, or a negative spread must not alone select Debt Reduction or another strategy. | Required business rule. |
 | MW-BR-06 | Moneywheel supplies metrics/evidence; canonical decision rules determine whether a condition is a hard constraint, eligibility input, warning, or diagnostic. | Required ownership boundary. |
 | MW-BR-07 | Goal Planner owns goal-level feasibility and funding-path comparison; Strategy Builder consumes that result and designs execution. | Required cross-feature boundary. |
 | MW-BR-08 | An asset mapped to a goal is not automatically earmarked, locked, sold, or unavailable elsewhere. | Required business rule. |
 | MW-BR-09 | A material Financial State or goal change may require recalculation/revalidation, but does not automatically replace a strategy or accepted plan. | Required lifecycle boundary. |
-| MW-BR-10 | Proposed alternatives remain scenarios until investor adoption. “No acceptable path” is a valid outcome. | Required lifecycle boundary. |\n| MW-BR-11 | Portfolio-Level Return Required must use Goal Planner's versioned goal-level requirements and explicit portfolio cash flows; it is not the arithmetic average of goal-level returns. | Required cross-feature measurement; define/validate calculation contract and dependencies before implementation. |
+| MW-BR-10 | Proposed alternatives remain scenarios until investor adoption. “No acceptable path” is a valid outcome. | Required lifecycle boundary. |
+| MW-BR-11 | Portfolio-Level Return Required must use Goal Planner's versioned goal-level requirements and explicit portfolio cash flows; it is not the arithmetic average of goal-level returns. | Required cross-feature measurement; define/validate calculation contract and dependencies before implementation. |
 
 ### Rule-role distinction
 
@@ -62,7 +63,12 @@ The formulas and thresholds below reflect the inspected backend/rules/moneywheel
 | insurance_coverage_ratio | Insurance Coverage Ratio | Existing Sum Assured / Required Insurance Cover × 100 | Excellent ≥80%; healthy 60–80%; attention 40–60%; critical <40%. |
 | goal_funding_ratio | Goal Funding Ratio | Current Goal Funding / Goal Target Amount × 100 | Excellent ≥100%; healthy 80–100%; attention 50–80%; critical <50%. |
 | future_funding_ratio | Future Funding Ratio | Projected Goal Funding / Future Goal Target × 100 | Excellent ≥100%; healthy 80–100%; attention 50–80%; critical <50%. |
+| required_rate_of_return | Required Rate of Return (legacy) | ((Future Goal Target / Current Goal Funding)^(1 / Goal Duration Years) − 1) × 100 | Excellent <8%; healthy 8–12%; attention 12–15%; critical ≥15%. Retain only for current-runtime compatibility until migration is approved. |
 
+
+
+
+**Legacy metric transition:** The current code still returns nine metrics, including `required_rate_of_return`. That existing row above documents current runtime behavior only. The intended target contract has eight retained existing metrics, two debt metrics, and `portfolio_level_return_required` (eleven total). Do not remove or rename the legacy key in code until API consumers, historical snapshots, persistence, frontend rendering, and tests have an explicit compatibility/migration plan.
 
 For DTI, preserve the exact constants and boundary comparisons in the current rules source. The current implementation imports DTI and savings benchmarks from the canonical constraint policy; do not create a second source of truth.
 
@@ -210,10 +216,12 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 
 ## 8. Acceptance criteria
 
-1. Existing nine metrics retain their formulas, units, thresholds, and boundary behavior unless separately approved.
+1. The current runtime's nine metrics retain their formulas, units, thresholds, and boundary behavior until a compatibility change is approved. The target contract retains eight existing metrics, retires Moneywheel's legacy `required_rate_of_return` ownership, and adds the two debt metrics plus `portfolio_level_return_required`; Goal Planner owns goal-level required return.
 2. The intended Moneywheel output contains eleven canonical metrics after the ownership change: eight retained existing metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is calculated by Goal Planner. Legacy snapshot compatibility is explicit.
 3. Weighted Debt Rate is principal-weighted, never a simple average.
-4. Investment–Debt Spread uses the explicitly supplied annual return assumption minus Weighted Debt Rate, expressed in percentage points.\n4a. Portfolio-Level Return Required uses explicit dated portfolio obligations/resources and versioned Goal Planner outputs; it is never a simple average of goal-level returns.\n4b. Goal-Level Return Required has one calculation owner (Goal Planner); Moneywheel does not retain a competing formula.
+4. Investment–Debt Spread uses the explicitly supplied annual return assumption minus Weighted Debt Rate, expressed in percentage points.
+4a. Portfolio-Level Return Required uses explicit dated portfolio obligations/resources and versioned Goal Planner outputs; it is never a simple average of goal-level returns.
+4b. Goal-Level Return Required has one calculation owner (Goal Planner); Moneywheel does not retain a competing formula.
 5. Missing, invalid, zero-denominator, incomparable, and non-finite inputs return unavailable with a reason.
 6. No invented health bands or hidden default return assumption for the new metrics.
 7. API continues to ignore client-supplied Financial State as calculation authority and enforces planning-unit ownership.
