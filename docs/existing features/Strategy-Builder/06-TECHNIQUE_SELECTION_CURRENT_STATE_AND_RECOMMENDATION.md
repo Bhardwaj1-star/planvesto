@@ -1,5 +1,8 @@
 # 06 — Technique Selection: Current State & Recommendation
 
+> **Current-state audit only — not target policy:** Any Goal Funding / `strat-goal-funding` Strategy row, variant, candidate, or behavior described below records legacy runtime observed during audit. Canonical target ownership is Goal Planner / Goal Feasibility; Goal Funding is not a Strategy Builder strategy. Follow `docs/implementations/Strategy-Builder.md` and `docs/Real-Life Decision Cases/strategy-decision-tree.md` for target rules. Preserve these observations as audit evidence; do not implement them as target behavior.
+
+
 ## 1. Purpose
 
 This document records the current code-verified Technique Selection system and the recommended target contract for the PlanVesto Canonical Decision Engine.
