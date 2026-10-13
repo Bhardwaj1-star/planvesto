@@ -18,7 +18,6 @@ from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 from report_engine.renderer import CommonPdfRenderer
-from data.moneywheel_repository import MoneywheelRepository
 from models.moneywheel import MoneywheelResult
 from rules.moneywheel import RULES
 from services.moneywheel_service import MoneywheelService
