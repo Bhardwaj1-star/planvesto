@@ -1,5 +1,8 @@
 # Strategy Applicability — Current State & Recommended Decision Framework
 
+> **Current-state audit only — not target policy:** Any Goal Funding / `strat-goal-funding` Strategy row, variant, candidate, or behavior described below records legacy runtime observed during audit. Canonical target ownership is Goal Planner / Goal Feasibility; Goal Funding is not a Strategy Builder strategy. Follow `docs/implementations/Strategy-Builder.md` and `docs/Real-Life Decision Cases/strategy-decision-tree.md` for target rules. Preserve these observations as audit evidence; do not implement them as target behavior.
+
+
 **Parent area:** `docs/existing features/Strategy-Builder/`  
 **Decision Engine phase:** Step 1 — Strategy Applicability  
 **Status:** Analysis / design only — rules are **not frozen** and no refactor is authorized by this document.
