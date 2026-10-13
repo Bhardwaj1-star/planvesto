@@ -20,7 +20,7 @@ class MoneywheelService:
 
     def __init__(
         self,
-        repository,
+        repository=None,
         data_repository=None,
         goal_repository: GoalRepository | None = None,
         engine: MoneywheelEngine | None = None,
@@ -44,15 +44,19 @@ class MoneywheelService:
             result.metadata["protection"] = protection_metadata
         if debug_metadata:
             result.metadata.update(debug_metadata)
+        if self.repository is None:
+            raise RuntimeError("MoneywheelRepository is required to persist a calculation.")
         return self.repository.save_snapshot(result, financial_state_snapshot or {})
 
-    def calculate_from_financial_state(
+    def build_from_financial_state(
         self,
         financial_state: FinancialState,
     ) -> MoneywheelResult:
-        """Calculate MoneyWheel exclusively from canonical FinancialState facts.
+        """Build a Moneywheel assessment without persisting a history snapshot.
 
-        Insurance facts and breakdown are sourced directly from FinancialState.
+        Use this for embedded report sections that need the same canonical
+        measurements without creating a second calculation-history record.
+        Insurance facts and breakdown are sourced from FinancialState.
         Goal funding remains sourced from GoalRepository.
         """
         planning_unit_id = financial_state.planning_unit_id
@@ -96,13 +100,20 @@ class MoneywheelService:
         data.existing_sum_assured = total_sum_assured
         data.required_insurance_cover = required_insurance_cover
 
-        result = self.calculate(
-            data,
-            financial_state.model_dump(mode="json"),
-            protection_metadata=protection_metadata,
-        )
+        result = self.engine.build(data)
+        result.metadata["protection"] = protection_metadata
         result.metadata["goals"] = goal_metadata
         return result
+
+    def calculate_from_financial_state(
+        self,
+        financial_state: FinancialState,
+    ) -> MoneywheelResult:
+        """Build the canonical assessment and persist its history snapshot."""
+        result = self.build_from_financial_state(financial_state)
+        if self.repository is None:
+            raise RuntimeError("MoneywheelRepository is required to persist a calculation.")
+        return self.repository.save_snapshot(result, financial_state.model_dump(mode="json"))
 
     def _goal_funding(self, planning_unit_id: str):
         goals = self.goal_repository.list_goals(planning_unit_id)
