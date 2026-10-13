@@ -53,9 +53,7 @@ The investor can continue with the same strategy and update the Execution Plan.
 
 ### If No
 
-The system should trigger **strategy re-evaluation**.
-
-It should not silently replace the strategy.
+The system must first recalculate Goal Planner feasibility/funding consequences. It should re-evaluate a canonical Strategy Builder decision only if the changed funding/execution conditions materially affect that strategy's applicability, viability, constraints, or outcome. It must not silently replace an accepted strategy.
 
 ---
 
@@ -63,9 +61,9 @@ It should not silently replace the strategy.
 
 Suppose the investor has:
 
-**Strategy:** Goal Funding
+**Goal Planner funding path:** existing asset + monthly contribution
 
-and an accepted Execution Plan based on:
+with an accepted implementation based on:
 
 - existing asset utilisation;
 - monthly contribution;
@@ -87,7 +85,7 @@ The result may show:
 - goal timeline changes;
 - available surplus becomes insufficient;
 - another goal is affected;
-- or the existing Goal Funding approach is no longer appropriate.
+- or the existing Goal Planner funding path is no longer feasible or appropriate.
 
 At that point, the system should not simply accept the execution change as though nothing else changed.
 
@@ -103,7 +101,7 @@ The system remains a guidance and advisory system.
 
 Therefore, it can identify:
 
-- that the current strategy has become less suitable;
+- that a current canonical strategy, if affected, has become less suitable;
 - why it has become less suitable;
 - what financial consequences resulted from the execution change;
 - and what alternative strategies may address the new situation.
@@ -170,14 +168,13 @@ The system identifies the need for re-evaluation; the investor decides the resul
 
 ---
 
-## 6. Example — Goal Funding
+## 6. Example — Goal Planner Funding-Path Change
 
 Suppose:
 
 - Goal = ₹50 lakh
 - Horizon = 8 years
-- Current strategy = Goal Funding
-- Current execution = existing asset + monthly contribution.
+- Current Goal Planner funding path = existing asset + monthly contribution.
 
 Investor changes execution:
 
@@ -192,11 +189,11 @@ Possible result:
 - goal feasibility changes;
 - another goal becomes constrained.
 
-The system then evaluates whether the current strategy/path is still appropriate.
+Goal Planner first recalculates feasibility and funding consequences. Strategy Builder then re-evaluates the relevant canonical strategy decision only if the change materially affects its applicability, viability, constraints, or outcome.
 
 If not, it can present alternatives such as:
 
-- another Goal Funding variant;
+- another Goal Planner funding path, if available and feasible;
 - Progressive De-risking where relevant;
 - Capital Preservation where capital protection becomes important;
 - Credit Utilisation where an appropriate timing/funding gap exists;
@@ -303,10 +300,10 @@ The relevant strategy alternatives should be:
 
 - applicable to the investor's situation;
 - evaluated against the relevant constraints;
-- assessed using the required eligibility fits;
+- assessed for applicability and viability against the relevant hard constraints;
 - and compared on the relevant financial outcomes.
 
-The Strategy Builder should continue to provide meaningful alternatives for the relevant decision.
+For each Strategy Builder decision, present exactly two options from the four canonical strategies. Do not use Scoring or the 8 Eligibility Fits. A funding-path change by itself is not a Strategy change; Goal Planner recalculates the funding path first, and Strategy Builder re-evaluates only where the strategy decision is materially affected.
 
 It should not simply display every strategy in the library.
 
