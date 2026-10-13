@@ -201,7 +201,7 @@ Answers:
 
 It determines the detailed implementation structure, such as:
 
-**Strategy → Variant → Technique → Architecture → Execution**
+**Strategy → Variant → Technique / Method → Solution → Action Plan → Execution**
 
 For example, if education is feasible through a path that preserves existing investments and uses education financing, Strategy Builder may determine whether **Credit Utilisation** is an appropriate strategy and how it should be implemented.
 
@@ -247,7 +247,7 @@ The broader flow established by this case is:
 
 ↓
 
-**Strategy → Variant → Technique → Architecture**
+**Strategy → Variant → Technique / Method → Solution**
 
 ↓
 
