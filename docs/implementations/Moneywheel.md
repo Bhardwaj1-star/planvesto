@@ -1,10 +1,10 @@
-# Moneywheel — Financial Planner Guide
+# Moneywheel — Financial Measurements & Health Assessment
 
 ## 1. What Moneywheel does
 
-Moneywheel summarizes a client's financial position through key ratios and measurements. These measurements help the financial planner understand savings, liquidity, debt, asset structure, insurance coverage, and goal funding.
+Moneywheel is the single feature that calculates defined financial measurements and assesses financial health. It uses Financial State as the source of financial records and presents savings, liquidity, debt, asset structure, insurance coverage and goal-funding signals in one place.
 
-**Moneywheel provides financial evidence; it does not make the decision for the planner.**
+**Moneywheel provides financial measurements and health assessment; it does not make the decision for the planner. Financial Health is not a separate top-level feature.**
 - **Moneywheel:** Calculates and explains financial measurements.
 - **Goal Planner:** Assesses whether each goal is achievable and compares funding options.
 - **Strategy Builder:** Uses feasibility results and relevant constraints to design a suitable approach.
