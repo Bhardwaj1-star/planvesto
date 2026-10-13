@@ -295,7 +295,7 @@ The documented hierarchy is:
 
 **Strategy → Variant → Technique → Method / Policy → Solution → Action**
 
-The current runtime may use internal composition structures, but Architecture is not a separate required level in the target business flow. The investor-facing proposal is the Solution, built from the selected Strategy, Variant, Technique and Method/Policy. Do not create a separate Architecture decision stage unless a future business requirement proves it necessary.
+Architecture is a separate design concept in the canonical flow and must be defined precisely in relation to Method/Policy and Solution before implementation is audited. Do not collapse these terms into one generic “solution” label.
 
 - **Strategy:** broad approach to the financial problem.
 - **Variant:** situation-specific form of a strategy.
