@@ -66,7 +66,7 @@ Defined Goal + Financial State
 - Strategy Builder must not silently repeat or redefine Goal Planner's feasibility decision.
 - If required evidence is missing, keep that uncertainty visible; do not invent financial inputs.
 
-The detailed feasibility journey remains in `04-GOAL_FEASIBILITY_JOURNEY.md`.
+The detailed Goal Feasibility process is documented within `01-GOAL_PLANNING_JOURNEY.md`.
 
 ---
 
