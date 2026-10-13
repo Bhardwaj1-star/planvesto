@@ -122,7 +122,6 @@ Each domain has a separate responsibility.
 | Variant Selection | Which structural form of the selected strategy fits the situation? | Variant is subordinate to one of the four strategies |
 | Technique Selection | Which reusable mechanisms are required or permitted by the selected Strategy + Variant? | Mapping is variant-specific; technique status must preserve the policy vocabulary |
 | Method / Policy | How is a selected technique applied in this context? | A method is not a separate strategy or technique merely because it describes an operation |
-| Architecture | How are the selected elements and dependencies composed? | Composition follows the selected Strategy, Variant, and technique decisions in the target flow |
 | Solution | What concrete implementation outcome is proposed for this investor? | Solution must not merely duplicate a Variant or Technique under another label |
 | Stress / Resilience | Does the proposed path remain acceptable under defined adverse or changed assumptions? | Reuses the canonical decision domains; it is not a separate competing decision engine |
 | Recommendation | How is the authoritative decision explained to the investor? | Explains both options and their trade-offs; does not silently replace the decision authority |
@@ -324,7 +323,6 @@ Strategy
   → Variant
   → Technique
   → Method / Policy
-  → Architecture
   → Solution
   → Action
 ~~~
@@ -333,7 +331,6 @@ Strategy
 - **Variant:** Structural form of the selected strategy.
 - **Technique:** Reusable mechanism required or permitted by the Strategy + Variant.
 - **Method / Policy:** Contextual rule for applying a technique.
-- **Architecture:** Composed structure of selected elements and dependencies.
 - **Solution:** Concrete investor-specific implementation outcome based on the selected path and actual financial inputs.
 - **Action:** Executable step derived from the accepted implementation and represented in the Action Plan.
 
@@ -441,7 +438,7 @@ These are audit findings, not claims that a fix has been implemented by this doc
 - The target flow has no separate eight-eligibility-fits stage.
 - **Every decision presents exactly two Strategy options.** This is mandatory; do not use a dynamic option count.
 - Each option's applicability, viability, evidence, assumptions, and trade-offs must be shown honestly. Showing an option does not mean endorsing it.
-- The target sequence evaluates and presents the two options for investor review; for each valid implementation, Strategy → Variant → Technique / Method precedes Architecture / Solution composition.
+- The target sequence evaluates and presents the two options for investor review; for each valid implementation, Strategy → Variant → Technique / Method leads to a concrete Solution proposal.
 - Goal Planner supplies goal-feasibility/funding context, not a Strategy. The integration between its feasibility output and Strategy Builder is a later connection and must not be assumed here.
 - Stress / Resilience and conditional Whole-Plan Impact remain distinct responsibilities.
 - Decision / Recommendation, Investor Decision, Accepted Plan, Action Plan, and Execution remain separate lifecycle states.
