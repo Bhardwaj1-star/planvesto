@@ -5,16 +5,30 @@
 **Status:** Feature definition aur existing-feature audit se consolidated implementation contract. Existing behavior ke liye audit evidence authoritative baseline hai; Weighted Debt Rate, Investment–Debt Spread aur Portfolio-Level Return Required ko specified additions ke roop mein treat kiya gaya hai, completed implementation ke roop mein nahi. Goal-Level Return Required ka owner Goal Planner hai. Downstream wiring aur portfolio-level calculation model abhi separately verify/finalize hone hain.  
 **Audited source baseline:** d7640029310c8e58d4cdd9a033d7683b5ea10002 (not a claim about production deployment).
 
-## Quick reference
+## 1. Design references
 
-- **Main kaam:** Financial position ke canonical measurements calculate/display karna; planning decisions ke liye evidence dena.
-- **Inputs:** Authoritative Financial State, relevant goal/portfolio data, declared assumptions, and the data needed by each metric.
-- **Process:** Validate inputs → calculate only supported metrics → return value, unit, availability, and relevant metadata → persist/display where the existing contract supports it.
-- **Outputs:** Existing Moneywheel metrics plus explicitly specified additions, with unavailable values and reasons represented honestly.
-- **Boundary:** Moneywheel measurement deta hai; Goal Planner feasibility calculate karta hai; Strategy Builder strategy choose/design karta hai; Action Plan adopted decision ko execute karwata hai.
-- **Unverified:** New metric wiring, portfolio-level return solver, downstream integration, deployment/database state, and test results must not be treated as complete without evidence.
+This specification keeps inspected code evidence separate from intended business behavior.
 
-## 1. Purpose and ownership
+### Existing-code evidence — baseline for current behavior
+- docs/existing features/Moneywheel/00-BACKEND-INDEX.md
+- docs/existing features/Moneywheel/01-API-AND-CALCULATION-FLOW.md
+- docs/existing features/Moneywheel/02-RATIO-CONTRACTS-AND-RULES.md
+- docs/existing features/Moneywheel/03-PERSISTENCE-UI-AND-INTEGRATIONS.md
+- docs/existing features/Moneywheel/04-TESTS-AND-EVIDENCE-GAPS.md
+- backend/rules/moneywheel.py
+
+### Business-rule evidence — intended boundaries, not proof of implementation
+- docs/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md — debt economics, opportunity cost, and the two new debt metrics.
+- Cases 3–4 — multi-goal feasibility, better-path comparison, and proposals before adoption.
+- Cases 5–6 — recalculation/revalidation without automatic plan replacement.
+- Cases 7–12 — new-goal scenarios, strategy/implementation changes, investor adoption, and no-acceptable-path behavior.
+- Case 15 — asset mapping is distinct from earmarking.
+- docs/Real-Life Decision Cases/16-CONCEPTS_OUTSIDE_EXISTING_FEATURES_REGISTER.md and FULL_AUDIT_REPORT.md — shared constraint ownership and taxonomy gaps.
+
+Where existing behavior differs from required behavior, preserve that distinction. The audit is not proof of production deployment or current live runtime state; business-rule references are not proof that a requirement is implemented.
+
+
+## 2. Purpose and ownership
 
 Moneywheel calculates and presents an investor's financial measurements as **constraint and evidence inputs** for planning. It must not independently choose a goal funding path, strategy, variant, technique, solution, or accepted plan.
 
@@ -26,7 +40,7 @@ Moneywheel calculates and presents an investor's financial measurements as **con
 
 Moneywheel is the canonical calculation owner for these metrics. Downstream consumers must use its returned values and metadata rather than independently recalculating the same metric.
 
-## 2. Consolidated rules and disposition
+## 3. Consolidated rules and disposition
 
 | ID | Rule | Disposition |
 |---|---|---|
@@ -54,7 +68,7 @@ Each downstream rule must declare its role:
 
 Do not turn every critical Moneywheel status into a universal hard constraint. Preserve the existing constraint evaluator's scope unless canonical rules are explicitly changed and tested.
 
-## 3. Canonical metric inventory
+## 4. Canonical metric inventory
 
 After implementation, Moneywheel will return **11 canonical metrics**: eight retained existing Moneywheel metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is owned by Goal Planner, not Moneywheel.
 
@@ -161,7 +175,7 @@ A single portfolio-level required return cannot be derived by taking a simple ar
 **Status bands:** Do not invent health/status bands in the initial implementation. Return the numeric value, assumptions, included-goal/resource scope, and availability metadata.
 
 
-## 4. Planning rules
+## 5. Planning rules
 
 1. **Authoritative source:** Build calculation input from server-owned Financial State and relevant server-side goal context. Preserve authentication and planning-unit ownership checks.
 2. **Goal context:** Goal-dependent metrics require goal-specific funding, target, future target, projection, and duration inputs as applicable. Do not assume all metrics can be calculated from Financial State alone.
@@ -172,7 +186,7 @@ A single portfolio-level required return cannot be derived by taking a simple ar
 7. **No plan mutation:** Calculation or status change does not accept/reject a proposal, update an Accepted Plan, or complete an Action Plan item.
 8. **Scenario assumptions:** Investment-return assumptions used in Investment–Debt Spread must come from the relevant scenario and be displayed with the result. They are not guaranteed returns.
 
-## 5. Business rules for downstream consumers
+## 6. Business rules for downstream consumers
 
 ### Goal Planner / Goal Feasibility
 - Consume Moneywheel values as evidence for goal feasibility and funding-gap analysis.
@@ -195,7 +209,7 @@ A single portfolio-level required return cannot be derived by taking a simple ar
 - Keep warnings/diagnostics separate from hard constraints.
 - Resolve conflicting constraint sources through the canonical constraint mechanism rather than silently taking the latest result.
 
-## 6. Output contract
+## 7. Output contract
 
 Each metric result must include:
 - canonical key and display name;
@@ -213,7 +227,7 @@ For Weighted Debt Rate, expose the included-debt scope and annual rate conventio
 
 If the current response schema enforces exactly nine metrics, update schemas, models, tests, persistence, history responses, and frontend rendering so new calculations have eleven metrics without unexpectedly breaking old clients. Preserve compatibility for historical nine-metric snapshots; do not pretend old snapshots contain the new metrics.
 
-## 7. API, persistence, and UI requirements
+## 8. API, persistence, and UI requirements
 
 - Preserve authenticated calculate/latest/history behavior and planning-unit ownership enforcement.
 - Keep server-side Financial State authoritative; client snapshot fields must not override it.
@@ -223,7 +237,7 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 - Display unavailable values as unavailable with an explanation, never as zero fallback.
 - Verify production migration/RLS independently; source migration files do not prove production state.
 
-## 8. Acceptance criteria
+## 9. Acceptance criteria
 
 1. The current runtime's nine metrics retain their formulas, units, thresholds, and boundary behavior until a compatibility change is approved. The target contract retains eight existing metrics, retires Moneywheel's legacy `required_rate_of_return` ownership, and adds the two debt metrics plus `portfolio_level_return_required`; Goal Planner owns goal-level required return.
 2. The intended Moneywheel output contains eleven canonical metrics after the ownership change: eight retained existing metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is calculated by Goal Planner. Legacy snapshot compatibility is explicit.
@@ -241,24 +255,6 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 12. Tests cover threshold boundaries, partial availability, weighted-rate arithmetic, spread sign/units, portfolio-level cash-flow solving/availability, goal-return ownership, historical compatibility, and cross-feature non-mutation.
 13. Existing Moneywheel tests are run and results recorded; locating tests is not proof that they pass.
 14. Deployment/database/RLS claims are made only after target-environment verification.
-
-## 9. Source documents and authority
-
-### Existing-code evidence — baseline for current behavior
-- docs/existing features/Moneywheel/00-BACKEND-INDEX.md
-- docs/existing features/Moneywheel/01-API-AND-CALCULATION-FLOW.md
-- docs/existing features/Moneywheel/02-RATIO-CONTRACTS-AND-RULES.md
-- docs/existing features/Moneywheel/03-PERSISTENCE-UI-AND-INTEGRATIONS.md
-- docs/existing features/Moneywheel/04-TESTS-AND-EVIDENCE-GAPS.md
-- backend/rules/moneywheel.py
-
-### Business-rule evidence — intended boundaries, not proof of implementation
-- docs/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md — debt economics, opportunity cost, and the two new debt metrics.
-- Cases 3–4 — multi-goal feasibility, better-path comparison, and proposals before adoption.
-- Cases 5–6 — recalculation/revalidation without automatic plan replacement.
-- Cases 7–12 — new-goal scenarios, strategy/implementation changes, investor adoption, and no-acceptable-path behavior.
-- Case 15 — asset mapping is distinct from earmarking.
-- docs/Real-Life Decision Cases/16-CONCEPTS_OUTSIDE_EXISTING_FEATURES_REGISTER.md and FULL_AUDIT_REPORT.md — shared constraint ownership and taxonomy gaps.
 
 ## 10. Explicit non-goals
 
