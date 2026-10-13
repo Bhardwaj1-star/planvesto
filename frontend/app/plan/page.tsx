@@ -1627,7 +1627,7 @@ export default function PlanPage() {
                             href="#financial-health"
                             className="transition hover:text-navy-900"
                         >
-                            Financial Health
+                            Moneywheel
                         </a>
                     </li>
 
