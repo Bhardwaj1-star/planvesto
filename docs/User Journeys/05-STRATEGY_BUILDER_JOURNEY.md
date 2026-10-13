@@ -1,364 +1,262 @@
-# Strategy Builder User Journey
+# Strategy Builder — Simple User Journey
 
 **Document Type:** User Journey  
-**Status:** CANONICAL DESIGN  
 **Feature:** Strategy Builder  
-**Scope:** Goal Planner handoff → Strategy selection → Implementation proposal → What-If / Stress → Recommendation → Investor adoption
+**Audience:** Financial planners, business stakeholders and non-technical readers  
+**Status:** Target journey / business design  
+**Purpose:** Explain how Strategy Builder helps a planner compare financial approaches and present a recommendation to an investor.
+
+> **Important:** This document explains the intended journey. It does not, by itself, confirm that every step is already available in the live product.
 
 ---
 
-## 1. Main Journey
+## 1. Strategy Builder in One Minute
 
-```
-Reviewed Goal Feasibility + Financial State + Goal Context + Constraints
-                              ↓
-                    Constraint / Safety Check
-                              ↓
-                    Strategy Applicability
-                              ↓
-                       Candidate Viability
-                              ↓
-                       Strategy Selection
-                              ↓
-                       Variant Selection
-                              ↓
-                       Technique Selection
-                              ↓
-                       Method / Policy
-                              ↓
-                 Architecture + Solution Proposal
-                              ↓
-                  What-If / Scenario Comparison
-                              ↓
-                     Stress / Resilience
-                              ↓
-                  Decision & Recommendation
-                              ↓
-                 Investor Review / Decision
-                    ┌─────────┼─────────┐
-                    ↓         ↓         ↓
-                  Accept    Modify     Reject
-                    ↓         ↓         ↓
-              Accepted Plan  Recheck   Existing Accepted
-                    ↓       affected   Plan remains
-                Action Plan  stages
-                    ↓         ↓
-                Execution  New Recommendation
-```
+Strategy Builder helps answer:
 
-This is the target journey. It does not claim that every step is already implemented in the current product.
+**“Given this investor’s financial situation and goals, which financial approach could make sense, what would it involve, and what should the investor consider before deciding?”**
+
+It uses information and goal-feasibility results from Goal Planner. It then helps shape a strategy, compare possible outcomes, review risks and present a recommendation.
+
+Strategy Builder supports the investor’s decision. It must not silently make the decision for them or execute a proposed change.
+
+### The journey at a glance
+
+1. Receive the goal and financial information.
+2. Check important limits, risks and missing information.
+3. Identify which strategies fit and which could actually work.
+4. Develop a practical proposal.
+5. Compare possible changes and test the proposal under pressure.
+6. Explain the recommendation and its trade-offs.
+7. Let the investor accept, modify or reject it.
 
 ---
 
-## 2. Entry Point — Goal Planner Handoff
+## 2. Stage One — Receive the Investor’s Information
 
-Strategy Builder starts after Goal Planner has supplied the relevant goal-feasibility and funding evidence.
+Strategy Builder starts after Goal Planner has provided the relevant goal and funding assessment.
 
-```
-Defined Goal + Financial State
-          + Goal Feasibility / Funding Evidence
-          + Relevant Constraints
-                    ↓
-             Strategy Builder
-```
+It may need:
+- The goal being considered and its context.
+- The investor’s relevant financial information.
+- Goal Planner’s funding and feasibility findings.
+- Relevant financial limits, obligations and constraints.
 
-- Goal Planner owns goal requirements, funding mechanisms, funding calculations and goal-feasibility assessment.
-- Strategy Builder uses that evidence to decide how the financial situation may be addressed through a strategy.
-- Strategy Builder must not silently repeat or redefine Goal Planner's feasibility decision.
-- If required evidence is missing, keep that uncertainty visible; do not invent financial inputs.
+### Who is responsible for what?
 
-The detailed Goal Feasibility process is documented within `01-GOAL_PLANNING_JOURNEY.md`.
+- **Goal Planner** assesses the goal, its funding requirements, funding calculations and goal feasibility.
+- **Strategy Builder** uses that evidence to consider the financial approach and develop a strategy-side proposal.
+- Strategy Builder must not quietly redo or replace Goal Planner’s feasibility decision.
 
----
-
-## 3. Constraint and Strategy Decision
-
-### System flow
-
-```
-Applicable Constraints / Safety Conditions
-                    ↓
-             Strategy Applicability
-                    ↓
-               Candidate Viability
-                    ↓
-              Strategy Selection
-```
-
-- Check the constraints and safety conditions relevant to the case.
-- **Applicability:** does this strategy fit the situation?
-- **Viability:** can it work under the actual financial conditions?
-- Select only from candidates that pass the relevant checks.
-- Distinguish a hard constraint from an advisory priority, a warning, a failed check and missing evidence.
-- Do not invent numerical thresholds, score weights or tie-break rules that are not defined in the governing sources.
-
-### Four canonical Strategy Builder strategies
-
-1. Progressive De-risking
-2. Capital Preservation
-3. Debt Reduction
-4. Credit Utilisation
-
-**Goal Funding is not a fifth Strategy Builder strategy.** Goal Funding and its funding mechanisms remain in Goal Planner / Goal Feasibility.
-
-### Valid decision outcomes
-
-- An acceptable strategy is identified.
-- No acceptable strategy/path qualifies under the current evidence and constraints.
-- More evidence is needed before a reliable decision can be made.
-
-The system must not force a strategy merely to produce an answer.
+**If information is missing:** make the gap clear and ask for the information needed. Do not invent figures or present an uncertain result as reliable.
 
 ---
 
-## 4. Variant, Technique and Implementation Design
+## 3. Stage Two — Check Limits and Identify Suitable Strategies
 
-After a strategy is selected:
+Before recommending an approach, the system checks the restrictions, risks and conditions relevant to the investor.
 
-```
-Selected Strategy
-       ↓
-     Variant
-       ↓
-    Technique
-       ↓
-  Method / Policy
-       ↓
-Architecture Composition
-       ↓
-Concrete Solution Proposal
-       ↓
-Investor Review
-```
+It then asks two different questions:
 
-- A **Strategy** is the high-level financial approach.
-- A **Variant** is a structural form of that strategy.
-- A **Technique** is a reusable mechanism selected because the Strategy + Variant calls for it.
-- A **Method / Policy** defines how a technique is applied in the context.
-- **Architecture** composes the selected elements and their dependencies.
-- A **Solution** is the concrete implementation proposal for this investor; it must not merely rename a Variant or Technique.
-- An **Action** is a concrete step derived from an accepted implementation. A proposal is not itself an Action Plan.
+- **Does this strategy fit the situation?** For example, is it relevant to the problem being considered?
+- **Could this strategy work under the investor’s actual financial conditions?** A strategy can sound relevant but still be unsuitable or unworkable in practice.
 
-### Investor sees
+These are different checks. Passing the first does not automatically mean the second will pass.
 
-- What the proposed approach would involve.
-- Relevant resources, timing, cash flow, debt, liquidity and dependencies where evidence is available.
-- Important assumptions, constraints and trade-offs.
-- The practical changes required by the proposed implementation.
+### The four Strategy Builder strategies
 
-The system proposes and explains the design. It does not silently execute changes or make the proposal an accepted plan.
+1. **Progressive De-risking** — gradually reduce exposure to risk when the situation calls for it.
+2. **Capital Preservation** — place greater emphasis on protecting available capital.
+3. **Debt Reduction** — focus on reducing debt and its financial burden.
+4. **Credit Utilisation** — consider the use of credit where the applicable rules and investor circumstances support it.
+
+These names identify the four strategy categories; they are not a promise that a strategy is appropriate for every investor.
+
+**Goal Funding is not a fifth strategy.** Goal Funding, including funding approaches such as SIPs, lump sums or contribution changes, belongs to Goal Planner and Goal Feasibility.
+
+### Possible outcomes
+
+The review can conclude that:
+- One or more acceptable paths qualify for further consideration.
+- No acceptable path qualifies under the available evidence and constraints.
+- More information is needed before a reliable conclusion can be reached.
+
+The system must not force a recommendation just to produce an answer.
 
 ---
 
-## 5. What-If / Scenario Journey
+## 4. Stage Three — Turn a Strategy into a Practical Proposal
 
-```
-Current Baseline / Proposed Solution
-                 ↓
-          Investor asks “What if?”
-                 ↓
-       Change an input or assumption
-                 ↓
-         Recalculate affected results
-                 ↓
-          Compare with baseline
-                 ↓
-           Investor reviews
-             ┌───┴───┐
-             ↓       ↓
-          Keep      Consider
-          current   revised path
-```
+Once a strategy has been selected for further consideration, the system develops a proposal suited to the investor’s situation.
 
-Possible changes documented for this journey include:
-- Goal date.
-- Contribution amount.
-- Asset mapping.
-- Strategy or implementation choice.
-- Execution action.
+A useful way to understand the planning terms is:
 
-The comparison shows the current and scenario positions, material differences and relevant trade-offs where supported by data.
+| Term | Meaning in everyday language |
+|---|---|
+| **Strategy** | The overall financial approach. |
+| **Variant** | A particular form of that approach. |
+| **Technique** | A method or mechanism used to carry out that form. |
+| **Method / Policy** | The rule for how that mechanism should be applied in this situation. |
+| **Solution proposal** | The specific proposed approach for this investor. |
+| **Action** | A practical step that follows from a proposal the investor has accepted. |
 
-A scenario, saved comparison or historical run is **not** an accepted plan. The active Accepted Plan must remain separate until the investor explicitly adopts a revised path.
+These terms must not be treated as interchangeable. A strategy or proposal is not, by itself, an action plan.
+
+### What should the planner and investor be able to understand?
+
+Where reliable information is available, the proposal should explain:
+- What would change in practice.
+- The expected effect on cash flow, debt, liquidity, resources and timing.
+- Important assumptions and dependencies.
+- The main benefits, costs, risks and trade-offs.
+- Any important information that is still unknown.
+
+The proposal should be specific enough to discuss, but it must not be presented as an accepted plan before the investor decides.
 
 ---
 
-## 6. Stress / Resilience
+## 5. Stage Four — Compare “What If?” Scenarios
 
-```
-Proposed Solution
-       ↓
-Relevant Stress / Resilience Tests
-       ↓
-Identify Pressure Points
-       ↓
-Show Impact and Limitations
-       ↓
-Investor reviews acceptability
-```
+A planner or investor may want to explore a change before making a decision.
 
-The system may show relevant effects on:
+Examples include:
+- What if the goal date changes?
+- What if the contribution amount changes?
+- What if a different asset is considered for the goal?
+- What if another strategy or implementation approach is considered?
+
+The system should:
+1. Keep the current position as the baseline.
+2. Change the selected input or assumption.
+3. Recalculate the results affected by that change.
+4. Compare the new scenario with the baseline.
+5. Explain the material differences and trade-offs.
+
+A scenario is for comparison. Saving or viewing a scenario does **not** automatically change the investor’s accepted plan.
+
+---
+
+## 6. Stage Five — Check How the Proposal Holds Up Under Pressure
+
+A proposal may look reasonable under normal assumptions but become difficult if circumstances worsen.
+
+Where supported by defined rules and reliable information, a stress or resilience review can examine effects on:
 - Goal funding.
 - Affordability and cash flow.
-- Liquidity and debt/EMI obligations.
-- Goal timing or other affected goals, where relevant evidence exists.
+- Available liquidity.
+- Debt repayments and EMI obligations.
+- Goal timing or other goals affected by the proposal.
 
-Stress / resilience tests the proposed path under defined adverse or changed assumptions. It is distinct from strategy applicability, viability and ordinary scenario comparison.
+The review should identify pressure points, explain the assumptions and show important limitations. It should not describe a stress result as a guaranteed forecast.
 
-- Show material weaknesses and assumptions.
-- Do not present stress results as guaranteed forecasts.
-- Do not silently change the investor's plan because a stress test shows pressure.
-- Exact stress cases and thresholds must come from governing rules; do not invent them.
+### How is this different from a “What If?” comparison?
 
----
+- **What If?** explores a changed input or choice and compares the result with the baseline.
+- **Stress / Resilience** examines how the proposal performs under defined adverse or challenging assumptions.
 
-## 7. Decision and Recommendation
-
-```
-Goal / Financial Evidence
-          +
-Strategy + Implementation Proposal
-          +
-What-If / Stress Findings
-          ↓
-     Decision Synthesis
-          ↓
-       Recommendation
-          ↓
-     Investor Review
-```
-
-The investor is shown, where supported:
-- Recommended path and why it fits.
-- Relevant constraints and assumptions.
-- Main trade-offs and pressure points.
-- Alternatives, when relevant.
-- Why no acceptable path was found, if that is the result.
-
-Recommendation is decision support. It does not itself select a new active plan or imply investor acceptance.
+Neither review should silently change the investor’s plan. The applicable stress cases and thresholds must come from the governing rules; they must not be invented.
 
 ---
 
-## 8. Investor Decision and Adoption
+## 7. Stage Six — Present the Recommendation
 
-```
-Recommendation
-      ↓
-Investor chooses
-  ┌───┼────┐
-  ↓   ↓    ↓
-Accept Modify Reject
-  ↓   ↓    ↓
-Accepted  Revisit  Existing Accepted
-Plan     affected  Plan remains
-         stages
-```
+The recommendation brings together the available financial evidence, the proposed approach and the findings from scenario and stress reviews.
 
-### Accept
-- The investor explicitly adopts the proposed path.
-- The adopted path becomes the Accepted Plan.
-- Relevant actions can then be represented in the Action Plan and move into execution.
+Where supported by the evidence, the planner should be able to explain:
+- What path is being proposed and why it may fit.
+- Which important limits and assumptions apply.
+- The main benefits, trade-offs and pressure points.
+- Relevant alternatives.
+- Why no acceptable path could be recommended, if that is the outcome.
 
-### Modify
-- Return to the affected planning, strategy, implementation or scenario stage.
-- Recalculate the affected outputs.
-- Produce a new recommendation for investor review.
-- Do not treat the modified proposal as accepted before the investor decides.
-
-### Reject
-- Do not replace the current Accepted Plan with the rejected proposal.
-- If no acceptable proposal remains, preserve that outcome; do not manufacture a recommendation.
+The recommendation should help the investor make an informed decision. It is not the same as investor approval.
 
 ---
 
-## 9. Investor-Designed Path
+## 8. Stage Seven — The Investor Decides
 
-If the investor wants to propose their own approach:
-- Keep it separate from the four canonical Strategy Builder strategies unless the source rules explicitly classify it otherwise.
-- Evaluate it against applicable constraints, feasibility/funding evidence, relevant impacts and resilience.
-- Explain numerical consequences and trade-offs where evidence supports them.
-- Investor-designed does not automatically mean viable, safe or accepted.
-- It becomes the active path only after the investor explicitly adopts it.
+The investor must explicitly choose what happens next.
 
----
-
-## 10. Whole-Plan Impact and Revalidation
-
-Whole-Plan / Multi-Goal Impact is conditional, not a mandatory step for every isolated goal decision.
-
-Use the separate whole-plan journey when a new goal or material decision affects multiple goals, shared resources, competing priorities or the existing plan. Show the effects on affected goals and resource trade-offs where evidence is available.
-
-When a material change occurs after adoption:
-
-```
-Accepted Plan + Material Change
-              ↓
-         Impact Analysis
-              ↓
-     Identify Affected Areas
-              ↓
-       Targeted Revalidation
-          ┌───┴───┐
-          ↓       ↓
-       Still     No longer
-       valid     valid
-          ↓       ↓
-      Continue   Revisit affected
-                 planning / strategy
-                      ↓
-               New Recommendation
-                      ↓
-               Investor Adoption
-```
-
-Revalidate affected parts of the plan; do not rebuild unrelated parts without cause. The separate documents `14-REVALIDATION_JOURNEY.md` and `19-MULTI_GOAL_WHOLE_PLAN_JOURNEY.md` remain the shared journeys for these cross-cutting situations.
-
----
-
-## 11. Strategy Builder Journey Outputs
-
-| Stage | Output |
+| Investor decision | What should happen |
 |---|---|
-| Entry / evidence check | Goal context, financial state, feasibility evidence and missing inputs |
-| Constraint / safety check | Relevant restrictions, warnings, failed checks or unknowns |
-| Strategy decision | Selected strategy or No Acceptable Strategy / Path |
-| Variant and technique design | Selected structural form and relevant mechanisms |
-| Implementation design | Architecture and investor-specific Solution proposal |
-| What-If | Baseline comparison and scenario differences |
-| Stress / resilience | Pressure points, effects and assumptions |
-| Recommendation | Explained proposed path, trade-offs and alternatives where relevant |
-| Investor decision | Accept / Modify / Reject |
-| Adoption | Accepted Plan only after explicit investor decision |
-| Action / execution | Actions derived from the accepted implementation |
+| **Accept** | The investor adopts the proposed path. It becomes the Accepted Plan, and relevant actions can then be prepared for execution. |
+| **Modify** | Return to the relevant planning stage, update the proposal, recalculate affected results and present a new recommendation. The changed proposal is not accepted until the investor decides. |
+| **Reject** | Do not replace the existing Accepted Plan with the rejected proposal. If no acceptable proposal remains, make that clear rather than manufacturing a recommendation. |
 
-These are target journey outputs; this table is not a claim that every output is already available in runtime.
+### Keep these three things separate
+
+- **Recommendation:** what the system proposes and explains.
+- **Accepted Plan:** the path the investor has explicitly adopted.
+- **Action Plan / Execution:** the practical steps that follow from the accepted path.
+
+A proposal must not be treated as accepted without the investor’s explicit decision, and the system must not execute a proposal silently.
 
 ---
 
-## 12. User Journey Boundaries
+## 9. If the Investor Suggests Their Own Approach
 
-- **Goal Planner / Goal Feasibility:** owns goal funding and feasibility; supplies evidence to Strategy Builder.
-- **Strategy Builder:** owns the strategy decision and the strategy-side implementation proposal.
-- **What-If:** compares a changed scenario with a baseline; does not itself adopt it.
-- **Stress / Resilience:** evaluates the proposed path under defined adverse assumptions; does not silently alter the plan.
-- **Decision / Recommendation:** explains the proposed path; it is not investor adoption.
-- **Investor Adoption:** records the explicit Accept / Modify / Reject decision.
-- **Accepted Plan:** represents the adopted path.
-- **Action Plan / Execution:** follow adoption; they are not interchangeable with a strategy or recommendation.
-- **Revalidation / Whole-Plan Impact:** are conditional shared journeys for material changes and cross-goal effects.
+An investor may want to explore an approach that they have proposed themselves.
+
+That path should:
+- Remain clearly identified as investor-designed rather than being incorrectly labelled as one of the four canonical strategies.
+- Be reviewed against relevant constraints, goal-feasibility evidence and financial impacts.
+- Show consequences and trade-offs where the available evidence supports them.
+- Not be assumed viable or safe simply because the investor suggested it.
+- Become the active path only after the investor explicitly adopts it.
 
 ---
 
-## 13. Core Rules
+## 10. When One Decision Affects Other Goals
 
-1. Use the reviewed Goal Planner feasibility/funding evidence; do not repeat its calculation inside Strategy Builder.
+Not every individual goal decision requires a full review of the investor’s entire financial plan.
+
+A broader review is needed when a material decision affects multiple goals, shared money or assets, competing priorities or the existing plan.
+
+In that situation:
+1. Identify which goals or resources may be affected.
+2. Explain the material impact and trade-offs where evidence is available.
+3. Recheck the affected parts of the plan.
+4. If the existing plan is no longer valid, prepare a revised recommendation.
+5. Ask the investor to decide whether to adopt the revised path.
+
+Recheck the parts that are affected; do not rebuild unrelated parts without a reason. The shared journeys for these cases are documented in `14-REVALIDATION_JOURNEY.md` and `19-MULTI_GOAL_WHOLE_PLAN_JOURNEY.md`.
+
+---
+
+## 11. A Simple Illustrative Example
+
+**Situation:** An investor has a future financial goal, an existing loan and limited monthly surplus.
+
+1. **Goal Planner provides the evidence.** It supplies the goal’s funding and feasibility findings.
+2. **Strategy Builder checks the situation.** It reviews the relevant constraints and identifies missing information, if any.
+3. **The system evaluates the strategies.** It distinguishes approaches that fit the situation from those that could actually work under the investor’s conditions.
+4. **A proposal is prepared.** The planner can review the expected changes, assumptions and trade-offs.
+5. **Alternatives are compared.** The planner can explore relevant “What If?” changes and review the proposal under defined stress assumptions.
+6. **A recommendation is explained.** The investor can see the reasoning and the main risks or limitations.
+7. **The investor decides.** Accepting, modifying or rejecting the proposal has a distinct outcome.
+
+This example explains the intended process only. It does not prescribe which strategy should win, assume a financial result or claim that every step is already implemented in the product.
+
+---
+
+## 12. Important Rules to Preserve
+
+1. Use Goal Planner’s goal-funding and feasibility evidence; do not redefine its responsibility inside Strategy Builder.
 2. Keep exactly four canonical strategies: Progressive De-risking, Capital Preservation, Debt Reduction and Credit Utilisation.
-3. Do not treat Goal Funding, SIP, lump sum or contribution escalation as a fifth Strategy Builder strategy.
-4. Distinguish strategy applicability from candidate viability.
-5. Do not invent thresholds, score weights, tie-break rules or unsupported financial facts.
-6. No Acceptable Strategy / Path and Insufficient Inputs are valid outcomes when supported by the evidence.
-7. Keep Strategy, Variant, Technique, Method / Policy, Architecture, Solution and Action distinct.
-8. Keep scenarios, recommendations and historical runs separate from the active Accepted Plan.
-9. Investor acceptance must be explicit; the system must not silently change the plan or execute a proposal.
-10. Apply Whole-Plan Impact and Revalidation when relevant; do not treat them as mandatory gates for every isolated decision.
-11. This document describes the target user journey, not proof that each step is already implemented in code.
+3. Goal Funding and its funding mechanisms are not a fifth Strategy Builder strategy.
+4. Check both whether a strategy fits the situation and whether it can work under the investor’s actual conditions.
+5. Do not invent financial inputs, numerical thresholds, score weights or tie-break rules.
+6. “No acceptable path” and “more information needed” are valid outcomes.
+7. Keep strategy, variant, technique, solution proposal and action distinct.
+8. Keep scenarios and recommendations separate from the Accepted Plan.
+9. Investor acceptance must be explicit. A recommendation must not trigger silent plan changes or execution.
+10. Apply whole-plan impact and revalidation when a material decision affects other goals or shared resources; do not make them mandatory for every isolated decision.
+11. This is the intended user journey, not proof that every step is already implemented in the live product.
+
+---
+
+## Related Journeys
+
+- `01-GOAL_PLANNING_JOURNEY.md` — Goal Planner and Goal Feasibility.
+- `14-REVALIDATION_JOURNEY.md` — reviewing affected parts after material changes.
+- `19-MULTI_GOAL_WHOLE_PLAN_JOURNEY.md` — decisions affecting multiple goals or shared resources.
