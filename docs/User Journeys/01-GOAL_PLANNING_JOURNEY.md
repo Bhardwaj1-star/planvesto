@@ -2,172 +2,224 @@
 
 **Document Type:** User Journey  
 **Status:** CANONICAL DESIGN  
-**Scope:** Investor creates/plans a goal → Goal Planning result → handoff to Strategy Decision.
+**Scope:** Goal Setup → Goal Feasibility → Strategy Decision
 
 ---
 
-## 1. Journey
+## 1. Main Journey
 
 ```
-Investor wants a goal
+Select / Create Goal
         ↓
-Create / Select Goal
+Goal Details
         ↓
-Enter Goal Details
-        ↓
-System validates & normalises
-        ↓
-Target Date / Timeline
+Target Date
         ↓
 Future Target
         ↓
 Map Existing Assets
         ↓
-Project Assets
+Project Mapped Assets
         ↓
 Funding Gap
         ↓
-Required Contribution
+Required Contribution / Return
         ↓
 Financial Capacity
         ↓
 Goal Feasibility
         ↓
-Investor reviews result
+Investor Review
         ↓
-Continue / Adjust
-        ↓
-Defined Goal
+Decision
         ↓
 Strategy Decision
 ```
 
 ---
 
-## 2. What the Investor Does
+## 2. Goal Setup
 
-1. Selects/creates a goal.
-2. Enters goal details and target date.
-3. Identifies assets intended for the goal.
-4. Reviews the projected funding position.
-5. Reviews feasibility.
-6. Decides whether to continue or change the goal assumptions.
-
-The investor owns the **goal intent and final choice**.
+```
+Canonical Goal
+      +
+Goal Details
+      +
+Target Date
+      +
+Mapped Assets
+      ↓
+Validated Goal Inputs
+```
 
 ---
 
-## 3. What the System Does
+## 3. System Outputs
 
-| Stage | System action | Investor sees |
-|---|---|---|
-| Goal input | Validate and normalise | Goal |
-| Timeline | Calculate duration | Time remaining |
-| Future target | Calculate target amount | Future requirement |
-| Asset mapping | Project mapped assets | Expected funding |
-| Funding gap | Compare target vs assets | Shortfall / On Track / Overfunded |
-| Contribution | Calculate required contribution | Monthly requirement |
-| Capacity | Read financial capacity | Available capacity |
-| Feasibility | Assess funding supportability | Feasible / Constrained / Infeasible / Unknown |
+| Stage | Output |
+|---|---|
+| Goal Validation | Valid / Missing Inputs |
+| Timeline | Time Remaining |
+| Target Calculation | Future Requirement |
+| Asset Projection | Projected Mapped Resources |
+| Funding Gap | Gap / Surplus |
+| Required Contribution | Contribution Amount |
+| Goal-Level Return Required | Required Return |
+| Financial Capacity | Available Capacity + Obligations |
+| Goal Feasibility | Feasibility Result + Reasons |
 
 ---
 
-## 4. Feasibility Branch
+## 4. Goal Feasibility
 
-### Feasible
-
-```
-Feasible
-   ↓
-Review
-   ↓
-Continue
-   ↓
-Strategy Decision
-```
-
-### Constrained / Infeasible
+### Approach 1 — Financial Optimization
 
 ```
-Result
-   ↓
-Investor reviews issue
-   ↓
-Change permitted goal assumptions?
-   ├─ Yes → Recalculate
-   └─ No  → Preserve current result
+Current Goal Conditions
+          ↓
+Financial Capacity
+          ↓
+Compare Relevant Funding Paths
+          ↓
+Constraints + Opportunity Cost
+          ↓
+Recalculate Feasibility
+          ↓
+     ┌────┴─────┐
+     ↓          ↓
+  Feasible   Still Infeasible
+     ↓          ↓
+ Investor    Approach 2
+   Review
 ```
 
-The system must **not silently change the investor's goal** to make it feasible.
+**Compare where relevant:**
+- Goal Funding
+- Debt Prepayment
+- Loan / EMI Changes
+- Liquidity
+- Competing Goals
+- Opportunity Cost
 
-### Unknown
+### Approach 2 — Goal Adjustment
+
+*Only if Approach 1 remains infeasible.*
 
 ```
-Missing financial evidence
-        ↓
-Feasibility = Unknown
-        ↓
-Obtain required evidence
-        ↓
+Still Infeasible
+       ↓
+Calculate Required Change
+       ↓
+┌──────┼────────┐
+↓      ↓        ↓
+Lower  Later    Combined
+Target Date     Change
+└──────┼────────┘
+       ↓
 Recalculate
+       ↓
+Investor Review
+       ↓
+Accept / Reject
 ```
 
-Missing data must not be treated as Feasible or Infeasible.
+**Rule:** No automatic goal change. No forced feasibility.
+
+### Other Results
+
+```
+Missing / Invalid Evidence
+          ↓
+        Unknown
+          ↓
+   Obtain Evidence
+          ↓
+      Recalculate
+```
+
+```
+No Acceptable Path
+        ↓
+Show Shortfall + Constraints
+        ↓
+Preserve Current Goal
+```
 
 ---
 
 ## 5. Investor Adjustment Loop
 
-If the investor changes an input:
-
 ```
-Changed Input
-    ↓
-Recalculate affected outputs
-    ↓
-Updated Funding Gap
-    ↓
-Updated Contribution
-    ↓
-Updated Feasibility
-    ↓
-Investor reviews again
+Input Changed
+     ↓
+Recalculate Affected Outputs
+     ↓
+Funding Gap / Contribution / Return
+     ↓
+Funding Paths + Feasibility
+     ↓
+Investor Review
 ```
 
-Examples:
-
-- Target date changes → timeline and downstream funding calculations update.
-- Goal cost changes → future target and funding calculations update.
-- Asset mapping changes → projected assets and funding gap update.
-- Financial capacity changes → feasibility is re-evaluated.
+| Changed Input | Recheck |
+|---|---|
+| Target Date | Timeline, Target, Funding, Feasibility |
+| Target Amount / Cost | Target, Gap, Contribution / Return, Feasibility |
+| Asset Mapping / Value | Projected Assets, Gap, Funding Paths |
+| Income / Expenses / Surplus | Capacity, Funding Paths, Feasibility |
+| Debt / EMI / Terms | Cash Flow, Debt Paths, Feasibility |
+| Return / Inflation Assumptions | Affected Projections + Calculations |
+| Priority / Flexibility / Constraint | Path Eligibility + Feasibility |
 
 ---
 
-## 6. What the Investor Should Get
-
-At the end of Goal Planning:
+## 6. Investor Result
 
 ```
-Goal
-Target Date
-Future Target
-Mapped Assets
-Projected Asset Value
+Goal + Target Date
+        ↓
+Future Requirement
+        ↓
+Projected Resources
+        ↓
 Funding Gap
-Required Contribution
+        ↓
+Required Contribution / Return
+        ↓
 Financial Capacity
-Goal Feasibility
+        ↓
+Feasibility + Reasons
+        ↓
+Funding Paths + Trade-offs
+        ↓
+Next Action
 ```
 
-The core question answered is:
-
-> **"Is this goal financially supportable under the current assumptions?"**
+**Result labels:**
+- Feasible
+- Constrained
+- Infeasible
+- Unknown
+- No Acceptable Path
 
 ---
 
-## 7. Handoff
+## 7. Whole-Plan Impact
 
-Goal Planning produces a canonical **Defined Goal**.
+```
+Material Shared-Resource / Plan Impact?
+                 ↓
+           ┌─────┴─────┐
+           ↓           ↓
+           No          Yes
+           ↓           ↓
+       Goal-Level   Assess Affected
+         Result     Goals + Plan
+```
+
+---
+
+## 8. Strategy Decision Handoff
 
 ```
 Defined Goal
@@ -178,72 +230,51 @@ Funding / Feasibility Evidence
      +
 Relevant Constraints
         ↓
-Strategy Decision
+Strategy Decision / Strategy Builder
 ```
 
-Goal Planning does **not** decide:
-
-- Progressive De-risking
-- Capital Preservation
-- Debt Reduction
-- Credit Utilisation
-- Variant
-- Technique
-- Solution
-
-Those belong downstream.
+**Goal Planner:** Goal requirement + funding paths + feasibility  
+**Strategy Builder:** Strategy / variant and execution design  
+**Accepted Plan:** Investor adoption required
 
 ---
 
-## 8. Boundaries
-
-**What-if:** optional. It can test a proposed change but does not automatically change the accepted state.
-
-**Whole-Plan Impact:** conditional. It is used when the goal affects competing goals, shared resources, or an existing plan.
-
-**Accepted Plan:** not created here. Investor adoption happens downstream.
-
----
-
-## 9. Simple Example
-
-Investor:
-
-> "I want to fund education in 10 years."
-
-Journey:
+## 9. Example
 
 ```
 Education Goal
-    ↓
-10-year timeline
-    ↓
-Future education cost
-    ↓
-Existing education assets
-    ↓
-Projected asset value
-    ↓
-Funding gap
-    ↓
-Required contribution
-    ↓
-Available surplus
-    ↓
-Feasibility
-    ↓
-Continue to Strategy Decision
+      ↓
+Target: 10 Years
+      ↓
+Future Education Cost
+      ↓
+Mapped Assets + Projection
+      ↓
+Funding Gap
+      ↓
+Required Contribution / Return
+      ↓
+Financial Capacity
+      ↓
+Goal Feasibility
+      ↓
+Investor Review
 ```
 
-The system does **not** automatically say:
-
-> "10 years = Progressive De-risking."
-
-Strategy selection happens after Goal Planning.
+*Example inputs are illustrative, not system defaults.*
 
 ---
 
 ## 10. Core Rule
 
-**Goal Planning defines and tests the goal.  
-Strategy Decision decides how the goal should be approached.**
+```
+Goal Planning
+      ↓
+Define + Calculate + Test
+      ↓
+Goal Feasibility
+      ↓
+Investor Decision
+      ↓
+Strategy Decision
+```
