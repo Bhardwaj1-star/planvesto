@@ -117,13 +117,13 @@ For example:
 
 | Financial requirement | Applicable strategy |
 |---|---|
-| Education goal funding | Goal Funding |
+| Education goal funding / feasibility | Goal Planner funding path (not a Strategy Builder strategy) |
 | Retirement risk transition | Progressive De-risking |
 | High-cost debt | Debt Reduction |
 | Goal timing/liquidity gap | Credit Utilisation |
 | Capital that must be protected | Capital Preservation |
 
-The exact combination depends on the investor's financial state, goals, constraints, and accepted trade-offs.
+The exact combination depends on the investor's financial state, goals, constraints, and accepted trade-offs. Goal Planner funding paths remain separate from Strategy Builder strategies. For each individual Strategy Builder decision, present exactly two Strategy options; a whole plan may contain multiple coordinated strategies across different goals or requirements.
 
 ---
 
@@ -156,23 +156,23 @@ Consider an investor with:
 
 The resulting financial plan could simultaneously use:
 
-### Strategy A — Goal Funding
+### Goal Planner funding path — Education Goal
 
-For the Education Goal.
+Goal Planner determines whether Education is feasible and compares its funding paths. This is not a Strategy Builder strategy and is not counted among the four canonical strategies.
 
-### Strategy B — Progressive De-risking
+### Strategy A — Progressive De-risking
 
 For the Retirement Goal as it approaches its target period.
 
-### Strategy C — Debt Reduction
+### Strategy B — Debt Reduction
 
 For the expensive loan.
 
-### Strategy D — Credit Utilisation
+### Strategy C — Credit Utilisation
 
-Where an appropriate temporary funding/timing gap exists.
+Where an appropriate temporary funding/timing gap exists and borrowing is viable.
 
-### Strategy E — Capital Preservation
+### Strategy D — Capital Preservation
 
 Where specific capital needs protection.
 
