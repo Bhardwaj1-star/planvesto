@@ -217,22 +217,7 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 15. Tests cover calculation boundaries, missing/invalid inputs, asset resolution, shared-resource conflicts, funding-path comparisons, version history, ownership, and non-mutation before adoption.
 16. Test results, live database/RLS state, and deployment status are reported only when actually verified.
 
-## 12. Implementation sequence for a coding agent
-
-1. Read this specification, `docs/feature/Goal-Planner.md`, and all relevant documents under `docs/existing features/Goal-Planner/`.
-2. Re-audit current `main` before relying on the older evidence revision; identify changed files and any stale evidence.
-3. Trace goal input/output schemas, API preview/save endpoints, goal engine, feasibility service, asset projection, funding-gap logic, funding-strategy functions, repository/versioning, frontend and tests.
-4. Mark each behavior as code-verified, required business behavior, or unresolved. Do not infer implementation from documentation alone.
-5. Freeze the typed feasibility/funding-path contract and status semantics before broad edits.
-6. Trace all authoritative sources for debt terms, cash flow, investment assumptions and Moneywheel outputs; do not invent data fields or defaults.
-7. Implement missing behavior incrementally while preserving compatible existing goal APIs and historical snapshots.
-8. Define cross-goal impact triggers and targeted revalidation through the shared planning lifecycle; avoid a duplicate private policy in Goal Planner.
-9. Wire Goal Planner's typed output into Strategy Builder and relevant impact-analysis consumers.
-10. Add unit, API-contract, service, persistence/version, frontend and cross-feature integration tests.
-11. Run the relevant test suites and record actual results, failures and tests not run.
-12. Report changed files, unresolved assumptions, migrations, tests and deployment verification separately.
-
-## 13. Source authority and evidence
+## 12. Source authority and evidence
 
 ### Goal Planner feature intent
 - `docs/feature/Goal-Planner.md`
@@ -253,6 +238,6 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 - `docs/Real-Life Decision Cases/16-CONCEPTS_OUTSIDE_EXISTING_FEATURES_REGISTER.md`
 - `docs/implementations/Moneywheel.md`
 
-## 14. Explicit non-goals
+## 13. Explicit non-goals
 
 This specification does not authorize an unreviewed rewrite of all goal formulas, hidden/default assumptions presented as investor facts, automatic selection of Debt Reduction or investment from one metric, treating asset mapping as earmarking, forced recommendations when no path is acceptable, automatic replacement of an Accepted Plan, indiscriminate whole-plan rebuilds, duplicating Moneywheel calculations, or claiming tests/production database/RLS/deployment are verified without evidence.
