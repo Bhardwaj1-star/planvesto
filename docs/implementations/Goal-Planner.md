@@ -3,8 +3,6 @@
 **Document type:** Authoritative implementation specification  
 **Scope:** Goal definition, funding requirement, feasibility, funding-gap analysis, alternative funding paths, and conditional multi-goal impact  
 **Status:** Business rules consolidated from the feature specification, existing-code evidence, and Real-Life Decision Cases. This document does not claim every required workflow is currently implemented.  
-**Existing-code audit baseline:** `5a3b060e1b27915ede226f5173364e23dca1263e` for the cited Goal Planner backend evidence; confirm current `main` before implementation.
-
 ## 1. Purpose and ownership
 
 Goal Planner answers: **What does this goal require, can it be funded under explicit assumptions, what is the funding gap, and which feasible funding paths are available?**
@@ -47,7 +45,6 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 
 - **Funding scenario:** a calculation case defined by a funding mechanism or combination, contribution/cash-flow schedule, eligible resources, and declared assumptions. It can be compared with other funding scenarios; it is not an adopted plan.
 - **Goal-condition adjustment:** a proposed reduction in target amount and/or extension of target date calculated by Goal Feasibility Approach 2 only after Approach 1 remains infeasible. It is not a separate What-If feature or engine.
-- **Saved goal version:** a persisted snapshot of the goal's inputs and relevant version metadata.
 - **Accepted Plan:** a funding/implementation proposal explicitly adopted through the investor-decision lifecycle.
 
 Use “funding scenario” only for alternative funding assumptions/mechanisms. Use “Goal Feasibility adjustment” for Approach 2 target/date changes. Neither is accepted automatically or mutates the canonical goal before investor acceptance.
@@ -66,7 +63,7 @@ The goal input contract should represent, as applicable:
 - Relevant debt terms and cash-flow facts when comparing financing alternatives.
 - Assumptions for each funding scenario: return, contribution, timing, debt repayment, and any other modeled change.
 - Existing Accepted Plan / relevant plan version when evaluating a change to an active plan.
-- Reference date and calculation/version metadata.
+- Reference date and calculation assumptions.
 
 Do not treat a client-supplied financial snapshot as the authoritative source if a server-owned source exists. Validate ownership and scope for goal, planning unit, assets, and persisted versions.
 
@@ -87,7 +84,7 @@ The following is the required logical contract. Preserve existing implementation
 9. **Run Goal Feasibility — Approach 2 only if still infeasible.** Calculate the goal-condition changes that would be needed to make it feasible under the evidenced financial capacity—principally a lower target amount, a later target date, or a combination. Quantify the required adjustment and recalculate the requirement, contribution, funding gap, and feasibility. These are feasibility adjustments identified by Goal Planner, not an independent What-If feature or separate engine. The investor's canonical goal must not be changed without explicit acceptance.
 10. **Assess broader impact conditionally.** If shared resources, other goals, or an Accepted Plan may be materially affected, invoke Whole-Plan / Multi-Goal Impact Analysis and identify affected decisions for revalidation.
 11. **Return a typed result.** Include calculations, assumptions, missing inputs, feasibility state, Approach 1 findings, any necessary Approach 2 adjustment, funding paths, trade-offs, and traceability metadata.
-12. **Persist only through the appropriate lifecycle.** Calculation/preview must not accidentally become an accepted plan. Versioned goal persistence and investor acceptance are separate transitions.
+12. **Keep calculation and investor decisions separate.** A calculation/preview must not accidentally become an accepted plan. Saving goal details and accepting a funding path or goal-condition change are separate decisions.
 
 ### Feasibility semantics
 
@@ -98,7 +95,7 @@ Use distinct states for at least:
 - **Incomplete / cannot determine:** required inputs or authoritative evidence are missing/invalid.
 - **No acceptable path:** modeled options fail investor-defined or canonical constraints; do not force a path.
 
-Exact status names and mapping to existing response schemas must be reconciled with the current implementation before changing contracts. Do not turn a diagnostic or warning into a hard block without an explicitly owned canonical rule.
+Keep result states consistent with the existing implementation where verified; do not turn a diagnostic or warning into a hard block without an explicitly owned canonical rule. Do not turn a diagnostic or warning into a hard block without an explicitly owned canonical rule.
 
 ## 5. Funding gap, funding mechanisms, required return, and feasibility
 ### 5.1 Goal-Level Return Required
@@ -236,14 +233,14 @@ Do not rebuild unrelated decisions automatically. Materiality thresholds, depend
 
 ## 9. Relationship with Strategy Builder and Action Plan
 
-Goal Planner's output should provide a typed, versioned feasibility/funding context, including:
+Goal Planner's output should provide a clear goal and feasibility/funding context, including:
 - Goal identity/type and target requirements.
 - Target date/duration and calculation assumptions.
 - Mapped-resource evidence and availability caveats.
 - Funding gap/surplus and required contribution.
 - Feasibility state, reasons, and missing inputs.
 - Evaluated funding paths and their trade-offs, when available.
-- Relevant Moneywheel evidence and freshness/version metadata.
+- Relevant Moneywheel metrics, assumptions, and freshness information.
 - Whole-plan impact/revalidation information when applicable.
 
 Strategy Builder consumes this context to evaluate strategy/variant eligibility and design execution. It must not:
@@ -307,7 +304,7 @@ Do not rebuild unrelated calculations just because one input changed. Use the sh
 
 ### Feasibility result mapping and next action
 
-The system must keep a clear distinction between the internal result and its investor-facing label. The following is the canonical display mapping; if existing API enums differ, map them at the response/UI boundary rather than creating a second feasibility engine.
+The system must keep a clear distinction between the underlying result and the label shown to the investor. Keep this mapping consistent with the existing result contract rather than creating a second feasibility engine.
 
 | Investor-facing label | Required meaning | Next supported action |
 |---|---|---|
@@ -328,80 +325,13 @@ For all results, the next action must preserve investor control:
 
 ### Real-life cases as test fixtures, not defaults
 
-Use the documented real-life cases as regression/acceptance-test fixtures for the relevant calculations and path comparisons. Their figures are examples only and must never become hidden product defaults or assumed values for other investors.
+Use the documented real-life cases as regression-test fixtures for the relevant calculations and path comparisons. Their figures are examples only and must never become hidden product defaults or assumed values for other investors.
 
 - **Retirement comparison fixture:** 25-year horizon; ₹20 lakh current corpus; ₹2 crore required corpus; ₹2 lakh monthly income; ₹1.2 lakh monthly expenses; ₹10,000 EMI; approximately ₹70,000 monthly surplus; approximately 8% home-loan interest assumption. Test that relevant debt-repayment, retirement-investment, and loan-restructuring paths are compared only when their required inputs are available, and that no path is automatically selected from debt existence or the assumed return spread.
 - **Education fixture:** ₹20 lakh current cost with a 10-year target horizon. Test target-date requirement, mapped-asset projection, funding gap, required contribution/return where supported, and feasibility evidence. Expected future target and outputs must be calculated from explicit test assumptions, not hardcoded from this example.
 
 Tests must verify the calculation/output contract and decision rules, not require one illustrative path to win regardless of the supplied assumptions.
 
-## 10. API, persistence, versioning, and UI contract
-
-- Preserve authentication and planning-unit/goal/asset ownership enforcement.
-- Preserve the distinction between preview/calculation and save/persist operations.
-- Use typed schemas for goal input, calculation result, feasibility, funding paths, assumptions, and version metadata.
-- Persist versioned goal snapshots where the existing save contract requires it; make historical versions distinguishable from current versions.
-- Record assumption sources, reference date, calculation version, and relevant source snapshot/version.
-- On a material goal update, trigger the existing/defined targeted recalculation and revalidation path; do not silently replace an Accepted Plan.
-- Display missing/incomplete inputs and assumptions next to results; do not render unavailable values as zero or as healthy.
-- Show projected values as estimates with assumptions, not guarantees.
-- Keep Goal History/reporting consistent with these distinct concepts: a **saved goal version** is a persisted snapshot of goal inputs; a **funding scenario** is a calculation using specified funding mechanisms, cash-flow schedules, and assumptions; a **Goal Feasibility adjustment** is a proposed target-amount reduction and/or target-date extension calculated only in Approach 2; an **Accepted Plan** is a proposal explicitly adopted by the investor. A Goal Feasibility adjustment is not a separate What-If feature, and neither a funding scenario nor an adjustment changes the canonical goal or Accepted Plan before acceptance.
-- Verify live database schema, RLS, and production deployment independently; source-level table references do not prove production state.
-
-## 11. Acceptance criteria
-
-1. Goal inputs and goal-type-specific requirements are validated, with missing inputs surfaced explicitly.
-2. Target-date requirement, mapped-resource projection, funding gap/surplus, and required contribution are traceable to named assumptions.
-3. Feasibility status distinguishes feasible, feasible-with-changes, not-feasible, incomplete, and no-acceptable-path outcomes (or a reviewed compatible equivalent).
-4. Funding mechanisms are not misclassified as Strategy Builder strategies.
-5. Alternative funding paths use comparable assumptions and expose cash-flow, debt, liquidity, timing, uncertainty, and competing-goal consequences where relevant.
-6. Debt existence, DTI, leverage, or a negative Investment–Debt Spread alone never selects a strategy.
-7. Goal Planner consumes canonical Moneywheel metrics and metadata without duplicating their formulas.
-8. Asset mapping never implicitly earmarks, sells, locks, or commits the asset.
-9. Shared assets/surplus are not silently counted as fully available to multiple goals.
-10. Whole-plan analysis is invoked when a material cross-goal dependency exists and is not indiscriminately run for every local edit.
-11. Calculating feasibility alternatives or proposed goal-condition adjustments does not overwrite the canonical goal or Accepted Plan before explicit investor acceptance.
-12. A goal cancellation does not delete the underlying Financial State asset; earmark release/remapping is a separate lifecycle action.
-13. Material changes trigger targeted recalculation/revalidation under a shared, explicit policy.
-14. Strategy Builder receives a typed feasibility/funding context and does not silently recreate feasibility.
-15. Tests cover calculation boundaries, missing/invalid inputs, asset resolution, shared-resource conflicts, funding-path comparisons, version history, ownership, and non-mutation before adoption.
-16. Test results, live database/RLS state, and deployment status are reported only when actually verified.
-17. Goal-Level Return Required is scenario-specific, traceable to cash-flow timing and assumptions, and distinct from required contribution and expected return.
-18. Constraint violations are not bypassed to manufacture feasibility; an unacceptable/no-path result is supported.
-19. Goal Feasibility first evaluates financial-capacity/surplus optimization, including relevant Opportunity Cost comparisons, without changing the investor's current target amount or date.
-20. If Approach 1 is insufficient, Goal Feasibility calculates the required target-amount reduction and/or target-date extension, quantifies their effects, and leaves the canonical goal unchanged until explicit investor acceptance.
-21. Both approaches use the same feasibility rules/engine; there is no separate What-If feasibility engine or duplicate calculation path.
-22. If no financially acceptable path or goal adjustment exists within constraints, the result clearly reports no acceptable path and the binding reasons.
-23. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
-
-24. The end-to-end calculation contract returns the required evidence for goal setup, timeline/target, asset projection, funding gap, financial capacity, feasibility, investor decision, and Strategy Builder handoff.
-25. Funding-path comparisons use a consistent baseline and expose material debt, cash-flow, liquidity, investment-assumption, goal, risk, and opportunity-cost differences only where supported by evidence.
-26. Material input changes trigger the dependency-specific recalculations listed in this specification without rebuilding unrelated decisions.
-27. Investor-facing Feasible, Constrained, Infeasible, Unknown, and No acceptable path labels map to explicit underlying result states and lead to the correct next action.
-28. The retirement and education real-life cases are regression-test fixtures only; their example values are never used as product defaults.
-29. An Unknown result directs the workflow to resolve missing/unreliable evidence; it is never treated as feasible or infeasible by assumption.
-
-## 12. Source authority and evidence
-
-### Goal Planner feature intent
-- `docs/feature/Goal-Planner.md`
-
-### Existing-code evidence (audited at the stated source revision; re-check against current main)
-- `docs/existing features/Goal-Planner/00-BACKEND-INDEX.md`
-- `docs/existing features/Goal-Planner/01-API-AND-REQUEST-BOUNDARY.md`
-- `docs/existing features/Goal-Planner/02-TAXONOMY-AND-DATA-CONTRACTS.md`
-- `docs/existing features/Goal-Planner/03-GOAL-CALCULATION-ENGINE.md`
-- `docs/existing features/Goal-Planner/04-ASSET-MAPPING-AND-FUNDING-PROJECTIONS.md`
-- `docs/existing features/Goal-Planner/05-FEASIBILITY-AND-WORKFLOW-READINESS.md`
-- `docs/existing features/Goal-Planner/06-PERSISTENCE-AND-VERSIONING.md`
-- `docs/existing features/Goal-Planner/07-MULTI-GOAL-PLANNING.md`
-- `docs/existing features/Goal-Planner/08-TESTS-AND-EVIDENCE-GAPS.md`
-
-### Cross-feature business-rule evidence (intent, not proof of runtime implementation)
-- `docs/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
-- `docs/Real-Life Decision Cases/16-CONCEPTS_OUTSIDE_EXISTING_FEATURES_REGISTER.md`
-- `docs/implementations/Moneywheel.md`
-
-## 13. Explicit non-goals
+## 10. Explicit non-goals
 
 This specification does not authorize an unreviewed rewrite of all goal formulas, hidden/default assumptions presented as investor facts, automatic selection of Debt Reduction or investment from one metric, treating asset mapping as earmarking, forced recommendations when no path is acceptable, automatic replacement of an Accepted Plan, indiscriminate whole-plan rebuilds, duplicating Moneywheel calculations, or claiming tests/production database/RLS/deployment are verified without evidence.
