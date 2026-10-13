@@ -17,7 +17,7 @@ Where the audit describes existing runtime behavior that differs from the target
 
 ## 2. Purpose and ownership
 
-Strategy Builder prepares relevant strategy alternatives for the investor from the investor's financial situation and goal context. It does not make the final strategy choice on the investor's behalf; the investor reviews the alternatives and decides.
+Strategy Builder prepares strategy alternatives for the investor from the investor's financial situation and goal context. It presents **exactly two Strategy options for each decision**. It does not make the final strategy choice on the investor's behalf; the investor reviews the alternatives and decides.
 
 Goal Planner does **not** send a Strategy to Strategy Builder. Goal Planner's responsibility is to establish the goal-feasibility approach/result and related funding context. The connection between Goal Planner's feasibility output and Strategy Builder's strategy generation will be defined when the two features are connected later. Do not assume or implement a strategy-selection dependency from Goal Planner.
 
@@ -32,7 +32,7 @@ Exactly these four strategies belong to Strategy Builder:
 
 **Goal Funding is owned by Goal Planner / Goal Feasibility. It is not a fifth Strategy Builder strategy.** SIP, lump sum, step-up contributions, contribution escalation, and combinations of funding mechanisms remain in the Goal Planner funding domain unless an explicit business decision changes their ownership.
 
-If no candidate strategy is acceptable, the result is **No Acceptable Strategy / No Acceptable Path**. The system must not force a strategy merely to produce a recommendation.
+If no acceptable path exists, the result must explicitly say **No Acceptable Strategy / No Acceptable Path**. The requirement to present two options does not permit the system to claim that an unviable option is suitable, hide a failed viability check, or force the investor to adopt either option. Each displayed option must show its actual status and supporting reasons.
 
 ## 3. Target decision flow
 
@@ -45,18 +45,18 @@ Applicable Constraints
           ↓
 Constraint / Safety Evaluation
           ↓
-Dynamic Strategy Alternative Generation
+Generate Exactly Two Strategy Options
           ↓
-Applicability / Viability Evaluation of Each Alternative
+Applicability / Viability Evaluation of Each Option
           ↓
-For Each Presented Alternative:
+For Each Option:
 Strategy → Variant → Technique → Method / Policy
           ↓
 Architecture Composition + Solution Proposal
           ↓
 Relevant Stress / Resilience and Comparison
           ↓
-Present Alternatives + Evidence / Trade-offs to Investor
+Present Both Options + Evidence / Trade-offs to Investor
           ↓
 Explicit Investor Decision / Adoption
           ↓
@@ -91,13 +91,13 @@ Unavailable evidence must remain distinguishable from a failed check. Missing in
 ### Outputs
 
 - An authoritative decision result and its status.
-- Strategy alternatives presented to the investor and the evidence/reasons for each.
-- The variant and implementation proposal for each presented alternative, or an explicit No Acceptable Strategy / No Acceptable Path result.
+- **Exactly two Strategy options** presented to the investor, each with its own applicability/viability status and evidence/reasons.
+- The variant and implementation proposal for each option where the option is viable and the required evidence exists; otherwise, an explicit status and reason such as Not Applicable, Not Viable, Insufficient Inputs, or No Acceptable Path.
 - Technique policy results, including reasons for Required, Conditional, Optional, Not Applicable, or Insufficient Inputs.
-- Architecture and a concrete investor-specific Solution proposal.
+- Architecture and a concrete investor-specific Solution proposal for options that can validly be composed.
 - Relevant assumptions, evidence, constraints, trade-offs, and stress/resilience findings.
 - Conditional whole-plan impact findings when applicable.
-- An explainable recommendation and supporting decision evidence.
+- An explainable comparison and recommendation that does not misrepresent an option's status.
 - A proposal/adoption state that remains separate from the active Accepted Plan.
 
 ## 5. Decision domains and boundaries
@@ -110,14 +110,14 @@ Each domain has a separate responsibility.
 | Constraint / Safety Evaluation | Which applicable restrictions or non-negotiable conditions govern the decision? | A diagnostic or warning is not automatically a hard blocker |
 | Strategy Applicability | Can this strategy legitimately apply to this situation? | Applicability is not viability |
 | Strategy Viability | Can the applicable candidate work under the actual financial conditions and constraints? | Failed viability must not be overridden merely to produce an answer |
-| Strategy Alternative Generation | Which strategy alternatives are relevant and viable enough to present to the investor? | Dynamic; no fixed scoring rule or score-based ranking. The system presents alternatives rather than choosing the investor's strategy |
+| Strategy Alternative Generation | Which two Strategy options should be presented for this decision? | Exactly two options must be presented; no fixed scoring rule or score-based ranking. Show evidence and status for each; do not choose on the investor's behalf |
 | Variant Selection | Which structural form of the selected strategy fits the situation? | Variant is subordinate to one of the four strategies |
 | Technique Selection | Which reusable mechanisms are required or permitted by the selected Strategy + Variant? | Mapping is variant-specific; technique status must preserve the policy vocabulary |
 | Method / Policy | How is a selected technique applied in this context? | A method is not a separate strategy or technique merely because it describes an operation |
 | Architecture | How are the selected elements and dependencies composed? | Composition follows the selected Strategy, Variant, and technique decisions in the target flow |
 | Solution | What concrete implementation outcome is proposed for this investor? | Solution must not merely duplicate a Variant or Technique under another label |
 | Stress / Resilience | Does the proposed path remain acceptable under defined adverse or changed assumptions? | Reuses the canonical decision domains; it is not a separate competing decision engine |
-| Recommendation | How is the authoritative decision explained to the investor? | Explains the decision; does not silently replace the decision authority |
+| Recommendation | How is the authoritative decision explained to the investor? | Explains both options and their trade-offs; does not silently replace the decision authority |
 | Investor Decision / Accepted Plan | Has the investor adopted the proposal into the active plan? | A recommendation, saved scenario, or history record is not proof of adoption |
 
 ## 6. Constraints, applicability, viability, and selection
@@ -130,7 +130,7 @@ The existing audit identifies emergency-reserve, debt-burden/DTI, goal-validity,
 
 ### Applicability
 
-A strategy enters the candidate set only when its documented situation conditions fit the goal, financial state, funding position, and applicable constraints.
+Evaluate the canonical strategies against the actual situation. The system must still present exactly two Strategy options, but must not mislabel a strategy as applicable when its documented conditions do not fit. If an option is not applicable, display that status and the reason rather than concealing it or pretending it is viable.
 
 ### Viability
 
@@ -148,11 +148,17 @@ For Credit Utilisation, the documented viability gates are:
 
 Failure of a material Credit Utilisation viability gate means Credit Utilisation fails viability and must not be recommended.
 
-### Strategy selection
+### Strategy selection and two-option presentation
 
-Strategy alternatives are prepared only after applicability, viability, and applicable constraints have been evaluated. Present the relevant alternatives with evidence and trade-offs so the investor can decide; the system must not silently choose one on the investor's behalf.
-
-The number and composition of alternatives are dynamic, not governed by a fixed universal rule. Do not invent score weights, numerical thresholds, score-based rankings, or fixed tie-breaking rules. The Goal Planner-to-Strategy Builder connection will be specified separately when those features are connected.
+- Present **exactly two Strategy options for every decision**. This is a fixed presentation requirement, not a dynamic count.
+- The options must come from the four canonical Strategy Builder strategies. Goal Funding is not a Strategy Builder option.
+- Do not require the second option to prove that it is better than the first before displaying it. Show both options with comparable evidence, assumptions, benefits, limitations, risks, and trade-offs wherever that evidence is available.
+- Do not automatically label one option “better” or declare a winner without comparable evidence and stated assumptions.
+- Evaluate and display each option's applicability and viability honestly. An option that fails a check must be marked with the relevant status and reason; it must not be recommended as suitable.
+- If fewer than two options are viable, still show exactly two Strategy options and clearly disclose the non-viable, non-applicable, or insufficient-input status. Do not invent a viable path or force acceptance. If no acceptable path exists, explicitly show **No Acceptable Strategy / No Acceptable Path**.
+- The investor makes the final choice, subject to genuinely hard constraints. A recommendation is guidance, not automatic adoption.
+- Do not invent score weights, numerical thresholds, score-based rankings, or fixed tie-breaking rules.
+- The Goal Planner-to-Strategy Builder connection will be specified separately when those features are connected.
 
 ## 7. Strategy-specific applicability boundaries
 
@@ -331,7 +337,7 @@ Architecture composition belongs after Strategy, Variant, and technique decision
 
 ## 11. Opportunity cost and implementation comparison
 
-Goal Planner owns goal feasibility and funding-path context. Strategy Builder consumes that context and may compare meaningful implementation alternatives where the required evidence exists.
+Goal Planner owns goal feasibility and funding-path context. Strategy Builder consumes that context and compares the two presented Strategy options where the required evidence exists.
 
 Relevant comparison dimensions recorded by the feature definition include:
 - Goal outcome and funding result.
@@ -341,7 +347,7 @@ Relevant comparison dimensions recorded by the feature definition include:
 - Risk/protection assumptions.
 - Competing-goal or shared-resource impact when relevant.
 
-Do not declare one alternative better without comparable evidence and stated assumptions. The feature definition records that current runtime pass-through of Opportunity Cost evidence and its effect on strategy selection remain unverified. Do not claim those behaviors are already implemented.
+Do not declare one option better without comparable evidence and stated assumptions. The feature definition records that current runtime pass-through of Opportunity Cost evidence and its effect on strategy selection remain unverified. Do not claim those behaviors are already implemented.
 
 ## 12. Stress, resilience, and revalidation
 
@@ -392,7 +398,7 @@ A completed decision must preserve enough evidence to explain:
 1. The goal and actual financial situation.
 2. Goal Planner feasibility/funding evidence used.
 3. Applicable constraints and their outcomes.
-4. Which of the four strategies were applicable.
+4. The two Strategy options presented and each option's applicability/viability status.
 5. Which applicable candidates failed viability and why.
 6. The selected strategy and the evidence supporting the selection, or why no acceptable path exists.
 7. The selected variant and its situation mapping.
@@ -425,7 +431,9 @@ These are audit findings, not claims that a fix has been implemented by this doc
 - The target Strategy Builder has four strategies, not five.
 - Goal Funding and its contribution/funding mechanisms remain owned by Goal Planner / Goal Feasibility.
 - The target flow has no separate eight-eligibility-fits stage.
-- The target sequence generates strategy alternatives for investor review; for each alternative, Strategy → Variant → Technique / Method precedes Architecture / Solution composition.
+- **Every decision presents exactly two Strategy options.** This is mandatory; do not use a dynamic option count.
+- Each option's applicability, viability, evidence, assumptions, and trade-offs must be shown honestly. Showing an option does not mean endorsing it.
+- The target sequence evaluates and presents the two options for investor review; for each valid implementation, Strategy → Variant → Technique / Method precedes Architecture / Solution composition.
 - Goal Planner supplies goal-feasibility/funding context, not a Strategy. The integration between its feasibility output and Strategy Builder is a later connection and must not be assumed here.
 - Stress / Resilience and conditional Whole-Plan Impact remain distinct responsibilities.
 - Decision / Recommendation, Investor Decision, Accepted Plan, Action Plan, and Execution remain separate lifecycle states.
@@ -441,4 +449,3 @@ Exact score weights, selection tie-breaks, numerical thresholds, stress taxonomy
 - **The 8 Eligibility Fits have no role in the Strategy Builder system.** Remove them completely; they must not exist as a separate stage, gate, evaluation, or decision input.
 - Neither Scoring nor the 8 Eligibility Fits may be used by the frontend, backend, recommendation flow, or any other part of the system.
 - Treat both as removed from the target system—not as pending features, optional checks, legacy fallbacks, or alternate decision paths.
-
