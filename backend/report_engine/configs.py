@@ -40,9 +40,8 @@ FINANCIAL_PLAN_SECTIONS = [
     {"id": "consolidated_funding", "title": "3. Consolidated Funding Capacity & Resource Waterfall"},
     {"id": "goal_ladder", "title": "4. Multi-Goal Strategic Priority Ladder & Allocations"},
     {"id": "family_cash_flow", "title": "5. Family Multi-Year Cash Flow Trajectory"},
-    {"id": "ratio_constraints", "title": "6. Key Financial Health & Ratio Constraints"},
-    {"id": "contingency_matrix", "title": "7. Family Contingency & Shock-Absorber Matrix"},
-    {"id": "governance_protocol", "title": "8. Ongoing Governance & Rebalancing Protocol"},
+    {"id": "contingency_matrix", "title": "6. Family Contingency & Shock-Absorber Matrix"},
+    {"id": "governance_protocol", "title": "7. Ongoing Governance & Rebalancing Protocol"},
 ]
 
 SUMMARY_REPORT_SECTIONS = [
