@@ -53,7 +53,7 @@
 
 ## 8. Relationship to Accepted Plan and Action Plan
 - Generated recommendation, saved scenario, investor adoption, Accepted Plan and Action Plan are separate lifecycle states.
-- Canonical target lifecycle: goal feasibility/funding context → Strategy Decision → Variant → Technique/Method → Solution Proposal → Stress/Resilience and targeted revalidation → Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+- Canonical target lifecycle: goal feasibility/funding context → Strategy Decision → Variant → Technique/Method → Architecture → Solution → Stress/Resilience and targeted revalidation → Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
 - A What-If scenario remains isolated from the active Accepted Plan until the investor adopts the revised path.
 - Execution changes do not automatically mean the canonical strategy has changed. Re-evaluate strategy only when the changed execution materially affects applicability, viability, constraints or outcomes.
 - No acceptable path is a valid outcome. An investor-designed strategy may be evaluated, but it must not be activated merely because no standard candidate passed.
@@ -102,7 +102,7 @@
 ## 14. Cross-feature concepts within Strategy Builder
 
 ### Implementation Design
-Strategy Builder owns the strategy-side design from selected Strategy/Variant through Technique, Method/Policy and a concrete Solution proposal. The proposal may compare resource use, contributions, timing, liquidity, debt effects and competing-goal consequences where relevant data exists. A Technique is not a Solution, and a Solution proposal is not an Action Plan. Active plan state changes only after explicit investor adoption.
+Strategy Builder owns the strategy-side design from selected Strategy/Variant through Technique, Method/Policy, Architecture and a concrete Solution proposal. The proposal may compare resource use, contributions, timing, liquidity, debt effects and competing-goal consequences where relevant data exists. A Technique is not a Solution, and a Solution proposal is not an Action Plan. Active plan state changes only after explicit investor adoption.
 
 ### What-If / Scenario
 A What-If scenario is an alternative evaluated against a known baseline. It must remain separate from the active Accepted Plan while being explored. Record baseline, changed inputs/assumptions, projected outcomes and validation status where supported. A saved scenario or report does not prove investor acceptance. The existing scenario route does not by itself prove runtime isolation or persistence.
@@ -117,12 +117,12 @@ The canonical decision tree includes Stress / Resilience before final decision o
 If all standard strategies fail, “No Acceptable Strategy” remains valid; do not force a standard recommendation. Where policy permits, an investor-designed path can be captured as a separate proposal and evaluated against constraints, feasibility, impact and resilience. It is not automatically safe, viable or accepted, and must not be relabelled as one of the four canonical strategies. It becomes active only through the explicit Investor Decision / Accepted Plan lifecycle.
 
 ### Technique policy and hierarchy
-Technique policy statuses are **Required**, **Conditional**, **Optional**, **Not Applicable** and **Insufficient Inputs**; the last two are not equivalent. Preserve **Strategy → Variant → Technique → Method/Policy → Solution → Action**. Goal Funding and Contribution Escalation remain Goal Planner responsibilities; Duration/Horizon Matching is a method, not a separate core technique.
+Technique policy statuses are **Required**, **Conditional**, **Optional**, **Not Applicable** and **Insufficient Inputs**; the last two are not equivalent. Preserve **Strategy → Variant → Technique → Method/Policy → Architecture → Solution → Action**. Goal Funding and Contribution Escalation remain Goal Planner responsibilities; Duration/Horizon Matching is a method, not a separate core technique.
 
 ### Impact analysis and debt economics
 Whole-Plan / Multi-Goal Impact is conditional when a new goal, existing Accepted Plan, shared-resource conflict or material cross-goal effect makes it relevant; it is not a mandatory gate for every individual-goal strategy decision. Material changes may require targeted revalidation of affected decisions. Debt Reduction/Credit Utilisation analysis may require effective debt cost, repayment terms, EMI capacity, borrowing capacity, financing cost and a credible repayment path. Calculation ownership, materiality thresholds and invalidation rules remain unverified.
 
-Canonical lifecycle: Goal Planner feasibility/funding → Strategy/Variant/Technique/Method → Solution proposal → relevant impact and resilience checks → recommendation → explicit Investor Decision → Accepted Plan → Action Plan → execution. This is a business contract, not proof of runtime implementation.
+Canonical lifecycle: Goal Planner feasibility/funding → Strategy/Variant/Technique/Method → Architecture/Solution proposal → relevant impact and resilience checks → recommendation → explicit Investor Decision → Accepted Plan → Action Plan → execution. This is a business contract, not proof of runtime implementation.
 
 
 ## 15. Canonical Strategy → Variant → Technique registry from the decision tree
@@ -279,7 +279,7 @@ Credit fails when borrowing capacity is insufficient, EMI is unsustainable, fina
 - Case 12 defines **No Acceptable Path** as a valid state when no proposed path is acceptable under current preferences/constraints; the system must not force a recommendation.
 - If the investor wants to design their own strategy, preserve it as a separate investor-designed proposal, evaluate it against constraints, feasibility, impact and resilience, and explain numerical consequences. Investor-designed does not mean guidance-free, automatically viable, safe or accepted; it must not be relabelled as one of the four canonical strategies.
 - The source records the lifecycle: Financial State + Investor Intent/Goals → Goal Planning/Feasibility → Strategy Decision → Implementation Design → Stress/Resilience → Decision/Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution. Whole-Plan/Multi-Goal Impact is conditional on a plan-level decision.
-- The historical source contradiction in Cases 8, 10 and 11 has been corrected in those case documents: Goal Funding is a Goal Planner funding path, not a Strategy Builder strategy. Any remaining `strat-goal-funding` or Goal Funding strategy rows in current-state audit documents describe the legacy runtime only, not the target taxonomy.
+- Case source conflicts are retained rather than silently resolved: Case 8's header says Goal Funding is not a Strategy Builder strategy, while its body labels Goal Funding as “Strategy A”; Cases 10–11 also use Goal Funding as a strategy in places. The Full Audit Report records these inconsistencies. The canonical Strategy Decision Tree classifies Goal Funding under Goal Planner/Goal Feasibility, not among the four strategies.
 
 ## 19. Source status and traceability
 - Canonical source: `docs/Decision tree/Real-Life Decision Cases/strategy-decision-tree.md`.
@@ -291,11 +291,12 @@ Credit fails when borrowing capacity is insufficient, EMI is unsustainable, fina
 
 ### Source discrepancies recorded in the Full Audit Report
 
-The source audit records historical discrepancies. Their current status is:
-- **Case 3 lifecycle ordering:** remains a separate source discrepancy; it is not resolved by the Goal Funding correction.
-- **Cases 8, 10 and 11 Goal Funding classification:** corrected in the target case documents. Goal Funding is a Goal Planner funding path, never a Strategy Builder strategy.
-- **Solution taxonomy in current runtime:** the audit reports legacy Goal Funding solution records wrap a Variant, while records for the four canonical strategies wrap a Technique. This is an observed runtime issue, not target policy; code is not changed by these documentation edits.
-- **Status terminology:** this feature document and `docs/implementations/Strategy-Builder.md` describe target behavior; current-state audit documents describe observed legacy runtime. When they differ, do not treat the audit snapshot as target policy.
+The source audit records these contradictions; they are preserved here as unresolved source facts, not silently reconciled:
+- **Case 3:** its main body places Action Plan before Strategy Builder, while the canonical lifecycle places Strategy Decision/Implementation Design before Investor Decision, Accepted Plan and Action Plan.
+- **Case 8:** its header says Goal Funding is not a Strategy Builder strategy, while its body labels Goal Funding as “Strategy A”.
+- **Cases 10–11:** the bodies describe Goal Funding/funding-path changes using strategy-change language, although the audit says a funding-path change should first be modelled as such and not assumed to be a canonical strategy change.
+- **Solution taxonomy in current runtime:** the audit reports Goal Funding solution records wrap a Variant, while records for the other four strategies wrap a Technique. This is an implementation finding in the source audit, not a corrected runtime behavior.
+- **Status terminology:** the source set uses “canonical”, “final” and “not frozen” without a single shared status model; this feature does not infer a unified status beyond what each source explicitly states.
 
 
 ### Case 4 — better-path implementation comparison
@@ -308,10 +309,10 @@ The source example uses an outstanding loan with an 18% cost. The system may giv
 
 ### Additional findings recorded by the Full Audit Report
 
-- **Goal Funding classification conflict (documentation resolution):** the former target-document contradiction is corrected. Six Goal Funding options may still appear in current-state audit records because they describe legacy runtime; they are Goal Planner funding paths, not Strategy Builder variants.
+- **Goal Funding classification conflict:** the audit records Goal Funding both inside and outside the canonical Strategy set, and identifies six Goal Funding “variants” as conflicting with the four-strategy target.
 - **Strategy matrix classification:** the audit records duplication/misclassification of Goal Funding mechanisms in the Strategy Matrix.
-- **Architecture terminology:** the existing runtime audit records composition structures, but the target business flow does not require Architecture as a separate decision level. The target output is a concrete Solution proposal.
-- **Historical policy:** the Goal Funding change log preserves an older Goal Funding-as-strategy claim as rejected history. It is not current canonical policy.
+- **Architecture vs Solution:** the audit records that these are combined in one place and separate in another; the canonical hierarchy in this feature preserves them as distinct layers.
+- **Historical policy:** the audit records that the Goal Funding change log contains an older Goal Funding-as-strategy claim followed by a later correction. The historical claim is not treated as current canonical policy.
 - **Case authority/numbering:** the audit records numbering and authority gaps in the case series. This feature does not infer an authority hierarchy beyond the explicit canonical Strategy Decision Tree and the source-specific status labels already recorded.
 - **Target pipeline vs runtime:** the audit states that target business pipeline and current runtime are not clearly separated. The taxonomy and mappings in this feature describe the documented target model; they are not proof that the current runtime implements them.
 
@@ -321,15 +322,15 @@ The source example uses an outstanding loan with an 18% cost. The system may giv
 - **Same asset, different meaning:** a ₹15 lakh portfolio can have ₹10 lakh mapped for Education at the planning stage, then ₹7 lakh earmarked after strategy selection. The two amounts answer different questions.
 - **Product boundary:** earmarking ₹5 lakh for a near-term Education payment means reserve/protect the capital; it does not select “product X”. Product implementation remains a separate downstream decision subject to relevant product, risk, liquidity, tax and regulatory rules.
 - **Technique role:** Asset Earmarking can be a Technique when a selected Strategy/Variant requires intentional resource designation/protection. It does not make Asset Mapping a Technique.
-- **Lifecycle:** Strategy → Variant → Technique (Asset Earmarking, when required) → Method/Policy → Solution → investor review and accept/reject/modify → Accepted Plan → Action Plan → execution.
+- **Lifecycle:** Strategy → Variant → Technique (Asset Earmarking, when required) → Method/Policy → Architecture/Solution → Action → investor review and accept/reject/modify → Accepted Plan → Action Plan → execution.
 - **Canonical rules from Case 15:** earmarking requires an explicit strategic reason; the same asset must not be silently treated as fully earmarked for competing goals; earmarking does not itself select a product; a mapped asset may later be earmarked, partially earmarked, released or reassigned; cancellation of a goal does not delete the underlying asset.
 
 
 ### Case 10 — execution change that may invalidate the current path
-The source example starts with a ₹50 lakh goal over 8 years and a Goal Planner funding path using an existing asset plus monthly contribution. If the investor no longer wants to use the existing asset, Goal Planner recalculates feasibility and funding consequences first: required monthly contribution may rise, a funding gap may appear, the goal timeline may change, available surplus may become insufficient, or another goal may be affected. Strategy Builder re-evaluates its canonical strategy decision only if those changed conditions materially affect applicability, viability, constraints or outcome. The two presented Strategy options must come from the four canonical strategies; an alternative Goal Planner funding path is not a Strategy Builder strategy. The source also records a Debt Reduction example where the investor cancels a planned lump-sum prepayment; recalculate principal, interest cost, repayment timeline, released cash flow, goal funding, liquidity and related consequences.
+The source example starts with a ₹50 lakh goal over 8 years and an accepted Goal Funding path using an existing asset plus monthly contribution. If the investor no longer wants to use the existing asset, recalculate the goal and assess whether the current path remains appropriate. Possible consequences recorded in the source are higher required monthly contribution, a funding gap, changed goal timeline, insufficient surplus or an effect on another goal. Alternatives named in the source include another Goal Funding variant, Progressive De-risking where relevant, Capital Preservation where capital protection becomes important, and Credit Utilisation where an appropriate timing/funding gap exists. The source also records a Debt Reduction example where the investor cancels a planned lump-sum prepayment; recalculate principal, interest cost, repayment timeline, released cash flow, goal funding, liquidity and related consequences. Case 10's use of “Goal Funding” as a strategy conflicts with the canonical four-strategy set; that source conflict remains explicitly unresolved.
 
 ### Case 11 — iterative numerical example
-The source example starts with Education and a Goal Planner funding path of ₹50,000 per month. The investor tests ₹40,000/month; the goal becomes underfunded. Goal Planner recalculates feasibility and compares funding paths; if the changed funding position materially affects the Strategy Builder decision, Strategy Builder presents exactly two options from its four canonical strategies with their evidence and trade-offs. The investor can then test a different funding amount, such as ₹45,000/month, and review goal feasibility, cash flow, liquidity, other-goal impact, risk, debt and preferences. Only the investor-accepted path becomes active. Goal Funding is not labelled a Strategy Builder strategy.
+The source example starts with Education / Goal Funding at ₹50,000 per month. The investor tests ₹40,000/month; the goal becomes underfunded. The system re-evaluates the path, the investor selects an alternative, then tests ₹45,000/month. The goal may become feasible while reducing surplus for another goal. The investor can continue changing parameters and reviewing goal feasibility, cash flow, liquidity, other-goal impact, risk, debt and preferences. Only the final accepted path becomes the active implementation. The source's use of “Goal Funding” as a strategy is retained as a documented terminology conflict, not adopted as canonical classification.
 
 ### Case 12 — investor-designed numerical example and valid outcomes
 The source investor-designed example is: retain an 18% loan, invest ₹50,000/month, use ₹5 lakh of existing assets and target ₹50 lakh in 8 years. The system calculates loan-interest implications, required investment-return assumptions, projected goal value, funding gap/surplus, cash-flow and liquidity impact, other-goal impact and other relevant consequences, distinguishing assumptions from guarantees. A strong debt-reduction priority is advisory unless a genuine hard constraint prevents the choice.
