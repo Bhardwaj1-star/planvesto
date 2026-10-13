@@ -34,14 +34,23 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 | GP-BR-08 | Asset mapping is planning association, not asset earmarking or commitment. | Never infer that a mapped asset is locked, sold, reserved, or unavailable elsewhere. |
 | GP-BR-09 | The same asset or surplus must not be silently treated as fully available to multiple goals. | Detect and disclose shared-resource conflicts. |
 | GP-BR-10 | Whole-plan analysis is triggered by relevant cross-goal dependencies or material impact, not by every individual-goal change. | Assess local impact first; escalate conditionally. |
-| GP-BR-11 | Alternative paths and What-If results remain proposals until explicit investor adoption. | Preserve Accepted Plan until adoption. |
+| GP-BR-11 | Alternative funding-path calculations and proposed Goal Feasibility adjustments remain proposals until explicit investor adoption. Approach 2 is part of Goal Feasibility, not a separate What-If feature. | Preserve the canonical goal and Accepted Plan until adoption. |
 | GP-BR-12 | “No acceptable path” is a valid result. | Explain the gap, constraints, assumptions, and possible changes; never force a recommendation. |
 | GP-BR-13 | Material changes require targeted recalculation/revalidation of affected goals and decisions. | Do not rebuild unrelated decisions without a material dependency. |
 | GP-BR-14 | Goal cancellation does not delete the underlying asset from Financial State. | Treat earmark release/remapping as a separate lifecycle action. |
 | GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |
 | GP-BR-16 | Goal-Level Return Required is scenario-specific and distinct from required contribution and expected return. | Calculate and expose it in Goal Planner when the cash-flow inputs support a valid solution. |
-| GP-BR-17 | Goal Feasibility follows two ordered approaches: first optimize available financial capacity/surplus using relevant financial alternatives and Opportunity Cost; only if the goal remains infeasible, calculate the goal-condition adjustments required. | Use one feasibility engine for both approaches; never invent surplus, bypass constraints, or force an acceptable path. |
+| GP-BR-17 | Goal Feasibility follows two ordered approaches: first identify the most suitable feasible use of evidenced financial capacity by comparing relevant alternatives and Opportunity Cost; only if the goal remains infeasible, calculate required goal-condition adjustments. Maximizing the surplus figure alone is not the objective. | Use one feasibility engine for both approaches; never invent surplus, bypass constraints, or force an acceptable path. |
 | GP-BR-18 | If financial optimization is insufficient, the system calculates what target-amount reduction and/or target-date extension would be required; it does not modify the investor's goal automatically. | Present the calculated adjustment and consequences for investor decision; preserve the original goal until explicitly accepted. |
+
+### Canonical terminology
+
+- **Funding scenario:** a calculation case defined by a funding mechanism or combination, contribution/cash-flow schedule, eligible resources, and declared assumptions. It can be compared with other funding scenarios; it is not an adopted plan.
+- **Goal-condition adjustment:** a proposed reduction in target amount and/or extension of target date calculated by Goal Feasibility Approach 2 only after Approach 1 remains infeasible. It is not a separate What-If feature or engine.
+- **Saved goal version:** a persisted snapshot of the goal's inputs and relevant version metadata.
+- **Accepted Plan:** a funding/implementation proposal explicitly adopted through the investor-decision lifecycle.
+
+Use “funding scenario” only for alternative funding assumptions/mechanisms. Use “Goal Feasibility adjustment” for Approach 2 target/date changes. Neither is accepted automatically or mutates the canonical goal before investor acceptance.
 
 ## 3. Goal inputs and canonical context
 
@@ -73,7 +82,7 @@ The following is the required logical contract. Preserve existing implementation
 4. **Calculate duration and target-date requirement.** Apply the canonical target/inflation calculation for the goal type. Retirement goals may require a distinct retirement corpus calculation and explicit retirement inputs.
 5. **Project mapped assets.** Project only resolved eligible assets under declared assumptions. Show that mapping does not earmark or reserve an asset.
 6. **Calculate funding evidence.** Return projected mapped resources, target-date requirement, funding gap/surplus, and required monthly contribution where inputs support those calculations.
-7. **Run Goal Feasibility — Approach 1: financial optimization.** Before changing goal conditions, evaluate whether the goal can be funded better from the investor's actual financial capacity. Compare relevant uses of money—such as goal contributions, debt prepayment, investment, loan/EMI changes, liquidity preservation, and other goals—using Opportunity Cost where relevant. Estimate only evidenced, constraint-compatible surplus that can realistically be freed or generated. Do not assume that every alternative improves surplus or that the highest nominal surplus is automatically best.
+7. **Run Goal Feasibility — Approach 1: financial optimization.** Before changing goal conditions, identify the most suitable feasible use of the investor's evidenced financial capacity. Compare relevant uses of money—such as goal contributions, debt prepayment, investment, loan/EMI changes, liquidity preservation, and other goals—using Opportunity Cost where relevant. Estimate only evidenced, constraint-compatible surplus that can realistically be freed or generated. The objective is not to maximize the surplus figure in isolation; assess the overall funding fit and trade-offs without violating applicable constraints.
 8. **Recalculate feasibility after Approach 1.** Apply the same feasibility rules to the resulting funding path, including contribution fit, debt obligations, liquidity, risk limits, shared resources, and other applicable constraints. If feasible, return the path and its trade-offs; do not proceed to goal-condition changes as if they were necessary.
 9. **Run Goal Feasibility — Approach 2 only if still infeasible.** Calculate the goal-condition changes that would be needed to make it feasible under the evidenced financial capacity—principally a lower target amount, a later target date, or a combination. Quantify the required adjustment and recalculate the requirement, contribution, funding gap, and feasibility. These are feasibility adjustments identified by Goal Planner, not an independent What-If feature or separate engine. The investor's canonical goal must not be changed without explicit acceptance.
 10. **Assess broader impact conditionally.** If shared resources, other goals, or an Accepted Plan may be materially affected, invoke Whole-Plan / Multi-Goal Impact Analysis and identify affected decisions for revalidation.
@@ -91,8 +100,8 @@ Use distinct states for at least:
 
 Exact status names and mapping to existing response schemas must be reconciled with the current implementation before changing contracts. Do not turn a diagnostic or warning into a hard block without an explicitly owned canonical rule.
 
-## 5. Funding gap and funding mechanisms
-## 4.1 Goal-Level Required Return
+## 5. Funding gap, funding mechanisms, required return, and feasibility
+### 5.1 Goal-Level Return Required
 
 Goal Planner owns **Goal-Level Return Required**. It must calculate the annualized return required for a specific goal under a clearly defined funding scenario before using that result to explain or compare feasibility. This is a Goal Planner calculation, not a strategy recommendation.
 
@@ -115,14 +124,14 @@ These are two distinct calculation directions and both must be supported where i
 
 Do not treat one as a substitute for the other. The output must record which variable was solved for and which assumptions were held fixed.
 
-## 4.2 Constraint-Aware Goal Feasibility: Two Ordered Approaches
+### 5.2 Constraint-Aware Goal Feasibility: Two Ordered Approaches
 
 Goal Feasibility must evaluate the current goal against explicit financial and investor-defined constraints. Relevant evidence can include available monthly surplus, eligible assets/resources, accepted risk limits, declared return assumptions, target date/amount, debt obligations, and permitted funding sources. Moneywheel remains the owner of its canonical metrics; Goal Planner consumes their values and metadata rather than duplicating their formulas.
 
 Constraint roles must remain distinct:
 - **Hard constraint:** cannot be overridden by the planner; a breach makes the affected path unacceptable under the rule.
-- **User-adjustable goal parameter:** target date or target amount can be changed only as a proposed scenario and only adopted through the investor-decision lifecycle.
-- **Financial-state fact/derived limit:** for example, currently available monthly surplus. Do not treat it as freely editable merely to make a scenario pass.
+- **User-adjustable goal parameter:** target date or target amount may be evaluated as a proposed Goal Feasibility adjustment, and can be changed in the canonical goal only through the investor-decision lifecycle.
+- **Financial-state fact/derived limit:** for example, currently available monthly surplus. Do not treat it as freely editable merely to make a calculation appear feasible.
 - **Projection assumption:** a stated return/inflation or other modeling assumption. It must not be silently increased to force feasibility.
 
 Goal Feasibility must use the following two ordered approaches as one decision process, not as separate features or engines.
@@ -131,7 +140,7 @@ Goal Feasibility must use the following two ordered approaches as one decision p
 
 Keep the investor's current goal amount and target date unchanged while evaluating how its funding position can be improved. Use authoritative Financial State and cash-flow facts to assess income, expenses, existing resources, debt obligations, liquidity needs, and competing goals. Where relevant, use Opportunity Cost to compare plausible uses of money and funding paths—for example, continuing goal contributions versus debt prepayment, changing loan/EMI terms, or a combined path.
 
-The objective is to identify the most suitable feasible use of the investor's actual financial capacity, not to maximize surplus at any cost. Do not invent income, assume unavailable cash flow, count the same asset/surplus twice, assume investment returns are guaranteed, or violate risk, liquidity, debt, or other hard constraints. Explain the trade-offs and recalculate feasibility using the resulting evidenced funding path.
+The objective is to identify the most suitable feasible use of the investor's actual financial capacity, not to maximize the surplus figure in isolation. Do not invent income, assume unavailable cash flow, count the same asset/surplus twice, assume investment returns are guaranteed, or violate risk, liquidity, debt, or other hard constraints. Explain the trade-offs and recalculate feasibility using the resulting evidenced funding path.
 
 If this approach makes the goal feasible, return the feasible path and its assumptions/trade-offs. Do not proceed to changing the goal's target amount/date as though that were required.
 
@@ -146,6 +155,8 @@ For each proposed adjustment, recalculate the target-date requirement, Goal-Leve
 
 If no path or goal adjustment fits the applicable constraints, return **no acceptable path** and explain the binding constraints and shortfall. A high required return does not justify exceeding the investor's risk limit or manufacturing feasibility.
 
+
+### 5.3 Funding output distinctions
 
 Goal Planner must distinguish these concepts:
 
@@ -211,7 +222,7 @@ Potential triggers include:
 - A goal target/date/contribution change consumes resources another goal relies on.
 - A material change in income, expenses, debt, asset value, or other Financial State changes feasibility.
 - A funding path reallocates resources, changes debt payments, or changes the contribution available to other goals.
-- A scenario changes a resource or assumption used by an Accepted Plan.
+- A funding scenario changes a resource or assumption used by an Accepted Plan; evaluate its impact without treating the scenario as an adopted plan.
 
 When triggered, return:
 - Affected goals and plan components.
@@ -253,7 +264,7 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 - On a material goal update, trigger the existing/defined targeted recalculation and revalidation path; do not silently replace an Accepted Plan.
 - Display missing/incomplete inputs and assumptions next to results; do not render unavailable values as zero or as healthy.
 - Show projected values as estimates with assumptions, not guarantees.
-- Keep Goal History/reporting consistent with the distinction between a saved goal version, a scenario, and an Accepted Plan.
+- Keep Goal History/reporting consistent with these distinct concepts: a **saved goal version** is a persisted snapshot of goal inputs; a **funding scenario** is a calculation using specified funding mechanisms, cash-flow schedules, and assumptions; a **Goal Feasibility adjustment** is a proposed target-amount reduction and/or target-date extension calculated only in Approach 2; an **Accepted Plan** is a proposal explicitly adopted by the investor. A Goal Feasibility adjustment is not a separate What-If feature, and neither a funding scenario nor an adjustment changes the canonical goal or Accepted Plan before acceptance.
 - Verify live database schema, RLS, and production deployment independently; source-level table references do not prove production state.
 
 ## 11. Acceptance criteria
