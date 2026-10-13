@@ -79,11 +79,11 @@ Contradictory sources:
 ### F-03 — Six Goal Funding “variants” conflict with the four-strategy target
 **Severity: Critical**
 
-The canonical tree defines four strategies and four variants under each. Older current-state/rule-ownership material describes five active strategies and 22 active variants, including Goal Funding. Architecture documents and the Strategy Matrix still list six Goal Funding choices: Existing Assets, SIP, Lumpsum, Lumpsum + SIP, Lumpsum + Step-up SIP and Step-up SIP.
+The canonical tree defines four strategies and four variants under each. Older current-state/rule-ownership material describes five active strategies and 22 active variants, including Goal Funding; those are legacy-runtime/audit observations, not target taxonomy. The earlier audit referenced architecture files under `docs/architecture/` that are absent from the current repository tree. Six historical Goal Funding options—Existing Assets, SIP, Lumpsum, Lumpsum + SIP, Lumpsum + Step-up SIP and Step-up SIP—must be treated as Goal Planner funding paths, not Strategy Builder variants.
 
 The canonical variant document also says SIP, Lumpsum and Step-up SIP are not Strategy Variants. The matrix repeats funding mechanisms in both Variants and Solutions columns.
 
-**Required resolution:** Publish a single versioned registry with exactly one primary type and owner per ID. If the four-strategy target remains authoritative, reclassify these six choices as **Goal Planner funding paths/mechanisms**, not Strategy Builder variants. Describe the 22-variant registry as current state until migration is verified; do not call it the target registry.
+**Remaining runtime/migration requirement:** Publish a single versioned registry with exactly one primary type and owner per ID. The documentation target now classifies these six choices as **Goal Planner funding paths/mechanisms**, not Strategy Builder variants. Describe the 22-variant registry as legacy current state until migration is verified; do not call it the target registry.
 
 ### F-04 — Case 3 puts Action Plan before Strategy Builder
 **Severity: High**
@@ -107,30 +107,30 @@ The canonical tree sometimes uses `Architecture / Solution` as one step, while i
 ### F-06 — Strategy Matrix duplicates and misclassifies Goal Funding mechanisms
 **Severity: High**
 
-`docs/architecture/strategy-matrix.md` repeats Goal Funding mechanisms in both Variants and Solutions columns and includes Contribution Escalation and Tax-Efficient Sequencing under Goal Funding techniques, conflicting with the canonical four-strategy target.
+The earlier audit reported that `docs/architecture/strategy-matrix.md` repeated Goal Funding mechanisms in Variants and Solutions columns and included Contribution Escalation and Tax-Efficient Sequencing under Goal Funding techniques. That referenced architecture path is absent from the current repository tree; treat this as a historical audit finding, not a current document location.
 
-**Required resolution:** Make the matrix reflect the authoritative type registry. Keep funding paths in Goal Planner ownership unless a deliberate business decision changes that classification.
+**Target rule:** Any current or recreated matrix must reflect the authoritative type registry. Keep funding paths in Goal Planner ownership unless a deliberate business decision changes that classification.
 
 ### F-07 — Case 8 contradicts its own header
 **Severity: High**
 
-Case 8’s header says Goal Funding is not a Strategy Builder strategy, but its body calls it Strategy A and presents it alongside the four canonical strategies.
+At the time of this audit, Case 8’s header said Goal Funding was not a Strategy Builder strategy, but its body called it Strategy A. The case document has since been corrected: Education funding is shown as a Goal Planner funding path, separate from the four canonical strategies.
 
-**Required resolution:** Rewrite the example to distinguish Goal Planner funding choice from Strategy Builder selection. A single investor plan may use a funding path and one or more of the four Strategy Builder strategies without making the funding path a strategy.
+**Documentation status:** Corrected in Case 8. A single investor plan may use a Goal Planner funding path and one or more of the four Strategy Builder strategies without making the funding path a strategy.
 
 ### F-08 — Cases 10–11 treat a funding-path change as a strategy change
 **Severity: High**
 
-Cases 10 and 11 call Goal Funding a strategy. This risks triggering a full Strategy Builder re-evaluation for changes that only affect contributions or funding mechanics.
+At the time of this audit, Cases 10 and 11 called Goal Funding a strategy. Those case documents have since been corrected to recalculate the Goal Planner funding path first and re-evaluate a canonical Strategy Builder decision only when materially affected.
 
-**Required resolution:** Model the change first as a Goal Planner funding-path/execution change. Re-evaluate the four Strategy Builder strategies only when the change materially affects their constraints, applicability, viability or outcomes.
+**Documentation status:** Corrected in Cases 10–11. Model the change first as a Goal Planner funding-path/execution change. Re-evaluate the four Strategy Builder strategies only when the change materially affects their constraints, applicability, viability or outcomes.
 
 ### F-09 — Historical change log mixes past and current policy
 **Severity: Medium-High**
 
-`00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` intentionally retains an older claim that Goal Funding is a strategy alongside the later correction.
+`00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` preserves an older claim that Goal Funding is a strategy as rejected/superseded historical evidence and explicitly identifies the current ownership.
 
-**Required resolution:** Preserve history, but clearly label the earlier claim superseded and not current policy. Do not erase the decision history.
+**Documentation status:** The change log now labels the earlier claim as rejected/superseded history and states that it is not a coding specification. Do not erase the decision history.
 
 ### F-10 — Asset Mapping vs Asset Earmarking boundary is conceptually sound, implementation status is vague
 **Severity: Medium-High**
