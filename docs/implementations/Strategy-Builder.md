@@ -15,11 +15,19 @@ The feature definition records the business model and its Real-Life Decision Cas
 
 Where the audit describes existing runtime behavior that differs from the target contract, preserve the distinction between **current state** and **target behavior**. A code-audit finding does not, by itself, define target business behavior.
 
+## Authority for coding agents — mandatory
+
+When documents or legacy records disagree, implement this contract's target rules and use `docs/Real-Life Decision Cases/strategy-decision-tree.md` as the canonical Strategy taxonomy. Feature and case documents explain the business context; `docs/existing features/Strategy-Builder/` records observed current/legacy behavior and must not override the target contract.
+
+The canonical Strategy Builder allowlist is exactly: **Progressive De-risking, Capital Preservation, Debt Reduction, and Credit Utilisation**. **Goal Funding is not a Strategy, candidate, Strategy variant, or fifth option.** It is Goal Planner / Goal Feasibility's funding-path domain.
+
+Treat `strat-goal-funding`, any Goal Funding Strategy row, and its six historical options as legacy/current-state identifiers only. Do not expose or select them as Strategy Builder strategies in the target system. Do not silently rename them to one of the four canonical strategies. Before any code/data migration, map the legacy records by their actual meaning to Goal Planner funding-path concepts; do not delete or migrate records solely because their names contain “Goal Funding.”
+
 ## 2. Purpose and ownership
 
 Strategy Builder prepares strategy alternatives for the investor from the investor's financial situation and goal context. It presents **exactly two Strategy options for each decision**. It does not make the final strategy choice on the investor's behalf; the investor reviews the alternatives and decides.
 
-Goal Planner does **not** send a Strategy to Strategy Builder. Goal Planner's responsibility is to establish the goal-feasibility approach/result and related funding context. The connection between Goal Planner's feasibility output and Strategy Builder's strategy generation will be defined when the two features are connected later. Do not assume or implement a strategy-selection dependency from Goal Planner.
+Goal Planner does **not** send a Strategy to Strategy Builder. Goal Planner's responsibility is to establish the goal-feasibility approach/result and related funding context. The connection between Goal Planner's feasibility output and Strategy Builder's strategy generation will be defined when the two features are connected later. Do not assume or implement a strategy-selection dependency from Goal Planner. A change to a funding path must first be evaluated in Goal Planner; it is not automatically a Strategy change.
 
 ### Canonical Strategy Builder strategies
 
