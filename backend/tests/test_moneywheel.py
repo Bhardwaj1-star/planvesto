@@ -288,3 +288,11 @@ def test_consolidated_report_uses_canonical_moneywheel_results_without_fake_valu
     assert liquid_ratio["current_value"] == "Not available"
     assert liquid_ratio["status"] == "Unavailable"
     assert liquid_ratio["rule_set_version"] == result.rule_set_version
+
+
+def test_negative_monthly_surplus_is_measured_as_a_negative_savings_rate():
+    result = MoneywheelEngine().build(_input(monthly_surplus=-5000))
+    ratio = next(r for r in result.ratios if r.key == "savings_rate")
+    assert ratio.available is True
+    assert ratio.value == -5.0
+    assert ratio.status == "critical"
