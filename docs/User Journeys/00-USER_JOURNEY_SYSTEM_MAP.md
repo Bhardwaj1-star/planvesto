@@ -13,6 +13,7 @@
 | Moneywheel | Not yet present | Journey document required |
 | Goal Planner | [01-GOAL_PLANNING_JOURNEY.md](./01-GOAL_PLANNING_JOURNEY.md) | Existing journey; includes Goal Feasibility |
 | Strategy Builder | [05-STRATEGY_BUILDER_JOURNEY.md](./05-STRATEGY_BUILDER_JOURNEY.md) | Consolidated feature journey |
+| Action Plan | [12-ACTION_PLAN_JOURNEY.md](./12-ACTION_PLAN_JOURNEY.md) | Canonical feature journey; positioned after Accepted Plan and before execution |
 | Budgeting | Not yet present | Journey document required |
 | Financial Health | Not yet present | Journey document required |
 
