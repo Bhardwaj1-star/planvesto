@@ -74,7 +74,7 @@ Contradictory sources:
 - `docs/architecture/strategy-variants.md` describes six Goal Funding variants.
 - The 00 change log preserves an earlier Goal Funding-as-strategy statement, although later parts reject it.
 
-**Required resolution:** Under the current canonical target, use a precise Goal Planner concept such as **Goal Funding / Feasibility** or **Funding Path**. Case 8 should describe a Goal Planner funding path, not a Strategy Builder strategy. Cases 10–11 should distinguish a changed funding/execution path from a change to one of the four canonical strategies. Keep the historical claim only if clearly labelled **superseded historical claim — not current policy**.
+**Documentation resolution:** The target documents now use **Goal Funding / Feasibility** or **Goal Planner funding path**. Case 8 no longer labels Goal Funding as Strategy A; Cases 10–11 distinguish funding-path changes from changes to one of the four canonical strategies. The change log retains earlier claims only as rejected/superseded history. Runtime code has not been changed by these documentation edits.
 
 ### F-03 — Six Goal Funding “variants” conflict with the four-strategy target
 **Severity: Critical**
@@ -164,16 +164,16 @@ Existing discrepancy and rule-ownership audits report that runtime composes arch
 
 | File | Result | Key observation |
 |---|---|---|
-| `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` | Historical labeling needed | Contains old Goal Funding-as-strategy claim and later correction; preserve history and mark superseded claims. |
+| `00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md` | Historical claims labelled | Preserves old Goal Funding-as-strategy wording as rejected history; canonical ownership is stated explicitly. |
 | `03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md` | Correction required | Main body places Action Plan before Strategy Builder. |
 | `04-CASE_4_BETTER_PATH_STRATEGY_AND_IMPLEMENTATION.md` | Mostly aligned | Separates Goal Planner, Strategy Builder, Implementation and Action Plan; optimization/comparison rules remain unfrozen. |
 | `05-CASE_5_PLAN_ADAPTATION_AFTER_FINANCIAL_STATE_CHANGE.md` | Mostly aligned | Materiality and targeted revalidation are sound; thresholds remain unfrozen and adoption/version states are abbreviated. |
 | `06-CASE_6_GOAL_INTENT_CHANGE_AND_RECALCULATION.md` | Mostly aligned | Recalculates changed inputs without automatically replacing the whole plan; formulas and asset reassignment remain unfrozen. |
 | `07-CASE_7_NEW_GOAL_AGAINST_EXISTING_PLAN.md` | Mostly aligned | Treats new goal as scenario and preserves accepted plan pending investor adoption. |
-| `08-CASE_8_INVESTOR_STRATEGY_CHANGE_AND_MULTI_STRATEGY_PLAN.md` | Correction required | Header rejects Goal Funding as strategy, body calls it Strategy A. |
+| `08-CASE_8_INVESTOR_STRATEGY_CHANGE_AND_MULTI_STRATEGY_PLAN.md` | Documentation corrected | Education funding is a Goal Planner path; the four canonical Strategy Builder strategies are listed separately. |
 | `09-CASE_9_EXECUTION_PLAN_WHAT_IF_AND_IMPACT_GUIDANCE.md` | Mostly aligned | Separates execution what-if from strategy change; funding options need clear Goal Planner terminology. |
-| `10-CASE_10_EXECUTION_CHANGE_TRIGGERING_STRATEGY_REEVALUATION.md` | Correction required | Calls Goal Funding a strategy; should model funding-path change first. |
-| `11-CASE_11_ITERATIVE_STRATEGY_EXECUTION_AND_REVALIDATION.md` | Correction required | Calls Goal Funding a strategy; iterative what-if/adoption loop otherwise aligned. |
+| `10-CASE_10_EXECUTION_CHANGE_TRIGGERING_STRATEGY_REEVALUATION.md` | Documentation corrected | Recalculate the Goal Planner funding path first; re-evaluate a canonical strategy only if materially affected. |
+| `11-CASE_11_ITERATIVE_STRATEGY_EXECUTION_AND_REVALIDATION.md` | Documentation corrected | Funding-path iterations remain in Goal Planner; Strategy Builder decisions remain separate. |
 | `12-CASE_12_NO_ACCEPTABLE_PATH_AND_INVESTOR_DESIGNED_STRATEGY.md` | Mostly aligned | Valid outcome subject to constraints, impact review and explicit adoption. |
 | `15-CANONICAL_ASSET_MAPPING_VS_ASSET_EARMARKING_DECISION_CASE.md` | Clarification required | Boundary is sound; split implementation status into definition/selection/execution/persistence/enforcement. |
 | `strategy-decision-tree.md` | Best target authority; cleanup needed | Four-strategy set and Strategy → Variant → Technique are clear; Architecture vs Solution needs consistent layering. |
