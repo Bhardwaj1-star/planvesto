@@ -60,7 +60,7 @@ Applicability / Viability Evaluation of Each Option
 For Each Option:
 Strategy → Variant → Technique → Method / Policy
           ↓
-Architecture Composition + Solution Proposal
+Solution Proposal
           ↓
 Relevant Stress / Resilience and Comparison
           ↓
@@ -102,7 +102,7 @@ Unavailable evidence must remain distinguishable from a failed check. Missing in
 - **Exactly two Strategy options** presented to the investor, each with its own applicability/viability status and evidence/reasons.
 - The variant and implementation proposal for each option where the option is viable and the required evidence exists; otherwise, an explicit status and reason such as Not Applicable, Not Viable, Insufficient Inputs, or No Acceptable Path.
 - Technique policy results, including reasons for Required, Conditional, Optional, Not Applicable, or Insufficient Inputs.
-- Architecture and a concrete investor-specific Solution proposal for options that can validly be composed.
+- A concrete investor-specific Solution proposal for each option that can validly be prepared.
 - Relevant assumptions, evidence, constraints, trade-offs, and stress/resilience findings.
 - Conditional whole-plan impact findings when applicable.
 - An explainable comparison and recommendation that does not misrepresent an option's status.
@@ -315,7 +315,7 @@ Additional policy boundaries:
 - Duration / Horizon Matching is a method/analysis, not a separate core technique.
 - Tax-specific techniques such as Tax-Efficient Sequencing and Tax-Loss Harvesting are not part of this core four-strategy technique registry; they belong to the appropriate investment/tax implementation layer unless a later business decision explicitly changes that boundary.
 
-## 10. Architecture, Solution, and Action
+## 10. Solution and Action
 
 Preserve the following hierarchy:
 
@@ -341,7 +341,7 @@ A Technique is not a Solution. A Solution must not merely duplicate a Variant or
 
 Asset Mapping is upstream Goal Planner feasibility evidence. Asset Earmarking is a Strategy Builder technique used when the selected path requires deliberate reservation/protection. They are different concepts and must not be aliases.
 
-Architecture composition belongs after Strategy, Variant, and technique decisions in the target flow. The existing-feature audit records that current runtime ordering differs; do not describe the current runtime as already matching the target.
+Prepare the Solution after the Strategy, Variant, Technique, and Method / Policy decisions. The existing-feature audit records additional composition logic in the current runtime; that is current-state implementation evidence, not a separate required target decision level.
 
 ## 11. Opportunity cost and implementation comparison
 
@@ -412,7 +412,7 @@ A completed decision must preserve enough evidence to explain:
 7. The selected variant and its situation mapping.
 8. Required and conditional techniques and their policy reasons.
 9. The methods/policies used.
-10. The composed Architecture and concrete Solution proposal.
+10. The concrete Solution proposal.
 11. Relevant assumptions, trade-offs, stress/resilience results, and conditional whole-plan impact.
 12. The recommendation and whether the investor has adopted it.
 
@@ -427,7 +427,7 @@ The current audit records unresolved differences including:
 - Current runtime ordering that differs from the target decision flow.
 - Split or overlapping rule ownership in the existing decision path.
 - Variant selection occurring inside recommendation in the audited runtime.
-- Technique execution/architecture composition influencing the current decision path.
+- Current runtime composition and technique execution influencing the decision path.
 - Incomplete formal stress/resilience gating and re-selection behavior.
 - Unverified scenario isolation, persistence, investor adoption, and active-plan updates.
 - Inconsistent current runtime use of the term Solution across strategy records.
