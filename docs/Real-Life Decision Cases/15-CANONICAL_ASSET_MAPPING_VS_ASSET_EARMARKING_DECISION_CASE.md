@@ -299,7 +299,7 @@ This does not turn Asset Mapping into a Technique.
 | What is the funding gap? | Goal Funding / Feasibility |
 | Should resources be intentionally reserved/protected? | Strategy Decision / Selected Technique |
 | How much should be earmarked? | Strategy / Method / Policy |
-| What concrete implementation should be performed? | Architecture / Solution / Action |
+| What concrete implementation should be proposed? | Solution |
 | What investor action is finally accepted? | Investor Decision / Accepted Plan |
 
 ---
@@ -375,7 +375,7 @@ Asset Earmarking
    ↓
 Method / Policy
    ↓
-Architecture / Solution
+Solution
    ↓
 Action
 ```
