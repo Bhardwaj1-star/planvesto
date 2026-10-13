@@ -53,7 +53,7 @@
 
 ## 8. Relationship to Accepted Plan and Action Plan
 - Generated recommendation, saved scenario, investor adoption, Accepted Plan and Action Plan are separate lifecycle states.
-- Canonical target lifecycle: goal feasibility/funding context → Strategy Decision → Variant → Technique/Method → Architecture → Solution → Stress/Resilience and targeted revalidation → Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
+- Canonical target lifecycle: goal feasibility/funding context → Strategy Decision → Variant → Technique/Method → Solution Proposal → Stress/Resilience and targeted revalidation → Recommendation → Investor Decision → Accepted Plan → Action Plan → Execution.
 - A What-If scenario remains isolated from the active Accepted Plan until the investor adopts the revised path.
 - Execution changes do not automatically mean the canonical strategy has changed. Re-evaluate strategy only when the changed execution materially affects applicability, viability, constraints or outcomes.
 - No acceptable path is a valid outcome. An investor-designed strategy may be evaluated, but it must not be activated merely because no standard candidate passed.
@@ -102,7 +102,7 @@
 ## 14. Cross-feature concepts within Strategy Builder
 
 ### Implementation Design
-Strategy Builder owns the strategy-side design from selected Strategy/Variant through Technique, Method/Policy, Architecture and a concrete Solution proposal. The proposal may compare resource use, contributions, timing, liquidity, debt effects and competing-goal consequences where relevant data exists. A Technique is not a Solution, and a Solution proposal is not an Action Plan. Active plan state changes only after explicit investor adoption.
+Strategy Builder owns the strategy-side design from selected Strategy/Variant through Technique, Method/Policy and a concrete Solution proposal. The proposal may compare resource use, contributions, timing, liquidity, debt effects and competing-goal consequences where relevant data exists. A Technique is not a Solution, and a Solution proposal is not an Action Plan. Active plan state changes only after explicit investor adoption.
 
 ### What-If / Scenario
 A What-If scenario is an alternative evaluated against a known baseline. It must remain separate from the active Accepted Plan while being explored. Record baseline, changed inputs/assumptions, projected outcomes and validation status where supported. A saved scenario or report does not prove investor acceptance. The existing scenario route does not by itself prove runtime isolation or persistence.
@@ -117,12 +117,12 @@ The canonical decision tree includes Stress / Resilience before final decision o
 If all standard strategies fail, “No Acceptable Strategy” remains valid; do not force a standard recommendation. Where policy permits, an investor-designed path can be captured as a separate proposal and evaluated against constraints, feasibility, impact and resilience. It is not automatically safe, viable or accepted, and must not be relabelled as one of the four canonical strategies. It becomes active only through the explicit Investor Decision / Accepted Plan lifecycle.
 
 ### Technique policy and hierarchy
-Technique policy statuses are **Required**, **Conditional**, **Optional**, **Not Applicable** and **Insufficient Inputs**; the last two are not equivalent. Preserve **Strategy → Variant → Technique → Method/Policy → Architecture → Solution → Action**. Goal Funding and Contribution Escalation remain Goal Planner responsibilities; Duration/Horizon Matching is a method, not a separate core technique.
+Technique policy statuses are **Required**, **Conditional**, **Optional**, **Not Applicable** and **Insufficient Inputs**; the last two are not equivalent. Preserve **Strategy → Variant → Technique → Method/Policy → Solution → Action**. Goal Funding and Contribution Escalation remain Goal Planner responsibilities; Duration/Horizon Matching is a method, not a separate core technique.
 
 ### Impact analysis and debt economics
 Whole-Plan / Multi-Goal Impact is conditional when a new goal, existing Accepted Plan, shared-resource conflict or material cross-goal effect makes it relevant; it is not a mandatory gate for every individual-goal strategy decision. Material changes may require targeted revalidation of affected decisions. Debt Reduction/Credit Utilisation analysis may require effective debt cost, repayment terms, EMI capacity, borrowing capacity, financing cost and a credible repayment path. Calculation ownership, materiality thresholds and invalidation rules remain unverified.
 
-Canonical lifecycle: Goal Planner feasibility/funding → Strategy/Variant/Technique/Method → Architecture/Solution proposal → relevant impact and resilience checks → recommendation → explicit Investor Decision → Accepted Plan → Action Plan → execution. This is a business contract, not proof of runtime implementation.
+Canonical lifecycle: Goal Planner feasibility/funding → Strategy/Variant/Technique/Method → Solution proposal → relevant impact and resilience checks → recommendation → explicit Investor Decision → Accepted Plan → Action Plan → execution. This is a business contract, not proof of runtime implementation.
 
 
 ## 15. Canonical Strategy → Variant → Technique registry from the decision tree
@@ -310,7 +310,7 @@ The source example uses an outstanding loan with an 18% cost. The system may giv
 
 - **Goal Funding classification conflict (documentation resolution):** the former target-document contradiction is corrected. Six Goal Funding options may still appear in current-state audit records because they describe legacy runtime; they are Goal Planner funding paths, not Strategy Builder variants.
 - **Strategy matrix classification:** the audit records duplication/misclassification of Goal Funding mechanisms in the Strategy Matrix.
-- **Architecture vs Solution:** the audit records that these are combined in one place and separate in another; the canonical hierarchy in this feature preserves them as distinct layers.
+- **Architecture terminology:** the existing runtime audit records composition structures, but the target business flow does not require Architecture as a separate decision level. The target output is a concrete Solution proposal.
 - **Historical policy:** the Goal Funding change log preserves an older Goal Funding-as-strategy claim as rejected history. It is not current canonical policy.
 - **Case authority/numbering:** the audit records numbering and authority gaps in the case series. This feature does not infer an authority hierarchy beyond the explicit canonical Strategy Decision Tree and the source-specific status labels already recorded.
 - **Target pipeline vs runtime:** the audit states that target business pipeline and current runtime are not clearly separated. The taxonomy and mappings in this feature describe the documented target model; they are not proof that the current runtime implements them.
@@ -321,7 +321,7 @@ The source example uses an outstanding loan with an 18% cost. The system may giv
 - **Same asset, different meaning:** a ₹15 lakh portfolio can have ₹10 lakh mapped for Education at the planning stage, then ₹7 lakh earmarked after strategy selection. The two amounts answer different questions.
 - **Product boundary:** earmarking ₹5 lakh for a near-term Education payment means reserve/protect the capital; it does not select “product X”. Product implementation remains a separate downstream decision subject to relevant product, risk, liquidity, tax and regulatory rules.
 - **Technique role:** Asset Earmarking can be a Technique when a selected Strategy/Variant requires intentional resource designation/protection. It does not make Asset Mapping a Technique.
-- **Lifecycle:** Strategy → Variant → Technique (Asset Earmarking, when required) → Method/Policy → Architecture/Solution → Action → investor review and accept/reject/modify → Accepted Plan → Action Plan → execution.
+- **Lifecycle:** Strategy → Variant → Technique (Asset Earmarking, when required) → Method/Policy → Solution → investor review and accept/reject/modify → Accepted Plan → Action Plan → execution.
 - **Canonical rules from Case 15:** earmarking requires an explicit strategic reason; the same asset must not be silently treated as fully earmarked for competing goals; earmarking does not itself select a product; a mapped asset may later be earmarked, partially earmarked, released or reassigned; cancellation of a goal does not delete the underlying asset.
 
 
