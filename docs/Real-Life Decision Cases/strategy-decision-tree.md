@@ -83,6 +83,8 @@ The Strategy Builder has four canonical strategies:
 
 Goal Funding belongs to the **Goal Planner / Goal Funding / Feasibility layer**. Funding mechanisms such as contribution increases, SIPs, step-ups and lump-sum funding are not peer Strategy Builder strategies.
 
+**Implementation authority:** This taxonomy is canonical for Strategy Builder. Any `strat-goal-funding` identifier or Goal Funding Strategy row in current-state audit material describes legacy runtime only. Do not implement Goal Funding as a Strategy Builder candidate or variant; use Goal Planner funding-path concepts instead. Preserve legacy records until their meaning is mapped in an explicit migration.
+
 ---
 
 # 5. Whole-Plan Impact Boundary
