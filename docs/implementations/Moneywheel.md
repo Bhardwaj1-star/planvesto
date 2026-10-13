@@ -72,7 +72,7 @@ Do not turn every critical Moneywheel status into a universal hard constraint. P
 
 After implementation, Moneywheel will return **11 canonical metrics**: eight retained existing Moneywheel metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is owned by Goal Planner, not Moneywheel.
 
-### 3.1 Existing nine — preserve current contracts
+### 4.1 Existing nine — preserve current contracts
 
 The formulas and thresholds below reflect the inspected backend/rules/moneywheel.py source. Do not move calculation authority to the UI.
 
@@ -97,7 +97,7 @@ For DTI, preserve the exact constants and boundary comparisons in the current ru
 
 If required inputs are missing, a denominator is zero, required-return inputs are invalid, or a result is non-finite, return unavailable with a reason. Aggregate status remains incomplete when any canonical metric is unavailable. Do not manufacture an overall healthy status.
 
-### 3.2 New metric — Weighted Debt Rate
+### 4.2 New metric — Weighted Debt Rate
 
 **Canonical key:** weighted_debt_rate  
 **Unit:** annual percentage rate (%)
@@ -122,7 +122,7 @@ If rates are stored as decimals, convert the result to percentage for display.
 
 **Status bands:** Do not invent excellent/healthy/attention/critical bands for the initial implementation. Return the numeric value and availability. A threshold rule may be added only through explicit canonical rule registration.
 
-### 3.3 New metric — Investment–Debt Spread
+### 4.3 New metric — Investment–Debt Spread
 
 **Canonical key:** investment_debt_spread  
 **Unit:** percentage points (pp)
@@ -146,7 +146,7 @@ Goal Planner should compare complete feasible paths, including cash flow, liquid
 
 **Status bands:** Do not invent health bands in the initial implementation. Return the spread in percentage points and expose its assumptions.
 
-### 3.4 New measurement — Portfolio-Level Return Required
+### 4.4 New measurement — Portfolio-Level Return Required
 
 **Canonical key:** portfolio_level_return_required  
 **Unit:** annualized percentage (%)  
