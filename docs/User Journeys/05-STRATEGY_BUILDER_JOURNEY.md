@@ -26,7 +26,7 @@ Reviewed Goal Feasibility + Financial State + Goal Context + Constraints
                               ↓
                        Method / Policy
                               ↓
-                 Solution Proposal
+                 Architecture + Solution Proposal
                               ↓
                   What-If / Scenario Comparison
                               ↓
@@ -124,7 +124,7 @@ Selected Strategy
        ↓
   Method / Policy
        ↓
-Solution Preparation
+Architecture Composition
        ↓
 Concrete Solution Proposal
        ↓
@@ -323,7 +323,7 @@ Revalidate affected parts of the plan; do not rebuild unrelated parts without ca
 | Constraint / safety check | Relevant restrictions, warnings, failed checks or unknowns |
 | Strategy decision | Selected strategy or No Acceptable Strategy / Path |
 | Variant and technique design | Selected structural form and relevant mechanisms |
-| Implementation design | Investor-specific Solution proposal |
+| Implementation design | Architecture and investor-specific Solution proposal |
 | What-If | Baseline comparison and scenario differences |
 | Stress / resilience | Pressure points, effects and assumptions |
 | Recommendation | Explained proposed path, trade-offs and alternatives where relevant |
@@ -357,7 +357,7 @@ These are target journey outputs; this table is not a claim that every output is
 4. Distinguish strategy applicability from candidate viability.
 5. Do not invent thresholds, score weights, tie-break rules or unsupported financial facts.
 6. No Acceptable Strategy / Path and Insufficient Inputs are valid outcomes when supported by the evidence.
-7. Keep Strategy, Variant, Technique, Method / Policy, Solution and Action distinct.
+7. Keep Strategy, Variant, Technique, Method / Policy, Architecture, Solution and Action distinct.
 8. Keep scenarios, recommendations and historical runs separate from the active Accepted Plan.
 9. Investor acceptance must be explicit; the system must not silently change the plan or execute a proposal.
 10. Apply Whole-Plan Impact and Revalidation when relevant; do not treat them as mandatory gates for every isolated decision.
