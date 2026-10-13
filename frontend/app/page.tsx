@@ -706,7 +706,7 @@ export default function Home() {
 </li>
 <li>
 <a className="transition hover:text-navy-900" href="/plan#financial-health">
-                            Financial Health
+                            Moneywheel
                         </a>
 </li>
 <li>

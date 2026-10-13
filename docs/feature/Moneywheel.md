@@ -1,8 +1,10 @@
-# Moneywheel
+# Moneywheel — Financial Measurements & Health Assessment
+
+**Canonical feature decision:** Financial Health is part of Moneywheel, not a separate top-level feature. Financial State remains the source of underlying financial records.
 
 ## 1. Main kaam
 - Investor ki financial position ke key ratios/signals ko ek view mein dikhana.
-- Financial health ke alag dimensions ko review karne mein madad dena.
+- Financial measurements ko interpret karke financial-health assessment ek hi Moneywheel feature ke andar dena.
 - Current result ke saath available historical Moneywheel results dikhana.
 
 ## 2. Dimensions visible in code

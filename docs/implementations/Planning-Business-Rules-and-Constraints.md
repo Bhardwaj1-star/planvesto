@@ -32,7 +32,7 @@ A **Critical ratio is not automatically a hard failure**. The rule that consumes
 | Feature / component | Its responsibility | What it contributes to a decision |
 |---|---|---|
 | **Financial State** | Holds the investor's financial information and cash-flow picture. | Income, expenses, assets, liabilities and related financial inputs. |
-| **Moneywheel / Financial Health** | Calculates and classifies financial measurements. | Ratios, status bands, data availability and financial-health evidence. |
+| **Moneywheel (including financial-health assessment)** | Calculates and interprets governed financial measurements. | Ratios, status bands, data availability and financial-health evidence. |
 | **Goal Planner** | Defines a goal's future requirement and funding position. | Goal target, timeline, mapped-resource projection, funding gap and contribution requirement. |
 | **Goal Feasibility** | Assesses whether a goal's funding path is workable under relevant conditions. | Feasibility result, reasons, constraints and funding-path context. Goal Funding belongs here—not as a fifth Strategy Builder strategy. |
 | **Constraint / Safety Evaluation** | Checks applicable rules, warnings, preferences, conflicts and missing evidence. | What a proposal must respect, what needs review and which evidence is incomplete. |
