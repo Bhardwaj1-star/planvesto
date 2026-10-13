@@ -200,7 +200,7 @@ A single portfolio-level required return cannot be derived by taking a simple ar
 - Apply the canonical hard-constraint gate and strategy-specific eligibility rules as separate layers.
 - Do not recreate Moneywheel formulas or thresholds downstream.
 - Only an explicitly registered rule can make a metric a hard constraint.
-- Keep Strategy, Variant, Technique/Method, Architecture/Solution, and implementation as distinct decision objects according to the canonical taxonomy.
+- Keep Strategy, Variant, Technique/Method, Solution, and implementation as distinct concepts according to the canonical taxonomy.
 - Do not accept a proposal or replace a strategy/plan solely because a Moneywheel metric changed.
 
 ### Canonical constraint/decision layer
