@@ -18,12 +18,10 @@ from services.multi_goal_planning_service import MultiGoalPlanningService
 from services.strategy_service import StrategyService
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 from report_engine.renderer import CommonPdfRenderer
-from engines.calculation.canonical import (
-    calculate_debt_to_income_ratio,
-    calculate_emergency_coverage,
-    calculate_financial_asset_ratio,
-    calculate_savings_rate,
-)
+from data.moneywheel_repository import MoneywheelRepository
+from models.moneywheel import MoneywheelResult
+from rules.moneywheel import RULES
+from services.moneywheel_service import MoneywheelService
 
 
 class FinancialPlanService:
@@ -46,6 +44,12 @@ class FinancialPlanService:
             strategy_repo=self.strategy_repo,
             strategy_service=self.strategy_service,
             goal_report_service=self.goal_report_service,
+        )
+        # Reports use the same Moneywheel engine/rules as the investor feature.
+        # The report path builds an assessment without persisting a second snapshot.
+        self.moneywheel_service = MoneywheelService(
+            repository=None,
+            goal_repository=self.goal_repo,
         )
 
     @staticmethod
@@ -126,6 +130,10 @@ class FinancialPlanService:
             })
 
         f_state = multi_plan.financial_state
+        canonical_financial_state = self.multi_goal_service.financial_state_service.current(
+            planning_unit_id, "family"
+        )
+        moneywheel_result = self.moneywheel_service.build_from_financial_state(canonical_financial_state)
         total_surplus = float(multi_plan.total_available_surplus or 0.0)
         total_allocated = float(multi_plan.total_allocated_contribution or 0.0)
         unallocated = max(0.0, total_surplus - total_allocated)
@@ -243,9 +251,12 @@ class FinancialPlanService:
                 for entry in (audit.get("canonical_constraint_set", {}).get("conflicts") or [])
             ],
             "audit_trail": multi_plan.audit_trail,
-            "ratio_constraints": self._build_ratio_constraints(f_state),
+            # Legacy field retained for response compatibility. Canonical planning
+            # constraints are supplied by ConstraintAggregator above, not rebuilt
+            # from Moneywheel ratios or a second set of thresholds.
+            "ratio_constraints": [],
             "family_cash_flow_trajectory": self._build_family_cash_flow_trajectory(rows, total_allocated, f_state),
-            "moneywheel_health_scan": self._build_moneywheel_health_scan(f_state),
+            "moneywheel_health_scan": self._build_moneywheel_health_scan(moneywheel_result),
             "contingency_matrix": self._build_family_contingency_matrix(),
             "governance_protocol": self._build_governance_protocol(),
         }
@@ -322,121 +333,44 @@ class FinancialPlanService:
 
         return trajectory
 
-    @classmethod
-    def _extract_canonical_ratios(cls, f_state: dict[str, Any]) -> tuple[float, float, float, float, float, float]:
-        income = float(f_state.get("annual_income") or 0.0)
-        monthly_income = float(f_state.get("monthly_income") or (income / 12.0 if income > 0 else 0.0))
-        expenses = float(f_state.get("annual_expenses") or 0.0)
-        monthly_exp = float(f_state.get("monthly_expenses") or (expenses / 12.0 if expenses > 0 else 0.0))
-        essential_exp = float(f_state.get("essential_monthly_expenses") or (monthly_exp if monthly_exp > 0 else 1.0))
-        monthly_surplus = float(f_state.get("monthly_surplus") or (monthly_income - monthly_exp if monthly_income > 0 else 0.0))
-        monthly_debt = float(f_state.get("monthly_debt_payments") or f_state.get("emi_burden_monthly") or 0.0)
-
-        assets = float(f_state.get("assets") or f_state.get("total_assets") or 0.0)
-        liabilities = float(f_state.get("liabilities") or f_state.get("total_liabilities") or 0.0)
-        financial_assets = float(f_state.get("financial_assets") or (assets * 0.6))
-        liquid_assets = float(f_state.get("liquid_assets") or 0.0)
-
-        savings_pct = calculate_savings_rate(monthly_surplus, monthly_income) if monthly_income > 0 else 0.0
-        if savings_pct is None:
-            savings_pct = ((income - expenses) / income * 100.0) if income > 0 else 0.0
-
-        if monthly_debt > 0 and monthly_income > 0:
-            dti_pct = calculate_debt_to_income_ratio(monthly_debt, monthly_income) or 0.0
-        else:
-            dti_pct = (liabilities / income * 100.0) if income > 0 else 0.0
-
-        if liquid_assets > 0 and essential_exp > 0:
-            emergency_months = calculate_emergency_coverage(liquid_assets, essential_exp) or 6.0
-        else:
-            emergency_months = (financial_assets * 0.2) / monthly_exp if monthly_exp > 0 else 6.0
-
-        fin_asset_pct = calculate_financial_asset_ratio(financial_assets, assets) if assets > 0 else 50.0
-        if fin_asset_pct is None:
-            fin_asset_pct = (financial_assets / assets * 100.0) if assets > 0 else 50.0
-
-        return savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, financial_assets
+    @staticmethod
+    def _format_moneywheel_bands(key: str) -> str:
+        """Render the canonical Moneywheel rule bands without defining new thresholds."""
+        rule = RULES[key]
+        parts = []
+        for status in ("excellent", "healthy", "attention", "critical"):
+            lower, upper = rule[status]
+            if lower is None and upper is None:
+                band = "all values"
+            elif lower is None:
+                band = f"< {upper:g}"
+            elif upper is None:
+                band = f">= {lower:g}"
+            else:
+                band = f"{lower:g} to <{upper:g}"
+            parts.append(f"{status.title()}: {band}{rule['unit']}")
+        return "; ".join(parts)
 
     @classmethod
-    def _build_moneywheel_health_scan(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
-        savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, financial_assets = cls._extract_canonical_ratios(f_state)
-
+    def _build_moneywheel_health_scan(cls, result: MoneywheelResult) -> list[dict[str, Any]]:
+        """Format the canonical Moneywheel result for the consolidated report."""
         return [
             {
-                "metric": "Savings Rate",
-                "current_value": f"{savings_pct:.1f}%",
-                "healthy_benchmark": ">= 25.0%",
-                "status": "Healthy" if savings_pct >= 25 else "Attention Required",
-            },
-            {
-                "metric": "Debt-to-Income (DTI)",
-                "current_value": f"{dti_pct:.1f}%",
-                "healthy_benchmark": "< 40.0%",
-                "status": "Healthy" if dti_pct < 40 else "Elevated Debt",
-            },
-            {
-                "metric": "Emergency Fund Buffer",
-                "current_value": f"{emergency_months:.1f} Months",
-                "healthy_benchmark": ">= 6.0 Months",
-                "status": "Adequate" if emergency_months >= 6.0 else "Build Buffer",
-            },
-            {
-                "metric": "Financial Asset Ratio",
-                "current_value": f"{(financial_assets / assets * 100):.1f}%" if assets > 0 else "—",
-                "healthy_benchmark": ">= 50.0%",
-                "status": "Healthy" if (assets > 0 and (financial_assets / assets) >= 0.5) else "Asset Heavy",
-            },
-        ]
-
-    @classmethod
-    def _build_ratio_constraints(cls, f_state: dict[str, Any]) -> list[dict[str, Any]]:
-        savings_pct, dti_pct, emergency_months, fin_asset_pct, assets, _ = cls._extract_canonical_ratios(f_state)
-
-        return [
-            {
-                "rule_id": "RULE-SAVINGS-RATE",
-                "rule_name": "Savings Rate Guardrail",
-                "category": "foundation",
-                "current_ratio": round(savings_pct, 1),
-                "target_threshold": 25.0,
-                "condition": ">= 25.0%",
-                "status": "pass" if savings_pct >= 25 else ("conditional" if savings_pct >= 15 else "fail"),
-                "reason": "Measures the percentage of gross income directed towards savings and goal investments.",
-                "corrective_action": "Optimize discretionary expenditures to direct at least 25% of annual income into goals." if savings_pct < 25 else None,
-            },
-            {
-                "rule_id": "RULE-DTI-RATIO",
-                "rule_name": "Debt-to-Income (DTI) Limit",
-                "category": "debt",
-                "current_ratio": round(dti_pct, 1),
-                "target_threshold": 40.0,
-                "condition": "< 40.0%",
-                "status": "pass" if dti_pct < 40 else "fail",
-                "reason": "Ensures that annual debt obligations remain manageable relative to earning capacity.",
-                "corrective_action": "Accelerate debt prepayment to bring leverage below 40% before expanding aggressive goals." if dti_pct >= 40 else None,
-            },
-            {
-                "rule_id": "RULE-EMERGENCY-BUFFER",
-                "rule_name": "Emergency Liquidity Buffer",
-                "category": "liquidity",
-                "current_ratio": round(emergency_months, 1),
-                "target_threshold": 6.0,
-                "condition": ">= 6.0 Months",
-                "status": "pass" if emergency_months >= 6.0 else "conditional",
-                "reason": "Protects against premature goal liquidation during unexpected family income interruptions.",
-                "corrective_action": "Maintain 6 months of mandatory living expenses in liquid fixed deposits or overnight funds." if emergency_months < 6.0 else None,
-            },
-            {
-                "rule_id": "RULE-FINANCIAL-ASSETS",
-                "rule_name": "Liquid Financial Asset Mix",
-                "category": "asset_allocation",
-                "current_ratio": round(fin_asset_pct, 1),
-                "target_threshold": 50.0,
-                "condition": ">= 50.0%",
-                "status": "pass" if fin_asset_pct >= 50.0 else "conditional",
-                "reason": "Prevents over-concentration of family net worth in illiquid physical real estate or gold.",
-                "corrective_action": "Direct upcoming surplus flows into diversified financial market instruments." if fin_asset_pct < 50.0 else None,
-            },
+                "metric": ratio.name,
+                "current_value": (
+                    f"{ratio.value:.2f} {ratio.unit}".strip()
+                    if ratio.available and ratio.value is not None
+                    else "Not available"
+                ),
+                "healthy_benchmark": cls._format_moneywheel_bands(ratio.key),
+                "status": ratio.status.title(),
+                "available": ratio.available,
+                "formula": ratio.formula,
+                "explanation": ratio.explanation,
+                "metric_key": ratio.key,
+                "rule_set_version": result.rule_set_version,
+            }
+            for ratio in result.ratios
         ]
 
     @classmethod
@@ -541,8 +475,8 @@ class FinancialPlanService:
         ], [220, 303]))
 
         # 2. MoneyWheel Health Scan
-        health_scan = plan.get("moneywheel_health_scan") or self._build_moneywheel_health_scan(state)
-        self._section(story, "2. MoneyWheel Diagnostic Health & Vulnerability Scan", styles)
+        health_scan = plan.get("moneywheel_health_scan") or []
+        self._section(story, "2. Moneywheel — Financial Measurements & Health Assessment", styles)
         if health_scan:
             h_rows = [["Diagnostic Metric", "Current Value", "Healthy Benchmark", "Diagnostic Assessment"]]
             for h in health_scan:
