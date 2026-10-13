@@ -2,7 +2,24 @@
 
 **Document type:** Authoritative implementation specification  
 **Scope:** Accepted-path actions, action generation, investor decisions on actions, execution tracking, impact comparison, and action-history preservation  
-**Status:** Consolidated from the Action Plan feature definition, existing-feature audit, user journey, and documented Real-Life Decision Cases. Current runtime evidence and required business behavior are distinguished; this document does not claim every requirement is implemented.
+**Status:** Feature definition aur existing-feature audit se consolidated implementation contract. User Journey sirf flow alignment ke liye aur Real-Life Decision Cases business boundaries/examples ke liye use hote hain. Current code evidence, required behavior aur unresolved points alag rakhe gaye hain; document yeh claim nahi karta ki har requirement implemented hai.
+
+## Quick reference
+
+- **Main kaam:** Accepted Plan mein investor ke adopt kiye hue path ko clear, executable actions mein badalna aur execution progress/impact track karna.
+- **Inputs:** Accepted Plan/approved version, relevant goal and financial context, accepted implementation details, current actions, and prior action-decision history.
+- **Process:** Accepted decision verify karo → applicable actions generate/reconcile karo → investor review/decision record karo → execution track karo → supported actual impact compare karo.
+- **Outputs:** Actions with their purpose, status, timing/amount where defined, dependencies where known, and planned/actual impact where supported.
+- **Boundary:** Action Plan strategy select nahi karta, Goal Feasibility dobara solve nahi karta, aur recommendation/What-If ko accepted decision nahi maanta.
+- **Unverified:** Non-strategy action coverage, adoption wiring, targeted-revalidation triggers, old-action reconciliation, and runtime/schema behavior remain explicit gaps unless separately evidenced.
+
+## Reference authority
+
+1. **Primary business definition:** [docs/feature/Action-Plan.md](../feature/Action-Plan.md).
+2. **Existing behavior baseline:** the five documents under [docs/existing features/Action-Plan/](../existing%20features/Action-Plan/). These describe the inspected code baseline; they do not prove current production behavior.
+3. **Journey alignment:** [docs/User Journeys/12-ACTION_PLAN_JOURNEY.md](../User%20Journeys/12-ACTION_PLAN_JOURNEY.md) confirms the high-level user flow only.
+4. **Real-Life Decision Cases:** use them to clarify business boundaries and examples, not as proof that code already implements them.
+5. **Conflict rule:** keep code-evidenced current behavior, required business behavior, and unresolved policy separate. Do not invent missing rules or claim an unverified implementation exists.
 
 ## 1. Purpose and ownership
 

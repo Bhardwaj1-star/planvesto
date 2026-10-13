@@ -2,8 +2,17 @@
 
 **Document type:** Authoritative implementation specification  
 **Scope:** Moneywheel metrics/constraints consumed by Goal Planner and Strategy Builder, including portfolio-level required return  
-**Status:** Requirements consolidated. Existing behavior is code-verified in the Moneywheel evidence documents; the two debt metrics and Portfolio-Level Return Required are specified additions. Goal-Level Return Required is owned by Goal Planner. Downstream wiring and the portfolio-level calculation model must be verified/finalized during implementation.  
+**Status:** Feature definition aur existing-feature audit se consolidated implementation contract. Existing behavior ke liye audit evidence authoritative baseline hai; Weighted Debt Rate, Investment–Debt Spread aur Portfolio-Level Return Required ko specified additions ke roop mein treat kiya gaya hai, completed implementation ke roop mein nahi. Goal-Level Return Required ka owner Goal Planner hai. Downstream wiring aur portfolio-level calculation model abhi separately verify/finalize hone hain.  
 **Audited source baseline:** d7640029310c8e58d4cdd9a033d7683b5ea10002 (not a claim about production deployment).
+
+## Quick reference
+
+- **Main kaam:** Financial position ke canonical measurements calculate/display karna; planning decisions ke liye evidence dena.
+- **Inputs:** Authoritative Financial State, relevant goal/portfolio data, declared assumptions, and the data needed by each metric.
+- **Process:** Validate inputs → calculate only supported metrics → return value, unit, availability, and relevant metadata → persist/display where the existing contract supports it.
+- **Outputs:** Existing Moneywheel metrics plus explicitly specified additions, with unavailable values and reasons represented honestly.
+- **Boundary:** Moneywheel measurement deta hai; Goal Planner feasibility calculate karta hai; Strategy Builder strategy choose/design karta hai; Action Plan adopted decision ko execute karwata hai.
+- **Unverified:** New metric wiring, portfolio-level return solver, downstream integration, deployment/database state, and test results must not be treated as complete without evidence.
 
 ## 1. Purpose and ownership
 
