@@ -36,7 +36,7 @@ BASKET_REPORT_SECTIONS = [
 
 FINANCIAL_PLAN_SECTIONS = [
     {"id": "financial_position", "title": "1. Consolidated Family Financial Position & Net Worth"},
-    {"id": "moneywheel_scan", "title": "2. MoneyWheel Diagnostic Health & Vulnerability Scan"},
+    {"id": "moneywheel_scan", "title": "2. Moneywheel — Financial Measurements & Health Assessment"},
     {"id": "consolidated_funding", "title": "3. Consolidated Funding Capacity & Resource Waterfall"},
     {"id": "goal_ladder", "title": "4. Multi-Goal Strategic Priority Ladder & Allocations"},
     {"id": "family_cash_flow", "title": "5. Family Multi-Year Cash Flow Trajectory"},
