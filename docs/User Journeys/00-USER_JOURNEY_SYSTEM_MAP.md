@@ -1,13 +1,14 @@
 # User Journey System Map
 
 **Document Type:** User Journey Map  
-**Status:** CANONICAL DESIGN
+**Status:** CANONICAL DESIGN  
+**Feature journey naming:** Use canonical feature names (e.g., Strategy Builder), not internal stage names (e.g., Strategy Decision).
 
 ## Core Journey
 
 ```
 Onboarding → Financial State → Goal Planning → Goal Feasibility
-→ Strategy Decision → Implementation Design → What-If / Stress
+→ Strategy Builder → Implementation Design → What-If / Stress
 → Decision & Recommendation → Investor Adoption → Accepted Plan
 → Action Plan → Execution
 ```
