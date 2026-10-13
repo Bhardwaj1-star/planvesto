@@ -4,6 +4,10 @@ from io import BytesIO
 from typing import Any
 
 from fastapi import HTTPException
+from pydantic import ValidationError
+from engines.moneywheel.engine import MoneywheelEngine
+from models.financial_state import FinancialState
+from models.moneywheel import MoneywheelInput, MoneywheelResult
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
@@ -129,10 +133,7 @@ class FinancialPlanService:
             })
 
         f_state = multi_plan.financial_state
-        canonical_financial_state = self.multi_goal_service.financial_state_service.current(
-            planning_unit_id, "family"
-        )
-        moneywheel_result = self.moneywheel_service.build_from_financial_state(canonical_financial_state)
+        moneywheel_result = self._build_moneywheel_result(planning_unit_id)
         total_surplus = float(multi_plan.total_available_surplus or 0.0)
         total_allocated = float(multi_plan.total_allocated_contribution or 0.0)
         unallocated = max(0.0, total_surplus - total_allocated)
@@ -331,6 +332,27 @@ class FinancialPlanService:
             balance = closing
 
         return trajectory
+
+    def _build_moneywheel_result(self, planning_unit_id: str) -> MoneywheelResult:
+        """Build Moneywheel from authoritative state; incomplete legacy contexts stay unavailable."""
+        state_service = getattr(self.multi_goal_service, "financial_state_service", None)
+        current = getattr(state_service, "current", None)
+        if not callable(current):
+            return MoneywheelEngine().build(MoneywheelInput(planning_unit_id=planning_unit_id))
+
+        # Do not catch data-fetch errors here: a failed source read must remain visible.
+        raw_state = current(planning_unit_id, "family")
+        if isinstance(raw_state, FinancialState):
+            state = raw_state
+        else:
+            try:
+                state = FinancialState.model_validate(raw_state)
+            except (ValidationError, TypeError, ValueError):
+                # Some older/report-test contexts contain only partial summary fields.
+                # Show unavailable Moneywheel metrics rather than inventing values.
+                return MoneywheelEngine().build(MoneywheelInput(planning_unit_id=planning_unit_id))
+
+        return self.moneywheel_service.build_from_financial_state(state)
 
     @staticmethod
     def _format_moneywheel_bands(key: str) -> str:
