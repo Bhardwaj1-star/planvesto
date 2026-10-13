@@ -1,8 +1,8 @@
 # Moneywheel — Final Implementation Specification
 
 **Document type:** Authoritative implementation specification  
-**Scope:** Moneywheel metrics/constraints consumed by Goal Planner and Strategy Builder  
-**Status:** Requirements consolidated. Existing behavior is code-verified in the Moneywheel evidence documents; the two debt metrics are required additions. Downstream wiring must be verified during implementation.  
+**Scope:** Moneywheel metrics/constraints consumed by Goal Planner and Strategy Builder, including portfolio-level required return  
+**Status:** Requirements consolidated. Existing behavior is code-verified in the Moneywheel evidence documents; the two debt metrics and Portfolio-Level Return Required are specified additions. Goal-Level Return Required is owned by Goal Planner. Downstream wiring and the portfolio-level calculation model must be verified/finalized during implementation.  
 **Audited source baseline:** d7640029310c8e58d4cdd9a033d7683b5ea10002 (not a claim about production deployment).
 
 ## 1. Purpose and ownership
@@ -24,13 +24,13 @@ Moneywheel is the canonical calculation owner for these metrics. Downstream cons
 | MW-BR-01 | Use authoritative server-side Financial State; client-supplied snapshots must not override it. | Preserve existing API behavior. |
 | MW-BR-02 | Missing input, invalid denominator, or non-finite result is unavailable, not zero and not healthy. | Preserve existing engine contract. |
 | MW-BR-03 | Preserve the nine existing canonical metrics, formulas, units, and thresholds unless separately approved. | Preserve and regression-test. |
-| MW-BR-04 | Add Weighted Debt Rate and Investment–Debt Spread as Moneywheel metrics. | Required addition. |
+| MW-BR-04 | Add Weighted Debt Rate, Investment–Debt Spread, and Portfolio-Level Return Required as Moneywheel measurements. | Required additions; portfolio-return calculation contract must be finalized before implementation. |
 | MW-BR-05 | Debt existence, DTI, leverage, or a negative spread must not alone select Debt Reduction or another strategy. | Required business rule. |
 | MW-BR-06 | Moneywheel supplies metrics/evidence; canonical decision rules determine whether a condition is a hard constraint, eligibility input, warning, or diagnostic. | Required ownership boundary. |
 | MW-BR-07 | Goal Planner owns goal-level feasibility and funding-path comparison; Strategy Builder consumes that result and designs execution. | Required cross-feature boundary. |
 | MW-BR-08 | An asset mapped to a goal is not automatically earmarked, locked, sold, or unavailable elsewhere. | Required business rule. |
 | MW-BR-09 | A material Financial State or goal change may require recalculation/revalidation, but does not automatically replace a strategy or accepted plan. | Required lifecycle boundary. |
-| MW-BR-10 | Proposed alternatives remain scenarios until investor adoption. “No acceptable path” is a valid outcome. | Required lifecycle boundary. |
+| MW-BR-10 | Proposed alternatives remain scenarios until investor adoption. “No acceptable path” is a valid outcome. | Required lifecycle boundary. |\n| MW-BR-11 | Portfolio-Level Return Required must use Goal Planner's versioned goal-level requirements and explicit portfolio cash flows; it is not the arithmetic average of goal-level returns. | Required cross-feature measurement; define/validate calculation contract and dependencies before implementation. |
 
 ### Rule-role distinction
 
@@ -46,7 +46,7 @@ Do not turn every critical Moneywheel status into a universal hard constraint. P
 
 ## 3. Canonical metric inventory
 
-After implementation, Moneywheel will return **11 canonical metrics**.
+After implementation, Moneywheel will return **11 canonical metrics**: eight retained existing Moneywheel metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is owned by Goal Planner, not Moneywheel.
 
 ### 3.1 Existing nine — preserve current contracts
 
@@ -62,7 +62,7 @@ The formulas and thresholds below reflect the inspected backend/rules/moneywheel
 | insurance_coverage_ratio | Insurance Coverage Ratio | Existing Sum Assured / Required Insurance Cover × 100 | Excellent ≥80%; healthy 60–80%; attention 40–60%; critical <40%. |
 | goal_funding_ratio | Goal Funding Ratio | Current Goal Funding / Goal Target Amount × 100 | Excellent ≥100%; healthy 80–100%; attention 50–80%; critical <50%. |
 | future_funding_ratio | Future Funding Ratio | Projected Goal Funding / Future Goal Target × 100 | Excellent ≥100%; healthy 80–100%; attention 50–80%; critical <50%. |
-| required_rate_of_return | Required Rate of Return | ((Future Goal Target / Current Goal Funding)^(1 / Goal Duration Years) − 1) × 100 | Excellent <8%; healthy 8–12%; attention 12–15%; critical ≥15%. |
+
 
 For DTI, preserve the exact constants and boundary comparisons in the current rules source. The current implementation imports DTI and savings benchmarks from the canonical constraint policy; do not create a second source of truth.
 
@@ -116,6 +116,35 @@ Relevant annual investment-return assumption − Weighted Debt Rate
 Goal Planner should compare complete feasible paths, including cash flow, liquidity, goal timing, investment uncertainty, debt cost/tenure, and competing goals.
 
 **Status bands:** Do not invent health bands in the initial implementation. Return the spread in percentage points and expose its assumptions.
+
+### 3.4 New measurement — Portfolio-Level Return Required
+
+**Canonical key:** portfolio_level_return_required  
+**Unit:** annualized percentage (%)  
+**Owner:** Moneywheel, using Goal Planner's versioned Goal-Level Return Required and goal funding/target-date evidence as inputs where relevant.
+
+**Purpose:** Estimate the portfolio-level annualized return required to fund the included goals under an explicit shared portfolio funding model. This is a portfolio measurement, not a strategy recommendation and not an average of individual goal returns.
+
+**Calculation contract:** The precise solver and output semantics must be finalized before implementation. At minimum, the model must explicitly define:
+- which goals are included and their target-date cash outflows/required corpus;
+- current portfolio assets included, their eligibility and allocation/availability;
+- future contributions, contribution timing, and any planned withdrawals;
+- goal-specific funding already ring-fenced or otherwise unavailable to other goals, where an authoritative earmarking/allocation exists;
+- whether the model assumes one pooled portfolio or distinct goal-specific portfolios;
+- return compounding/annualization convention and reference date;
+- treatment of inflation-adjusted target amounts and any other modeled cash flows;
+- how shared assets/surplus are prevented from being double-counted.
+
+A single portfolio-level required return cannot be derived by taking a simple arithmetic mean of goal-level required returns. Different goal dates, amounts, current funding, contributions, and withdrawals make that invalid. The model must solve against the combined dated obligations and cash flows, or return unavailable/indeterminate if the defined model does not support a meaningful unique result.
+
+**Cross-feature dependency and sequencing:** Goal Planner first calculates goal-level requirements and, where valid, Goal-Level Return Required for each goal/scenario. Moneywheel then calculates Portfolio-Level Return Required from the relevant versioned goal results and explicit portfolio-level cash-flow/resource assumptions. This dependency must be one-way for this measurement; Goal Planner must not require Portfolio-Level Return Required to calculate Goal-Level Return Required, avoiding a circular dependency. Goal Feasibility may consume the portfolio-level result as additional evidence after it is available.
+
+**Interpretation and limitations:** This is the return mathematically required under the declared pooled-resource/cash-flow model, not an expected or guaranteed return and not proof that the portfolio can achieve it within the investor's risk limits. Compare it with an independently declared, risk-appropriate return assumption only on a comparable basis. A high required return must trigger constraint-aware feasibility/adjustment analysis, not an automatic increase in risk.
+
+**Availability:** Return unavailable with a reason if goal data, dated cash flows, resource scope, contribution assumptions, or required version metadata are missing/invalid; if shared resources cannot be reconciled; or if the defined solver cannot produce a meaningful result. Do not substitute the average of goal returns, a universal default, zero, or an arbitrary fallback.
+
+**Status bands:** Do not invent health/status bands in the initial implementation. Return the numeric value, assumptions, included-goal/resource scope, and availability metadata.
+
 
 ## 4. Planning rules
 
@@ -182,9 +211,9 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 ## 8. Acceptance criteria
 
 1. Existing nine metrics retain their formulas, units, thresholds, and boundary behavior unless separately approved.
-2. New calculations contain exactly eleven canonical metrics.
+2. The intended Moneywheel output contains eleven canonical metrics after the ownership change: eight retained existing metrics, two debt metrics, and Portfolio-Level Return Required. Goal-Level Return Required is calculated by Goal Planner. Legacy snapshot compatibility is explicit.
 3. Weighted Debt Rate is principal-weighted, never a simple average.
-4. Investment–Debt Spread uses the explicitly supplied annual return assumption minus Weighted Debt Rate, expressed in percentage points.
+4. Investment–Debt Spread uses the explicitly supplied annual return assumption minus Weighted Debt Rate, expressed in percentage points.\n4a. Portfolio-Level Return Required uses explicit dated portfolio obligations/resources and versioned Goal Planner outputs; it is never a simple average of goal-level returns.\n4b. Goal-Level Return Required has one calculation owner (Goal Planner); Moneywheel does not retain a competing formula.
 5. Missing, invalid, zero-denominator, incomparable, and non-finite inputs return unavailable with a reason.
 6. No invented health bands or hidden default return assumption for the new metrics.
 7. API continues to ignore client-supplied Financial State as calculation authority and enforces planning-unit ownership.
@@ -192,7 +221,7 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 9. Moneywheel refresh does not choose a strategy, change goal priority, earmark assets, or mutate Accepted Plan/Action Plan state.
 10. Goal Planner and Strategy Builder consume a typed canonical output rather than duplicate formulas.
 11. Tests prove that diagnostic, warning, eligibility, and hard constraint are distinct.
-12. Tests cover threshold boundaries, partial availability, weighted-rate arithmetic, spread sign/units, historical compatibility, and cross-feature non-mutation.
+12. Tests cover threshold boundaries, partial availability, weighted-rate arithmetic, spread sign/units, portfolio-level cash-flow solving/availability, goal-return ownership, historical compatibility, and cross-feature non-mutation.
 13. Existing Moneywheel tests are run and results recorded; locating tests is not proof that they pass.
 14. Deployment/database/RLS claims are made only after target-environment verification.
 
@@ -216,4 +245,4 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 
 ## 10. Explicit non-goals
 
-This specification does not authorize redesigning all existing ratios/thresholds, automatic Debt Reduction/Investment selection from a single metric, unapproved status bands, a separate hard-constraint engine inside Moneywheel, automatic changes to goal priority/strategy/Accepted Plan/asset earmarking/Action Plan, or claims that tests/deployments/production RLS are verified without evidence.
+This specification does not authorize redesigning all existing ratios/thresholds, automatic Debt Reduction/Investment selection from a single metric, unapproved status bands, a separate hard-constraint engine inside Moneywheel, automatic changes to goal priority/strategy/Accepted Plan/asset earmarking/Action Plan, or claims that tests/deployments/production RLS are verified without evidence. It also does not authorize implementing Portfolio-Level Return Required until its cash-flow solver, goal inclusion/allocation rules, and legacy `required_rate_of_return` migration/compatibility are explicitly reviewed.

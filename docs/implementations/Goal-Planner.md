@@ -38,7 +38,7 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 | GP-BR-12 | “No acceptable path” is a valid result. | Explain the gap, constraints, assumptions, and possible changes; never force a recommendation. |
 | GP-BR-13 | Material changes require targeted recalculation/revalidation of affected goals and decisions. | Do not rebuild unrelated decisions without a material dependency. |
 | GP-BR-14 | Goal cancellation does not delete the underlying asset from Financial State. | Treat earmark release/remapping as a separate lifecycle action. |
-| GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |
+| GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |\n| GP-BR-16 | Goal-Level Return Required is scenario-specific and distinct from required contribution and expected return. | Calculate and expose it in Goal Planner when the cash-flow inputs support a valid solution. |\n| GP-BR-17 | Constraints bound feasibility search; a high required return must not justify silently exceeding the investor's risk limit or inventing surplus. | Evaluate explicit What-If adjustments and allow no acceptable path. |\n| GP-BR-18 | Target date/amount adjustments are proposals, not automatic edits to the canonical goal. | Recalculate each scenario and require explicit investor adoption. |
 
 ## 3. Goal inputs and canonical context
 
@@ -88,6 +88,51 @@ Use distinct states for at least:
 Exact status names and mapping to existing response schemas must be reconciled with the current implementation before changing contracts. Do not turn a diagnostic or warning into a hard block without an explicitly owned canonical rule.
 
 ## 5. Funding gap and funding mechanisms
+## 4.1 Goal-Level Required Return
+
+Goal Planner owns **Goal-Level Return Required**. It must calculate the annualized return required for a specific goal under a clearly defined funding scenario before using that result to explain or compare feasibility. This is a Goal Planner calculation, not a strategy recommendation.
+
+The calculation must use the goal's target-date requirement, time remaining, eligible mapped resources/current funding, and the contribution schedule for the scenario. It must identify whether the scenario assumes no future contributions, regular contributions, step-up contributions, lump sums, or a combination. Different funding schedules can produce different required-return results.
+
+Rules:
+- Do not calculate required return from target amount and duration alone when current funding or future contributions materially affect the result.
+- Define the cash-flow timing convention (for example, contribution at period start/end), compounding frequency, annualization convention, and inflation/target-date treatment.
+- If the cash-flow pattern cannot support a unique or meaningful required-return solution, return unavailable/indeterminate with a reason; do not fabricate a percentage.
+- Label required return as the return mathematically needed under the stated scenario, not as an expected, achievable, guaranteed, or risk-adjusted return.
+- Compare required return with a separately sourced, risk-appropriate projection assumption only when the assumptions are comparable. A gap between required and assumed return is evidence for feasibility analysis, not an automatic verdict by itself.
+- Goal-Level Return Required must be recalculated when the target amount/date, mapped resources, contribution schedule, or other material scenario input changes.
+
+### Required-return versus required-contribution calculations
+
+These are two distinct calculation directions and both must be supported where inputs permit:
+
+1. **Required return:** given the target, timeline, eligible current resources, and contribution schedule, solve for the annualized return needed.
+2. **Required contribution:** given the target, timeline, eligible resources, and a declared return assumption, solve for the contribution needed.
+
+Do not treat one as a substitute for the other. The output must record which variable was solved for and which assumptions were held fixed.
+
+## 4.2 Constraint-Aware Feasibility and Goal Adjustments
+
+Goal Feasibility must evaluate the current goal against explicit financial and investor-defined constraints. Relevant evidence can include available monthly surplus, eligible assets/resources, accepted risk limits, declared return assumptions, target date/amount, debt obligations, and permitted funding sources. Moneywheel remains the owner of its canonical metrics; Goal Planner consumes their values and metadata rather than duplicating their formulas.
+
+Constraint roles must remain distinct:
+- **Hard constraint:** cannot be overridden by the planner; a breach makes the affected path unacceptable under the rule.
+- **User-adjustable goal parameter:** target date or target amount can be changed only as a proposed scenario and only adopted through the investor-decision lifecycle.
+- **Financial-state fact/derived limit:** for example, currently available monthly surplus. Do not treat it as freely editable merely to make a scenario pass.
+- **Projection assumption:** a stated return/inflation or other modeling assumption. It must not be silently increased to force feasibility.
+
+When the current goal is not feasible under its stated assumptions, evaluate relevant alternatives as separate What-If scenarios, where supported:
+- **Target-date extension** to allow more time.
+- **Target-date advancement** to test a changed/earlier need; this commonly increases funding pressure and is not inherently a repair.
+- **Target-amount reduction** to test a smaller acceptable goal.
+- **Target-amount increase** to reflect a changed user need; this generally raises the funding requirement and is not a default remedy for a shortfall.
+- **Funding-path changes**, such as SIP, lump sum, step-up contributions, or combinations.
+- **Additional funding sources** only where availability and permitted use are evidenced.
+
+For every scenario, recalculate the affected target-date requirement, Goal-Level Return Required or required contribution as appropriate, projected resources, funding gap, monthly cash-flow fit, and feasibility. Compare alternatives on consistent assumptions and show what changed from the baseline. Do not change the user's canonical goal merely by calculating or saving a scenario. The user must explicitly accept a revision before it becomes the active goal/plan state.
+
+Do not assume the maximum possible investment risk is acceptable simply because the required return is high. If no path fits the applicable constraints, return **no acceptable path** with the binding constraints and shortfall explained.
+
 
 Goal Planner must distinguish these concepts:
 
@@ -215,7 +260,7 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 13. Material changes trigger targeted recalculation/revalidation under a shared, explicit policy.
 14. Strategy Builder receives a typed feasibility/funding context and does not silently recreate feasibility.
 15. Tests cover calculation boundaries, missing/invalid inputs, asset resolution, shared-resource conflicts, funding-path comparisons, version history, ownership, and non-mutation before adoption.
-16. Test results, live database/RLS state, and deployment status are reported only when actually verified.
+16. Test results, live database/RLS state, and deployment status are reported only when actually verified.\n17. Goal-Level Return Required is scenario-specific, traceable to cash-flow timing and assumptions, and distinct from required contribution and expected return.\n18. Constraint violations are not bypassed to manufacture feasibility; an unacceptable/no-path result is supported.\n19. Target-date and target-amount adjustments are evaluated as separate scenarios and do not mutate the canonical goal before explicit adoption.\n20. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
 
 ## 12. Source authority and evidence
 
