@@ -17,7 +17,7 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 - **Whole-Plan / Multi-Goal Impact Analysis:** Evaluates shared-resource conflicts and effects on other goals when a change materially affects the broader plan. This is conditional, not required for every local goal edit.
 - **Strategy Builder:** Consumes Goal Planner's feasibility and funding context to decide how to implement a feasible path. It must not silently redefine Goal Planner feasibility or treat a funding mechanism as a strategy.
 - **Implementation Design:** Where available, models concrete implementation alternatives for a selected path.
-- **Accepted Plan / Investor Decision lifecycle:** Only an explicit investor adoption transition makes a proposal active. Calculation, preview, saving a scenario, or generating a report must not itself overwrite an Accepted Plan.
+- **Accepted Plan / Investor Decision lifecycle:** Only an explicit investor acceptance transition makes a proposed funding path or goal-condition change active. Calculation or preview must not itself overwrite the canonical goal or Accepted Plan.
 - **Action Plan:** Turns an adopted plan into execution actions; it is not the goal-feasibility engine.
 
 ## 2. Core business rules
@@ -40,8 +40,8 @@ It owns goal-level requirements and feasibility—not the final strategy choice 
 | GP-BR-14 | Goal cancellation does not delete the underlying asset from Financial State. | Treat earmark release/remapping as a separate lifecycle action. |
 | GP-BR-15 | Goal Planner owns its feasibility result; Strategy Builder consumes that result and handles strategy/execution decisions. | Avoid duplicate or conflicting feasibility logic downstream. |
 | GP-BR-16 | Goal-Level Return Required is scenario-specific and distinct from required contribution and expected return. | Calculate and expose it in Goal Planner when the cash-flow inputs support a valid solution. |
-| GP-BR-17 | Constraints bound feasibility search; a high required return must not justify silently exceeding the investor's risk limit or inventing surplus. | Evaluate explicit What-If adjustments and allow no acceptable path. |
-| GP-BR-18 | Target date/amount adjustments are proposals, not automatic edits to the canonical goal. | Recalculate each scenario and require explicit investor adoption. |
+| GP-BR-17 | Goal Feasibility follows two ordered approaches: first optimize available financial capacity/surplus using relevant financial alternatives and Opportunity Cost; only if the goal remains infeasible, calculate the goal-condition adjustments required. | Use one feasibility engine for both approaches; never invent surplus, bypass constraints, or force an acceptable path. |
+| GP-BR-18 | If financial optimization is insufficient, the system calculates what target-amount reduction and/or target-date extension would be required; it does not modify the investor's goal automatically. | Present the calculated adjustment and consequences for investor decision; preserve the original goal until explicitly accepted. |
 
 ## 3. Goal inputs and canonical context
 
@@ -73,11 +73,12 @@ The following is the required logical contract. Preserve existing implementation
 4. **Calculate duration and target-date requirement.** Apply the canonical target/inflation calculation for the goal type. Retirement goals may require a distinct retirement corpus calculation and explicit retirement inputs.
 5. **Project mapped assets.** Project only resolved eligible assets under declared assumptions. Show that mapping does not earmark or reserve an asset.
 6. **Calculate funding evidence.** Return projected mapped resources, target-date requirement, funding gap/surplus, and required monthly contribution where inputs support those calculations.
-7. **Evaluate feasibility.** Apply the defined feasibility contract using funding need, contribution/surplus fit, constraints and required inputs. Do not equate a positive mapped-asset projection with complete feasibility.
-8. **Evaluate relevant funding paths.** Where the capability is supported, compare explicit alternatives on the same goal baseline and clearly expose each path's assumptions and outcomes.
-9. **Assess broader impact conditionally.** If shared resources, other goals, or an Accepted Plan may be materially affected, invoke Whole-Plan / Multi-Goal Impact Analysis and identify affected decisions for revalidation.
-10. **Return a typed result.** Include calculations, assumptions, missing inputs, feasibility state, funding paths and traceability metadata.
-11. **Persist only through the appropriate lifecycle.** Preview/calculation must not accidentally become an accepted plan. Versioned goal persistence and plan adoption are separate transitions.
+7. **Run Goal Feasibility — Approach 1: financial optimization.** Before changing goal conditions, evaluate whether the goal can be funded better from the investor's actual financial capacity. Compare relevant uses of money—such as goal contributions, debt prepayment, investment, loan/EMI changes, liquidity preservation, and other goals—using Opportunity Cost where relevant. Estimate only evidenced, constraint-compatible surplus that can realistically be freed or generated. Do not assume that every alternative improves surplus or that the highest nominal surplus is automatically best.
+8. **Recalculate feasibility after Approach 1.** Apply the same feasibility rules to the resulting funding path, including contribution fit, debt obligations, liquidity, risk limits, shared resources, and other applicable constraints. If feasible, return the path and its trade-offs; do not proceed to goal-condition changes as if they were necessary.
+9. **Run Goal Feasibility — Approach 2 only if still infeasible.** Calculate the goal-condition changes that would be needed to make it feasible under the evidenced financial capacity—principally a lower target amount, a later target date, or a combination. Quantify the required adjustment and recalculate the requirement, contribution, funding gap, and feasibility. These are feasibility adjustments identified by Goal Planner, not an independent What-If feature or separate engine. The investor's canonical goal must not be changed without explicit acceptance.
+10. **Assess broader impact conditionally.** If shared resources, other goals, or an Accepted Plan may be materially affected, invoke Whole-Plan / Multi-Goal Impact Analysis and identify affected decisions for revalidation.
+11. **Return a typed result.** Include calculations, assumptions, missing inputs, feasibility state, Approach 1 findings, any necessary Approach 2 adjustment, funding paths, trade-offs, and traceability metadata.
+12. **Persist only through the appropriate lifecycle.** Calculation/preview must not accidentally become an accepted plan. Versioned goal persistence and investor acceptance are separate transitions.
 
 ### Feasibility semantics
 
@@ -114,7 +115,7 @@ These are two distinct calculation directions and both must be supported where i
 
 Do not treat one as a substitute for the other. The output must record which variable was solved for and which assumptions were held fixed.
 
-## 4.2 Constraint-Aware Feasibility and Goal Adjustments
+## 4.2 Constraint-Aware Goal Feasibility: Two Ordered Approaches
 
 Goal Feasibility must evaluate the current goal against explicit financial and investor-defined constraints. Relevant evidence can include available monthly surplus, eligible assets/resources, accepted risk limits, declared return assumptions, target date/amount, debt obligations, and permitted funding sources. Moneywheel remains the owner of its canonical metrics; Goal Planner consumes their values and metadata rather than duplicating their formulas.
 
@@ -124,17 +125,26 @@ Constraint roles must remain distinct:
 - **Financial-state fact/derived limit:** for example, currently available monthly surplus. Do not treat it as freely editable merely to make a scenario pass.
 - **Projection assumption:** a stated return/inflation or other modeling assumption. It must not be silently increased to force feasibility.
 
-When the current goal is not feasible under its stated assumptions, evaluate relevant alternatives as separate What-If scenarios, where supported:
-- **Target-date extension** to allow more time.
-- **Target-date advancement** to test a changed/earlier need; this commonly increases funding pressure and is not inherently a repair.
-- **Target-amount reduction** to test a smaller acceptable goal.
-- **Target-amount increase** to reflect a changed user need; this generally raises the funding requirement and is not a default remedy for a shortfall.
-- **Funding-path changes**, such as SIP, lump sum, step-up contributions, or combinations.
-- **Additional funding sources** only where availability and permitted use are evidenced.
+Goal Feasibility must use the following two ordered approaches as one decision process, not as separate features or engines.
 
-For every scenario, recalculate the affected target-date requirement, Goal-Level Return Required or required contribution as appropriate, projected resources, funding gap, monthly cash-flow fit, and feasibility. Compare alternatives on consistent assumptions and show what changed from the baseline. Do not change the user's canonical goal merely by calculating or saving a scenario. The user must explicitly accept a revision before it becomes the active goal/plan state.
+### Approach 1 — Optimize financial capacity and available surplus first
 
-Do not assume the maximum possible investment risk is acceptable simply because the required return is high. If no path fits the applicable constraints, return **no acceptable path** with the binding constraints and shortfall explained.
+Keep the investor's current goal amount and target date unchanged while evaluating how its funding position can be improved. Use authoritative Financial State and cash-flow facts to assess income, expenses, existing resources, debt obligations, liquidity needs, and competing goals. Where relevant, use Opportunity Cost to compare plausible uses of money and funding paths—for example, continuing goal contributions versus debt prepayment, changing loan/EMI terms, or a combined path.
+
+The objective is to identify the most suitable feasible use of the investor's actual financial capacity, not to maximize surplus at any cost. Do not invent income, assume unavailable cash flow, count the same asset/surplus twice, assume investment returns are guaranteed, or violate risk, liquidity, debt, or other hard constraints. Explain the trade-offs and recalculate feasibility using the resulting evidenced funding path.
+
+If this approach makes the goal feasible, return the feasible path and its assumptions/trade-offs. Do not proceed to changing the goal's target amount/date as though that were required.
+
+### Approach 2 — Calculate required goal-condition adjustments only if still infeasible
+
+If Approach 1 cannot make the goal feasible within applicable constraints, calculate what change to the goal would be required. At minimum, evaluate:
+- **Lower target amount:** calculate the target amount that fits the available funding capacity under the declared assumptions.
+- **Later target date:** calculate the additional time required for the goal to fit the available funding capacity under the declared assumptions.
+- **Combination, where needed:** if neither single adjustment is sufficient or acceptable, quantify a combined adjustment where the calculation supports it.
+
+For each proposed adjustment, recalculate the target-date requirement, Goal-Level Return Required or required contribution as appropriate, projected resources, funding gap, cash-flow fit, and feasibility. Show the difference from the original goal and state the assumptions and limitations. Do not silently advance the target date, increase the target amount, or alter the canonical goal. These are Goal Feasibility findings and required adjustments—not an independent What-If feature or a separate engine. The investor decides whether to accept a proposed change; until then, the original goal remains unchanged.
+
+If no path or goal adjustment fits the applicable constraints, return **no acceptable path** and explain the binding constraints and shortfall. A high required return does not justify exceeding the investor's risk limit or manufacturing feasibility.
 
 
 Goal Planner must distinguish these concepts:
@@ -258,7 +268,7 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 8. Asset mapping never implicitly earmarks, sells, locks, or commits the asset.
 9. Shared assets/surplus are not silently counted as fully available to multiple goals.
 10. Whole-plan analysis is invoked when a material cross-goal dependency exists and is not indiscriminately run for every local edit.
-11. Scenario calculation or saving does not overwrite an Accepted Plan before explicit investor adoption.
+11. Calculating feasibility alternatives or proposed goal-condition adjustments does not overwrite the canonical goal or Accepted Plan before explicit investor acceptance.
 12. A goal cancellation does not delete the underlying Financial State asset; earmark release/remapping is a separate lifecycle action.
 13. Material changes trigger targeted recalculation/revalidation under a shared, explicit policy.
 14. Strategy Builder receives a typed feasibility/funding context and does not silently recreate feasibility.
@@ -266,8 +276,11 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 16. Test results, live database/RLS state, and deployment status are reported only when actually verified.
 17. Goal-Level Return Required is scenario-specific, traceable to cash-flow timing and assumptions, and distinct from required contribution and expected return.
 18. Constraint violations are not bypassed to manufacture feasibility; an unacceptable/no-path result is supported.
-19. Target-date and target-amount adjustments are evaluated as separate scenarios and do not mutate the canonical goal before explicit adoption.
-20. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
+19. Goal Feasibility first evaluates financial-capacity/surplus optimization, including relevant Opportunity Cost comparisons, without changing the investor's current target amount or date.
+20. If Approach 1 is insufficient, Goal Feasibility calculates the required target-amount reduction and/or target-date extension, quantifies their effects, and leaves the canonical goal unchanged until explicit investor acceptance.
+21. Both approaches use the same feasibility rules/engine; there is no separate What-If feasibility engine or duplicate calculation path.
+22. If no financially acceptable path or goal adjustment exists within constraints, the result clearly reports no acceptable path and the binding reasons.
+23. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
 
 ## 12. Source authority and evidence
 
