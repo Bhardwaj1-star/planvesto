@@ -254,6 +254,87 @@ Strategy Builder consumes this context to evaluate strategy/variant eligibility 
 
 A selected strategy or implementation becomes an Accepted Plan only through the explicit investor-decision lifecycle. Action Plan generation/synchronization occurs downstream from the accepted plan, not from a mere feasibility preview.
 
+## 9.1 End-to-end input, calculation, and output contract
+
+The implementation must support the complete Goal Planning flow. This table describes system responsibilities and outputs; it does not prescribe screen design or replace the User Journey.
+
+| Stage | Required system behavior | Required output/evidence |
+|---|---|---|
+| Goal setup | Resolve the selected goal to the canonical goal type; validate goal-specific inputs. | Canonical goal identity, validated input, and any missing-field reasons. |
+| Timeline and target | Calculate time remaining and the target-date requirement from declared assumptions. | Duration, future target/requirement, reference date, and assumption sources. |
+| Asset mapping and projection | Resolve selected assets from authoritative records and project only eligible mapped resources. | Mapped-resource list, projection assumptions, projected value, and mapping/earmarking caveat. |
+| Funding gap | Compare the target-date requirement with projected mapped resources using an explicit sign convention. | Requirement, projected resources, funding gap/surplus, and calculation trace. |
+| Financial capacity | Resolve evidenced income, expenses, surplus, debt/EMI, liquidity, and other relevant facts. | Available capacity, relevant obligations, source/freshness metadata, and missing evidence. |
+| Funding-path comparison | Model only relevant paths supported by available data; compare them on a consistent baseline. | Per-path assumptions, contribution/cash-flow schedule, resource use, outcome, constraints, and trade-offs. |
+| Goal Feasibility | Run Approach 1 first; run Approach 2 only if Approach 1 leaves the goal infeasible. | Feasibility state, reasons, Approach 1 findings, and—only when needed—proposed goal-condition adjustments. |
+| Investor decision | Keep results as proposals until the investor explicitly adopts a path or goal change. | Decision status, selected proposal/version, and any required recalculation. |
+| Strategy handoff | Provide the validated goal and feasibility evidence to Strategy Decision/Strategy Builder. | Versioned goal context, feasibility evidence, relevant constraints, and unresolved caveats. |
+
+### Funding-path comparison output
+
+When multiple relevant paths are available, return a comparable result for each path. Do not show a path as an option if the system cannot model it from available evidence.
+
+Each path should include, where applicable:
+
+- Path identifier and plain-language description.
+- Funding mechanism(s), contribution amount/schedule, and timing.
+- Resources used and remaining liquidity.
+- Goal target, projected funding, residual gap/surplus, and feasibility state.
+- Debt balance, EMI/payment burden, interest cost, and debt duration when debt is involved and the required inputs exist.
+- Return/inflation assumptions and projected investment outcome, clearly labelled as uncertain rather than guaranteed.
+- Effects on other goals or an Accepted Plan when material.
+- Binding constraints, missing inputs, key risks, and limitations.
+- Opportunity cost: the material benefit given up by choosing this path instead of another comparable path.
+
+The comparison must use a consistent reference date and disclose material differences in assumptions. Do not present unsupported precision or fabricate unavailable values. Relevant paths may include faster debt repayment, continued goal investing while servicing debt, loan/EMI restructuring with additional investing, or a combined path—but these are examples, not a mandatory fixed set of options.
+
+### Input-change and recalculation contract
+
+A material input change must recalculate the affected outputs and revalidate any dependent decision. At minimum, apply this dependency map:
+
+| Changed input | Outputs that must be re-evaluated |
+|---|---|
+| Target date / time horizon | Duration, target-date requirement, mapped-asset projection, funding gap, required return/contribution as applicable, funding paths, Opportunity Cost, and feasibility. |
+| Current cost / target amount | Target-date requirement, funding gap, required return/contribution as applicable, funding paths, Opportunity Cost where material, and feasibility. |
+| Asset mapping or eligible asset value | Resolved mapped resources, projected asset value, funding gap, funding paths, and feasibility; shared-resource conflicts if the asset is used elsewhere. |
+| Income, expenses, or available surplus | Financial capacity, contribution affordability, relevant funding paths, Opportunity Cost, feasibility, and affected goals when shared resources change. |
+| Debt balance, rate, EMI, tenure, or financing terms | Debt/cash-flow projections, relevant repayment/restructuring paths, liquidity, Opportunity Cost, feasibility, and affected goals when material. |
+| Return, inflation, contribution schedule, or other scenario assumption | Only the calculations depending on that assumption, including required return/contribution, projection, path comparison, and feasibility. |
+| Goal priority/flexibility or a relevant constraint | Path eligibility/ranking and feasibility; whole-plan impact when competing goals or shared resources may be affected. |
+| Accepted Plan or shared-resource allocation changes | Revalidate the affected goal/path and any materially dependent goals or decisions. |
+
+Do not rebuild unrelated calculations just because one input changed. Use the shared planning lifecycle's dependency/materiality policy where defined; do not invent a separate Goal Planner threshold.
+
+### Feasibility result mapping and next action
+
+The system must keep a clear distinction between the internal result and its investor-facing label. The following is the canonical display mapping; if existing API enums differ, map them at the response/UI boundary rather than creating a second feasibility engine.
+
+| Investor-facing label | Required meaning | Next supported action |
+|---|---|---|
+| **Feasible** | A path fits the current goal conditions and applicable constraints under stated assumptions. | Review assumptions/trade-offs; the investor may accept the proposed path or stop. |
+| **Constrained** | A path may be feasible, but material constraints, risks, or trade-offs need to be shown. This label alone must not imply either “feasible only with changes” or “infeasible.” | Explain the constraint and available paths; allow review and recalculation where inputs or funding choices change. |
+| **Infeasible** | Approach 1 has not found a path that makes the current goal feasible under applicable constraints. | Run Approach 2 and present the required target-amount reduction and/or target-date extension, if calculable. |
+| **Unknown** | Missing, invalid, stale, or insufficient authoritative evidence prevents a reliable determination. | Identify the missing/correctable evidence; recalculate after it is resolved. |
+| **No acceptable path** | Evaluated paths/adjustments do not meet applicable hard constraints or investor-defined limits. | Explain the binding reasons and shortfall; do not force a recommendation or silently relax constraints. |
+
+The underlying result must retain the more specific implementation state: feasible under stated assumptions; feasible only with changes; not feasible under stated assumptions; incomplete/cannot determine; or no acceptable path. Do not collapse “Constrained” into one of these without recording why. Opportunity cost explains trade-offs between paths; it does not itself make a goal infeasible.
+
+For all results, the next action must preserve investor control:
+- A funding-path choice is a proposal until explicitly accepted.
+- Goal-condition adjustments are offered only after Approach 1 remains infeasible.
+- The investor may accept a proposal, change relevant inputs and request recalculation, or stop.
+- If evidence is Unknown, request/correct evidence rather than asking the investor to accept an unsupported result.
+- Strategy Builder receives the goal and feasibility evidence only after the appropriate goal decision state is established; it remains responsible for downstream strategy selection.
+
+### Real-life cases as test fixtures, not defaults
+
+Use the documented real-life cases as regression/acceptance-test fixtures for the relevant calculations and path comparisons. Their figures are examples only and must never become hidden product defaults or assumed values for other investors.
+
+- **Retirement comparison fixture:** 25-year horizon; ₹20 lakh current corpus; ₹2 crore required corpus; ₹2 lakh monthly income; ₹1.2 lakh monthly expenses; ₹10,000 EMI; approximately ₹70,000 monthly surplus; approximately 8% home-loan interest assumption. Test that relevant debt-repayment, retirement-investment, and loan-restructuring paths are compared only when their required inputs are available, and that no path is automatically selected from debt existence or the assumed return spread.
+- **Education fixture:** ₹20 lakh current cost with a 10-year target horizon. Test target-date requirement, mapped-asset projection, funding gap, required contribution/return where supported, and feasibility evidence. Expected future target and outputs must be calculated from explicit test assumptions, not hardcoded from this example.
+
+Tests must verify the calculation/output contract and decision rules, not require one illustrative path to win regardless of the supplied assumptions.
+
 ## 10. API, persistence, versioning, and UI contract
 
 - Preserve authentication and planning-unit/goal/asset ownership enforcement.
@@ -292,6 +373,13 @@ A selected strategy or implementation becomes an Accepted Plan only through the 
 21. Both approaches use the same feasibility rules/engine; there is no separate What-If feasibility engine or duplicate calculation path.
 22. If no financially acceptable path or goal adjustment exists within constraints, the result clearly reports no acceptable path and the binding reasons.
 23. Both individual-goal feasibility and conditional combined-goal/shared-resource feasibility are covered by tests.
+
+24. The end-to-end calculation contract returns the required evidence for goal setup, timeline/target, asset projection, funding gap, financial capacity, feasibility, investor decision, and Strategy Builder handoff.
+25. Funding-path comparisons use a consistent baseline and expose material debt, cash-flow, liquidity, investment-assumption, goal, risk, and opportunity-cost differences only where supported by evidence.
+26. Material input changes trigger the dependency-specific recalculations listed in this specification without rebuilding unrelated decisions.
+27. Investor-facing Feasible, Constrained, Infeasible, Unknown, and No acceptable path labels map to explicit underlying result states and lead to the correct next action.
+28. The retirement and education real-life cases are regression-test fixtures only; their example values are never used as product defaults.
+29. An Unknown result directs the workflow to resolve missing/unreliable evidence; it is never treated as feasible or infeasible by assumption.
 
 ## 12. Source authority and evidence
 
