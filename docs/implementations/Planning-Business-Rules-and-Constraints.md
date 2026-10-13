@@ -1,419 +1,417 @@
-# Planning, Business Rules & Constraints — Code Audit Register
+# Planning Rules & Constraints — Financial Planner Guide
 
-**Document type:** Cross-feature business-rule and constraint audit  
-**Audience:** Financial planners, product owners and engineering  
-**Audit basis:** Existing backend code on the repository's default branch  
-**Purpose:** One reference showing the rule, its current behavior, where it is defined, which feature consumes it, and what still needs verification.
+## 1. Why this guide exists
 
-> **Audit principle:** This register records behavior found in code. It does not convert a planned business rule into an implemented rule. Where a rule is described in documentation but code evidence is incomplete, that limitation is called out. Thresholds below are code values, not a claim that they are universally suitable financial advice.
+This is the cross-feature reference for financial planners using Planvesto. It explains:
 
----
+- Which financial and planning rules currently exist in the backend code.
+- What each rule means in day-to-day planning.
+- Which feature uses the rule and what effect it can have.
+- What information is needed before the rule can be applied.
+- Where the current system has gaps, inconsistent thresholds, or behavior that needs confirmation.
 
-## 1. Executive Summary
+**This is a code-audited guide, not a promise that every planned workflow is fully implemented.** The values below are the values found in the audited code. They are not universal financial-advice standards and should not be presented as guaranteed outcomes.
 
-Planvesto has a shared constraint framework, but **not every planning and business rule is fully centralized in one place**.
+### How to interpret a rule
 
-- `backend/engines/constraints/models.py` defines a common format for constraints, including source, severity, role, evidence, validity and goal association.
-- `backend/engines/constraints/aggregator.py` combines rule-engine results, financial-ratio assessments, Moneywheel outputs, risk-profile constraints and strategy constraints into a shared `ConstraintSet`.
-- `backend/engines/constraints/policy.py` owns several important constraint IDs, thresholds, priority ranks, source priorities and normalization/conflict-handling helpers.
-- `backend/rules/canonical.py` is a metadata registry for canonical rule IDs, scopes and roles. It does **not** own all runtime behavior or every threshold.
-- Domain-specific rules remain in files such as `backend/rules/moneywheel.py`, `backend/rules/goals.py`, `backend/rules/multi_goal.py`, `backend/rules/protection.py`, `backend/rules/eligibility.py`, `backend/rules/strategy_decision.py`, and the relevant engines.
-- Some logic is duplicated, hardcoded outside the policy file, or represented in the registry without an exact one-to-one connection to runtime behavior. Those are audit findings, not assumptions that the system is fully centralized.
+| Label | Meaning for the planner |
+|---|---|
+| **Hard constraint** | A condition that can block a specific planning path or make it unacceptable. |
+| **Eligibility check** | Tests whether a strategy can be considered or can proceed conditionally. |
+| **Warning** | Flags a concern for review; it does not automatically block a decision. |
+| **Measurement / evidence** | Describes the investor's financial position. It becomes a blocker only if a separate rule says so. |
+| **Calculation / classification** | Calculates or categorizes information used by a later decision. |
+| **Missing evidence** | Required information is unavailable, so the planner should not assume the check passed. |
 
-### How to read this document
-
-- **Hard constraint:** can block a path or impose a non-negotiable condition.
-- **Eligibility check:** decides whether a strategy can be considered, can proceed conditionally, or fails.
-- **Warning / recommendation:** highlights a concern; it is not automatically a hard block.
-- **Diagnostic evidence:** a measurement or explanation used by another decision. A “critical” ratio status is not automatically a hard constraint.
-- **Transformation / classification rule:** normalizes or calculates data, rather than deciding whether a path is allowed.
+A **Critical ratio is not automatically a hard failure**. The rule that consumes the ratio determines whether it becomes a warning, a constraint, or simply evidence.
 
 ---
 
-## 2. Central Constraint Framework
+## 2. How the planning features work together
 
-| Area | Current code owner | What it does | Main consumers / features | Audit finding |
-|---|---|---|---|---|
-| Canonical constraint format | `backend/engines/constraints/models.py` | Standard fields for identity, source, severity, role, value, evidence, validity, pass/fail and optional goal association | Strategy Engine and downstream planning code | Shared format exists. It is a data contract, not the owner of every rule. |
-| Constraint policy | `backend/engines/constraints/policy.py` | Selected rule IDs, threshold constants, priority ranks, source priority, normalization, conflict detection, priority validation | Constraint evaluator, Risk Profiler, Profile and Multi-Goal rules | Partial centralization; some benchmarks remain elsewhere. |
-| Constraint assembly | `backend/engines/constraints/aggregator.py` | Collects available outputs from RuleEngine, ratio evaluator, Moneywheel, Risk Profiler and strategy rules | Strategy Engine / planning orchestration | Central aggregator exists, but inputs are optional; a caller can aggregate only the sources it supplies. |
-| Conversion to common format | `backend/engines/constraints/adapters.py` | Converts each domain's result into canonical constraints | Constraint Aggregator | Adapter maps roles/severity and preserves evidence. It should not be mistaken for the source of business policy. |
-| Rule identity catalogue | `backend/rules/canonical.py` | Names rules, their scope, role and source module | Rule discovery and governance | Metadata registry is not the complete runtime rulebook; some active rules are absent or represented differently. |
-| Legacy constraint import | `backend/rules/constraints.py` | Re-exports selected symbols from `engines.constraints.policy` | Older callers | Compatibility layer, not a separate intended policy owner. |
-
-### Constraint data handling rules found in code
-
-- Constraint records can preserve source, evidence, confidence and a validity period.
-- Supported sources include financial state, observed behavior, declared constraints and preferences.
-- Source-priority ordering is: financial state (4), observed behavior (3), declared constraint (2), preference (1).
-- If confidence is not supplied, the policy helper derives it from source priority and evidence count.
-- Different values for the same constraint key are recorded as an **unresolved conflict**; the helper does not automatically decide which conflicting value is correct.
-- Priority validation rejects unknown constraint keys, duplicate keys, non-integer ranks below 1 and duplicate ranks.
-- Behavioral observations require a supported dimension and evidence. Missing observations remain `insufficient_evidence`; the system must not invent a behavioral score.
-- Behavioral constraints are marked for **product selection only** in the observed-behavior policy. They should not silently become goal-feasibility blockers.
-
-**Important limitation:** the presence of these helpers does not prove that every feature passes all its constraints through the aggregator. Each call path must be checked independently.
-
----
-
-## 3. Financial Health / Moneywheel Rules
-
-### 3.1 Nine canonical Moneywheel ratios
-
-The canonical ratio list is defined in `backend/rules/moneywheel.py`. `backend/engines/moneywheel/engine.py` calculates these ratios using the shared calculation functions and assigns a status using the benchmark bands.
-
-| Ratio | Current code calculation | Current status bands in code | Feature use / interpretation |
-|---|---|---|---|
-| Savings Rate | `(Income - Expenses) / Income × 100` | Excellent ≥30%; Healthy ≥20% and <30%; Attention ≥10% and <20%; Critical <10% | Moneywheel financial-health evidence; ratio evaluator can create a savings warning when status is attention/critical. |
-| Liquid Asset Ratio | Liquid assets / total assets ×100 | Excellent ≥25%; Healthy 15–<25%; Attention 10–<15%; Critical <10% | Moneywheel liquidity composition evidence. Not, by itself, a goal-specific hard block. |
-| Debt-to-Income Ratio | Monthly debt payments / gross monthly income ×100 | Excellent <20%; Healthy 20–<30%; Attention 30–<40%; Critical ≥40% | Moneywheel debt-burden evidence; a critical status can trigger a constraint on high-priority discretionary goals in the ratio evaluator. |
-| Leverage Ratio | Total liabilities / total assets ×100 | Excellent <20%; Healthy 20–<30%; Attention 30–<50%; Critical ≥50% | Moneywheel balance-sheet leverage evidence. The benchmark bands are defined in `rules/moneywheel.py`, not wholly in policy.py. |
-| Financial Asset Ratio | Financial assets / total assets ×100 | Excellent ≥70%; Healthy 50–<70%; Attention 30–<50%; Critical <30% | Moneywheel asset-composition evidence. |
-| Insurance Coverage Ratio | Existing sum assured / required insurance cover ×100 | Excellent ≥80%; Healthy 60–<80%; Attention 40–<60%; Critical <40% | Moneywheel protection evidence; uses required-cover calculation from protection rules. |
-| Goal Funding Ratio | Current goal funding / goal target ×100 | Excellent ≥100%; Healthy 80–<100%; Attention 50–<80%; Critical <50% | Goal funding progress evidence. |
-| Future Funding Ratio | Projected goal funding / future goal target ×100 | Excellent ≥100%; Healthy 80–<100%; Attention 50–<80%; Critical <50% | Projected goal funding evidence. |
-| Required Rate of Return | Required annualized return implied by future target, current funding and duration | Excellent <8%; Healthy 8–<12%; Attention 12–<15%; Critical ≥15% | Goal-level return-requirement evidence. This is a required-return classification, not a return forecast or promise. |
-
-**Ratio availability rule:** if required inputs are missing, a denominator is zero, or a result is not finite, Moneywheel marks that ratio unavailable and records a reason. It does not manufacture a numeric ratio.
-
-**Important distinction:** Moneywheel status bands primarily classify financial evidence. A “critical” label becomes a hard constraint only where a separate policy/evaluator explicitly makes it one.
-
-### 3.2 Additional financial constraints in the ratio evaluator
-
-Owner: `backend/engines/constraints/evaluator.py`  
-Main consumers: constraint aggregation, goal prioritization and strategy eligibility where the resulting ConstraintSet is supplied.
-
-| Rule / check | Current code behavior | Effect |
+| Feature / component | Its responsibility | What it contributes to a decision |
 |---|---|---|
-| Emergency reserve critical | Emergency coverage below 3 months is classed as critical in the ratio evaluator. High/critical-priority discretionary goals can receive a failed hard constraint and a suggested priority reduction to low. | Can constrain the relevant discretionary goal. It does not automatically make every goal infeasible. |
-| Emergency reserve attention | Coverage below the 6-month healthy benchmark but not critical produces a warning. | Advisory warning; not the same as a hard failure. |
-| Emergency reserve excellent | Evaluator has a separate ≥9-month excellent band. | This 9-month band is hardcoded in evaluator.py rather than fully owned by policy.py. |
-| Debt burden critical | DTI ≥40% is critical; high/critical-priority discretionary goals can receive a failed hard constraint and suggested priority reduction to low. | Can constrain relevant discretionary goals to protect debt serviceability. |
-| Debt burden attention | DTI in the 30%–40% range produces a warning. | Advisory warning. |
-| Savings rate deficit | Savings rate in critical/attention bands produces a warning that expense reduction may be needed. | Advisory warning; not a hard block by itself. |
-| Positive goal horizon | Goal duration must be greater than zero. | Hard goal-validity check. |
-| Positive goal target | Future goal target must be greater than zero. | Hard goal-validity check. |
-| Leverage benchmark | Moneywheel classifies leverage using 20% / 30% / 50% bands. The ratio evaluator’s displayed benchmark also contains 30% healthy and 50% critical values. | Evidence/benchmark; verify if any downstream rule treats it as blocking. |
+| **Financial State** | Holds the investor's financial information and cash-flow picture. | Income, expenses, assets, liabilities and related financial inputs. |
+| **Moneywheel / Financial Health** | Calculates and classifies financial measurements. | Ratios, status bands, data availability and financial-health evidence. |
+| **Goal Planner** | Defines a goal's future requirement and funding position. | Goal target, timeline, mapped-resource projection, funding gap and contribution requirement. |
+| **Goal Feasibility** | Assesses whether a goal's funding path is workable under relevant conditions. | Feasibility result, reasons, constraints and funding-path context. Goal Funding belongs here—not as a fifth Strategy Builder strategy. |
+| **Constraint / Safety Evaluation** | Checks applicable rules, warnings, preferences, conflicts and missing evidence. | What a proposal must respect, what needs review and which evidence is incomplete. |
+| **Risk Profiler** | Assesses required risk against observable financial capacity and, separately, behavioral evidence. | Risk-related evidence and conditional/fail outcomes where supported. |
+| **Strategy Builder** | Evaluates the four canonical strategies and prepares two options. | Applicability, viability, variants, techniques, solution proposals and trade-offs. |
+| **Action Plan / Accepted Plan** | Separates a proposal from an adopted plan and its actions. | Actions follow the relevant investor decision; a preview is not acceptance or execution. |
 
-**Implementation caveat:** the ratio evaluator reads and calculates financial metrics from the financial context, with fallback field names. A metric can be absent and therefore not evaluated. The exact inputs provided by each feature/API call must be checked before assuming a constraint was applied.
+### Planner's end-to-end review
 
-### 3.3 Threshold ownership issues found
+1. Confirm the investor's financial information is current and usable.
+2. Review Moneywheel measurements and note unavailable ratios.
+3. Confirm the canonical goal, its priority, target date and assumptions.
+4. Review Goal Planner's future target, mapped assets, projected funding and gap.
+5. Review Goal Feasibility and all applicable hard constraints, warnings and missing evidence.
+6. Where relevant, check risk capacity and effects on other goals or shared resources.
+7. Review Strategy Builder's two options, their applicability and viability, and their trade-offs.
+8. Keep proposal, investor acceptance, Accepted Plan and execution as separate states.
+9. Recalculate or revalidate affected decisions when material inputs change.
 
-- DTI threshold values are referenced by the canonical policy and Moneywheel bands; the status ranges are defined in `rules/moneywheel.py`.
-- Savings healthy benchmark is shared from policy, while the other savings bands are in `rules/moneywheel.py`.
-- Leverage thresholds (20%, 30%, 50%) remain in `rules/moneywheel.py`; evaluator.py also has a hardcoded benchmark string.
-- Emergency reserve has 3-month and 6-month constants in policy, while the ≥9-month “excellent” band is hardcoded in evaluator.py.
-- The rule registry in `rules/canonical.py` describes Moneywheel ratios as explanatory evidence. Runtime evaluator logic separately determines when certain metrics create goal-specific hard constraints or warnings.
-
-These are candidates for a later centralization pass; this document does not change code.
-
----
-
-## 4. Goal Identity, Validity and Priority Rules
-
-**Main owners:** `backend/rules/goals.py`, `backend/engines/goal/engine.py`, `backend/engines/constraints/evaluator.py`.
-
-### 4.1 Canonical goal types
-
-The backend canonical goal list is:
-
-- Retirement
-- Marriage
-- Vehicle
-- Dream Home
-- Education
-- Vacation
-- Debt Freedom
-- Wealth Creation
-- FIRE / Passive Income
-- Others
-
-Goal type is the canonical identity. Beneficiary, child, purpose details and other circumstances belong in contextual/dynamic details, not in a new goal type. The normalizer accepts canonical IDs or display names case-insensitively; unknown values normalize to an empty canonical type rather than becoming a new canonical goal.
-
-### 4.2 Goal priority vocabulary
-
-- Canonical priority levels: Critical, High, Medium, Low.
-- Accepted labels such as “must-have”, “important”, “moderate”, “aspirational”, “nice-to-have” and “discretionary” normalize to the canonical levels.
-- An unrecognized or missing priority currently defaults to **Medium** in `canonical_goal_priority()`.
-- Multi-goal priority ranks are Critical=0, High=1, Medium=2, Low=3 in the shared policy. The Multi-Goal helper also accepts numeric ranks supplied as integers or numeric strings; this behavior needs validation at input boundaries.
-
-### 4.3 Essential vs discretionary classification
-
-Current code classifies as **discretionary**:
-- Vehicle
-- Dream Home
-- Vacation
-- Wealth Creation
-- Others
-
-Current code classifies as **essential**:
-- Retirement
-- Marriage
-- Education
-- Debt Freedom
-- FIRE / Passive Income
-
-Policy: a discretionary goal must not preempt an essential goal or safety-reserve funding. This is encoded by `can_discretionary_preempt_essential()` in policy.py and exposed in `rules/multi_goal.py`.
-
-**Audit concern:** these are fixed categories in code. If business policy intends a goal's essential/discretionary status to vary by investor circumstances, current classification alone does not represent that nuance.
+Do not assume that every feature automatically receives every constraint. The shared constraint aggregator accepts optional sources; the actual call path must supply the relevant evidence.
 
 ---
 
-## 5. Goal Planner Rules and Calculations
+## 3. The shared constraint framework
 
-**Main owners:** `backend/engines/goal/engine.py`, `target_calculator.py`, `funding_gap.py`, `asset_projection.py`, `backend/rules/assumptions.py`, and canonical calculation functions.
+The backend has a common constraint framework, but **not all rules and thresholds are centralized in it**.
 
-| Rule / calculation | Current code behavior | Goal Planner use | Important limitation |
+| Code location | Role in the system | Planner-level meaning | Current limitation |
 |---|---|---|---|
-| Goal identity | Normalizes goal type/name to the canonical goal taxonomy. | Prevents aliases/beneficiaries from becoming new goal identities. | Unknown goal type should be surfaced/validated by callers; canonical normalizer itself returns empty for unknown values. |
-| Duration | Calculates remaining months from target month/year and reference date; past dates return zero duration. | Determines horizon for future cost and funding calculations. | A zero duration is also invalid under the positive-horizon hard constraint. |
-| Default inflation | Uses 6% when no goal-specific inflation rate is supplied. | Estimates future goal requirement. | This is a code default, not a universal inflation forecast; the source must be visible to the planner. |
-| Future target | Calculates future cost from today’s cost, inflation assumption and duration. | Establishes target-date requirement. | Depends on assumptions and valid inputs. |
-| Asset mapping | Each mapped asset must exist in the planning unit and have a name; mapped allocation is projected using current value, allocation type/value, expected return and duration. | Estimates resources considered for the goal. | A missing asset causes an error; mapping is a planning allocation, not proof of legal earmarking. |
-| Default funding return | Uses mapped-asset allocated-value-weighted expected returns; if there is no mapped capital, falls back to 8%. | Assumption used in the contribution calculation. | Must not be described as guaranteed/expected market performance. |
-| Funding gap | Future target minus projected mapped assets. Positive = Shortfall; near-zero (within ₹0.01) = On Track; negative = Overfunded. | Shows target-date gap/surplus. | A non-calculable gap is currently converted to zero inside the helper; callers must ensure invalid inputs are not confused with “On Track”. |
-| Required monthly contribution | For a positive gap and positive duration, calculates an end-of-month monthly contribution using annual return/12 and the number of months. A non-positive gap or zero duration returns zero. | Estimates monthly funding needed. | A zero contribution with an immediate goal can coexist with a funding gap; the gap must remain visible. |
-| Retirement corpus | Retirement requires current age and life expectancy in dynamic details; uses a separate retirement corpus calculation and an 8% retirement-return assumption. | Retirement-specific target calculation. | Missing ages raise an error for active goals; cancelled goals have a special fallback of age 30 and life expectancy 85. This fallback needs careful review because it can hide missing data in cancelled records. |
-| Required return | Moneywheel/canonical calculation derives return needed from current funding, target and duration. | Return requirement evidence for goal feasibility and strategy-side analysis. | Required return is not a forecast and is undefined when inputs such as current funding are zero or missing. |
+| `backend/engines/constraints/models.py` | Defines the shared constraint record format. | Provides a common structure for rule identity, source, severity, role, evidence, validity and optional goal association. | A common format does not mean every rule is defined here. |
+| `backend/engines/constraints/policy.py` | Owns selected rule IDs, thresholds, priority ranks, source priority and helper policies. | Central policy reference for some of the system's shared rules. | Only part of the business rulebook is centralized here. |
+| `backend/engines/constraints/aggregator.py` | Combines available constraint results from several sources. | Brings supplied rule-engine, ratio, Moneywheel, risk and strategy outputs together. | Sources are optional; omitted sources cannot contribute their constraints to that aggregation. |
+| `backend/engines/constraints/adapters.py` | Converts domain results into the common constraint format. | Makes results from different features comparable in a shared structure. | An adapter translates a rule result; it does not own the underlying business decision. |
+| `backend/rules/canonical.py` | Registers canonical rule metadata such as identity, scope and role. | Helps identify the intended rule catalogue. | It is not a complete record of every active runtime rule or threshold. |
+| `backend/rules/constraints.py` | Re-exports selected policy symbols for older callers. | Compatibility path for older code. | It should not be treated as a second intended policy owner. |
 
-### Goal Feasibility ownership boundary
+### How constraint information is handled
 
-The intended product boundary documented in the user journey is:
-- Goal Planner owns goal requirements, funding calculations, funding paths and goal-feasibility assessment.
-- Strategy Builder consumes the evidence and develops the strategy-side proposal.
-- Strategy Builder should not silently repeat or replace Goal Planner’s feasibility conclusion.
+- A constraint may include its source, evidence, confidence, validity period and relationship to a goal.
+- Recognized source categories include financial state, observed behavior, declared constraints and preferences.
+- Source priority in the audited policy is: financial state **4**, observed behavior **3**, declared constraint **2**, preference **1**.
+- If confidence is missing, a helper derives it from source priority and evidence count.
+- If the same constraint key has conflicting values, the helper records an **unresolved conflict**; it does not automatically know which value is correct.
+- Priority validation rejects unknown keys, duplicate keys, non-integer ranks below 1 and duplicate ranks.
+- Behavioral observations require a supported dimension and evidence. Missing observations remain insufficient evidence; the system should not invent a behavioral score.
+- The audited observed-behavior policy marks behavioral constraints for **product selection only**. They should not silently become goal-feasibility blockers.
 
-**Audit status:** the Goal Engine calculations above are directly visible in code. The full business sequence of comparing debt prepayment, EMI changes, liquidity, competing goals, opportunity cost and then goal adjustment must be verified against the specific orchestration/service call paths before claiming every branch is implemented.
+**Planner action:** if an important constraint is absent from a result, do not conclude that the investor passed it. First confirm that the relevant source was available and passed into the decision.
 
 ---
 
-## 6. Multi-Goal Allocation and Shared-Resource Rules
+## 4. Moneywheel / Financial Health measurements
 
-**Main owner:** `backend/rules/multi_goal.py`; related policy in `backend/engines/constraints/policy.py`.
+The canonical ratio list is in `backend/rules/moneywheel.py`; calculations and status assignment are handled by the Moneywheel engine and related calculation functions.
 
-- Priority values are normalized into the canonical vocabulary and mapped to precedence ranks.
-- A lower numeric rank represents higher precedence in the priority-rank map (Critical 0, High 1, Medium 2, Low 3).
-- A discretionary goal cannot preempt an essential goal.
-- Funding statuses include fully funded, partially funded, unfunded, within surplus, surplus shortfall and requires review.
+### 4.1 Current ratio bands in code
+
+| Measurement | Calculation used by code | Excellent | Healthy | Attention | Critical |
+|---|---|---:|---:|---:|---:|
+| **Savings Rate** | (Income − Expenses) ÷ Income × 100 | ≥30% | ≥20% and <30% | ≥10% and <20% | <10% |
+| **Liquid Asset Ratio** | Liquid assets ÷ total assets × 100 | ≥25% | ≥15% and <25% | ≥10% and <15% | <10% |
+| **Debt-to-Income Ratio** | Monthly debt payments ÷ gross monthly income × 100 | <20% | ≥20% and <30% | ≥30% and <40% | ≥40% |
+| **Leverage Ratio** | Total liabilities ÷ total assets × 100 | <20% | ≥20% and <30% | ≥30% and <50% | ≥50% |
+| **Financial Asset Ratio** | Financial assets ÷ total assets × 100 | ≥70% | ≥50% and <70% | ≥30% and <50% | <30% |
+| **Insurance Coverage Ratio** | Existing sum assured ÷ required cover × 100 | ≥80% | ≥60% and <80% | ≥40% and <60% | <40% |
+| **Goal Funding Ratio** | Current goal funding ÷ goal target × 100 | ≥100% | ≥80% and <100% | ≥50% and <80% | <50% |
+| **Future Funding Ratio** | Projected goal funding ÷ future goal target × 100 | ≥100% | ≥80% and <100% | ≥50% and <80% | <50% |
+| **Required Rate of Return** | Annualized return implied by target, current funding and duration | <8% | ≥8% and <12% | ≥12% and <15% | ≥15% |
+
+### 4.2 How a planner should use these measurements
+
+- **Savings Rate:** indicates how much of income remains after expenses. An attention/critical status can create a savings warning; it is not automatically a strategy decision.
+- **Liquid Asset Ratio:** describes the liquid portion of total assets. It is not, by itself, a hard block on a goal.
+- **Debt-to-Income:** indicates debt-payment burden relative to gross income. In a separate evaluator, a high value can constrain certain high-priority discretionary goals.
+- **Leverage:** describes liabilities relative to assets. Its status band is evidence; check the downstream rule before treating it as a blocker.
+- **Financial Asset Ratio:** describes financial assets as a share of total assets.
+- **Insurance Coverage:** compares existing sum assured with the code's required-cover calculation.
+- **Goal Funding / Future Funding:** compare current or projected funding with a goal's target. Confirm the target date and assumptions before interpreting the result.
+- **Required Rate of Return:** indicates the return implied by the target and funding assumptions. It is **not a forecast, guarantee or permission to take excessive risk**.
+
+### 4.3 Missing data rule
+
+If required inputs are missing, a denominator is zero, or a calculated result is not finite, Moneywheel marks the ratio unavailable and records a reason rather than manufacturing a number.
+
+An unavailable ratio is not the same as a healthy ratio. Resolve or disclose the missing input before relying on that measurement.
+
+### 4.4 Additional reserve, debt and goal checks
+
+| Rule | Current code behavior | Effect for the planner |
+|---|---|---|
+| Emergency reserve below 3 months | Classified as critical by the ratio evaluator. Certain high/critical-priority discretionary goals can receive a failed hard constraint and a suggested priority reduction to Low. | May constrain the affected discretionary goal; it does not automatically make every goal infeasible. |
+| Emergency reserve below the 6-month healthy benchmark, but not critical | Produces a warning. | Requires review; it is not the same as a hard failure. |
+| Emergency reserve at least 9 months | Evaluator has a separate excellent band. | This band is hardcoded in the evaluator rather than fully owned by the shared policy. |
+| Debt-to-income ≥40% | Classified as critical; certain high/critical-priority discretionary goals can receive a failed hard constraint and suggested priority reduction to Low. | Can constrain the relevant discretionary goal. |
+| Debt-to-income 30% to below 40% | Produces a warning. | Review debt burden and affordability; warning is not automatically a block. |
+| Savings rate in attention/critical bands | Can produce a warning that expense reduction may be needed. | Advisory warning, not a hard block by itself. |
+| Goal horizon must be positive | Zero or negative duration fails the validity check. | Confirm the goal date; a past date is not a valid future funding horizon. |
+| Future goal target must be positive | A non-positive target fails the validity check. | Correct or confirm the target before planning. |
+
+### 4.5 Threshold ownership gaps
+
+- Savings, debt and leverage bands are not all owned by one central policy file.
+- The evaluator has its own reserve bands, including the 9-month excellent threshold.
+- Some benchmark values are repeated in the canonical policy, Moneywheel rules and evaluator.
+- The rule catalogue may describe a ratio as evidence while a separate evaluator gives it a goal-specific blocking effect.
+
+These are centralization and consistency gaps identified in code, not evidence that every threshold is currently producing the same result in every feature.
+
+---
+
+## 5. Canonical goals, priorities and essential/discretionary rules
+
+### 5.1 Canonical goal list
+
+The backend's canonical goal taxonomy is:
+
+1. Retirement
+2. Marriage
+3. Vehicle
+4. Dream Home
+5. Education
+6. Vacation
+7. Debt Freedom
+8. Wealth Creation
+9. FIRE / Passive Income
+10. Others
+
+The **goal type is the canonical identity**. A beneficiary, child, purpose detail or other circumstance should be stored as context rather than becoming a new goal type. For example, “child education” should be represented as the Education goal with relevant beneficiary/context details—not as a separate canonical goal.
+
+The normalizer accepts canonical IDs or display names case-insensitively. Unknown values normalize to an empty canonical type; they should be validated rather than silently turned into a new goal.
+
+### 5.2 Priority rules
+
+- Canonical priorities: **Critical, High, Medium, Low**.
+- Recognized alternate labels such as “must-have”, “important”, “moderate”, “aspirational”, “nice-to-have” and “discretionary” are normalized to canonical levels.
+- Missing or unrecognized priority currently defaults to **Medium** in `canonical_goal_priority()`.
+- Shared priority ranks are **Critical = 0, High = 1, Medium = 2, Low = 3**. Lower number means higher precedence.
+
+**Planner caution:** a missing priority can therefore become Medium without the planner explicitly choosing it. Confirm the priority where it materially affects a decision.
+
+### 5.3 Current essential/discretionary classification in code
+
+| Classification | Goal types |
+|---|---|
+| **Discretionary** | Vehicle, Dream Home, Vacation, Wealth Creation, Others |
+| **Essential** | Retirement, Marriage, Education, Debt Freedom, FIRE / Passive Income |
+
+The policy says a discretionary goal must not preempt an essential goal or safety-reserve funding.
+
+**Limitation:** the classification is fixed in code. It may not reflect every investor's circumstances; for example, a vehicle may be essential for one investor and discretionary for another. Treat this as a current system classification, not a complete human judgement.
+
+---
+
+## 6. Goal Planner rules and calculations
+
+The main calculation logic is in `backend/engines/goal/engine.py` and its target, funding-gap and asset-projection helpers, with assumptions and shared calculation functions in related modules.
+
+| Rule / calculation | What the code currently does | What the planner should verify |
+|---|---|---|
+| **Goal identity** | Normalizes the goal to the canonical taxonomy. | Confirm the correct canonical goal; keep beneficiary/purpose in contextual details. |
+| **Goal duration** | Calculates remaining months from the target month/year and reference date. A past date produces zero duration. | Confirm the target date; zero duration can fail the positive-horizon constraint. |
+| **Default inflation** | Uses 6% if no goal-specific inflation rate is supplied. | Confirm the assumption is appropriate for the goal and visible in the explanation; 6% is a code default, not a universal forecast. |
+| **Future target** | Inflates today's goal cost over the remaining duration. | Verify today's cost, inflation assumption and time horizon. |
+| **Mapped assets** | Projects mapped assets using current value, allocation details, expected return and duration. A mapped asset must exist in the planning unit and have a name. | Verify asset identity, value, allocation and return assumptions. Mapping a resource to a goal does not prove it is legally earmarked or locked. |
+| **Funding return** | Uses an allocated-value-weighted expected return for mapped assets; if there is no mapped capital, it falls back to 8%. | Treat the result as an assumption, not guaranteed performance. Confirm the source of the return. |
+| **Funding gap** | Future target minus projected mapped assets. Positive = Shortfall; approximately zero (within ₹0.01) = On Track; negative = Overfunded. | Review both target and projected assets. The helper can convert a non-calculable gap to zero, which risks making invalid data look On Track if callers do not preserve the error state. |
+| **Required monthly contribution** | For a positive gap and positive duration, calculates an end-of-month monthly contribution using annual return divided by 12 and number of months. Non-positive gap or zero duration returns zero. | A zero contribution does not necessarily mean a goal is healthy; check the gap and horizon separately. |
+| **Retirement corpus** | Requires current age and life expectancy in dynamic details for an active retirement calculation; uses a separate retirement corpus calculation and an 8% retirement-return assumption. | Ensure age and life expectancy are present. The 8% value is a code assumption, not a promise. |
+| **Cancelled retirement goal** | Has a special fallback of age 30 and life expectancy 85. | This fallback needs review because missing data in a cancelled record can be replaced with assumed ages. |
+| **Goal-level required return** | Derives the return implied by current funding, target and duration when inputs permit. | Do not confuse required return with forecast return, and do not treat an undefined value as zero. |
+
+### Goal Planner and Goal Feasibility ownership
+
+- **Goal Planner** owns goal requirements, target calculations, resource projection, funding gap, required contribution and goal-level funding context.
+- **Goal Feasibility** assesses whether a funding path is workable under relevant conditions.
+- **Strategy Builder** consumes relevant goal/feasibility evidence to evaluate strategy options; it should not silently replace Goal Planner's calculation or feasibility conclusion.
+- Funding mechanisms such as SIP, lump sum, step-up contribution and combinations belong to the **goal funding / feasibility domain**, not to a fifth Strategy Builder strategy.
+
+**Audit limitation:** the calculation functions are visible in code, but the complete orchestration of debt prepayment, EMI changes, liquidity, competing goals, opportunity cost and goal adjustment needs call-path verification before claiming every branch is active.
+
+---
+
+## 7. Multi-goal and shared-resource rules
+
+The main rule owner is `backend/rules/multi_goal.py`, with shared policy in `backend/engines/constraints/policy.py`.
+
+- Priority is normalized to Critical, High, Medium or Low and mapped to a precedence rank.
+- A discretionary goal must not preempt an essential goal.
+- Funding statuses in code include fully funded, partially funded, unfunded, within surplus, surplus shortfall and requires review.
 - Feasibility statuses include pass, conditional and infeasible.
-- Multi-goal impact should be relevant when goals compete for shared assets, surplus, liquidity or other resources.
+- Shared-resource analysis matters when goals compete for assets, surplus, liquidity or other limited resources.
 
-**Important distinction:** the rule registry says goal priority order is an architecture constraint. Whether that rule actually blocks, changes ranking, or only informs recommendations depends on the downstream consumer. The rule ID alone does not establish that effect.
+**Important:** the existence of a priority rule does not by itself prove that a downstream feature blocks a proposal, changes its ranking or only displays a warning. The actual consumer determines the effect.
+
+When a decision materially changes shared resources or an existing Accepted Plan, identify which other goals may be affected and revalidate those decisions. Do not assume that every isolated decision requires rebuilding the entire plan.
 
 ---
 
-## 7. Strategy Builder Rules
+## 8. Strategy Builder rules
 
-**Rule definitions / consumers:** `backend/rules/eligibility.py`, `backend/engines/strategy/eligibility.py`, `backend/engines/strategy/decision.py`, `backend/rules/strategy_decision.py`, `backend/engines/rules/engine.py`, and the ConstraintSet.
+The relevant backend areas include `backend/rules/eligibility.py`, `backend/engines/strategy/eligibility.py`, `backend/engines/strategy/decision.py`, `backend/rules/strategy_decision.py` and the rules engine.
 
-### 7.1 Eight eligibility checks in backend code
+### 8.1 The four canonical strategies
 
-The current backend eligibility module defines these eight checks. They are an internal code-level assessment list; their existence does not mean the UI must display eight separate cards or stages.
+1. Progressive De-risking
+2. Capital Preservation
+3. Debt Reduction
+4. Credit Utilisation
 
-| Eligibility check | How code uses it | Result when it fails or evidence is missing |
+**Goal Funding is not a fifth Strategy Builder strategy.** It remains in Goal Planner / Goal Feasibility.
+
+The internal backend contains eight eligibility checks. They are an internal assessment set—not a requirement to show eight separate UI stages.
+
+| Internal check | What it assesses | Planner interpretation |
 |---|---|---|
-| Cash-flow fit | Compares the strategy’s required monthly contribution with available monthly surplus. If surplus is absent, it attempts to derive it from income minus expenses and EMI. | Missing evidence → Conditional; no/non-positive surplus → Fail; required contribution above surplus → Conditional with a shortfall amount. |
-| Liquidity fit | Compares liquid assets with required liquidity/safety reserve. | Missing data → Conditional; reserve shortfall → Conditional with the liquidity gap. |
-| Debt fit | Checks debt/EMI serviceability using the available debt and income evidence. | May fail or be conditional depending on the evidence and implemented checks. Verify full call path before claiming all debt cases are covered. |
-| Asset-resource fit | Checks whether resources needed for the strategy are available. | Missing evidence or resource gap can require a conditional change. |
-| Risk-capacity fit | Compares strategy risk requirement with investor risk capacity. | Missing risk evidence → Conditional; required risk above capacity → Fail. |
-| Goal-constraint fit | Checks canonical goal type, horizon and strategy-defined constraints such as `horizon<=`, `horizon>=`, `funding_gap<=` and `funding_gap>=`. | Matching strategy limits can exclude the strategy; malformed numeric constraints are currently ignored by the local parser. |
-| Multi-goal-conflict fit | Checks whether the strategy compromises a higher-priority goal or shared resources. | May require resource reallocation without materially compromising higher-priority goals. |
-| Implementation fit | Checks whether implementation evidence and required changes are available/feasible. | Missing implementation inputs can make the candidate conditional or fail through other gates. |
+| Cash-flow fit | Whether the proposed funding/repayment requirement fits available surplus. | A proposal can fail if required monthly cash flow exceeds usable surplus. |
+| Liquidity fit | Whether available liquid resources can support required liquidity. | Do not use resources without checking reserve and liquidity needs. |
+| Debt fit | Whether debt burden and repayment conditions support the proposal. | Check affordability and repayment sustainability. |
+| Asset/resource fit | Whether the needed assets or resources are available. | Confirm data and resource availability. |
+| Risk-capacity fit | Whether the proposal is compatible with observable capacity to bear risk. | Required risk should not exceed demonstrated capacity. |
+| Goal-constraint fit | Whether goal type, horizon, funding gap and applicable goal constraints allow the path. | A goal-specific constraint can make a candidate unacceptable. |
+| Multi-goal conflict fit | Whether the proposal creates a material conflict with other goals/resources. | Assess shared-resource effects where relevant. |
+| Implementation fit | Whether there is a credible way to carry out the proposal. | A theoretically attractive option may still be impractical. |
 
-Eligibility statuses:
-- **PASS:** checks pass.
-- **CONDITIONAL:** the strategy may work if specified changes or evidence are supplied.
-- **FAIL:** one or more blocking eligibility checks fail.
+The eligibility logic uses **PASS / CONDITIONAL / FAIL** outcomes. Missing evidence should not be silently treated as a pass.
 
-A conditional candidate is not the same as a fully viable, ready-to-execute proposal. The code's overall status combines the individual fit results and other eligibility gates.
+### 8.2 Applicability is different from viability
 
-### 7.2 Strategy applicability
+- **Applicability:** Does this strategy fit the kind of problem and the investor's situation?
+- **Viability:** Can it work under the investor's financial conditions and applicable constraints?
+- **Recommendation:** How should the evidence, assumptions and trade-offs be explained?
+- **Adoption:** Has the investor explicitly accepted the proposal?
 
-The library-level `StrategyRuleEngine` first checks whether the canonical goal type is in the strategy’s applicable goal types. If applicable goal characteristics are configured, it tests signals such as:
-- Funding shortfall / on-track / overfunded.
-- Near-term (≤5 years) / long-term (≥7 years).
-- Fixed / flexible timeline.
-- High / critical priority.
+A strategy may be applicable but not viable. A warning or poor ratio is not automatically a hard blocker; the specific rule decides its effect.
 
-A strategy is treated as characteristic-matched when at least one configured characteristic matches. This is distinct from the later financial eligibility check.
+### 8.3 Current scoring and consistency warning
 
-### 7.3 Strategy decision scoring found in code
+The audited strategy code contains scoring constants, including:
 
-`backend/rules/strategy_decision.py` defines numeric scoring inputs:
-- Primary goal-type match: 25; other-goal match: 10.
-- Characteristic match: 5 per applicable characteristic.
-- Optimal horizon fit: 30; baseline horizon fit: 15.
-- Feasibility: pass 15; conditional 8; fail 0.
-- Technique execution contribution: capped at 10.
-- Failed eligibility returns a decision score of -1000.
-- Funding fit adds special scores for selected legacy strategy IDs and funding/debt conditions.
-- Component score can add points for component activation/supporting strategies.
+- Primary goal-type match: 25
+- Other-goal match: 10
+- Characteristic match: 5
+- Optimal horizon: 30; baseline horizon: 15
+- Feasibility PASS: 15; CONDITIONAL: 8; FAIL: 0
+- Technique score maximum: 10
+- Failed eligibility: −1000
 
-**Important discrepancy:** scoring logic still references strategy IDs such as `strat-dynamic-accumulation`, `strat-calibrated-growth`, `strat-high-liquidity-flex`, `strat-cap-preservation`, and `strat-debt-reduction`. These IDs do not map cleanly to the four canonical business strategy names in the simplified Strategy Builder documentation. This needs a code-to-canonical-strategy mapping audit; do not assume the four canonical strategies are already the only runtime strategy identities.
+These are code-level scoring values, not necessarily a complete or approved planner-facing ranking policy. Do not interpret a score as proof that an option is financially suitable.
 
-The scoring code is evidence of current runtime behavior. It should not be presented as an approved business weighting policy unless the product owner has explicitly ratified these weights.
+**Identified mismatch:** scoring code refers to legacy strategy IDs such as `strat-dynamic-accumulation`, `strat-calibrated-growth`, `strat-high-liquidity-flex`, `strat-cap-preservation` and `strat-debt-reduction`. These do not cleanly map to the four canonical strategy names. The mapping needs reconciliation before strategy scores are treated as consistent across the system.
 
-### 7.4 Hard constraints passed to Strategy Builder
+### 8.4 Two-option decision rule
 
-The Strategy Engine can use a ConstraintSet’s failed hard constraints as ineligibility reasons. However:
-- Some financial-state conditions are policy overrides rather than universal build blockers.
-- Ratio status alone is adapted as diagnostic evidence; explicit constraint-check results carry goal-specific hard/warning effects.
-- The aggregator accepts optional sources, so an omitted source will not contribute constraints to that invocation.
-- A code path that falls back to a raw RuleAssessment can behave differently from one that receives a complete ConstraintSet. Callers need consistent use of the canonical aggregator.
+The Strategy Builder guide requires two options for each decision, while still being honest about their status:
 
----
+- Both options must come from the four canonical strategies.
+- Show applicability and viability separately, with reasons.
+- Do not present a failed option as suitable or recommendable.
+- If neither is acceptable, the valid result is **No Acceptable Strategy / No Acceptable Path**.
+- Do not invent score weights, thresholds, tie-breakers or eligibility outcomes.
+- Keep proposal, investor decision, Accepted Plan and execution separate.
 
-## 8. Risk Profiler and Behavioral Rules
-
-**Owners:** `backend/engines/risk_profiler/engine.py`, `backend/rules/risk_profiler.py`, `backend/engines/profile/behavioral.py`, `backend/engines/constraints/policy.py`.
-
-### Risk Required
-- Consumes the canonical required-risk/return calculation from the calculation layer when the required inputs are available.
-- Evidence can include future target, current funding and time horizon.
-- If required evidence is unavailable, Risk Required is marked unavailable rather than inventing a value.
-- The current implementation also supports an explicit override input; the source and precedence of that override should be governed and auditable.
-
-### Risk Capacity
-- Derived from observable financial information such as investable surplus, safety reserve, EMI/debt service, assets and liabilities.
-- The comparison helper returns Conditional if either required risk or capacity is missing.
-- Returns Pass when required risk is within capacity; Fail when required risk exceeds capacity.
-- Strategy definitions can declare the required risk capacity.
-
-### Risk Tolerance / observed behavior
-- Uses five supported behavior dimensions: decision consistency, volatility reaction, discipline, intervention tendency and loss/uncertainty response.
-- Observations require evidence and retain confidence and validity information.
-- Missing behavior remains insufficient evidence; it is not replaced by hypothetical answers.
-- Behavior constraints are labelled for product selection only. They must not be converted into invented risk-capacity values or hard goal constraints.
-
-### Constraint provenance
-Risk/Profile policy can preserve whether a value came from financial state, observed behavior, a declared constraint or a preference. Conflicting values are recorded as unresolved. Current helpers detect the conflict; they do not establish a complete business resolution policy.
+This describes the business rule for planner-facing behavior; it does not prove every screen currently enforces it.
 
 ---
 
-## 9. Insurance / Protection Rules
+## 9. Risk Profiler rules
 
-**Owner:** `backend/rules/protection.py`; consumed by Moneywheel and related protection calculations.
+The audited Risk Profiler consumes required-risk information from canonical calculations when available, while an override path also exists.
 
-- Baseline required insurance cover = **10 × gross annual income + outstanding liabilities**.
-- Negative income or liability inputs are floored at zero in the calculation.
-- Existing assets are intentionally not netted off against the required cover.
-- Recognized life-policy types in code: term insurance, term, endowment, whole life, ULIP and money back.
-- Recognized health-policy types: health insurance, health.
-- Moneywheel’s Insurance Coverage Ratio compares existing sum assured with the calculated required cover and classifies the coverage ratio into its status bands.
+- **Risk capacity** is assessed from observable financial information such as surplus, emergency reserve, EMI/debt, assets and liabilities.
+- If required risk is within capacity, the check can pass; if it exceeds capacity, it can fail; if evidence is missing, the result can be conditional.
+- Behavioral dimensions include decision consistency, reaction to volatility, discipline, intervention tendency, and response to loss/uncertainty.
+- Behavioral observations require evidence. Missing observations should remain unknown rather than becoming an invented score.
+- The audited observed-behavior policy labels these behavioral constraints for **product selection only**; do not silently use them as goal-feasibility blockers.
 
-**Audit note:** this is a baseline calculation rule. It does not, by itself, establish a complete insurance suitability recommendation or product-selection rule.
-
----
-
-## 10. Financial State, Budget and Data Classification Rules
-
-**Owners:** `backend/rules/financial_metrics.py`, canonical calculation functions, and feature-specific engines.
-
-Current classifications in `financial_metrics.py`:
-
-- Short-term liability types: Credit Card, Personal Loan, Consumer Loan, Other.
-- Essential expense types: Housing, Utilities, Groceries, Healthcare, Insurance, Education, Debt Payments.
-- Unknown expense types default to “Other” in the classification helper and are therefore not classed as essential by this set.
-- Financial-state compatibility helpers delegate cash-flow ratio and savings/investment rate calculations to the canonical calculation module; they should not be treated as separate calculation owners.
-- Safety-reserve months helper delegates to the canonical calculation function and falls back to 12 when the result is unavailable.
-
-**Audit gaps to verify:**
-- Whether frontend/onboarding category options exactly match backend category classification.
-- Whether “Other” should ever default to non-essential or unknown instead.
-- Whether the safety-reserve fallback of 12 months is an approved business policy or a technical fallback.
-- Whether the same income/expense fields and definitions are used consistently by Moneywheel, Goal Planner, Risk Profiler and Strategy Builder.
+**Planner action:** distinguish financial ability to take risk from behavioral comfort with risk. They are related, but not interchangeable.
 
 ---
 
-## 11. Action Plan Rules
+## 10. Insurance and protection rules
 
-**Owner:** `backend/rules/action_plan.py`; used when action specifications are generated from a selected strategy architecture.
+The audited required-life-cover formula is:
 
-- The primary strategy produces one **high-priority** action describing execution of the core mechanism.
-- Each supporting strategy produces a **medium-priority** action.
-- Each implementation technique produces a **medium-priority** action.
-- These are action-specification rules. They do not, by themselves, prove that an investor accepted the plan or that execution has happened.
+**Required cover = 10 × gross annual income + outstanding liabilities**
 
-**Required boundary:** accepted-plan status, investor adoption and execution state must remain separate from a strategy recommendation or draft proposal.
+- Negative inputs are floored at zero.
+- Existing assets are not netted off in this formula.
+- Recognized life-policy types in code include term, endowment, whole life, ULIP and money back.
+- Recognized health-policy types include health and health insurance.
 
----
+This is the formula currently found in code, not proof that a ten-times-income rule is sufficient for every family. Confirm liabilities, dependants, future goals, existing cover and the applicable planning methodology before treating the result as a final recommendation.
 
-## 12. Canonical Rule Registry vs Runtime Behavior
-
-`backend/rules/canonical.py` records rule IDs, names, scopes, roles, source modules and version metadata. Examples registered include:
-- Goal positive horizon / positive target.
-- Canonical goal-type and priority classification.
-- Moneywheel ratio classifications.
-- Strategy cash-flow, liquidity, debt, asset-resource, risk-capacity, goal-constraint, multi-goal-conflict and implementation fits.
-- Goal priority order.
-- Discretionary-goal protection of essential goals.
-- Required insurance cover.
-
-However, the registry is **not a complete list of all code-backed business behavior**:
-- Some active RuleEngine diagnostics (for example priority-sensitive, fixed-timeline, surplus-health and financial-health diagnostics) are defined in runtime code separately.
-- Some scoring constants and strategy-ID rules are in `rules/strategy_decision.py`.
-- Moneywheel benchmark bands are in `rules/moneywheel.py`.
-- Goal calculations and assumptions are in goal-engine modules.
-- The eight eligibility fits are in `rules/eligibility.py` and are evaluated by `engines/strategy/eligibility.py`.
-- Action generation and protection logic live in separate domain modules.
-
-Therefore, counting entries in `CANONICAL_RULES` would undercount the full set of operational rules.
+Moneywheel's Insurance Coverage Ratio compares existing sum assured with this required-cover calculation. Its status bands are listed in Section 4.
 
 ---
 
-## 13. Cross-Feature Usage Map
+## 11. Financial State and budget classifications
 
-| Rule family | Onboarding / Profile | Financial State / Moneywheel | Goal Planner | Risk Profiler | Strategy Builder | Multi-Goal | Action Plan / Investment |
-|---|---|---|---|---|---|---|---|
-| Canonical goal type / aliases | Input normalization should align | Context | **Direct** | Goal evidence may be consumed | **Direct** for applicability and eligibility | **Direct** for essential/discretionary classification | Indirect |
-| Priority vocabulary / ranks | Collects priority input | — | Goal priority context | Constraint provenance possible | Ranking/fit context | **Direct** | May inform priority downstream |
-| Financial ratio benchmarks | — | **Direct** | Funding/financial evidence | Capacity inputs | **Direct** when context/ConstraintSet supplied | Shared-resource evidence | Recommendation context |
-| Emergency reserve / debt / savings constraints | — | **Direct evidence** | May affect feasibility/priority | **Direct capacity evidence** | Can create goal-specific hard constraints/warnings | Protects essential goals/shared reserve | May affect recommendation/actions |
-| Goal validity / target / horizon | — | Goal-related ratios | **Direct** | Required-risk inputs | **Direct** eligibility gates | Goal state | Action context |
-| Goal funding gap / required contribution / return | — | Goal ratios / return evidence | **Direct calculation owner** | Required-risk calculation can consume related inputs | Eligibility/scoring can consume required contribution and goal status | Funding status | Proposal/action inputs |
-| Essential vs discretionary protection | — | — | Goal classification | Financial constraints can influence | May constrain strategy choices | **Direct policy** | Indirect |
-| Risk capacity / tolerance / behavior | Profile inputs | May consume financial metrics | Goal evidence only where passed | **Direct** | **Direct** risk eligibility | Potential shared-plan evidence | Product selection / implementation context |
-| Insurance required cover / coverage ratio | Policy data input | **Direct ratio** | May inform protection goal context | Liabilities / financial-state evidence | Could be evidence if passed; not a universal strategy gate | Indirect | Investment/protection decision support |
-| Strategy scoring / eligibility | — | Ratio evidence | Supplies goal/funding evidence | Risk capacity evidence | **Direct** | Multi-goal conflict fit | Produces architecture for accepted plan |
-| Action generation priority | — | — | — | — | Approved architecture input | — | **Direct** |
+The audited code includes these classifications:
 
-“May” and “where supplied” are deliberate: the code contains a rule or consumer interface, but an individual feature only uses it if the active call path passes the relevant inputs/results.
+| Area | Current classification / behavior | Planner note |
+|---|---|---|
+| Short-term liabilities | Credit Card, Personal Loan, Consumer Loan, Other | Verify that every liability is categorized correctly; unknown categories may be misrepresented if not reviewed. |
+| Essential expenses | Housing, Utilities, Groceries, Healthcare, Insurance, Education, Debt Payments | This classification affects cash-flow interpretation; confirm context where an expense does not fit neatly. |
+| Unknown expense type | Defaults to Other | “Other” is a fallback, not confirmation that the expense is unimportant. |
+| Financial State calculations | Wrappers delegate to canonical cash-flow/savings calculations. | The wrapper should not be mistaken for an independent second formula owner. |
+| Safety-reserve helper | A 12-month fallback exists in the audited helper. | This is distinct from the ratio evaluator's 3-, 6- and 9-month bands. Confirm which path a feature uses. |
+
+The 12-month fallback and reserve-evaluation bands are an example of why a planner should not assume every feature uses one shared reserve threshold.
 
 ---
 
-## 14. Confirmed Gaps, Overlaps and Risks
+## 12. Action Plan and investor adoption
 
-1. **Policy is not the sole threshold owner.** Leverage bands, Moneywheel bands and some health diagnostics remain hardcoded outside `engines/constraints/policy.py`.
-2. **Rule registry is not exhaustive.** It describes a subset of the runtime rule system and is not sufficient as the only audit source.
-3. **Constraint aggregation is optional-input based.** Missing a source from a call means that source’s constraints are absent from that ConstraintSet.
-4. **Diagnostic vs blocking semantics need consistency.** A ratio marked “critical” is not automatically a failed hard constraint; the explicit evaluator policy determines whether it affects a goal.
-5. **Strategy identities appear inconsistent across policy and documentation.** Scoring functions reference legacy strategy IDs. Map them to the four canonical business strategies before treating score outputs as canonical.
-6. **Potential conflicting financial benchmarks exist across consumers.** Audit all thresholds and labels against one approved business policy; do not fix values without product-owner approval.
-7. **Goal funding gap fallback may mask invalid data.** The gap helper currently maps a missing/unavailable canonical gap to zero; callers must prevent this from being shown as “On Track”.
-8. **Default assumptions require governance.** Goal inflation defaults to 6%; fallback funding return is 8%; retirement return is 8%; required insurance cover uses 10 years of gross income plus liabilities. These values need an explicit owner and user-visible assumption labels.
-9. **Unknown priority defaults to Medium.** Confirm whether silent defaulting is acceptable or should instead request investor input.
-10. **Essential/discretionary classification is fixed by goal type.** Confirm whether individual circumstances can override that classification.
-11. **Eligibility parser silently ignores malformed numeric strategy constraints.** Invalid rule configuration should ideally be visible rather than skipped.
-12. **No universal feature-consumption proof from a rule definition alone.** The call path must be traced to establish whether each feature actually supplies and enforces the rule.
+The audited action-plan logic can assign high priority to a primary strategy action and medium priority to supporting strategy/technique actions. This does **not** prove that the investor accepted or executed those actions.
 
----
+Keep these states separate:
 
-## 15. Recommended Audit Status Vocabulary
+1. Calculation or preview
+2. Proposed strategy / solution
+3. Investor decision
+4. Accepted Plan
+5. Action Plan
+6. Actual execution
 
-Use these labels in future updates to this register:
-
-- **Code-backed:** behavior is directly visible in an inspected runtime module.
-- **Consumed by feature:** the feature call path passes or reads the rule/evidence.
-- **Defined but not proven consumed:** a rule exists, but active usage has not been verified.
-- **Documented target:** product documentation describes the rule, but current runtime implementation is not confirmed.
-- **Conflict / duplicate:** comparable logic or thresholds exist in more than one place.
-- **Missing / unclear policy:** code has a fallback or behavior without an approved business definition visible in the inspected sources.
+A preview must not silently accept a proposal, change goal priority, earmark an asset or overwrite an Accepted Plan. After a material input change, revalidate affected decisions rather than assuming the previous result still applies.
 
 ---
 
-## 16. Audit Boundary
+## 13. Key gaps identified in the code audit
 
-This document consolidates the principal backend rule-bearing modules inspected for constraints, Moneywheel, goals, multi-goal logic, Goal Planner calculations, Strategy Builder eligibility/scoring, Risk Profiler, protection, financial classifications and action generation.
+| Gap | Why it matters to a financial planner | What needs to be verified or corrected |
+|---|---|---|
+| Not all thresholds are centralized | Different features may classify the same situation differently. | Establish one policy owner for shared thresholds and make consumers use it. |
+| Rule registry is incomplete | A rule may run in code without being fully represented in the canonical catalogue. | Reconcile registered rules with active runtime rules. |
+| Constraint aggregation uses optional sources | A decision may be missing a constraint if the relevant source was not supplied. | Trace every feature's actual call path and inputs. |
+| Critical ratio does not always mean hard failure | A planner could mistake a warning for a blocker or miss a real blocker. | Document the effect of each rule at the point where it is consumed. |
+| Legacy Strategy IDs conflict with canonical strategy names | Scoring and business labels may not refer to the same strategy. | Map or retire legacy IDs and test the four-strategy allowlist. |
+| Reserve thresholds differ across helpers | Different screens or calculations may use different benchmarks. | Decide and document the intended threshold by purpose; remove accidental duplication. |
+| Funding-gap helper can turn a non-calculable result into zero | Invalid data can appear to mean “On Track” if the caller loses the error state. | Preserve an explicit unavailable/error status. |
+| Important assumptions use defaults | A planner may not see that 6%, 8%, or 10× income was assumed. | Make assumptions and their source visible and governable. |
+| Unknown priority defaults to Medium | A missing investor decision can affect goal order. | Surface the default and require confirmation where material. |
+| Essential/discretionary categories are fixed | The classification may not match the investor's real circumstances. | Decide whether the classification should allow context-specific review. |
+| Malformed numeric strategy constraints can be ignored | A bad input might not trigger the intended check. | Validate input and surface an explicit invalid-data outcome. |
+| Full feature call paths are not yet proven | A rule's existence does not prove every feature applies it. | Trace active callers and tests for each rule and constraint. |
 
-It is a **code-audited register, not a claim that every frontend form, API call, database rule, test, scheduled workflow or runtime deployment has been exhaustively traced**. Before calling the entire system fully centralized, the next audit should map every rule to its active call sites and tests, reconcile all duplicate thresholds and legacy strategy IDs, and verify that every relevant feature supplies the canonical ConstraintSet.
+---
+
+## 14. Planner's quick review checklist
+
+Before relying on a Planvesto recommendation, confirm:
+
+- [ ] The goal uses one of the canonical goal types.
+- [ ] Target date, current cost, inflation and return assumptions are visible and reasonable for the case.
+- [ ] Asset mappings refer to real, correctly valued resources; mapping is not mistaken for earmarking.
+- [ ] Funding gap, required contribution and required return are interpreted separately.
+- [ ] Unavailable inputs are not being treated as zero or as a pass.
+- [ ] Reserve and debt warnings are distinguished from hard constraints.
+- [ ] The applicable constraint sources were actually supplied to the decision.
+- [ ] Required risk is not being confused with risk capacity or behavioral comfort.
+- [ ] Other goals and shared resources are reviewed when the decision could materially affect them.
+- [ ] Strategy applicability and viability are shown separately.
+- [ ] A failed option is not presented as suitable merely to fill a two-option display.
+- [ ] A recommendation is not mistaken for investor acceptance or execution.
+- [ ] Material changes trigger targeted recalculation/revalidation.
+
+---
+
+## 15. Audit boundary and next review
+
+This guide consolidates the principal rule-bearing backend modules reviewed for this audit. It does not claim that every frontend form, API endpoint, database path, test and deployment route has been exhaustively traced.
+
+The next verification pass should:
+
+1. Trace each rule from definition to its active feature/API caller and tests.
+2. Reconcile duplicate thresholds and assumptions under clear policy ownership.
+3. Resolve the legacy Strategy ID versus canonical four-strategy mismatch.
+4. Verify that every relevant feature receives the required canonical ConstraintSet and preserves missing/conflicting evidence.
+5. Test that unavailable or invalid calculations cannot appear as healthy, zero-gap or passing outcomes.
+
+**Bottom line:** use this guide to understand the rules currently visible in code, but treat the identified gaps as open audit items—not as proof that the system is already fully centralized or consistent.
