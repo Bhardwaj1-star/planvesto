@@ -619,7 +619,7 @@ export default function LearnPage() {
                     </p>
 
                     <h3 className="mt-4 font-bold text-navy-900">
-                        Financial health
+                        Moneywheel
                     </h3>
 
                     <p className="mt-2 text-sm leading-6 text-slate-500">
