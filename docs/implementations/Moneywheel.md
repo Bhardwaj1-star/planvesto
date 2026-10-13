@@ -196,20 +196,7 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 13. Existing Moneywheel tests are run and results recorded; locating tests is not proof that they pass.
 14. Deployment/database/RLS claims are made only after target-environment verification.
 
-## 9. Coding-agent sequence
-
-1. Read this specification and the existing Moneywheel evidence documents before editing.
-2. Inspect current schemas/models and all consumers of the nine-metric contract.
-3. Trace debt records and the relevant return assumption to authoritative sources; do not invent fields or defaults.
-4. Extend registry, models, calculations, availability handling, API schemas, persistence, history, and UI for both new metrics.
-5. Version the contract compatibly and preserve reading of old snapshots.
-6. Wire Goal Planner and Strategy Builder to consume canonical Moneywheel output; do not duplicate formulas.
-7. Confirm each downstream rule's role in the canonical constraint registry. Do not promote diagnostics to hard constraints without explicit ownership.
-8. Add unit, API-contract, adapter, service, persistence/history, frontend, and integration tests.
-9. Run tests and record actual outcomes, including tests not run.
-10. Report changed files, source-data gaps, migrations, test results, and deployment verification separately.
-
-## 10. Source documents and authority
+## 9. Source documents and authority
 
 ### Existing-code evidence — baseline for current behavior
 - docs/existing features/Moneywheel/00-BACKEND-INDEX.md
@@ -227,6 +214,6 @@ If the current response schema enforces exactly nine metrics, update schemas, mo
 - Case 15 — asset mapping is distinct from earmarking.
 - docs/Real-Life Decision Cases/16-CONCEPTS_OUTSIDE_EXISTING_FEATURES_REGISTER.md and FULL_AUDIT_REPORT.md — shared constraint ownership and taxonomy gaps.
 
-## 11. Explicit non-goals
+## 10. Explicit non-goals
 
 This specification does not authorize redesigning all existing ratios/thresholds, automatic Debt Reduction/Investment selection from a single metric, unapproved status bands, a separate hard-constraint engine inside Moneywheel, automatic changes to goal priority/strategy/Accepted Plan/asset earmarking/Action Plan, or claims that tests/deployments/production RLS are verified without evidence.
