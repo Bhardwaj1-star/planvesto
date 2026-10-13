@@ -2,49 +2,46 @@
 
 **Document Type:** Feature User Journey Register  
 **Status:** CANONICAL DESIGN  
-**Purpose:** Keep user journeys organized by canonical product feature. Internal stages such as strategy selection, recommendation and execution belong inside the relevant feature journey or a shared cross-feature journey—not as substitutes for feature journeys.
+**Purpose:** Index only those feature journeys whose corresponding implementation specification exists in `docs/implementations/`.
 
-## Canonical Feature Journeys
+## Implementation-Backed Feature Journeys
 
-| Feature | Journey document | Current status |
-|---|---|---|
-| Onboarding | [02-ONBOARDING_JOURNEY.md](./02-ONBOARDING_JOURNEY.md) | Existing journey; needs feature-level verification |
-| Financial State | [03-FINANCIAL_STATE_JOURNEY.md](./03-FINANCIAL_STATE_JOURNEY.md) | Existing journey; needs feature-level verification |
-| Moneywheel | Not yet present | Journey document required |
-| Goal Planner | [01-GOAL_PLANNING_JOURNEY.md](./01-GOAL_PLANNING_JOURNEY.md) | Existing journey; includes Goal Feasibility |
-| Strategy Builder | [05-STRATEGY_BUILDER_JOURNEY.md](./05-STRATEGY_BUILDER_JOURNEY.md) | Consolidated feature journey |
-| Action Plan | [12-ACTION_PLAN_JOURNEY.md](./12-ACTION_PLAN_JOURNEY.md) | Canonical feature journey; positioned after Accepted Plan and before execution |
-| Budgeting | Not yet present | Journey document required |
-| Financial Health | Not yet present | Journey document required |
+| Feature | Implementation document | User Journey | Boundary |
+|---|---|---|---|
+| Goal Planner | [Goal-Planner.md](../implementations/Goal-Planner.md) | [01-GOAL_PLANNING_JOURNEY.md](./01-GOAL_PLANNING_JOURNEY.md) | Goal requirements, funding paths and Goal Feasibility |
+| Moneywheel | [Moneywheel.md](../implementations/Moneywheel.md) | [04-MONEYWHEEL_JOURNEY.md](./04-MONEYWHEEL_JOURNEY.md) | Financial measurements and traceable evidence for downstream planning |
+| Strategy Builder | [Strategy-Builder.md](../implementations/Strategy-Builder.md) | [05-STRATEGY_BUILDER_JOURNEY.md](./05-STRATEGY_BUILDER_JOURNEY.md) | Strategy selection and strategy-side implementation proposal |
+| Action Plan | [Action-Plan.md](../implementations/Action-Plan.md) | [12-ACTION_PLAN_JOURNEY.md](./12-ACTION_PLAN_JOURNEY.md) | Actions derived from an Accepted Plan, execution and impact review |
 
-This register records document coverage; it does not claim that a journey has been verified against runtime behavior unless that verification has been performed.
+Only journeys listed above are retained in this folder because each has a matching implementation specification. This does not mean every described capability is already implemented in runtime; each journey must preserve the implementation document's distinction between current behavior and required/target behavior.
 
-## End-to-End Product Lifecycle
+## End-to-End Handoff
 
 ```
-Onboarding → Financial State → Goal Planner → Strategy Builder
-→ Investor Decision / Adoption → Accepted Plan → Action Plan → Execution
+Financial State / Goal Context
+          ↓
+Goal Planner + Goal Feasibility
+          ↓
+Moneywheel Evidence (where relevant)
+          ↓
+Strategy Builder
+          ↓
+Investor Decision / Adoption
+          ↓
+Accepted Plan
+          ↓
+Action Plan → Execution
 ```
 
-Moneywheel, Budgeting and Financial Health remain distinct features; this lifecycle line does not merge their responsibilities into Goal Planner or Strategy Builder.
-
-## Shared / Cross-Feature Journeys
-
-These describe changes or plan-level situations that may affect more than one feature. They do not replace the feature journeys above.
-
-- [14-REVALIDATION_JOURNEY.md](./14-REVALIDATION_JOURNEY.md)
-- [15-GOAL_CHANGE_JOURNEY.md](./15-GOAL_CHANGE_JOURNEY.md)
-- [16-FINANCIAL_STATE_CHANGE_JOURNEY.md](./16-FINANCIAL_STATE_CHANGE_JOURNEY.md)
-- [17-NEW_GOAL_AGAINST_EXISTING_PLAN_JOURNEY.md](./17-NEW_GOAL_AGAINST_EXISTING_PLAN_JOURNEY.md)
-- [19-MULTI_GOAL_WHOLE_PLAN_JOURNEY.md](./19-MULTI_GOAL_WHOLE_PLAN_JOURNEY.md)
+The diagram shows responsibilities and handoffs, not a mandatory sequence in which Moneywheel must always run after Goal Planner. Goal Planner owns goal-level requirements and feasibility; Moneywheel owns its measurements; Strategy Builder consumes planning evidence; Action Plan follows explicit investor adoption.
 
 ## Journey Writing Rule
 
-A feature User Journey must explain:
+Each retained journey must state:
 - What the investor does.
-- What the system does.
-- What the investor sees.
-- What decision or next step the investor can take.
-- What information enters the feature and what output it passes onward.
+- What the system does and what it presents.
+- What inputs it relies on and what outputs it passes onward.
+- What the investor can decide or do next.
+- Which behaviors are current, planned, unknown or not yet verified.
 
-Use the feature's existing documentation and code-backed behavior as evidence. Mark gaps as unknown; do not invent steps, rules or functionality.
+Use the matching implementation specification as the governing reference. Do not invent steps, rules, calculations or runtime capabilities.
