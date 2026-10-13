@@ -141,3 +141,30 @@ Calculations should use the authoritative financial information and relevant goa
 - Weighted Debt Rate, Investment–Debt Spread, and Portfolio-Level Return Required are specified additions; their live status must be checked before relying on them.
 - No new health bands or automatic investment/debt recommendations are implied.
 - Results are calculations based on the supplied data and assumptions; they are not guarantees of future outcomes.
+
+
+## 7. Consolidation audit — 2026-10-13
+
+**Canonical feature decision:** Moneywheel includes financial-health assessment. Financial Health is not a separate top-level feature. Financial State remains the source of financial records.
+
+### Findings from current code inspection
+- The investor-facing Moneywheel route and backend API already exist at `/investor/moneywheel` and `/api/moneywheel`; the backend router is registered once in `backend/main.py`.
+- The consolidated financial-plan report had a second health scan and a separate ratio-constraint list in `FinancialPlanService`. These repeated measurements and used a separate set of thresholds.
+- The old report helper silently substituted estimates/defaults for missing values, including an assumed financial-asset mix, emergency-buffer months and ratio fallbacks. Those could make incomplete data look like a real measurement.
+- Strategy/constraint diagnostics also consume financial metrics. They are not a separate user-facing feature, but their decision role and metric ownership must remain explicit.
+- The report layout previously exposed a separate “Financial Health & Ratio Constraints” section alongside the Moneywheel health scan.
+
+### Changes in this branch
+- Split Moneywheel calculation from snapshot persistence. The report can build the same canonical Moneywheel result without writing a duplicate history snapshot.
+- The consolidated report now formats its health/measurement section from the canonical Moneywheel engine and rule set.
+- Removed the report's duplicate hard-coded ratio/health calculation path. The legacy `ratio_constraints` response field is retained as an empty compatibility field; governed constraints continue to come from `ConstraintAggregator`.
+- Removed the duplicate ratio-constraint section from the report layout.
+- Updated visible product/navigation labels to Moneywheel while preserving the existing `financial-health` anchor for compatibility.
+- Allowed a negative monthly surplus in the Moneywheel input model so a deficit can be measured as a negative savings rate instead of being rejected before calculation.
+- Added regression tests for pure assessment building, unavailable values in the report, and negative monthly surplus.
+
+### Not yet verified / remaining work
+- CI and the backend/frontend test suites must pass before merge.
+- The Strategy Rule Engine still has an emergency-reserve diagnostic and a legacy current-liquidity diagnostic. Emergency-reserve coverage is a different measurement from the current Liquid Asset Ratio; decide later whether it should be added to Moneywheel's governed metric catalogue. Do not silently treat these measures as equivalent.
+- The current canonical Moneywheel schema still names the ninth metric `required_rate_of_return`, which is goal-context dependent. The planned Portfolio-Level Return Required is not implemented by this consolidation; a compatibility/migration decision is needed before replacing that metric.
+- No production deployment or live database migration is claimed by this source change.
