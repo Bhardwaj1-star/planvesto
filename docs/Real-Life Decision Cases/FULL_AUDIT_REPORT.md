@@ -69,9 +69,7 @@ The canonical `strategy-decision-tree.md` defines four Strategy Builder strategi
 Contradictory sources:
 - Case 8 lists Goal Funding as “Strategy A” for an Education goal.
 - Cases 10 and 11 label Goal Funding as a strategy.
-- `docs/architecture/strategy-matrix.md` has a Goal Funding Strategy row.
-- `docs/architecture/strategy-architecture-composition.md` calls Goal Funding a canonical first-class strategy.
-- `docs/architecture/strategy-variants.md` describes six Goal Funding variants.
+- The earlier audit referenced `docs/architecture/strategy-matrix.md`, `docs/architecture/strategy-architecture-composition.md`, and `docs/architecture/strategy-variants.md` as sources that classified Goal Funding as a Strategy or listed its six options as variants. Those paths are absent from the current repository tree; these are historical audit references, not current document paths.
 - The 00 change log preserves an earlier Goal Funding-as-strategy statement, although later parts reject it.
 
 **Documentation resolution:** The target documents now use **Goal Funding / Feasibility** or **Goal Planner funding path**. Case 8 no longer labels Goal Funding as Strategy A; Cases 10–11 distinguish funding-path changes from changes to one of the four canonical strategies. The change log retains earlier claims only as rejected/superseded history. Runtime code has not been changed by these documentation edits.
