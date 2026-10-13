@@ -1,134 +1,221 @@
-# Strategy Builder — Final Implementation Specification
+# Strategy Builder — Implementation Contract
 
-**Document type:** Authoritative implementation specification  
-**Scope:** Canonical Strategy Decision, Strategy/Variant/Technique selection, implementation architecture, stress/resilience, final recommendation and investor adoption boundaries  
-**Status:** Consolidated from the Strategy Builder feature definition, existing-feature audit documents, and documented Real-Life Decision Cases. The target business model is separated from code-verified evidence; this document does not claim every target rule is implemented or that the business rules are frozen.  
-**Existing-code evidence:** See `docs/existing features/Strategy-Builder/` and the code references in Section 12.
+**Document type:** Implementation contract / coding-agent handoff  
+**Scope:** Strategy Builder's target decision flow, canonical strategy and variant registry, technique policy, implementation proposal, stress/resilience, recommendation, and investor-adoption boundary.  
+**Status:** Consolidated from the two designated references. This document describes the target contract; it does not claim the target is already implemented in code.
 
-## 1. Purpose and ownership
+## 1. Design references
 
-Strategy Builder determines which canonical strategy is applicable and viable for a defined goal and financial context, selects a fitting variant and techniques, composes an implementation proposal, evaluates relevant trade-offs and resilience, and presents an explainable decision for the investor.
+This contract is based on these two references:
 
-It consumes Goal Planner's goal-feasibility and funding context. It must not silently recalculate or redefine Goal Planner's funding feasibility as if that were Strategy Builder's own decision.
+1. Feature definition: [docs/feature/Strategy-Builder.md](../feature/Strategy-Builder.md)
+2. Existing-feature code audit: [docs/existing features/Strategy-Builder/](../existing%20features/Strategy-Builder/)
 
-The four canonical Strategy Builder strategies are:
-- **Progressive De-risking**
-- **Capital Preservation**
-- **Debt Reduction**
-- **Credit Utilisation**
+The feature definition records the business model and its Real-Life Decision Case basis. The existing-feature folder records the inspected code, current runtime behavior, and documented gaps. The audit is not repeated here.
 
-**Goal Funding is owned by Goal Planner / Goal Feasibility, not a fifth Strategy Builder strategy.** References in historical cases or audit material that label Goal Funding as a strategy are recorded source inconsistencies, not a reason to expand the canonical four-strategy set.
+Where the audit describes existing runtime behavior that differs from the target contract, preserve the distinction between **current state** and **target behavior**. A code-audit finding does not, by itself, define target business behavior.
 
-Strategy Builder must not force a recommendation when no candidate is acceptable. **No Acceptable Strategy / No Acceptable Path** is a valid decision outcome.
+## 2. Purpose and ownership
 
-## 2. Inputs and outputs
+Strategy Builder evaluates the financial situation for a defined goal, determines which of the four canonical strategies can apply and work, selects the strategy and its variant, determines the relevant techniques and methods/policies, assembles an investor-specific implementation proposal, evaluates relevant resilience, and produces an explainable decision.
+
+Strategy Builder consumes Goal Planner's goal-feasibility and funding evidence. It does not independently recreate or silently redefine Goal Planner's feasibility decision.
+
+### Canonical Strategy Builder strategies
+
+Exactly these four strategies belong to Strategy Builder:
+
+1. Progressive De-risking
+2. Capital Preservation
+3. Debt Reduction
+4. Credit Utilisation
+
+**Goal Funding is owned by Goal Planner / Goal Feasibility. It is not a fifth Strategy Builder strategy.** SIP, lump sum, step-up contributions, contribution escalation, and combinations of funding mechanisms remain in the Goal Planner funding domain unless an explicit business decision changes their ownership.
+
+If no candidate strategy is acceptable, the result is **No Acceptable Strategy / No Acceptable Path**. The system must not force a strategy merely to produce a recommendation.
+
+## 3. Target decision flow
+
+The target flow is:
+
+~~~text
+Goal Context + Financial State
+          +
+Goal Planner Feasibility / Funding Evidence
+          +
+Applicable Constraints
+          ↓
+Constraint / Safety Evaluation
+          ↓
+Strategy Applicability
+          ↓
+Strategy Viability
+          ↓
+Strategy Selection
+          ↓
+Variant Selection
+          ↓
+Technique Selection
+          ↓
+Method / Policy
+          ↓
+Architecture Composition + Solution Proposal
+          ↓
+Stress / Resilience
+          ↓
+Decision / Recommendation
+          ↓
+Explicit Investor Decision / Adoption
+          ↓
+Accepted Plan
+          ↓
+Action Plan
+          ↓
+Execution
+~~~
+
+The target flow does **not** contain a separate eight-eligibility-fits stage. References to eight fits in the existing-feature audit describe the audited current system and must not be treated as a required target stage for this contract.
+
+Whole-Plan / Multi-Goal Impact is conditional. It applies when the decision affects an existing Accepted Plan, shared resources, competing goals, a newly added goal, or another material cross-goal outcome. It is not a mandatory gate for every isolated individual-goal decision.
+
+Investor Decision, Accepted Plan, Action Plan, and Execution are downstream lifecycle stages; they are not interchangeable with the Strategy Decision or recommendation.
+
+## 4. Inputs and outputs
 
 ### Inputs
-- Defined goal or explicitly selected planning basket, including its requirements, target timing and relevant preferences.
-- Current financial state and relevant assets, liabilities, cash flow, liquidity and debt information.
-- Goal Planner's feasibility, funding-gap and funding-path evidence, including assumptions and limitations where available.
-- Canonical constraint evaluation and the evidence needed for strategy applicability and eligibility.
-- Selected scenario / changed assumptions for a What-If or stress evaluation.
-- Existing Accepted Plan context when the decision is a plan-level change or may affect shared resources.
-- Historical runs and versions for comparison and traceability; history alone is not current adoption state.
 
-Missing or unavailable evidence must remain distinguishable from a failed check. Do not silently replace missing values with assumed financial facts.
+- Defined goal and the actual requirement, target, timing, and payment structure.
+- Current financial state and relevant income, expenses, assets, liabilities, liquidity, debt, and cash-flow evidence.
+- Goal Planner feasibility result, funding gap, funding-path evidence, assumptions, and known limitations.
+- Applicable constraints and their evaluation evidence.
+- Information needed to evaluate strategy applicability and viability.
+- Existing Accepted Plan and shared-resource context when the decision is plan-level or can materially affect other goals.
+- Changed assumptions or scenario inputs for What-If and stress evaluation.
+- Historical runs/versions for traceability and comparison. History alone does not prove current adoption.
+
+Unavailable evidence must remain distinguishable from a failed check. Missing information must not be silently replaced with invented financial facts.
 
 ### Outputs
-- Canonical decision result and its status.
-- Applicable strategy candidates, selected strategy or explicit no-acceptable-path result.
-- Selected variant and technique-policy outcomes, including the reasons and evidence for required, conditional, optional, not-applicable or insufficient-input statuses.
-- Architecture and investor-specific Solution proposal, with relevant assumptions, outcomes, trade-offs and constraints.
-- Relevant stress/resilience and conditional whole-plan impact findings.
-- Explainable recommendation, alternatives where justified, and persisted decision/run evidence.
-- A proposed change remains a proposal until the investor explicitly adopts it through the accepted-plan lifecycle.
 
-## 3. Canonical decision domains and separation of responsibilities
+- An authoritative decision result and its status.
+- Applicable strategy candidates and their reasons.
+- The selected strategy and variant, or an explicit No Acceptable Strategy / No Acceptable Path result.
+- Technique policy results, including reasons for Required, Conditional, Optional, Not Applicable, or Insufficient Inputs.
+- Architecture and a concrete investor-specific Solution proposal.
+- Relevant assumptions, evidence, constraints, trade-offs, and stress/resilience findings.
+- Conditional whole-plan impact findings when applicable.
+- An explainable recommendation and supporting decision evidence.
+- A proposal/adoption state that remains separate from the active Accepted Plan.
 
-The documented target decision subsystem is:
+## 5. Decision domains and boundaries
 
-1. Goal context and Goal Planner feasibility/funding evidence.
-2. Hard-constraint and safety evaluation.
-3. Strategy applicability.
-4. Eight strategy eligibility fits.
-5. Strategy selection.
-6. Variant selection.
-7. Technique selection and policy.
-8. Architecture composition and Solution proposal.
-9. Stress/resilience evaluation, with re-evaluation when required.
-10. Final decision and recommendation.
+Each domain has a separate responsibility.
 
-These domains answer different questions and must not be collapsed into a single opaque score:
+| Domain | Question it answers | Required boundary |
+|---|---|---|
+| Goal Planner feasibility/funding | What is the goal's funding/feasibility position? | Upstream evidence consumed by Strategy Builder; do not recalculate it as a Strategy Builder strategy |
+| Constraint / Safety Evaluation | Which applicable restrictions or non-negotiable conditions govern the decision? | A diagnostic or warning is not automatically a hard blocker |
+| Strategy Applicability | Can this strategy legitimately apply to this situation? | Applicability is not viability |
+| Strategy Viability | Can the applicable candidate work under the actual financial conditions and constraints? | Failed viability must not be overridden merely to produce an answer |
+| Strategy Selection | Which viable candidate is selected under the defined business decision? | Must have one decision authority; recommendation wording must not make a second selection |
+| Variant Selection | Which structural form of the selected strategy fits the situation? | Variant is subordinate to one of the four strategies |
+| Technique Selection | Which reusable mechanisms are required or permitted by the selected Strategy + Variant? | Mapping is variant-specific; technique status must preserve the policy vocabulary |
+| Method / Policy | How is a selected technique applied in this context? | A method is not a separate strategy or technique merely because it describes an operation |
+| Architecture | How are the selected elements and dependencies composed? | Composition follows the selected Strategy, Variant, and technique decisions in the target flow |
+| Solution | What concrete implementation outcome is proposed for this investor? | Solution must not merely duplicate a Variant or Technique under another label |
+| Stress / Resilience | Does the proposed path remain acceptable under defined adverse or changed assumptions? | Reuses the canonical decision domains; it is not a separate competing decision engine |
+| Recommendation | How is the authoritative decision explained to the investor? | Explains the decision; does not silently replace the decision authority |
+| Investor Decision / Accepted Plan | Has the investor adopted the proposal into the active plan? | A recommendation, saved scenario, or history record is not proof of adoption |
 
-- **Hard constraints:** Is the situation permitted to proceed under the applicable validity/safety policy?
-- **Applicability:** Should this strategy enter the candidate pool for this situation?
-- **Eligibility / viability:** Can the candidate work under the actual financial conditions and available evidence?
-- **Selection:** Which acceptable candidate is the appropriate choice under the defined decision policy?
-- **Variant:** Which structural form of the selected strategy fits?
-- **Technique:** Which reusable mechanisms does the Strategy + Variant require or permit?
-- **Method/Policy:** How is a technique applied in this context?
-- **Architecture:** How are the selected elements and dependencies composed?
-- **Solution:** What concrete investor-specific implementation outcome is proposed?
-- **Stress/resilience:** Does the proposed path remain acceptable under defined adverse or changed assumptions?
-- **Recommendation:** How is the authoritative decision explained to the investor? Recommendation explains the decision; it must not silently create a second decision.
+## 6. Constraints, applicability, viability, and selection
 
-Applicability, viability, financial-health diagnostics, preferences, warnings and hard constraints are not interchangeable concepts. A financial-health signal is not automatically a universal blocker. Missing evidence must not silently become a hard failure.
+### Constraints and safety
 
-## 4. Hard constraints and eight eligibility fits
+Evaluate applicable constraints before selecting a strategy. Preserve the meaning established by the governing policy for blockers, warnings, preferences, diagnostics, conflicts, and unavailable evidence.
 
-### Hard constraints
+The existing audit identifies emergency-reserve, debt-burden/DTI, goal-validity, priority, and constraint-conflict behavior in current code. Those audit observations do not make every such signal a universal blocker. Do not invent new thresholds or change a diagnostic into a hard constraint without a source-defined rule.
 
-The audit records existing constraint behavior around goal-positive horizon/target, critical emergency reserve, critical debt burden/DTI, discretionary-versus-essential priority and constraint-conflict governance. These are current audit findings, not permission to treat every signal as a universal blocker.
+### Applicability
 
-The canonical constraint result must preserve at least the distinction between:
-- **PASS**
-- **FAIL**
-- **UNAVAILABLE / insufficient evidence**
+A strategy enters the candidate set only when its documented situation conditions fit the goal, financial state, funding position, and applicable constraints.
 
-Where the product distinguishes blockers, warnings and diagnostics, retain those meanings. Exact rule identities, scope, thresholds and missing-data behavior must be taken from the approved canonical policy; do not invent new thresholds in implementation.
+### Viability
 
-### Eight eligibility fits
+A candidate that is applicable must still be checked for whether it can work under actual conditions. Applicability does not prove viability.
 
-The canonical fit vocabulary is:
-1. Cash-flow Fit
-2. Liquidity Fit
-3. Debt Fit
-4. Asset Resource Fit
-5. Risk Capacity Fit
-6. Goal Constraint Fit
-7. Multi-goal Conflict Fit
-8. Implementation Fit
+For Credit Utilisation, the documented viability gates are:
 
-The existing audit records aggregate precedence as **FAIL > CONDITIONAL > PASS**. The business conditions behind every fit, symmetry of statuses, overlap with applicability/constraints and the complete treatment of unavailable inputs remain items to reconcile against the detailed audits and approved real-life cases. Do not treat the existence of a fit name or engine as proof that its policy is complete.
+- A genuine funding or timing gap exists.
+- Reasonable own-resource funding has been considered.
+- Borrowing capacity is sufficient.
+- EMI/repayment is sustainable.
+- Financing cost is economically justified.
+- A credible repayment path exists.
+- Applicable hard financial constraints are not violated.
 
-Multi-goal conflict/whole-plan impact is conditional on a plan-level decision, shared-resource conflict, new goal against an existing plan, or a material cross-goal effect. It is not an automatic mandatory gate for every isolated single-goal decision.
+Failure of a material Credit Utilisation viability gate means Credit Utilisation fails viability and must not be recommended.
 
-## 5. Strategy applicability and selection
+### Strategy selection
 
-### Canonical candidate set
+Selection occurs only after applicability, viability, and the applicable constraints have been evaluated. The selected strategy must be explainable from the evidence used.
 
-Only the four canonical strategies in Section 1 belong to the Strategy Builder strategy set. Goal Funding mechanisms, including contribution planning/escalation, remain within Goal Planner / Goal Feasibility.
+The source references do not establish a frozen universal score, score weights, numerical thresholds, or complete tie-breaking policy. Do not invent them or treat historical runtime scoring as an approved target rule. Where a case cannot be resolved by an explicit canonical rule, preserve that unresolved status rather than silently adding a rule.
 
-Applicability must determine whether a strategy belongs in the candidate pool. Viability then evaluates whether that candidate can work under the actual conditions. Do not use strategy selection to hide a failed hard constraint or to turn missing data into a favorable result.
-
-### Strategy-specific boundaries
-
-- **Progressive De-risking** is not selected merely because a goal has a future date. The documented rationale is a meaningful future requirement for which gradual changes in risk/capital positioning improve the chance of meeting it.
-- **Capital Preservation** is not selected merely because a goal exists. It applies when some or all required capital has become protection-sensitive.
-- **Debt Reduction** is not selected merely because the investor has debt. The decision must be tied to material effects on cash-flow capacity, goal funding, affordability or resilience.
-- **Credit Utilisation** must be supported by borrowing capacity, sustainable EMI/repayment, justified financing cost and a credible repayment path. It must not simply transfer an existing debt problem into another form.
-
-If every candidate fails applicability/viability or violates a genuine hard constraint, return a clear no-acceptable-path outcome rather than force a winner.
-
-### Selection policy
-
-The audit identifies a current PASS > CONDITIONAL > FAIL principle and composite scoring in the existing decision engine, but exact score weights, precedence, alternative-candidate policy and final selection conditions are not established here as frozen business rules. The implementation must use one authoritative selection policy, preserve reasons/evidence, and avoid duplicate selection logic in the recommendation layer. Do not invent weights or thresholds.
-
-## 6. Canonical Strategy → Variant registry
-
-These are the documented target variants and their situation mapping. The mapping is not proof that each variant is reachable or implemented in the current runtime.
+## 7. Strategy-specific applicability boundaries
 
 ### Progressive De-risking
+
+**Purpose:** Gradually move from accumulation/growth toward greater protection as a meaningful future requirement approaches.
+
+Applicable when:
+- A meaningful future requirement exists.
+- Its horizon is defined or reasonably identifiable.
+- Capital is still in an accumulation/growth phase.
+- Gradual protection can improve the probability of meeting the requirement.
+
+It is not the primary strategy when the requirement is already immediate and protection dominates, no meaningful transition exists, or another strategy solves the dominant problem more directly.
+
+Relevant evidence includes the goal timeline and target, current/projected funding, funding gap, payment structure, and current capital/risk position.
+
+### Capital Preservation
+
+**Purpose:** Protect identified capital once it becomes protection-sensitive.
+
+Applicable when:
+- Required capital is identifiable.
+- The requirement is sufficiently close or otherwise protection-sensitive.
+- Capital loss could materially impair the goal.
+- Protecting that capital matters more than pursuing additional growth for it.
+
+It is not selected merely because a goal exists or because the goal has a date in the future.
+
+Relevant evidence includes timeline, required and currently funded capital, payment dates/structure, capital already protected, and the consequence of capital loss.
+
+### Debt Reduction
+
+**Purpose:** Reduce or restructure debt when liabilities materially reduce cash-flow capacity, affordability, resilience, or goal funding.
+
+Applicable when:
+- Material debt exists.
+- Debt servicing constrains cash flow or goal funding.
+- Reducing/restructuring the debt can materially improve the relevant financial position.
+
+Debt is not, by itself, sufficient reason to select this strategy.
+
+Relevant evidence includes outstanding balance, effective debt cost, EMI/payment, tenure, prepayment terms, income, expenses, surplus, and competing goals.
+
+### Credit Utilisation
+
+**Purpose:** Address a legitimate funding/timing gap through responsible borrowing.
+
+It is not automatically a solution for every funding gap. Apply the viability gates in Section 6. Borrowing must fail viability when borrowing capacity is insufficient, repayment is unsustainable, financing cost is unjustified, a credible repayment path is absent, borrowing merely transfers an existing debt problem into another form, or an applicable hard financial constraint is violated.
+
+## 8. Canonical Strategy → Variant registry
+
+The target registry contains 16 variants: four under each canonical Strategy Builder strategy.
+
+### Progressive De-risking
+
 | Situation | Variant |
 |---|---|
 | Single future goal date | Goal-Date Glide Path |
@@ -137,6 +224,7 @@ These are the documented target variants and their situation mapping. The mappin
 | Accumulation transitioning into recurring income | Income-Transition Glide Path |
 
 ### Capital Preservation
+
 | Situation | Variant |
 |---|---|
 | Entire required capital needs protection | Full-Goal Preservation |
@@ -145,6 +233,7 @@ These are the documented target variants and their situation mapping. The mappin
 | Only core/required capital needs protection | Protected-Core Preservation |
 
 ### Debt Reduction
+
 | Situation | Variant |
 |---|---|
 | Debt creates a goal funding gap | Goal-Gap Debt Reduction |
@@ -153,6 +242,7 @@ These are the documented target variants and their situation mapping. The mappin
 | Debt and another goal must be coordinated | Goal-Linked Debt Reduction |
 
 ### Credit Utilisation
+
 | Situation | Variant |
 |---|---|
 | Small residual funding gap | Residual-Gap Bridge |
@@ -160,20 +250,9 @@ These are the documented target variants and their situation mapping. The mappin
 | Borrowing constrained by sustainable EMI | EMI-Cap Financing |
 | Temporary timing mismatch | Timing-Bridge Financing |
 
-Variant selection must be an identifiable decision domain with explicit candidate applicability, conditions and precedence. The audits identify selection logic outside the centralized definitions, implicit precedence, missing-input effects and reachability gaps. Those current-state findings require verification; do not silently assume all 16 target variants are active in runtime.
+These are target business mappings. Their presence in this registry does not prove that every variant is reachable or implemented in the current runtime. Goal Funding's historical six options are Goal Planner funding paths, not Strategy Builder variants.
 
-## 7. Canonical techniques and variant-to-technique policy
-
-A Technique is a reusable mechanism selected because the Strategy + Variant requires or permits it. Technique selection must be variant-aware and must preserve the policy status for each technique:
-- **Required**
-- **Conditional**
-- **Optional**
-- **Not Applicable**
-- **Insufficient Inputs**
-
-Not Applicable and Insufficient Inputs are not equivalent. Conditional does not mean always apply. Do not infer a technique's status solely from a strategy-level mapping when the canonical mapping is variant-specific.
-
-### Technique registry
+## 9. Canonical technique registry
 
 | Technique | Primary purpose |
 |---|---|
@@ -189,6 +268,18 @@ Not Applicable and Insufficient Inputs are not equivalent. Conditional does not 
 | EMI Capacity Analysis | Determine sustainable repayment capacity |
 | Borrowing Capacity Analysis | Determine how much borrowing can responsibly be supported |
 | Financing Cost Comparison | Determine whether borrowing is economically justified |
+
+### Technique policy statuses
+
+| Status | Meaning |
+|---|---|
+| Required | The variant cannot be properly executed without it |
+| Conditional | Used only when a defined condition exists |
+| Optional | May improve implementation but is not necessary |
+| Not Applicable | Should not be used in this situation |
+| Insufficient Inputs | Relevant, but required information is unavailable |
+
+**Not Applicable and Insufficient Inputs are different states.** Conditional does not mean always apply.
 
 ### Variant-to-technique policy matrix
 
@@ -211,111 +302,139 @@ Not Applicable and Insufficient Inputs are not equivalent. Conditional does not 
 | Credit Utilisation — EMI-Cap Financing | EMI Capacity Analysis, Borrowing Capacity Analysis | Financing Cost Comparison |
 | Credit Utilisation — Timing-Bridge Financing | Cash-flow Matching, Financing Cost Comparison | Borrowing Capacity Analysis, EMI Capacity Analysis |
 
-Laddering is conditional, not a default Capital Preservation technique; use it where multiple predictable maturity/payment dates justify staggered maturities.
-
-### Taxonomy exclusions and boundaries
+Additional policy boundaries:
+- Laddering is conditional, not a default Capital Preservation technique. It applies when multiple predictable maturity/payment dates justify staggered maturities.
 - Contribution Escalation belongs to Goal Planner / Goal Funding, not the core Strategy Decision Tree.
 - Duration / Horizon Matching is a method/analysis, not a separate core technique.
-- Tax-specific techniques such as Tax-Efficient Sequencing and Tax-Loss Harvesting are not forced into this four-strategy decision tree; they remain in the appropriate downstream investment/tax implementation layer unless a later explicit business decision changes that ownership.
-- Asset Mapping records an asset-goal relationship. Asset Earmarking is a strategic designation/protection technique and is not equivalent to mapping.
-- A Technique is not a Solution. A Solution must not merely duplicate a Variant or Technique under another label.
+- Tax-specific techniques such as Tax-Efficient Sequencing and Tax-Loss Harvesting are not part of this core four-strategy technique registry; they belong to the appropriate investment/tax implementation layer unless a later business decision explicitly changes that boundary.
 
-## 8. Architecture, Solution and opportunity-cost comparison
+## 10. Architecture, Solution, and Action
 
-Architecture composes the selected Strategy, Variant, technique choices, methods/policies and their dependencies into a coherent implementation proposal. Architecture and Solution are separate concepts:
-- **Architecture:** the composed structure of selected elements and dependencies.
-- **Solution:** the concrete investor-specific implementation outcome proposed within that structure.
-- **Action:** a concrete step derived from an accepted implementation.
+Preserve the following hierarchy:
 
-The Solution proposal may compare resource use, contributions, timing, liquidity, debt effects, risk assumptions and competing-goal consequences where relevant evidence exists. Do not declare an alternative better without comparable evidence and explicit assumptions.
+~~~text
+Strategy
+  → Variant
+  → Technique
+  → Method / Policy
+  → Architecture
+  → Solution
+  → Action
+~~~
 
-Goal Planner owns goal funding feasibility and funding-path context. Strategy Builder consumes that context and evaluates execution strategies and meaningful implementation alternatives; it must not silently redefine the upstream feasibility result. Opportunity-cost concepts can inform comparisons, but current runtime pass-through, calculation ownership and decision impact must be verified rather than assumed.
+- **Strategy:** High-level financial responsibility selected for the situation.
+- **Variant:** Structural form of the selected strategy.
+- **Technique:** Reusable mechanism required or permitted by the Strategy + Variant.
+- **Method / Policy:** Contextual rule for applying a technique.
+- **Architecture:** Composed structure of selected elements and dependencies.
+- **Solution:** Concrete investor-specific implementation outcome based on the selected path and actual financial inputs.
+- **Action:** Executable step derived from the accepted implementation and represented in the Action Plan.
 
-The existing audit reports that architecture is currently composed before final strategy selection in at least one runtime path, creating possible circular influence (Strategy → Architecture → Technique/score → Strategy). The target policy must have one clear selection authority and a coherent downstream architecture composition. Preserve existing architecture identity requirements documented by the audit unless an explicit approved change says otherwise.
+A Technique is not a Solution. A Solution must not merely duplicate a Variant or Technique under a different label.
 
-### Asset earmarking
-Earmarking requires an explicit strategic reason. The same asset must not be silently treated as fully earmarked for competing goals. A mapped asset may later be earmarked, partially earmarked, released or reassigned. Cancelling a goal must not delete the underlying asset. Earmarking capital does not itself select an investment product; product selection remains a separate downstream decision.
+Asset Mapping is upstream Goal Planner feasibility evidence. Asset Earmarking is a Strategy Builder technique used when the selected path requires deliberate reservation/protection. They are different concepts and must not be aliases.
 
-## 9. Stress / resilience and conditional revalidation
+Architecture composition belongs after Strategy, Variant, and technique decisions in the target flow. The existing-feature audit records that current runtime ordering differs; do not describe the current runtime as already matching the target.
 
-Stress/resilience evaluates whether the proposed path remains acceptable under defined adverse or changed assumptions, including relevant funding, liquidity, debt/EMI and goal-timing effects. It is distinct from:
-- base-case applicability;
-- base-case viability;
-- whole-plan impact analysis;
-- What-If scenario exploration.
+## 11. Opportunity cost and implementation comparison
 
-The target decision model reuses the same canonical constraint, eligibility, strategy, variant and architecture rules under stressed inputs rather than creating a separate recommendation system. If stress findings invalidate the current candidate, the decision must be reconsidered through the canonical decision authority.
+Goal Planner owns goal feasibility and funding-path context. Strategy Builder consumes that context and may compare meaningful implementation alternatives where the required evidence exists.
 
-The audit records baseline and sensitivity-scenario capability but identifies gaps in canonical stress taxonomy, correlated stress cases, formal resilience classification, stability testing and stress-triggered re-selection. Categories such as Robust / Conditional / Fragile were proposed in audit material but are not treated here as frozen labels. Exact scenarios, thresholds, classification and warning/blocking behavior remain to be confirmed against approved business rules.
+Relevant comparison dimensions recorded by the feature definition include:
+- Goal outcome and funding result.
+- Required contribution and timing.
+- Liquidity and resource use.
+- Debt cost and repayment effects.
+- Risk/protection assumptions.
+- Competing-goal or shared-resource impact when relevant.
 
-Material execution or financial-state changes require impact analysis and targeted revalidation of affected decisions. Do not re-evaluate or replace the entire plan automatically when only a local change is material. Whole-Plan / Multi-Goal Impact is invoked when the decision affects competing goals/shared resources or otherwise has a material cross-goal effect.
+Do not declare one alternative better without comparable evidence and stated assumptions. The feature definition records that current runtime pass-through of Opportunity Cost evidence and its effect on strategy selection remain unverified. Do not claim those behaviors are already implemented.
 
-## 10. What-If, investor decision and plan lifecycle
+## 12. Stress, resilience, and revalidation
 
-A What-If scenario is an alternative evaluated against a known baseline. Where supported, retain the baseline, changed inputs/assumptions, projected outcomes and validation status. Exploring or saving a scenario must not mutate the active Accepted Plan.
+Stress / Resilience is evaluated after the implementation proposal in the target flow.
 
-Keep these states distinct:
-1. Decision/run generated.
-2. Scenario saved or edited.
-3. Recommendation presented.
-4. Investor accepts, rejects or modifies the proposal.
-5. Accepted Plan updated only after explicit adoption.
-6. Action Plan created/updated from the accepted implementation.
-7. Actions executed and execution status recorded.
+- It tests whether the selected path remains acceptable under defined adverse or changed assumptions.
+- It is distinct from Strategy Applicability, Strategy Viability, and Whole-Plan Impact.
+- It reuses the canonical decision domains; it must not create a competing recommendation engine.
+- If stress findings invalidate the candidate or selected path, the decision must be reconsidered through the canonical decision authority.
+- Stress results, warnings, failure conditions, thresholds, and missing-input behavior must follow an explicit source-defined rule; do not invent them.
 
-A historical run, version, recommendation or saved scenario does not prove current adoption. If the investor rejects every proposal, the existing Accepted Plan and Action Plan remain unchanged. If the investor adopts a revised path, update only the affected accepted implementation and relevant actions; completed actions remain history while active/future actions may be revised.
+Whole-Plan / Multi-Goal Impact is evaluated only when the decision is plan-level or a material cross-goal effect exists. A material change can trigger targeted revalidation of affected decisions; it does not automatically require replacing the entire plan.
 
-An investor-designed path may be captured as a separate proposal when the product policy permits it. Evaluate it against constraints, feasibility/funding context, relevant whole-plan impact and resilience; explain its numerical consequences and distinguish assumptions from guarantees. It is not automatically safe, viable or accepted and must not be relabelled as one of the four canonical strategies. It becomes active only through explicit investor adoption.
+The existing-feature audit records that formal stress/resilience gating and re-selection policy are not fully established in current runtime. This contract describes the target responsibility, not verified runtime behavior.
 
-A complete financial plan can contain multiple coordinated strategies across different goals/financial requirements. Two alternatives shown for one decision do not limit the entire plan to two strategies.
+## 13. What-If, investor adoption, and plan lifecycle
 
-## 11. Real-life case coverage and decision boundaries
+A What-If scenario is an alternative evaluated against a known baseline. Where supported, retain the baseline, changed inputs/assumptions, projected outcomes, and validation status.
 
-The documented cases establish these requirements:
-- **Cases 1–2:** Goal Funding ownership; Strategy Builder consumes Goal Planner feasibility and evaluates execution choice, including debt/EMI, financing cost, preservation of productive assets and long-term effects where relevant.
-- **Cases 3–4:** separate strategy/implementation proposal from investor acceptance and Action Plan; compare current and alternative paths using explicit assumptions, contributions, timing, liquidity, risk and other-goal effects.
-- **Cases 5–8:** respond to changed financial state, changed goal intent and new/competing goals; distinguish advisory priorities from genuine hard constraints; investor choice must not silently replace the active plan before adoption.
-- **Cases 9–11:** What-If isolation, impact analysis, targeted revalidation and iterative updates; a changed execution/funding input does not automatically mean the canonical strategy changed.
-- **Case 12:** no acceptable standard path and investor-designed proposal handling; no forced recommendation.
-- **Case 15:** Asset Mapping versus Asset Earmarking, protection rationale, shared-resource conflicts and downstream product-selection boundary.
+A What-If scenario, saved scenario, generated recommendation, or historical run does not itself change the active Accepted Plan.
 
-The source material contains explicit terminology conflicts, including some case bodies calling Goal Funding a strategy while the canonical decision-tree definition excludes it. The canonical four-strategy model in this specification preserves Goal Funding as a Goal Planner / Goal Feasibility responsibility; the historical conflict is not silently rewritten as runtime evidence.
+~~~text
+Accepted Plan
+    ↓
+Execution Change / What-If
+    ↓
+Impact Analysis
+    ↓
+Targeted Revalidation of Affected Decisions
+    ↓
+Investor Decision
+    ↓
+Updated Accepted Plan (only after adoption)
+    ↓
+Updated Action Plan
+    ↓
+Execution
+~~~
 
-Illustrative numbers in real-life cases (including the example 18% debt cost, goal amounts, contributions or return assumptions) are case inputs only. They are not default thresholds, promised returns or general rules.
+Re-evaluate a Strategy Decision when a change materially affects its applicability, viability, applicable constraints, or outcome. A local execution change does not automatically mean the canonical strategy has changed.
 
-## 12. Existing code evidence and routes
+An investor-designed path may be captured and evaluated separately when the product permits it. It is not automatically safe, viable, or accepted, and it must not be relabelled as one of the four canonical strategies. It becomes active only through explicit Investor Decision / Accepted Plan adoption.
 
-### Code references identified by the feature/audit documents
-- Frontend: `frontend/app/investor/strategy-builder/page.tsx`
-- Strategy API: `backend/api/strategy.py`
-- Strategy edit API: `backend/api/strategy_edit.py`
-- Strategy version API: `backend/api/strategy_version.py`
-- Strategy engine: `backend/engines/strategies` and related strategy engine modules.
-- Detailed current-state audit: `docs/existing features/Strategy-Builder/`
+## 14. Decision output and explanation
 
-### Supporting routes
-- Strategy comparison: `/investor/strategy-comparison`
-- Strategy edit: `/investor/strategy-edit`
-- Strategy history: `/investor/strategy-history`
-- Strategy scenarios: `/investor/strategy-scenarios`
+A completed decision must preserve enough evidence to explain:
 
-These references identify areas to inspect; they do not by themselves prove exact runtime order, complete persistence, scenario isolation, investor acceptance behavior or deployment status.
+1. The goal and actual financial situation.
+2. Goal Planner feasibility/funding evidence used.
+3. Applicable constraints and their outcomes.
+4. Which of the four strategies were applicable.
+5. Which applicable candidates failed viability and why.
+6. The selected strategy and the evidence supporting the selection, or why no acceptable path exists.
+7. The selected variant and its situation mapping.
+8. Required and conditional techniques and their policy reasons.
+9. The methods/policies used.
+10. The composed Architecture and concrete Solution proposal.
+11. Relevant assumptions, trade-offs, stress/resilience results, and conditional whole-plan impact.
+12. The recommendation and whether the investor has adopted it.
 
-## 13. Unverified implementation facts
+A recommendation must not be treated as an Accepted Plan. A historical run must not be treated as the current decision state.
 
-The source audits and feature definition leave the following points unverified or not frozen:
-- Exact applicability conditions and AND/OR semantics, horizon boundaries and missing-data behavior.
-- Canonical hard-constraint identities, thresholds, scope and the distinction between blockers, warnings and diagnostics.
-- Full business conditions and status behavior for all eight eligibility fits.
-- Strategy-selection precedence, score weights and alternative-candidate policy.
-- Reachability and exact runtime selection conditions for every target variant.
-- Variant-specific technique selection, combination/exclusion rules and missing-input behavior.
-- Exact architecture composition order and how circular selection influence is prevented.
-- Complete and consistent Solution meaning in registry/runtime.
-- Opportunity-cost calculation ownership, evidence pass-through and effect on decisions.
-- Stress taxonomy, resilience labels, thresholds and re-selection behavior.
-- Materiality and targeted-invalidation rules for cross-goal/plan-level changes.
-- Scenario persistence/isolation and explicit acceptance-to-Accepted-Plan/Action-Plan update behavior.
-- Which target business rules are active in runtime versus documented only.
+## 15. Existing code and implementation status
 
-Keep code-verified current behavior, target business requirements and unresolved decisions explicitly separate. Do not infer implementation from a registry entry, UI route, historical snapshot or design document.
+The existing-feature audit folder is the source for code-backed current-state findings and identifies relevant backend/frontend modules. Use those findings to distinguish existing behavior from target behavior; do not treat the audit's proposed target language as proof that the target is already implemented.
+
+The current audit records unresolved differences including:
+- Legacy strategy identifiers and Goal Funding references in current-state code.
+- Current runtime ordering that differs from the target decision flow.
+- Split or overlapping rule ownership in the existing decision path.
+- Variant selection occurring inside recommendation in the audited runtime.
+- Technique execution/architecture composition influencing the current decision path.
+- Incomplete formal stress/resilience gating and re-selection behavior.
+- Unverified scenario isolation, persistence, investor adoption, and active-plan updates.
+- Inconsistent current runtime use of the term Solution across strategy records.
+
+These are audit findings, not claims that a fix has been implemented by this document.
+
+### Required target-state distinction
+
+- The target Strategy Builder has four strategies, not five.
+- Goal Funding and its contribution/funding mechanisms remain owned by Goal Planner / Goal Feasibility.
+- The target flow has no separate eight-eligibility-fits stage.
+- The target sequence selects Strategy → Variant → Technique / Method before Architecture / Solution composition.
+- Stress / Resilience and conditional Whole-Plan Impact remain distinct responsibilities.
+- Decision / Recommendation, Investor Decision, Accepted Plan, Action Plan, and Execution remain separate lifecycle states.
+- No Acceptable Strategy / No Acceptable Path is a valid result.
+
+Exact score weights, selection tie-breaks, numerical thresholds, stress taxonomy, materiality thresholds, and any runtime behavior not established by the two references must not be invented in implementation.
