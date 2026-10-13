@@ -1,672 +1,234 @@
-# Goal Planning Journey
+# Goal Planning — User Journey
 
-**Document Type:** User Journey  
-**Status:** CANONICAL DESIGN  
-**Purpose:** Show exactly what the investor does, what the system does, what is calculated, what the investor sees, and how Goal Planning establishes feasibility before Strategy Decision.
+**Document type:** User Journey  
+**Status:** Canonical journey design
 
----
+This document contains only the investor's steps, the screens or information shown, the system's response, and the next step.
 
-## 1. What this journey is solving
-
-Investor has an objective such as:
-
-> “I want to fund my retirement in 25 years.”
-
-Goal Planning answers:
-
-> **What exactly is the goal, what will it require, what resources are available, what funding gap exists, and what financial path can make the goal feasible?**
-
-This is broader than simply comparing **Required Contribution vs Available Surplus**.
-
-Where alternative uses of the investor's financial capacity exist, Goal Planning must be able to compare the **financial consequences and opportunity cost of alternative feasible paths**.
-
-This does **not** mean that Goal Planning selects the Strategy Builder Strategy.
+- **Type 1 — Broader Journey:** the complete investor journey from starting a goal to the Strategy Decision handoff.
+- **Type 2 — Detailed Component Journeys:** the step-by-step journey inside each major part of Type 1.
 
 ---
 
-## 2. Complete investor journey
+# Type 1 — Broader User Journey
+
+## 1. End-to-end flow
 
 ```
-Investor starts a goal
-        ↓
-Goal details
-        ↓
-System validates & normalises
-        ↓
-Timeline
-        ↓
-Future target
-        ↓
-Existing asset mapping
-        ↓
-Asset projection
-        ↓
-Funding gap
-        ↓
-Current financial capacity
-        ↓
-Alternative feasible funding paths
-        ↓
-Financial outcome / opportunity-cost comparison
-        ↓
-Goal feasibility / funding path
-        ↓
-Investor reviews result
-        ↓
-Accept / Adjust / Stop
-        ↓
-Defined Goal + Feasibility Evidence
-        ↓
-Strategy Decision
+Start Goal
+   ↓
+Enter Goal Details
+   ↓
+Set Target Date and Review Target
+   ↓
+Choose Assets to Map
+   ↓
+Review Projected Assets and Funding Gap
+   ↓
+Review Financial Capacity
+   ↓
+Review Available Funding Paths
+   ↓
+Review Goal Feasibility Result
+   ↓
+Accept / Change Inputs / Stop
+   ↓
+Confirm Goal and Feasibility Information
+   ↓
+Continue to Strategy Decision
 ```
 
----
+## 2. Main journey stages
 
-## 3. Step-by-step journey
-
-| Step | Investor does | System does | Investor sees | Output |
+| Stage | Investor action | System response | What the investor sees | Next step |
 |---|---|---|---|---|
-| 1. Start | Chooses a goal | Maps input to canonical goal type | Goal | Canonical Goal Type |
-| 2. Goal details | Enters goal details, current cost and required context | Validates required fields and normalises input | Entered goal details | Normalised Goal Input |
-| 3. Target date | Enters target month/year | Calculates time remaining | Time to goal | Goal Timeline |
-| 4. Future target | Confirms/adjusts permitted assumptions | Calculates future target | Future requirement | Future Target |
-| 5. Asset mapping | Selects assets intended for the goal | Validates mapping | Mapped assets | Asset Mapping |
-| 6. Asset projection | Reviews assumptions | Projects mapped assets to goal date | Expected asset value | Projected Asset Value |
-| 7. Funding gap | Reviews result | Compares future target with projected mapped assets | Shortfall / On Track / Overfunded | Funding Gap |
-| 8. Capacity | Reviews current position | Determines available financial capacity and relevant constraints | Available capacity | Financial Capacity |
-| 9. Funding paths | Reviews possible ways to close the gap | Evaluates alternative financially feasible paths using actual financial data | Alternative paths | Funding / Feasibility Paths |
-| 10. Opportunity cost | Reviews trade-offs | Compares mathematical consequences of alternative uses of financial capacity | Benefits, costs, trade-offs | Opportunity-Cost Analysis |
-| 11. Feasibility | Reviews conclusion | Determines whether the goal can be made feasible under the analysed assumptions/path | Feasible / Constrained / Infeasible / Unknown | Goal Feasibility |
-| 12. Decision | Accepts assumptions, adjusts them, or stops | Recalculates affected outputs | Updated result | Proposed Defined Goal |
-| 13. Handoff | Continues | Packages goal + funding/feasibility evidence | Ready for Strategy Decision | Defined Goal |
+| 1. Start | Selects a goal or starts a new one. | Opens the goal details step and loads relevant saved information, if any. | Selected goal and available goal details. | Enter or review details. |
+| 2. Goal details | Enters or reviews the goal information. | Checks the submitted information and identifies anything missing or invalid. | Entered details and any fields that need attention. | Correct missing information or continue. |
+| 3. Target date and target | Enters or reviews the target date and relevant assumptions. | Calculates the time remaining and the target amount for that date. | Target date, time remaining, target amount, and displayed assumptions. | Review or change permitted inputs. |
+| 4. Asset mapping | Selects assets to include in the goal view, or continues without mapping assets. | Checks the selected assets and loads their available values. | Selected assets and any unavailable or unresolved items. | Review the projected values. |
+| 5. Funding gap | Reviews the projected asset values and target. | Calculates and displays the remaining gap or surplus. | Target amount, projected mapped assets, and funding gap/surplus. | Review the financial position. |
+| 6. Financial capacity | Reviews the financial information used for the goal. | Loads available income, expenses, surplus, debt/EMI, liquidity, and relevant constraints. | Available information, relevant obligations, and any missing evidence. | Review funding paths. |
+| 7. Funding paths | Reviews the paths the system can calculate from the available information. | Calculates the relevant alternatives and their outcomes. | Available paths, assumptions, projected outcomes, and limitations. | Compare paths and trade-offs. |
+| 8. Feasibility result | Reviews the result and any reasons shown. | Displays the feasibility status and supporting information. | Feasibility status, key reasons, assumptions, and relevant alternatives. | Follow the result-specific route below. |
+| 9. Investor decision | Accepts a proposal, changes relevant inputs, or stops. | Saves or recalculates only after the relevant action is confirmed. | Confirmation, updated result, or the option to stop. | Review the updated result or continue. |
+| 10. Handoff | Chooses to continue after reviewing the goal result. | Passes the confirmed goal information and feasibility evidence to Strategy Decision. | Confirmation that the goal information is ready for the next step. | Continue to Strategy Decision. |
 
----
+## 3. Result-specific routes
 
-## 4. What is actually calculated
-
-### 4.1 Timeline
-
-```
-Today
-  ↓
-Target Month / Year
-  ↓
-Duration
-```
-
-Example:
-
-**Today:** 2026  
-**Target:** 2051  
-**Duration:** 25 years
-
-The calculated duration becomes part of the Goal Planning evidence.
-
----
-
-### 4.2 Future target
-
-```
-Today's Cost
-     ↓
-Approved Assumption
-     ↓
-Time to Goal
-     ↓
-Future Target
-```
-
-The exact calculation uses the canonical Goal Planner calculation.
-
-The User Journey does not create a second formula.
-
----
-
-### 4.3 Asset projection
-
-```
-Mapped Asset
-     ↓
-Current Value
-     ↓
-Projection Assumptions
-     ↓
-Projected Value at Goal Date
-```
-
-Only resources mapped to the goal participate in the mapped-asset projection.
-
----
-
-### 4.4 Funding gap
-
-```
-Future Target
-      -
-Projected Mapped Asset Value
-      =
-Funding Gap
-```
-
-Possible results:
-
-- **Shortfall** — positive funding gap
-- **On Track** — target is supportable by mapped resources under the model
-- **Overfunded** — mapped resources exceed the target
-
-A shortfall is **not automatically a reason to select Credit Utilisation or Debt Reduction**.
-
----
-
-### 4.5 Required contribution
-
-Where a positive funding gap remains:
-
-```
-Funding Gap
-     ↓
-Time Remaining
-     ↓
-Required Contribution
-```
-
-This establishes one funding requirement.
-
-It is not, by itself, the complete feasibility decision.
-
----
-
-## 5. Financial capacity and alternative funding paths
-
-Case 1 established an important requirement: the system should not treat debt, surplus or any single metric as an isolated decision.
-
-For example, where an investor has monthly surplus available:
-
-```
-Available Financial Capacity
-          ↓
-      Alternative Uses
-          │
-          ├── Additional Goal Funding / Investment
-          │
-          ├── Faster Debt Repayment
-          │
-          └── Loan / Financing Restructuring
-```
-
-The actual alternatives depend on the investor's financial situation and the goal.
-
-The system evaluates the relevant alternatives using:
-
-- goal requirement;
-- goal horizon;
-- available surplus/capacity;
-- existing assets;
-- debt and EMI;
-- debt cost;
-- remaining tenure;
-- liquidity/reserves;
-- required goal funding;
-- investment assumptions;
-- repayment capacity;
-- relevant constraints.
-
-The system must not invent an alternative merely to produce a comparison.
-
----
-
-## 6. Opportunity-cost analysis
-
-**Opportunity cost is part of the feasibility/funding analysis when alternative uses of financial capacity materially change the goal or financial outcome.**
-
-The question is:
-
-> **What does the investor gain and give up by choosing one feasible financial path instead of another?**
-
-### Example from the real-life case
-
-A retirement client has approximately ₹70,000 monthly surplus and an existing home loan.
-
-The system may need to compare:
-
-```
-Path A
-Surplus → Faster Debt Repayment
-       ↓
-Interest Saving
-       ↓
-Lower Debt
-       ↓
-Less money deployed toward retirement during the period
-```
-
-versus:
-
-```
-Path B
-Surplus → Retirement Investment
-       ↓
-Potentially Higher Retirement Corpus
-       ↓
-Loan Continues
-       ↓
-Interest Continues
-       ↓
-Investment Outcome Is Uncertain
-```
-
-A further feasible scenario may be:
-
-```
-Path C
-Loan Restructuring
-       ↓
-Lower EMI
-       ↓
-Higher Monthly Investable Surplus
-       ↓
-Additional Retirement Investment
-       ↓
-But Potentially Higher Total Interest
-```
-
-The system compares the **mathematical consequences and trade-offs** of the relevant paths.
-
-It does **not** apply:
-
-> “Debt exists → Debt Reduction.”
-
-It also does **not** apply:
-
-> “Expected investment return is higher → Investment is automatically better.”
-
-Investment returns are assumptions/scenarios and must not be represented as guaranteed outcomes.
-
----
-
-## 7. What Opportunity Cost produces
-
-Opportunity-cost analysis should make the trade-off visible rather than hide it inside a generic feasibility label.
-
-The investor should be able to see, where relevant:
-
-| Comparison | Path A | Path B | Path C |
+| Result shown | Investor sees | Investor's next step | System's next response |
 |---|---|---|---|
-| Use of surplus | Debt repayment | Goal investment | Restructuring + investment |
-| Debt outcome | Improved | Debt continues | Changed |
-| Interest outcome | Lower | Continues | May increase/decrease depending on structure |
-| Goal funding outcome | Changes | Changes | Changes |
-| Liquidity | Changes | Changes | Changes |
-| Investment outcome | Lower deployment | Higher deployment | Higher deployment possible |
-| Key risk | Goal funding trade-off | Market/return uncertainty | Higher debt cost / tenure risk |
-| Opportunity cost | Foregone goal investment | Foregone interest saving | Trade-off between both |
+| **Feasible** | The available path, its assumptions, and relevant trade-offs. | Review and accept the proposed path, change inputs, or stop. | Confirms the selected action and prepares the relevant goal information for the next step. |
+| **Constrained** | The constraints, risks, trade-offs, and paths available for review. | Review the details; change relevant inputs or a funding choice if desired. | Recalculates affected results after a change, or keeps the current result if no change is made. |
+| **Infeasible** | The shortfall and the reasons the current goal has not been made feasible. | Review the proposed target-amount reduction and/or target-date extension when available. | Shows the proposed adjustment and its recalculated result; waits for the investor's decision. |
+| **Unknown** | The information that is missing, invalid, or not reliable enough to complete the assessment. | Provide or correct the requested information. | Recalculates after the evidence is resolved. |
+| **No acceptable path** | The paths reviewed, the unmet requirements, and the constraints preventing an acceptable result. | Review the reasons, change permitted inputs if appropriate, or stop. | Recalculates only after a relevant change; does not force a path. |
 
-The exact columns depend on the case.
+## 4. Main journey exit points
 
-The system should show only calculations that are actually supported by the available evidence and assumptions.
+The investor can leave the journey at these points:
 
----
-
-## 8. Feasibility result
-
-Feasibility is therefore not merely:
-
-```
-Required Contribution vs Available Surplus
-```
-
-The relevant model is:
-
-```
-Goal Requirement
-      +
-Financial State
-      +
-Funding Gap
-      +
-Relevant Financial Alternatives
-      +
-Opportunity Cost / Trade-offs
-      +
-Constraints
-      ↓
-Goal Feasibility / Feasible Funding Path
-```
-
-Possible result:
-
-| Result | Meaning |
-|---|---|
-| **Feasible** | A financially supportable path exists under the stated assumptions |
-| **Constrained** | A path may exist, but important financial constraints/trade-offs remain |
-| **Infeasible** | Current evidence does not identify a supportable path |
-| **Unknown** | Required evidence or assumptions are insufficient to establish feasibility |
-
-**Important:** Opportunity cost does not automatically make a goal Infeasible. It explains the economic trade-off between feasible alternatives.
+- **Continue:** the goal and its feasibility information are ready for Strategy Decision.
+- **Change and review again:** return to the relevant step, update the input, and review the recalculated result.
+- **Stop:** leave without adopting the proposal or silently changing the saved goal.
+- **Resolve missing information:** return when the required evidence is available.
 
 ---
 
-## 9. What happens when the investor changes something?
+# Type 2 — Detailed Component Journeys
 
-The system should recalculate the outputs affected by the change.
+## 5. Component A — Start and enter goal details
 
-### Target date changes
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| A1 | Selects a goal type. | Opens the relevant goal form. | Goal type and applicable fields. | Enter details. |
+| A2 | Enters or edits the goal name, current cost/target amount, target date, priority, flexibility, and other requested details. | Checks the entered fields and identifies missing or invalid information. | Entered information and field-level messages. | Correct issues or continue. |
+| A3 | Supplies any requested goal-specific information. | Checks whether the information needed for this goal is available. | Any additional fields or missing-information message. | Continue when the form is complete. |
+| A4 | Reviews and confirms the details. | Prepares the goal inputs for the next step. | A review of the entered goal information. | Review target and timeline. |
 
-```
-Target Date
-   ↓
-Timeline
-   ↓
-Future Target
-   ↓
-Asset Projection
-   ↓
-Funding Gap
-   ↓
-Funding Paths
-   ↓
-Opportunity Cost
-   ↓
-Feasibility
-```
+If the required information is missing or invalid, the investor stays on the relevant step until it is corrected or exits the journey. The system does not present a completed result using missing values as if they were known.
 
-### Goal cost changes
+## 6. Component B — Review timeline and target
 
-```
-Goal Cost
-   ↓
-Future Target
-   ↓
-Funding Gap
-   ↓
-Funding Paths
-   ↓
-Opportunity Cost
-   ↓
-Feasibility
-```
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| B1 | Enters or confirms the target month/year. | Calculates the time remaining. | Target date and time remaining. | Review the target amount. |
+| B2 | Reviews the current cost/target amount and displayed assumptions. | Calculates the target amount for the selected date using the configured calculation. | Target amount for the selected date and the assumptions shown with it. | Continue or change an input. |
+| B3 | Changes the target date, target amount, or a permitted assumption. | Recalculates the outputs affected by that change. | Updated timeline, target, and affected results. | Review the updated information. |
+| B4 | Confirms the displayed target information. | Passes the confirmed inputs to asset mapping and projection. | Confirmed target and timeline. | Review assets. |
 
-### Asset mapping changes
+## 7. Component C — Map and review assets
 
-```
-Asset Mapping
-   ↓
-Projected Asset Value
-   ↓
-Funding Gap
-   ↓
-Funding Paths
-   ↓
-Feasibility
-```
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| C1 | Opens the asset list. | Loads assets available from the investor's financial records. | Available assets and their recorded values. | Select assets. |
+| C2 | Selects or removes assets for this goal. | Checks the selected asset records and mapping. | Current selection and any asset that could not be resolved. | Review the selection. |
+| C3 | Confirms the mapping. | Projects the selected, resolved assets to the goal date using the displayed assumptions. | Mapped assets, projected values, assumptions, and any limitations. | Review the funding gap. |
+| C4 | Changes the asset selection or a relevant projection input. | Recalculates the affected asset projections and downstream results. | Updated projection and funding gap. | Continue or review the updated result. |
 
-### Financial capacity / debt changes
+If no asset is mapped, the investor can continue when the flow allows it; the system shows the result using the available information rather than inventing an asset value.
 
-```
-Financial State Change
-   ↓
-Available Capacity
-   ↓
-Debt Economics / Financing Position
-   ↓
-Affected Funding Paths
-   ↓
-Opportunity-Cost Comparison
-   ↓
-Feasibility
-```
+## 8. Component D — Review funding gap and required contribution
 
-Not every change requires every analysis to be rebuilt.
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| D1 | Reviews the target and projected mapped assets. | Calculates the funding gap or surplus. | Target, projected mapped asset value, and gap/surplus. | Review contribution information. |
+| D2 | Reviews the contribution amount, when it can be calculated. | Calculates the required contribution under the displayed assumptions. | Required contribution, schedule, and assumptions. | Review financial capacity. |
+| D3 | Changes a relevant target, date, asset selection, or contribution assumption. | Recalculates affected outputs. | Updated gap, contribution, and related figures. | Review the updated result. |
 
----
+If a value cannot be calculated from the available information, the investor sees that it is unavailable and why, rather than a fabricated number.
 
-## 10. Feasibility branches
+## 9. Component E — Review financial capacity
 
-### Feasible
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| E1 | Opens the financial-capacity view. | Loads the available income, expenses, surplus, assets, liabilities, debt/EMI, and liquidity information relevant to the goal. | The available financial information and its displayed source/status. | Review the information. |
+| E2 | Notices missing or incorrect information and chooses to correct it. | Opens the relevant input/update step. | The information that needs attention. | Correct it and return. |
+| E3 | Confirms or returns from the financial information. | Refreshes the affected capacity figures and dependent calculations when required. | Updated capacity information or a message identifying unresolved evidence. | Review funding paths. |
 
-```
-Feasible Path
-     ↓
-Investor reviews
-     ↓
-Continue
-     ↓
-Defined Goal + Feasibility Evidence
-     ↓
-Strategy Decision
-```
+## 10. Component F — Review and compare funding paths
 
-### Constrained / Infeasible
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| F1 | Opens the available funding paths. | Lists only paths that can be assessed with the available information. | Available paths and any limitations on the comparison. | Open a path or compare paths. |
+| F2 | Selects a path or opens the comparison. | Shows comparable outcomes using the assumptions for each path. | Funding schedule, resources used, projected goal funding, remaining gap, and relevant cash-flow effects. | Review trade-offs. |
+| F3 | Reviews debt-related paths, when relevant. | Shows the available debt, EMI, interest, tenure, and liquidity outcomes supported by the recorded information. | Path-by-path debt and cash-flow information, including unavailable items. | Compare the overall outcomes. |
+| F4 | Reviews the comparison. | Shows material differences in goal outcome, cash flow, liquidity, risk, assumptions, and other-goal effects where available. | Comparison and the important limitations or trade-offs. | Continue to the feasibility result. |
+| F5 | Changes a funding input or selects a different path to review. | Recalculates the affected path and comparison. | Updated path results and comparison. | Review the updated feasibility result. |
 
-```
-Constraint / Infeasibility
-        ↓
-Investor sees:
-• what caused it
-• which assumptions matter
-• available alternatives
-• financial trade-offs
-        ↓
-Investor changes goal / assumptions / funding choice?
-   ├── YES → Recalculate
-   └── NO  → Keep result / stop
-```
+When the recorded information does not support a path or a comparison value, the system identifies the limitation instead of inventing a result. The investor can continue with the paths that can be assessed or return to correct the information.
 
-The system must **not silently reduce the goal, extend the date, assume extra funding, or select credit** merely to produce a feasible result.
+## 11. Component G — Review Goal Feasibility
 
-### Unknown
+### G1. First result
 
-```
-Missing / unreliable evidence
-        ↓
-Feasibility = Unknown
-        ↓
-Obtain / correct evidence
-        ↓
-Recalculate
-```
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| G1.1 | Requests or opens the feasibility result. | Assesses the current goal using the available financial information and relevant funding paths. | Result status, reasons, assumptions, and available paths. | Follow the displayed result route. |
+| G1.2 | Reviews a feasible path. | Keeps the path as a proposal until the investor confirms the relevant action. | Path details, assumptions, and trade-offs. | Accept, change inputs, or stop. |
+| G1.3 | Reviews a constrained result. | Shows the constraints and trade-offs that need attention. | Constraint details and available paths. | Review, change relevant inputs, or stop. |
+| G1.4 | Reviews an infeasible result. | Shows the current shortfall and proceeds to the goal-adjustment step when that calculation can be made. | Shortfall and the available adjustment options. | Review the proposed adjustment. |
+| G1.5 | Receives an Unknown result. | Identifies the evidence that needs to be supplied or corrected. | Missing or unreliable information and the step to return to. | Correct information and recalculate. |
+| G1.6 | Receives No acceptable path. | Shows the unmet requirements and constraints for the paths assessed. | Reasons no assessed path can be accepted. | Change relevant inputs if appropriate, or stop. |
 
-Unknown is not Feasible and not Infeasible.
+### G2. Review proposed goal-condition adjustments
 
----
+This route is shown only when the first assessment has not made the current goal feasible.
 
-## 11. What the investor should see at the end
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| G2.1 | Reviews the proposed lower target amount, later target date, or combination when available. | Calculates the result for each adjustment that can be assessed. | Proposed change, revised target, updated funding figures, and relevant trade-offs. | Compare the proposals. |
+| G2.2 | Selects a proposal to review further. | Shows the updated result for that proposal without silently changing the saved goal. | Updated feasibility result and the difference from the original goal. | Accept the proposal, change inputs, or stop. |
+| G2.3 | Changes a proposed value or related input. | Recalculates the affected outputs. | Revised proposal and result. | Review again. |
+| G2.4 | Declines all proposed adjustments. | Keeps the original goal unchanged. | Current result and options to return or stop. | Return to an earlier step or exit. |
 
-A useful Goal Planning result should show:
+## 12. Component H — Confirm the decision and hand off
 
-**Goal**
-- Goal type/name
-- Target date
-- Priority/flexibility where applicable
+| Step | Investor action | System response | What the investor sees | Next step |
+|---|---|---|---|---|
+| H1 | Reviews the selected funding path or proposed goal change. | Shows the exact proposal and the goal information affected by the decision. | Final review of the selected proposal, assumptions, and resulting figures. | Confirm or go back. |
+| H2 | Confirms the decision. | Runs the appropriate save/adoption step and records the resulting state. | Confirmation or a message explaining what needs attention. | Continue when confirmation succeeds. |
+| H3 | Chooses to change the proposal instead. | Returns to the relevant input or comparison step. | Previous information available for review and editing. | Update and recalculate. |
+| H4 | Continues to Strategy Decision. | Passes the goal and feasibility evidence forward. | Goal information ready for the next stage. | Continue to Strategy Decision. |
+| H5 | Stops without confirming. | Leaves the unaccepted proposal unadopted. | The option to leave or return later, according to the available workflow. | Exit or resume later. |
 
-**Funding**
-- Today's cost
-- Future target
-- Mapped assets
-- Projected mapped asset value
-- Funding gap
-- Required contribution
+## 13. Component I — Return after an input changes
 
-**Financial Capacity**
-- Available capacity
-- Relevant debt/EMI information where applicable
-- Relevant liquidity information
+| Changed information | Investor returns to | System updates | Investor reviews next |
+|---|---|---|---|
+| Target date or target amount | Target and timeline | Affected target, projection, funding gap, contribution, paths, and feasibility | Updated target and result |
+| Asset selection or asset value | Asset mapping | Affected asset projection, funding gap, paths, and feasibility | Updated projection and result |
+| Income, expenses, or available surplus | Financial capacity | Capacity, contribution fit, relevant paths, and feasibility | Updated capacity and result |
+| Debt, EMI, rate, tenure, or financing details | Financial capacity or path comparison | Relevant debt/cash-flow outcomes, affected comparisons, and feasibility | Updated path comparison and result |
+| Funding schedule or displayed scenario assumption | Funding-path comparison | Calculations that depend on the changed assumption | Updated path and feasibility |
+| Missing or unreliable information | The step that requested the information | Calculations dependent on the corrected evidence | Updated result |
 
-**Feasibility / Funding Analysis**
-- Available feasible path(s)
-- Important assumptions
-- Opportunity-cost / trade-off analysis where material
-- Key risks and limitations
-- Goal feasibility
+The investor is returned to the nearest relevant step. The system does not make the investor repeat unrelated steps when their information has not changed.
 
-The investor should be able to answer:
+## 14. Example journeys
 
-> **“What do I need, what do I already have, what is the gap, what feasible paths are available, and what am I giving up by choosing one path over another?”**
+These examples show the order of the journey. The figures are case inputs; this document does not pre-fill calculated outcomes that have not been established.
+
+### Example A — Retirement goal
+
+**Investor starts with these case details:**
+- Retirement horizon: 25 years
+- Current corpus: ₹20 lakh
+- Required corpus recorded for the case: ₹2 crore
+- Monthly income: ₹2 lakh
+- Monthly expenses: ₹1.2 lakh
+- EMI: ₹10,000
+- Approximate monthly surplus: ₹70,000
+- Home-loan interest assumption: approximately 8%
+
+**Journey:**
+
+1. Investor enters or reviews the retirement details and target date.
+2. System displays the timeline and target information.
+3. Investor reviews the mapped corpus and its projected value.
+4. System displays the funding gap and the contribution result when calculable.
+5. Investor reviews financial capacity and home-loan information.
+6. System displays the funding paths supported by the case information, which may include faster repayment, continued retirement investing, and a loan-restructuring path when its inputs are available.
+7. Investor compares the resulting goal funding, debt/interest, cash flow, liquidity, assumptions, and trade-offs.
+8. Investor reviews the feasibility result and either continues, changes inputs, reviews a proposed goal adjustment if presented, or stops.
+
+### Example B — Education goal
+
+**Investor starts with these case details:**
+- Current education cost: ₹20 lakh
+- Target horizon: 10 years
+
+**Journey:**
+
+1. Investor enters or reviews the education goal and target date.
+2. System displays the timeline and target information based on the configured assumptions.
+3. Investor selects any assets to map to the goal.
+4. System displays the projected mapped assets and funding gap.
+5. Investor reviews required contribution and financial capacity when the relevant information is available.
+6. System displays the funding paths it can assess and the resulting feasibility status.
+7. Investor reviews the result, changes relevant inputs if needed, and confirms a decision or stops.
+8. If the investor continues, the system passes the goal and feasibility evidence to Strategy Decision.
 
 ---
 
-## 12. What happens next
-
-Goal Planning produces:
-
-```
-Defined Goal
-      +
-Financial State
-      +
-Funding / Feasibility Evidence
-      +
-Relevant Constraints
-      +
-Material Trade-offs
-      ↓
-Strategy Decision
-```
-
-Strategy Decision may later consider:
-
-- Progressive De-risking
-- Capital Preservation
-- Debt Reduction
-- Credit Utilisation
-- No acceptable Strategy
-
-Goal Planning does **not** select the Strategy Builder Strategy.
-
----
-
-## 13. Important boundaries
-
-### Goal Funding
-
-Goal Funding is part of the **Goal Planner / Goal Feasibility function**.
-
-It determines the financial path/options by which the goal can become feasible.
-
-It is **not** a peer Strategy Builder Strategy.
-
-### Opportunity Cost
-
-Opportunity Cost is a **decision principle within feasibility/funding analysis when alternative financial paths are being compared**.
-
-It is not itself a Strategy, Variant, Technique or Solution.
-
-### Whole-Plan Impact
-
-Whole-Plan Impact is not required for every goal.
-
-It becomes relevant when a new/changed goal materially competes with existing goals/resources or otherwise creates a plan-level decision.
-
-Opportunity-cost analysis can occur at Goal Planning level without requiring a Whole-Plan decision.
-
-### What-If
-
-Optional scenario analysis. A scenario does not automatically modify the accepted plan.
-
-### Accepted Plan
-
-Not created here. Investor adoption happens downstream.
-
----
-
-## 14. Real-life case connection
-
-The retirement case that established this requirement had:
-
-- 25-year retirement horizon;
-- ₹20 lakh current corpus;
-- ₹2 crore required corpus;
-- ₹2 lakh monthly income;
-- ₹1.2 lakh monthly expenses;
-- ₹10,000 EMI;
-- approximately ₹70,000 monthly surplus;
-- approximately 8% home-loan interest assumption.
-
-The key question was not:
-
-> “Does the client have debt?”
-
-It was:
-
-> **“What happens if the available financial capacity is used for debt repayment instead of retirement funding, or if the loan is restructured and the released EMI is invested?”**
-
-That comparison is what exposed **Opportunity Cost as a core feasibility/funding consideration**.
-
-The case established that the system should compare alternative feasible financial paths rather than apply a one-dimensional debt rule.
-
----
-
-## 15. Example
-
-Investor says:
-
-> “Education goal: ₹20 lakh today's cost, target in 10 years.”
-
-System:
-
-```
-Education
-   ↓
-10-year timeline
-   ↓
-Future education target
-   ↓
-Map existing education assets
-   ↓
-Project mapped assets
-   ↓
-Calculate funding gap
-   ↓
-Calculate required contribution
-   ↓
-Read financial capacity
-   ↓
-Identify relevant funding paths
-   ↓
-Compare financial consequences where alternatives matter
-   ↓
-Feasibility
-```
-
-Investor sees:
-
-```
-Future Target:              ₹X
-Mapped Asset Projection:    ₹Y
-Funding Gap:                ₹Z
-Required Contribution:      ₹A/month
-Available Capacity:         ₹B/month
-
-Feasible Path(s):           ...
-Trade-off / Opportunity
-Cost (if material):         ...
-Feasibility:                ...
-```
-
-Only after this does the system hand the Defined Goal and feasibility evidence to Strategy Decision.
-
-It does **not** say:
-
-> “Education + 10 years = Progressive De-risking.”
-
-That is a downstream decision.
-
----
-
-## 16. Core rule
-
-**Goal Planning defines the goal, establishes the funding requirement, evaluates relevant feasible financial paths, and compares their mathematical consequences and material opportunity costs.**
-
-**Strategy Decision decides how an established feasible path should be implemented through Strategy → Variant → Technique → Method/Policy → Architecture/Solution.**
-
-**Investor remains the owner of goal intent and the final decision.**
-
----
-
-## References
-
-- `docs/architecture/goal-planner.md`
-- `docs/Decision tree/Real-Life Decision Cases/00-GOAL_FUNDING_CONCEPT_CHANGE_LOG.md`
-- `docs/Decision tree/Real-Life Decision Cases/03-CASE_3_MULTI_GOAL_FEASIBILITY_AND_ACTION_PLAN.md`
-- `docs/existing features/Strategy-Builder/00-DECISION_ENGINE_DESIGN_SUMMARY.md`
-- `docs/User Journeys/04-GOAL_FEASIBILITY_JOURNEY.md`
+**Related implementation contract:** `docs/implementations/Goal-Planner.md`  
+This link is provided for the implementation details; those details are not duplicated here.
