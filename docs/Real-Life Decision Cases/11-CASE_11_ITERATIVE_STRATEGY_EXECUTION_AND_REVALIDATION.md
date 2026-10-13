@@ -67,7 +67,7 @@ The system should support this sequence without losing the distinction between:
 Suppose the investor starts with:
 
 **Goal:** Education  
-**Strategy:** Goal Funding
+**Goal Planner funding path:** existing asset + monthly contribution
 
 The investor tests the current execution.
 
@@ -81,7 +81,7 @@ The result shows that the goal may no longer be adequately funded.
 
 ### Step 2 — Strategy Re-Evaluation
 
-The system identifies that the current strategy/path may no longer be appropriate under the new conditions.
+Goal Planner recalculates feasibility and the funding gap first. Strategy Builder re-evaluates the canonical strategy decision only if the changed conditions materially affect applicability, viability, constraints, or outcome.
 
 It presents applicable alternatives.
 
@@ -188,7 +188,7 @@ The system must distinguish between:
 
 ### Accepted Plan
 
-The strategy and execution currently accepted by the investor.
+The canonical strategy (if any) and Goal Planner funding/execution path currently accepted by the investor.
 
 and
 
@@ -371,8 +371,8 @@ The Action Plan therefore represents the current accepted implementation state w
 
 ### Initial
 
-**Strategy:** Goal Funding  
-**Execution:** ₹50,000/month
+**Goal Planner funding path:** ₹50,000/month  
+**Funding assumption:** existing path remains subject to feasibility revalidation
 
 ### Iteration 1
 
@@ -508,7 +508,7 @@ The execution change makes the existing strategy potentially inappropriate.
 
 ### Case 11 — Iterative Strategy + Execution Revalidation
 
-The investor can move through strategy and execution changes repeatedly until an acceptable path is selected.
+The investor can iterate through Goal Planner funding-path changes and Strategy Builder decisions as separate but connected processes until an acceptable path is selected.
 
 Therefore:
 
@@ -519,7 +519,7 @@ Therefore:
 ## 16. Established Business Decisions
 
 1. Financial planning can be an iterative decision process.
-2. The investor can test multiple strategy and execution alternatives.
+2. The investor can test funding-path changes in Goal Planner and, when materially relevant, exactly two canonical Strategy Builder options.
 3. Strategy and execution remain distinct concepts.
 4. Execution changes can trigger strategy re-evaluation.
 5. A new strategy can itself be tested through execution what-if scenarios.
@@ -538,7 +538,7 @@ Therefore:
 
 ## 17. Final Business Principle
 
-> **The investor should be able to iterate between strategy and execution decisions using their own financial numbers. The system continuously guides the investor by showing the impact of each choice, identifying when re-evaluation is required, and allowing the investor to adopt the path they consider acceptable.**
+> **The investor should be able to iterate between Goal Planner funding-path and canonical Strategy Builder decisions using their own financial numbers. The system continuously guides the investor by showing the impact of each choice, identifying when re-evaluation is required, and allowing the investor to adopt the path they consider acceptable.**
 
 Therefore:
 
