@@ -1,8 +1,8 @@
 # Case 1 — Goal Funding Concept Change Log
 
 **Location:** `docs/Decision tree/Real-Life Decision Cases/`  
-**Purpose:** Preserve the complete business discussion that started from Real-Life Case 1 and led to the clarification of Goal Funding, Goal Planner feasibility, and Strategy Builder responsibilities.  
-**Status:** Business concept clarification — NOT yet implemented or frozen in code.
+**Purpose:** Preserve the complete historical discussion that led to the clarification of Goal Funding, Goal Planner feasibility, and Strategy Builder responsibilities. Rejected or superseded statements are retained as history only and must not be used as current implementation instructions.  
+**Status:** Historical business-decision log. It preserves earlier rejected interpretations and later corrections; it is not a standalone coding specification. The canonical target rule is settled: Goal Funding belongs to Goal Planner / Goal Feasibility and is not a Strategy Builder strategy. Current runtime/code migration is a separate task.
 
 ---
 
