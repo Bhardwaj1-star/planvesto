@@ -7,7 +7,7 @@
 
 ## 1. Executive conclusion
 
-The documents do not yet establish one consistent, implementation-ready relationship between Strategy, Variant, Technique, Architecture, Solution and Action. The canonical Strategy Decision Tree is clearer than several older architecture documents and some real-life case bodies, but the older definitions remain and contradict the target model.
+At the time of this audit, the documents did not establish one consistent, implementation-ready relationship between Strategy, Variant, Technique, Architecture, Solution and Action. The canonical Strategy Decision Tree was clearer than several older architecture documents and case bodies. The Goal Funding classification in the target case documents has since been corrected; other architecture/solution and runtime gaps described in this report remain audit findings until separately resolved.
 
 The most important verified problem is not merely wording: `backend/library/strategies/solution_matrix.py` constructs “solutions” differently by strategy. For Goal Funding, each solution record wraps a **variant**; for the other four strategies, each wraps a **technique**. `Solution` is therefore not one consistent business abstraction across the strategy set.
 
@@ -67,8 +67,8 @@ The `StrategyArchitecture` model separately stores `solution_ids` and `technique
 The canonical `strategy-decision-tree.md` defines four Strategy Builder strategies: Progressive De-risking, Capital Preservation, Debt Reduction and Credit Utilisation. It explicitly places Goal Funding in Goal Planner / Goal Feasibility, not as a fifth Strategy Builder strategy.
 
 Contradictory sources:
-- Case 8 lists Goal Funding as “Strategy A” for an Education goal.
-- Cases 10 and 11 label Goal Funding as a strategy.
+- At the time of this audit, Case 8 listed Goal Funding as “Strategy A” for an Education goal; that case has since been corrected.
+- At the time of this audit, Cases 10 and 11 labelled Goal Funding as a strategy; both case documents have since been corrected.
 - The earlier audit referenced `docs/architecture/strategy-matrix.md`, `docs/architecture/strategy-architecture-composition.md`, and `docs/architecture/strategy-variants.md` as sources that classified Goal Funding as a Strategy or listed its six options as variants. Those paths are absent from the current repository tree; these are historical audit references, not current document paths.
 - The 00 change log preserves an earlier Goal Funding-as-strategy statement, although later parts reject it.
 
@@ -264,8 +264,8 @@ Asset Mapping is upstream feasibility evidence. Asset Earmarking is a downstream
 
 ## 6. Recommended correction order
 
-1. Freeze taxonomy and authority: Goal Funding ownership; Strategy vs Variant vs Technique vs Method/Policy vs Architecture vs Solution vs Action.
-2. Correct registry/matrix: remove Goal Funding from target Strategy Builder set; reclassify its six funding options; stop duplicating items across Variant and Solution columns.
+1. **Documentation taxonomy:** Goal Funding ownership is now explicit in the canonical tree and Strategy Builder implementation contract; the four-strategy allowlist is stated for coding agents.
+2. **Runtime registry/migration remains open:** keep Goal Funding out of the target Strategy Builder set; map legacy funding options to Goal Planner funding-path concepts; do not delete or migrate records solely by name. Any registry or matrix that exists or is recreated must keep funding paths out of Strategy/Variant columns.
 3. Correct case bodies: Case 3 lifecycle order; Case 8 multi-strategy example; Cases 10–11 terminology; mark historical statements in the 00 change log as superseded.
 4. Standardize document metadata and case register: authority type, approval/freeze status, implementation status, commit and supersession links.
 5. Separate target architecture from runtime: mark current code order as current state and canonical decision flow as target state until runtime tests prove alignment.
