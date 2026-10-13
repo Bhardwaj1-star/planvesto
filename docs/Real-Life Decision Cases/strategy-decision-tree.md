@@ -1,7 +1,7 @@
 # Strategy Decision Tree
 
 **Document Type:** Canonical Business Decision Document  
-**Status:** Canonical Business Decision Flow  
+**Status:** Final Business Architecture  
 **Scope:** Strategy Decision Tree / Real-Life Decision Cases
 
 ---
@@ -55,7 +55,7 @@ This document defines the **individual-goal Strategy Decision subsystem**. It mu
 | 8 | Variant Selection | Select implementation form | Selected variant |
 | 9 | Technique Selection | Identify required/conditional techniques | Technique set |
 | 10 | Technique Conditions / Method | Determine how techniques operate | Method / policy |
-| 11 | Solution Proposal | Prepare the concrete investor-specific implementation | Solution |
+| 11 | Architecture / Solution | Assemble the concrete implementation | Solution |
 | 12 | Stress / Resilience | Test robustness of the selected path | Resilience result |
 | 13 | Decision Output | Produce the authoritative decision and rationale | Decision / recommendation input |
 
@@ -82,8 +82,6 @@ The Strategy Builder has four canonical strategies:
 **Goal Funding is not a fifth Strategy Builder strategy.**
 
 Goal Funding belongs to the **Goal Planner / Goal Funding / Feasibility layer**. Funding mechanisms such as contribution increases, SIPs, step-ups and lump-sum funding are not peer Strategy Builder strategies.
-
-**Implementation authority:** This taxonomy is canonical for Strategy Builder. Any `strat-goal-funding` identifier or Goal Funding Strategy row in current-state audit material describes legacy runtime only. Do not implement Goal Funding as a Strategy Builder candidate or variant; use Goal Planner funding-path concepts instead. Preserve legacy records until their meaning is mapped in an explicit migration.
 
 ---
 
