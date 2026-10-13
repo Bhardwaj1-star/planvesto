@@ -438,3 +438,13 @@ These are audit findings, not claims that a fix has been implemented by this doc
 - No Acceptable Strategy / No Acceptable Path is a valid result.
 
 Exact score weights, selection tie-breaks, numerical thresholds, stress taxonomy, materiality thresholds, and any runtime behavior not established by the two references must not be invented in implementation.
+
+## Notes
+
+### Scoring and 8 Eligibility Fits — Remove Completely
+
+- **Scoring has no role in the Strategy Builder system.** Do not use a scoring model, score components, score totals, weights, thresholds, or score-based ranking to make or influence the strategy decision.
+- **The 8 Eligibility Fits have no role in the Strategy Builder system.** Remove them completely; they must not exist as a separate stage, gate, evaluation, or decision input.
+- Neither Scoring nor the 8 Eligibility Fits may be used by the frontend, backend, recommendation flow, or any other part of the system.
+- Treat both as removed from the target system—not as pending features, optional checks, legacy fallbacks, or alternate decision paths.
+
