@@ -4,33 +4,22 @@ from typing import Any
 from fastapi import HTTPException
 
 from data.goal_repository import GoalRepository
-from data.strategy_repository import StrategyRepository
 from engines.constraints.aggregator import ConstraintAggregator
-from engines.constraints.models import ConstraintSet
 from engines.orchestration.engine import MultiGoalOrchestrator
 from engines.orchestration.models import GoalEvaluationInput, MultiGoalPlanResult
-from models.strategy import InvestorPriorities
-from services.goal_report_service import GoalReportService
-from services.strategy_service import StrategyService
 from services.financial_state_service import FinancialStateService
 
 
 class MultiGoalPlanningService:
-    """Service layer coordinating multi-goal planning workflows using MultiGoalOrchestrator."""
+    """Coordinates competing goals using Goal Planner outputs only."""
 
     def __init__(
         self,
         goal_repo: GoalRepository | None = None,
-        strategy_repo: StrategyRepository | None = None,
-        strategy_service: StrategyService | None = None,
-        goal_report_service: GoalReportService | None = None,
         orchestrator: MultiGoalOrchestrator | None = None,
         financial_state_service: FinancialStateService | None = None,
     ):
         self.goal_repo = goal_repo or GoalRepository()
-        self.strategy_repo = strategy_repo or StrategyRepository()
-        self.strategy_service = strategy_service or StrategyService()
-        self.goal_report_service = goal_report_service or GoalReportService()
         self.orchestrator = orchestrator or MultiGoalOrchestrator()
         self.constraint_aggregator = ConstraintAggregator()
         self.financial_state_service = financial_state_service or FinancialStateService()
@@ -38,7 +27,7 @@ class MultiGoalPlanningService:
     def build_multi_goal_plan(
         self,
         planning_unit_id: str,
-        priorities: InvestorPriorities | None = None,
+        priorities: dict[str, Any] | None = None,
         rule_overrides: dict[str, dict[str, Any]] | None = None,
         priority_ranks: dict[str, int] | None = None,
         goal_order: list[str] | None = None,
@@ -48,81 +37,47 @@ class MultiGoalPlanningService:
             raise HTTPException(status_code=404, detail="No goals found for this planning unit")
 
         inputs: list[GoalEvaluationInput] = []
-        strategy_eval_map: dict[str, dict[str, Any]] = {}
-
-        for idx, goal in enumerate(goals):
-            goal_id = goal["goal_id"]
-            strategy_version_id = self.strategy_repo.get_selected_strategy_version_id(planning_unit_id, goal_id)
-            if not strategy_version_id:
+        for idx, goal_row in enumerate(goals):
+            goal_id = goal_row["goal_id"]
+            defined_goal = self.goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
+            if defined_goal is None:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"No current StrategyVersion selected for goal '{goal_id}'. Finalize a strategy version before building the current multi-goal plan.",
+                    status_code=409,
+                    detail=f"Goal '{goal_id}' has no current DefinedGoal snapshot from Chapter 10.",
                 )
-
-            report = self.goal_report_service.build_report(
-                planning_unit_id,
-                strategy_version_id=strategy_version_id,
-            )
-            calc = report.get("goal_calculation", {})
-            rec = report.get("recommendation", {})
-
             if goal_order and goal_id in goal_order:
                 rank = goal_order.index(goal_id) + 1
             elif priority_ranks and goal_id in priority_ranks:
                 rank = int(priority_ranks[goal_id])
-            elif goal.get("priority_rank"):
-                rank = int(goal["priority_rank"])
+            elif goal_row.get("priority_rank"):
+                rank = int(goal_row["priority_rank"])
             else:
                 rank = idx + 1
 
-            client_p = goal.get("priority") or calc.get("priority") or "medium"
-            today_cost = float(calc.get("today_cost") or 0.0)
-            future_target = float(calc.get("future_target") or 0.0)
-            funding_gap = float(calc.get("funding_gap") or 0.0)
-            req_monthly = float(calc.get("required_monthly_contribution") or 0.0)
-
-            t_year = calc.get("target_year")
-            t_month = calc.get("target_month")
-            target_date = f"{t_year}-{t_month:02d}" if t_year and t_month else None
-
-            eval_input = GoalEvaluationInput(
+            target_date = f"{defined_goal.target_year}-{defined_goal.target_month:02d}"
+            inputs.append(GoalEvaluationInput(
                 goal_id=goal_id,
-                goal_name=report.get("goal_name") or goal.get("goal_name") or goal_id,
-                goal_type=report.get("goal_type") or goal.get("goal_type") or "general",
+                goal_name=defined_goal.goal_name,
+                goal_type=defined_goal.goal_type,
                 priority_rank=rank,
-                client_priority=client_p,
+                client_priority=defined_goal.priority,
                 target_date=target_date,
-                target_year=t_year,
-                target_month=t_month,
-                today_cost=today_cost,
-                future_target=future_target,
-                funding_gap=funding_gap,
-                required_monthly_contribution=req_monthly,
-                flexibility=goal.get("flexibility"),
-            )
-            inputs.append(eval_input)
+                target_year=defined_goal.target_year,
+                target_month=defined_goal.target_month,
+                today_cost=defined_goal.today_cost,
+                future_target=defined_goal.future_target,
+                funding_gap=defined_goal.funding_gap,
+                required_monthly_contribution=defined_goal.required_monthly_contribution,
+                flexibility=defined_goal.flexibility,
+                defined_goal=defined_goal,
+                metadata={
+                    "defined_goal_id": defined_goal.defined_goal_id,
+                    "defined_goal_version": defined_goal.version,
+                    "feasibility_status": defined_goal.feasibility_status,
+                    "funding_options": defined_goal.funding_options,
+                },
+            ))
 
-            strategy_eval_map[goal_id] = {
-                "recommended_strategy_id": report.get("selected_strategy_id") or rec.get("recommended_strategy_id"),
-                "recommended_strategy_name": report.get("strategy", {}).get("name"),
-                "strategy_version_id": strategy_version_id,
-                "feasibility_status": {"feasible": "pass", "constrained": "conditional"}.get(
-                    rec.get("feasibility_status"), rec.get("feasibility_status") or "pass"
-                ),
-                "required_monthly_contribution": req_monthly,
-                "today_cost": calc.get("today_cost"),
-                "future_target": calc.get("future_target"),
-                "funding_gap": calc.get("funding_gap"),
-                "projected_mapped_asset_value": calc.get("projected_mapped_asset_value"),
-                "funding_return_assumption": calc.get("funding_return_assumption"),
-                "available_monthly_surplus": report.get("feasibility", {}).get(
-                    "available_monthly_surplus"
-                ),
-                "funding_strategies": report.get("funding_solutions", []),
-                "reasons": rec.get("short_reasons", []),
-            }
-
-        # Consume the canonical current FinancialState directly.
         state = self.financial_state_service.current(planning_unit_id, "family")
         if hasattr(state, "model_dump"):
             state = state.model_dump(mode="json")
@@ -151,8 +106,6 @@ class MultiGoalPlanningService:
             "emi_burden_monthly": metric_value("emi_burden_monthly"),
         })
 
-        # Single canonical constraint path: all ratio/rule-derived controls are
-        # evaluated and normalized by ConstraintAggregator into ConstraintSet.
         canonical_constraint_set = self.constraint_aggregator.aggregate(
             goals=inputs,
             financial_context=financial_context,
@@ -162,23 +115,16 @@ class MultiGoalPlanningService:
         if rule_overrides:
             effective_overrides.update(rule_overrides)
 
-        def eval_lookup(goal_input: GoalEvaluationInput, context: dict[str, Any]) -> dict[str, Any]:
-            return strategy_eval_map.get(goal_input.goal_id, {})
-
         plan = self.orchestrator.orchestrate(
             goals=inputs,
             financial_context=financial_context,
-            strategy_evaluator=eval_lookup,
+            strategy_evaluator=None,
             rule_overrides=effective_overrides,
         )
-
-        # Surface the canonical constraint output; no second evaluator path.
         for warning in canonical_constraint_set.warnings:
             plan.planning_notes.append(f"Constraint Warning: {warning.message}")
         for hard in canonical_constraint_set.hard_constraints:
             plan.trade_offs.append(f"Constraint: {hard.message}")
-
-        # Attach the canonical constraint set to the plan's audit trail
         plan.audit_trail.append({
             "source": "ConstraintAggregator",
             "canonical_constraint_set": canonical_constraint_set.model_dump(),
@@ -186,5 +132,4 @@ class MultiGoalPlanningService:
             "conflict_count": len(canonical_constraint_set.conflicts),
             "hard_failure_count": len(canonical_constraint_set.hard_constraints),
         })
-
         return plan
