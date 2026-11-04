@@ -29,6 +29,8 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
     for sip in path.goal_linked_sips:
         if not sip.confirmed_for_goal:
             issues.append(f"Goal-linked SIP {sip.sip_id} is not confirmed for this goal.")
+        if not sip.source_reference:
+            issues.append(f"Source evidence is missing for goal-linked SIP {sip.sip_id}.")
 
     if path.step_3_requirement_changed:
         issues.append("Approved asset decisions changed the self-money requirement; return to Chapter 10 to recalculate Funding Gap and Required SIP/Lump Sum before projection.")
