@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -193,8 +193,8 @@ class GoalFundingAssessment(BaseModel):
     defined_goal_id: str
     defined_goal_version: int
     version: int = 1
-    status: str
-    entry_route: str
+    status: Literal['insufficient_evidence', 'ready_for_investor_review']
+    entry_route: Literal['steps_1_to_3_then_step_4', 'step_4_direct']
     goal_handoff: dict[str, Any]
     self_money: FundingPathAssessment
     self_money_financing: FundingPathAssessment
