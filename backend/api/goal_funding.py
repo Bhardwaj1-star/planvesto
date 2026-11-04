@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Header, HTTPException, Query
-from api.auth import authenticate_user, verify_assets_ownership, verify_goal_ownership, verify_planning_unit_ownership
+from api.auth import authenticate_user, verify_assets_ownership, verify_goal_ownership
 from models.goal_funding import GoalFundingAssessment
 from schemas.goal_funding import GoalFundingAssessmentRequest
 from services.goal_funding_service import GoalFundingService
