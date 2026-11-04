@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field, model_validator
@@ -12,6 +12,15 @@ class FundingPath(str, Enum):
 class AssetDisposition(str, Enum):
     KEEP = "keep"
     REALLOCATE = "reallocate"
+
+
+class GoalLinkedSIP(BaseModel):
+    sip_id: str = Field(min_length=1)
+    monthly_amount: float = Field(ge=0)
+    next_contribution_date: date | None = None
+    end_date: date | None = None
+    source_reference: str | None = None
+    confirmed_for_goal: bool = False
 
 
 class ProjectionEventType(str, Enum):
@@ -114,7 +123,7 @@ class ContingencyOption(BaseModel):
 
 class FundingPathAssessment(BaseModel):
     path: FundingPath
-    asset_decisions: list[AssetDecision] = Field(default_factory=list)
+    asset_decisions: list[AssetDecision] = Field(default_factory=list)\n    goal_linked_sips: list[GoalLinkedSIP] = Field(default_factory=list)
     unmapped_asset_assessment_permitted: bool = False
     self_money_requirement: float | None = Field(default=None, ge=0)
     financing: FinancingEvidence | None = None
@@ -126,7 +135,7 @@ class FundingPathAssessment(BaseModel):
     contingency_options: list[ContingencyOption] = Field(default_factory=list)
     assumptions: dict[str, Any] = Field(default_factory=dict)
     constraints: list[str] = Field(default_factory=list)
-    calculation_evidence: dict[str, Any] = Field(default_factory=dict)
+    calculation_evidence: dict[str, Any] = Field(default_factory=dict)\n    step_3_requirement_changed: bool = False
 
     @model_validator(mode="after")
     def financing_only_on_financing_path(self):
