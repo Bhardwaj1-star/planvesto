@@ -125,7 +125,7 @@ class ContingencyOption(BaseModel):
 
 class FundingPathAssessment(BaseModel):
     path: FundingPath
-    asset_decisions: list[AssetDecision] = Field(default_factory=list)\n    goal_linked_sips: list[GoalLinkedSIP] = Field(default_factory=list)
+    asset_decisions: list[AssetDecision] = Field(default_factory=list)\n    goal_linked_sips: list[GoalLinkedSIP] = Field(default_factory=list)\n    goal_linked_sips_assessed: bool = False
     unmapped_asset_assessment_permitted: bool = False
     self_money_requirement: float | None = Field(default=None, ge=0)
     financing: FinancingEvidence | None = None
