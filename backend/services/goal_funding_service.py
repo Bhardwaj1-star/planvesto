@@ -77,7 +77,8 @@ class GoalFundingService:
             "required_monthly_contribution": goal.required_monthly_contribution,
             "funding_return_assumption": goal.funding_return_assumption,
             "mapped_assets": [item.model_dump(mode="json") for item in goal.mapped_assets],
-            "available_monthly_surplus": available_monthly_surplus,\n            "financial_state_snapshot_id": financial_state.get("snapshot_id") if isinstance(financial_state, dict) else None,
+            "available_monthly_surplus": available_monthly_surplus,
+            "financial_state_snapshot_id": financial_state.get("snapshot_id") if isinstance(financial_state, dict) else None,
             "monthly_debt_payments": monthly_debt_payments,
             "version_metadata": goal.version_metadata,
         }
