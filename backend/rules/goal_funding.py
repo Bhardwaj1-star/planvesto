@@ -52,6 +52,9 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         issues.append("Monitoring evidence is missing.")
     if not path.contingency_options:
         issues.append("Contingency assessment is missing.")
+    for option in path.contingency_options:
+        if not option.revised_scenario:
+            issues.append(f"Revised scenario evidence is missing for contingency trigger: {option.trigger}.")
 
     fallback_order = {
         "contribution": 0, "investment_growth": 1, "financing": 2,
