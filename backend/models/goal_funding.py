@@ -47,7 +47,7 @@ class FinancingEvidence(BaseModel):
     lender_or_source: str | None = None
     amount: float | None = Field(default=None, ge=0)
     drawdown_date: date | None = None
-    annual_interest_rate: float | None = Field(default=None, ge=0, le=100)
+    annual_interest_rate: float | None = Field(default=None, ge=0, le=100, description="Annual interest rate in percent, e.g. 8.5")
     tenure_months: int | None = Field(default=None, ge=1)
     emi: float | None = Field(default=None, ge=0)
     processing_fees: float | None = Field(default=None, ge=0)
@@ -57,7 +57,7 @@ class FinancingEvidence(BaseModel):
 
     def missing_terms(self) -> list[str]:
         required = {
-            "amount": self.amount,
+            "lender_or_source": self.lender_or_source,\n            "amount": self.amount,
             "drawdown_date": self.drawdown_date,
             "annual_interest_rate": self.annual_interest_rate,
             "tenure_months": self.tenure_months,
@@ -70,6 +70,7 @@ class FinancingEvidence(BaseModel):
 
 class ProjectionEvent(BaseModel):
     event_date: date
+    event_timestamp: datetime | None = None
     event_type: ProjectionEventType
     amount: float = Field(ge=0)
     source_reference: str | None = None
