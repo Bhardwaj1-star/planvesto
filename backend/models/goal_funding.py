@@ -37,6 +37,7 @@ class AssetDecision(BaseModel):
     investor_approved: bool = False
     available_on: date | None = None
     liquidity_notes: str | None = None
+    risk_suitability_assessment: str | None = None
     restrictions: list[str] = Field(default_factory=list)
     competing_goal_notes: str | None = None
 
