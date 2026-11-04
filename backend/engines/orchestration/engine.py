@@ -64,9 +64,9 @@ class MultiGoalOrchestrator:
         # Step 1: Evaluate each goal independently (reuse StrategyEngine or evaluator)
         evaluated_goals: list[tuple[GoalEvaluationInput, dict[str, Any]]] = []
         for g in goals:
-            strat_info = {}
+            strat_info = dict(g.metadata or {})
             if strategy_evaluator:
-                strat_info = strategy_evaluator(g, context)
+                strat_info.update(strategy_evaluator(g, context))
             evaluated_goals.append((g, strat_info))
 
         # Step 2: Resolve priorities & prepare allocation payload
@@ -136,16 +136,13 @@ class MultiGoalOrchestrator:
                 shortfall=item.monthly_shortfall,
                 funding_status=item.funding_status,
                 feasibility_status=item.feasibility_status,
-                recommended_strategy_id=s_info.get("recommended_strategy_id"),
-                recommended_strategy_name=s_info.get("recommended_strategy_name"),
-                strategy_version_id=s_info.get("strategy_version_id"),
                 today_cost=s_info.get("today_cost"),
                 future_target=s_info.get("future_target"),
                 funding_gap=s_info.get("funding_gap"),
                 projected_mapped_asset_value=s_info.get("projected_mapped_asset_value"),
                 funding_return_assumption=s_info.get("funding_return_assumption"),
                 available_monthly_surplus=s_info.get("available_monthly_surplus"),
-                funding_strategies=s_info.get("funding_strategies", []),
+                funding_options=s_info.get("funding_options", []),
                 override_applied=item.override_applied,
                 override_reason=item.override_reason,
                 reasons=reasons,
