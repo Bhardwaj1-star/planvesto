@@ -15,8 +15,6 @@ from data.strategy_version_repository import StrategyVersionRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from services.financial_state_service import FinancialStateService
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
-from engines.strategy.variant_selector import VariantSelector
-from library.strategies.variants import get_canonical_strategy_variant
 from report_engine.renderer import CommonPdfRenderer
 
 
@@ -563,36 +561,8 @@ class GoalReportService:
         contribution_rules = self._build_contribution_rules(goal)
         action_plan_timeline = self._build_action_plan_timeline(goal)
         contingency_matrix = self._build_contingency_matrix()
-        # Automatically resolve canonical strategy variant
-        variant_id = self._get(run, 'selected_variant_id') or recommendation.get('recommended_variant_id')
+        # Legacy strategy-variant resolution is retired; no library variant is emitted.
         variant_obj = None
-        if variant_id:
-            var_def = get_canonical_strategy_variant(variant_id)
-            if var_def:
-                variant_obj = {
-                    'variant_id': var_def.variant_id,
-                    'name': var_def.name,
-                    'description': var_def.description,
-                    'variant_type': var_def.variant_type,
-                    'strategy_id': var_def.strategy_id,
-                }
-        if not variant_obj and selected_strategy_id:
-            try:
-                var_def = VariantSelector.select_variant(
-                    strategy_id=selected_strategy_id,
-                    goal=goal,
-                    financial_context=context,
-                    baseline_scenario=selected_scenario,
-                )
-                variant_obj = {
-                    'variant_id': var_def.variant_id,
-                    'name': var_def.name,
-                    'description': var_def.description,
-                    'variant_type': var_def.variant_type,
-                    'strategy_id': var_def.strategy_id,
-                }
-            except Exception:
-                pass
 
         report = {
             "report_type": "goal_decision_report",
