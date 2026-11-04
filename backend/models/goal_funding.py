@@ -100,6 +100,8 @@ class YearlyFundingPosition(BaseModel):
 class InvestmentPlanEvidence(BaseModel):
     proposed_allocation: dict[str, Any] = Field(default_factory=dict)
     techniques_considered: list[str] = Field(default_factory=list)
+    techniques_assessed: bool = False
+    products_assessed: bool = False
     product_options: list[dict[str, Any]] = Field(default_factory=list)
     alternatives: list[dict[str, Any]] = Field(default_factory=list)
     assumptions: dict[str, Any] = Field(default_factory=dict)
