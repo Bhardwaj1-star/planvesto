@@ -40,6 +40,7 @@ class AssetDecision(BaseModel):
     liquidity_notes: str | None = None
     risk_suitability_assessment: str | None = None
     restrictions: list[str] = Field(default_factory=list)
+    restrictions_assessed: bool = False
     competing_goal_notes: str | None = None
 
 
