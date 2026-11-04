@@ -1,3 +1,4 @@
+"""Legacy StrategyVersion read repository retained for existing Action Plan/history records only."""
 from typing import Any
 
 from models.strategy_version import StrategyVersion
