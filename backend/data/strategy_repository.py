@@ -1,3 +1,4 @@
+"""Legacy read repository for historical StrategyRun and StrategyVersion records; new assessments use GoalFundingRepository."""
 from typing import Any
 from data.supabase import get_supabase
 from models.strategy import InvestorPriorities, Scenario, StrategyDefinition, StrategyRankingItem, StrategyRecommendation, StrategyRun, StrategyArchitecture
