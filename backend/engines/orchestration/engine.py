@@ -69,9 +69,9 @@ class MultiGoalOrchestrator:
         allocation_items: list[dict[str, Any]] = []
         goal_context_map: dict[str, dict[str, Any]] = {}
 
-        for g, s_info in evaluated_goals:
+        for g, goal_info in evaluated_goals:
             req_contrib = float(g.required_monthly_contribution or goal_info.get("required_monthly_contribution", 0.0))
-            goal_context_map[g.goal_id] = s_info
+            goal_context_map[g.goal_id] = goal_info
 
             resolved_p, override_applied, override_reason = self.resolve_goal_priority(
                 g, context, rule_overrides
@@ -115,7 +115,7 @@ class MultiGoalOrchestrator:
 
         for item in alloc_result.allocations:
             goal_info = goal_context_map.get(item.goal_id, {})
-            reasons = list(s_info.get("reasons", []))
+            reasons = list(goal_info.get("reasons", []))
             if item.override_applied and item.override_reason:
                 reasons.append(f"Priority Adjusted: {item.override_reason}")
 
@@ -132,7 +132,7 @@ class MultiGoalOrchestrator:
                 shortfall=item.monthly_shortfall,
                 funding_status=item.funding_status,
                 feasibility_status=item.feasibility_status,
-                today_cost=s_info.get("today_cost"),
+                today_cost=goal_info.get("today_cost"),
                 future_target=s_info.get("future_target"),
                 funding_gap=s_info.get("funding_gap"),
                 projected_mapped_asset_value=s_info.get("projected_mapped_asset_value"),
