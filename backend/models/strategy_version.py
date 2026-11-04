@@ -1,3 +1,4 @@
+"""Legacy immutable StrategyVersion snapshots retained for historical Action Plan/report lineage only."""
 from datetime import datetime, timezone
 from typing import Any, Literal
 
