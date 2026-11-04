@@ -40,8 +40,12 @@ class GoalFundingService:
 
         mapped_ids = {asset.asset_id for asset in goal.mapped_assets}
         goal_funding_date = date(goal.target_year, goal.target_month, 1)
+        mapped_assets = {asset.asset_id: asset for asset in goal.mapped_assets}
         for path in (request.self_money, request.self_money_financing):
             for decision in path.asset_decisions:
+                mapped_asset = mapped_assets.get(decision.asset_id)
+                if mapped_asset and decision.assessed_amount is not None and decision.assessed_amount > mapped_asset.allocated_amount + 0.01:
+                    raise HTTPException(status_code=422, detail=f"Assessed amount for asset {decision.asset_id} exceeds the amount mapped to this goal.")
                 if decision.asset_id in mapped_ids and decision.available_on and decision.available_on > goal_funding_date:
                     raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available by the goal funding date.")
                 if not decision.risk_suitability_assessment:
