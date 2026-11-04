@@ -1,7 +1,6 @@
 from typing import Literal
+
 from engines.calculation.engine import round_money
-
-
 from engines.calculation.canonical import calculate_goal_funding_gap
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 
@@ -10,13 +9,7 @@ def calculate_funding_gap(
     future_target: float,
     projected_mapped_asset_value: float,
 ) -> tuple[float, Literal["Shortfall", "On Track", "Overfunded"]]:
-    """
-    Target-date funding gap:
-      funding_gap = future_target - projected_mapped_asset_value
-      > 0 -> Shortfall
-      == 0 -> On Track
-      < 0 -> Overfunded
-    """
+    """Compare the future target with eligible mapped assets at the goal date."""
     gap = calculate_goal_funding_gap(future_target, projected_mapped_asset_value)
     if gap is None:
         gap = 0.0
@@ -27,32 +20,32 @@ def calculate_funding_gap(
     return (gap, "Overfunded")
 
 
+def effective_monthly_rate(annual_effective_return: float) -> float:
+    """Convert an effective annual return to an equivalent effective monthly rate."""
+    annual = float(annual_effective_return)
+    if annual <= -1.0:
+        raise ValueError("Annual return must be greater than -100%")
+    return (1.0 + annual) ** (1.0 / 12.0) - 1.0
+
+
 def calculate_required_monthly_contribution(
     funding_gap: float,
     annual_return: float,
     duration_years: float,
 ) -> float:
-    """
-    Calculates the end-of-month contribution required to fund a positive
-    target-date gap. The same nominal annual return convention used by the
-    goal asset projection is converted to a monthly rate.
+    """Calculate the month-end SIP required to close a future-value funding gap.
 
-    A non-positive gap requires no additional contribution. If the target is
-    effectively immediate, the future monthly-contribution model is not
-    applicable and returns 0; the caller should surface the immediate gap.
+    The annual return is treated as an effective annual rate and converted to
+    an equivalent effective monthly rate. This is an ordinary-annuity model;
+    irregular and step-up schedules require their own dated cash-flow inputs.
     """
     gap = max(0.0, float(funding_gap))
     years = max(0.0, float(duration_years))
     if gap <= 0.0 or years <= 0.0:
         return 0.0
 
-    annual = float(annual_return)
-    if annual <= -1.0:
-        raise ValueError("Annual return must be greater than -100%")
-
+    monthly_rate = effective_monthly_rate(annual_return)
     months = max(1, round(years * 12))
-    monthly_rate = annual / 12.0
-
     if abs(monthly_rate) < 1e-12:
         return round_money(gap / months)
 
@@ -60,18 +53,16 @@ def calculate_required_monthly_contribution(
     if denominator <= 0.0:
         raise ValueError("Return assumption produces an invalid contribution factor")
 
-    required = gap * monthly_rate / denominator
-    return round_money(max(0.0, required))
+    return round_money(max(0.0, gap * monthly_rate / denominator))
 
 
 def calculate_funding_return_assumption(
     mapped_assets: list[dict],
     fallback_return: float = DEFAULT_FUNDING_RETURN_ASSUMPTION,
 ) -> float:
-    """
-    Returns the weighted nominal annual return of mapped assets using their
-    allocated current value as weights. Falls back explicitly when no mapped
-    capital exists.
+    """Return the allocated-value-weighted annual return for mapped assets.
+
+    The fallback is an explicit planning baseline, not an asset-name inference.
     """
     fallback = normalize_annual_return(fallback_return)
     if not mapped_assets:
