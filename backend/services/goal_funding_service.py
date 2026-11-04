@@ -32,10 +32,7 @@ class GoalFundingService:
         if not goal.defined_goal_id:
             raise HTTPException(status_code=409, detail="Defined Goal handoff is missing its identity")
 
-        try:
-            financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
-        except Exception:
-            financial_state = {}
+        financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
         if hasattr(financial_state, "model_dump"):
             financial_state = financial_state.model_dump(mode="json")
         available_monthly_surplus = self._metric_value(financial_state, "investable_surplus_monthly")
