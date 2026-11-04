@@ -167,6 +167,8 @@ class GoalFundingAssessmentRequest(BaseModel):
             raise ValueError("self_money_financing must use the self_money_financing funding path")
         if self.investor_decision is not None and not self.investor_decision_confirmed:
             raise ValueError("Investor decision requires explicit confirmation")
+        if self.investor_decision is None and self.investor_decision_confirmed:
+            raise ValueError("Decision confirmation cannot be true without a selected funding path")
         return self
 
 
