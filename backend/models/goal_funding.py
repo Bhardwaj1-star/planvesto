@@ -34,6 +34,7 @@ class ProjectionEventType(str, Enum):
 class AssetDecision(BaseModel):
     asset_id: str = Field(min_length=1)
     disposition: AssetDisposition
+    assessed_amount: float | None = Field(default=None, ge=0)
     investor_approved: bool = False
     available_on: date | None = None
     liquidity_notes: str | None = None
