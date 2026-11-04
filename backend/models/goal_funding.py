@@ -45,11 +45,11 @@ class AssetDecision(BaseModel):
 
 class FinancingEvidence(BaseModel):
     lender_or_source: str | None = None
-    amount: float | None = Field(default=None, ge=0)
+    amount: float | None = Field(default=None, gt=0)
     drawdown_date: date | None = None
     annual_interest_rate: float | None = Field(default=None, ge=0, le=100, description="Annual interest rate in percent, e.g. 8.5")
     tenure_months: int | None = Field(default=None, ge=1)
-    emi: float | None = Field(default=None, ge=0)
+    emi: float | None = Field(default=None, gt=0)
     processing_fees: float | None = Field(default=None, ge=0)
     other_costs: float | None = Field(default=None, ge=0)
     total_financing_cost: float | None = Field(default=None, ge=0, description="Total evidenced financing cost over the full repayment term, including applicable fees and charges.")
