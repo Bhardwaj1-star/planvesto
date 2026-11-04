@@ -32,7 +32,10 @@ class GoalFundingService:
         if not goal.defined_goal_id:
             raise HTTPException(status_code=409, detail="Defined Goal handoff is missing its identity")
 
-        financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
+        try:
+            financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
+        except Exception:
+            financial_state = {}
         if hasattr(financial_state, "model_dump"):
             financial_state = financial_state.model_dump(mode="json")
         available_monthly_surplus = self._metric_value(financial_state, "investable_surplus_monthly")
@@ -57,6 +60,8 @@ class GoalFundingService:
         for path in (request.self_money, request.self_money_financing):
             if path.self_money_requirement is None and not path.step_3_requirement_changed:
                 path.self_money_requirement = goal.funding_gap
+            elif path.self_money_requirement is not None and not path.step_3_requirement_changed and abs(path.self_money_requirement - goal.funding_gap) > 0.01:
+                raise HTTPException(status_code=409, detail="Self-money requirement differs from Chapter 10; submit approved asset decisions for Goal Planner recalculation first.")
         handoff = {
             "defined_goal_id": goal.defined_goal_id,
             "defined_goal_version": goal.version,
