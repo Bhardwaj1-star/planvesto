@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Header, HTTPException, Query
-from api.auth import authenticate_user, verify_goal_ownership, verify_planning_unit_ownership
+from api.auth import authenticate_user, verify_assets_ownership, verify_goal_ownership, verify_planning_unit_ownership
 from models.goal_funding import GoalFundingAssessment
 from schemas.goal_funding import GoalFundingAssessmentRequest
 from services.goal_funding_service import GoalFundingService
@@ -11,6 +11,9 @@ router = APIRouter(prefix="/api/goal-funding", tags=["Goal Funding Strategy"])
 def assess_goal_funding(request: GoalFundingAssessmentRequest, authorization: str | None = Header(default=None)):
     user_id = authenticate_user(authorization)
     verify_goal_ownership(request.planning_unit_id, request.goal_id, user_id)
+    asset_ids = list({decision.asset_id for path in (request.self_money, request.self_money_financing) for decision in path.asset_decisions})
+    if asset_ids:
+        verify_assets_ownership(request.planning_unit_id, asset_ids, user_id)
     try:
         return GoalFundingService().assess(request)
     except ValueError as exc:
