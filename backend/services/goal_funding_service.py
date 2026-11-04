@@ -47,10 +47,14 @@ class GoalFundingService:
                     raise HTTPException(status_code=422, detail=f"Assessed amount for asset {decision.asset_id} exceeds the amount mapped to this goal.")
                 if mapped_asset and (decision.disposition.value == "reallocate" or (decision.assessed_amount is not None and decision.assessed_amount < mapped_asset.allocated_amount - 0.01)):
                     path.step_3_requirement_changed = True
-                if decision.asset_id in mapped_ids and decision.available_on and (decision.available_on.year, decision.available_on.month) > (goal.target_year, goal.target_month):
+                if decision.available_on and (decision.available_on.year, decision.available_on.month) > (goal.target_year, goal.target_month):
                     raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available in the goal funding month.")
                 if not decision.risk_suitability_assessment:
                     raise HTTPException(status_code=422, detail=f"Risk suitability assessment is required for asset {decision.asset_id}.")
+
+        financing_drawdown = request.self_money_financing.financing.drawdown_date if request.self_money_financing.financing else None
+        if financing_drawdown and (financing_drawdown.year, financing_drawdown.month) > (goal.target_year, goal.target_month):
+            raise HTTPException(status_code=422, detail="Financing drawdown must be available by the goal funding month.")
 
         entry_route = "steps_1_to_3_then_step_4" if mapped_ids else "step_4_direct"
         for path in (request.self_money, request.self_money_financing):
