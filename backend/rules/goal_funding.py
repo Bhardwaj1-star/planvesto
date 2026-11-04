@@ -59,8 +59,21 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         years = sorted(position.year for position in path.yearly_positions)
         if len(years) != len(set(years)):
             issues.append("Year-by-year projection contains duplicate calendar years.")
+        for position in path.yearly_positions:
+            required_values = ("opening_balance", "contributions", "investment_growth", "financing_drawdowns", "repayments", "goal_payments", "closing_balance", "shortfall", "surplus")
+            if any(getattr(position, key) is None for key in required_values):
+                issues.append(f"Year {position.year} is missing one or more explicit funding-position values; use zero only when evidenced as zero.")
+            if not position.evidence_references:
+                issues.append(f"Year {position.year} has no supporting evidence references.")
     if not path.projection_events:
         issues.append("Dated contribution, growth, financing/repayment and goal-payment events are missing.")
+    for event in path.projection_events:
+        if not event.source_reference:
+            issues.append(f"Source evidence is missing for projection event on {event.event_date} ({event.event_type.value}).")
+    if path.path == FundingPath.SELF_MONEY_FINANCING and path.financing and (path.financing.amount or 0) > 0:
+        event_types = {event.event_type.value for event in path.projection_events}
+        if "financing" not in event_types or "repayment" not in event_types:
+            issues.append("Financing path requires dated financing drawdown and repayment events.")
     if not path.calculation_evidence.get("source_snapshot_id"):
         issues.append("Projection source snapshot is missing.")
     if not path.calculation_evidence.get("calculation_version"):
@@ -69,6 +82,8 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         issues.append("Daily dated cash-flow calculation method/day-count convention is not yet approved in Chapter 05; projection cannot be marked authoritative.")
     if path.investment_plan is None:
         issues.append("Investment planning evidence is missing.")
+    elif not path.investment_plan.proposed_allocation or not path.investment_plan.assumptions or not path.investment_plan.risks or not path.investment_plan.costs or not path.investment_plan.trade_offs:
+        issues.append("Investment allocation, assumptions, risks, costs and trade-offs must be explicitly assessed; use an explicit none/zero statement where applicable.")
     if not path.goal_payments:
         issues.append("Goal payment and withdrawal matching evidence is missing.")
     for payment in path.goal_payments:
