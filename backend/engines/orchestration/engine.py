@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 from engines.allocation.engine import ResourceAllocationEngine
 from rules.multi_goal import get_priority_rank
 from rules.goals import GoalPriority
@@ -46,7 +46,6 @@ class MultiGoalOrchestrator:
         self,
         goals: list[GoalEvaluationInput],
         financial_context: dict[str, Any] | None = None,
-        strategy_evaluator: Callable[[GoalEvaluationInput, dict[str, Any]], dict[str, Any]] | None = None,
         rule_overrides: dict[str, dict[str, Any]] | None = None,
     ) -> MultiGoalPlanResult:
         """Executes multi-goal orchestration across competing goals and resources."""
@@ -61,21 +60,18 @@ class MultiGoalOrchestrator:
         surplus_val = context.get("monthly_surplus")
         available_surplus = float(surplus_val) if surplus_val is not None else None
 
-        # Step 1: Evaluate each goal independently (reuse StrategyEngine or evaluator)
-        evaluated_goals: list[tuple[GoalEvaluationInput, dict[str, Any]]] = []
-        for g in goals:
-            strat_info = dict(g.metadata or {})
-            if strategy_evaluator:
-                strat_info.update(strategy_evaluator(g, context))
-            evaluated_goals.append((g, strat_info))
+        # Step 1: Consume the current Goal Planner snapshot for each goal.
+        evaluated_goals: list[tuple[GoalEvaluationInput, dict[str, Any]]] = [
+            (goal, dict(goal.metadata or {})) for goal in goals
+        ]
 
         # Step 2: Resolve priorities & prepare allocation payload
         allocation_items: list[dict[str, Any]] = []
-        strat_map: dict[str, dict[str, Any]] = {}
+        goal_context_map: dict[str, dict[str, Any]] = {}
 
         for g, s_info in evaluated_goals:
-            req_contrib = float(g.required_monthly_contribution or s_info.get("required_monthly_contribution", 0.0))
-            strat_map[g.goal_id] = s_info
+            req_contrib = float(g.required_monthly_contribution or goal_info.get("required_monthly_contribution", 0.0))
+            goal_context_map[g.goal_id] = s_info
 
             resolved_p, override_applied, override_reason = self.resolve_goal_priority(
                 g, context, rule_overrides
@@ -118,7 +114,7 @@ class MultiGoalOrchestrator:
         rank_map = {item["goal_id"]: item["priority_rank"] for item in allocation_items}
 
         for item in alloc_result.allocations:
-            s_info = strat_map.get(item.goal_id, {})
+            goal_info = goal_context_map.get(item.goal_id, {})
             reasons = list(s_info.get("reasons", []))
             if item.override_applied and item.override_reason:
                 reasons.append(f"Priority Adjusted: {item.override_reason}")
