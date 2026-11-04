@@ -46,6 +46,8 @@ class GoalFundingService:
                 mapped_asset = mapped_assets.get(decision.asset_id)
                 if mapped_asset and decision.assessed_amount is not None and decision.assessed_amount > mapped_asset.allocated_amount + 0.01:
                     raise HTTPException(status_code=422, detail=f"Assessed amount for asset {decision.asset_id} exceeds the amount mapped to this goal.")
+                if mapped_asset and (decision.disposition.value == "reallocate" or (decision.assessed_amount is not None and decision.assessed_amount < mapped_asset.allocated_amount - 0.01)):
+                    path.step_3_requirement_changed = True
                 if decision.asset_id in mapped_ids and decision.available_on and decision.available_on > goal_funding_date:
                     raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available by the goal funding date.")
                 if not decision.risk_suitability_assessment:
@@ -102,6 +104,8 @@ class GoalFundingService:
                 )
 
         status = "insufficient_evidence" if comparison["status"] != "comparable" else "ready_for_investor_review"
+        if request.investor_decision is not None and status != "ready_for_investor_review":
+            raise HTTPException(status_code=409, detail="A funding path decision cannot be recorded until both paths have sufficient comparable evidence.")
         assessment = GoalFundingAssessment(
             planning_unit_id=request.planning_unit_id,
             goal_id=request.goal_id,
