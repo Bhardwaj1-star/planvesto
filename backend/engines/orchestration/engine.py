@@ -133,16 +133,16 @@ class MultiGoalOrchestrator:
                 funding_status=item.funding_status,
                 feasibility_status=item.feasibility_status,
                 today_cost=goal_info.get("today_cost"),
-                future_target=s_info.get("future_target"),
-                funding_gap=s_info.get("funding_gap"),
-                projected_mapped_asset_value=s_info.get("projected_mapped_asset_value"),
-                funding_return_assumption=s_info.get("funding_return_assumption"),
-                available_monthly_surplus=s_info.get("available_monthly_surplus"),
-                funding_options=s_info.get("funding_options", []),
+                future_target=goal_info.get("future_target"),
+                funding_gap=goal_info.get("funding_gap"),
+                projected_mapped_asset_value=goal_info.get("projected_mapped_asset_value"),
+                funding_return_assumption=goal_info.get("funding_return_assumption"),
+                available_monthly_surplus=goal_info.get("available_monthly_surplus"),
+                funding_options=goal_info.get("funding_options", []),
                 override_applied=item.override_applied,
                 override_reason=item.override_reason,
                 reasons=reasons,
-                notes=s_info.get("notes", []) + ([item.allocation_reasoning] if item.allocation_reasoning else []),
+                notes=goal_info.get("notes", []) + ([item.allocation_reasoning] if item.allocation_reasoning else []),
             )
             goal_resolutions.append(res)
 
