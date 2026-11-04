@@ -86,13 +86,21 @@ class GoalFundingService:
         if financing and available_monthly_surplus is None:
             finance_evidence["issues"].append("Current Available Monthly Surplus is unavailable; financing repayment capacity cannot be assessed.")
             finance_evidence["status"] = "insufficient_evidence"
-        elif financing and financing.emi is not None and available_monthly_surplus is not None and financing.emi > max(0.0, float(available_monthly_surplus)):
+        elif financing and available_monthly_surplus is not None and float(available_monthly_surplus) <= 0:
+            finance_evidence["issues"].append("Current Available Monthly Surplus is zero or negative; financing repayment capacity is not established.")
+            finance_evidence["status"] = "insufficient_evidence"
+        elif financing and financing.emi is not None and available_monthly_surplus is not None and financing.emi > float(available_monthly_surplus):
             finance_evidence["issues"].append("Proposed EMI exceeds current Available Monthly Surplus; repayment capacity is not established.")
             finance_evidence["status"] = "insufficient_evidence"
 
         comparison = compare_funding_paths(
             request.self_money, request.self_money_financing, self_evidence, finance_evidence
         )
+        comparison["repayment_capacity_context"] = {
+            "available_monthly_surplus": available_monthly_surplus,
+            "existing_monthly_debt_payments": monthly_debt_payments,
+            "proposed_monthly_emi": financing.emi if financing else None,
+        }
         for label, path in (
             ("Self Money", request.self_money),
             ("Self Money + Financing", request.self_money_financing),
