@@ -14,12 +14,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from data.goal_repository import GoalRepository
-from data.strategy_repository import StrategyRepository
-from models.strategy import InvestorPriorities
-from services.goal_report_service import GoalReportService
 from rules.multi_goal import get_priority_rank
 from services.multi_goal_planning_service import MultiGoalPlanningService
-from services.strategy_service import StrategyService
 from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
 from report_engine.renderer import CommonPdfRenderer
 from models.moneywheel import MoneywheelResult
@@ -33,21 +29,10 @@ class FinancialPlanService:
     def __init__(
         self,
         goal_repo: GoalRepository | None = None,
-        strategy_repo: StrategyRepository | None = None,
-        strategy_service: StrategyService | None = None,
-        goal_report_service: GoalReportService | None = None,
         multi_goal_service: MultiGoalPlanningService | None = None,
     ):
         self.goal_repo = goal_repo or GoalRepository()
-        self.strategy_repo = strategy_repo or StrategyRepository()
-        self.strategy_service = strategy_service or StrategyService()
-        self.goal_report_service = goal_report_service or GoalReportService()
-        self.multi_goal_service = multi_goal_service or MultiGoalPlanningService(
-            goal_repo=self.goal_repo,
-            strategy_repo=self.strategy_repo,
-            strategy_service=self.strategy_service,
-            goal_report_service=self.goal_report_service,
-        )
+        self.multi_goal_service = multi_goal_service or MultiGoalPlanningService(goal_repo=self.goal_repo)
         # Reports use the same Moneywheel engine/rules as the investor feature.
         # The report path builds an assessment without persisting a second snapshot.
         self.moneywheel_service = MoneywheelService(
@@ -91,7 +76,7 @@ class FinancialPlanService:
     def build_plan(
         self,
         planning_unit_id: str,
-        priorities: InvestorPriorities | None = None,
+        priorities: dict[str, Any] | None = None,
         rule_overrides: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Builds one coherent consolidated financial plan using MultiGoalPlanningService."""
@@ -120,12 +105,9 @@ class FinancialPlanService:
                 "allocated_monthly_contribution": res.allocated_monthly_contribution,
                 "monthly_shortfall": res.shortfall,
                 "funding_status": res.funding_status,
-                "strategy_version_id": res.strategy_version_id,
-                "strategy_id": res.recommended_strategy_id,
-                "strategy_name": res.recommended_strategy_name,
                 "feasibility_status": res.feasibility_status,
                 "available_monthly_surplus": res.available_monthly_surplus,
-                "funding_strategies": res.funding_strategies,
+                "funding_options": res.funding_options,
                 "override_applied": res.override_applied,
                 "override_reason": res.override_reason,
                 "reasons": res.reasons,
