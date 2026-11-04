@@ -57,7 +57,8 @@ class FinancingEvidence(BaseModel):
 
     def missing_terms(self) -> list[str]:
         required = {
-            "lender_or_source": self.lender_or_source,\n            "amount": self.amount,
+            "lender_or_source": self.lender_or_source,
+            "amount": self.amount,
             "drawdown_date": self.drawdown_date,
             "annual_interest_rate": self.annual_interest_rate,
             "tenure_months": self.tenure_months,
