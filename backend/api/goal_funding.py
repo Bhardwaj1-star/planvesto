@@ -4,7 +4,7 @@ from models.goal_funding import GoalFundingAssessment
 from schemas.goal_funding import GoalFundingAssessmentRequest
 from services.goal_funding_service import GoalFundingService
 
-router = APIRouter(prefix="/api/goal-funding", tags=["Goal Funding Strategy"])
+router = APIRouter(prefix="/api/goal-funding", tags=["Goal Funding"])
 
 
 @router.post("/assess", response_model=GoalFundingAssessment)
