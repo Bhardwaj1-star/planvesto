@@ -122,7 +122,6 @@ class MultiGoalPlanningService:
         plan = self.orchestrator.orchestrate(
             goals=inputs,
             financial_context=financial_context,
-            strategy_evaluator=None,
             rule_overrides=effective_overrides,
         )
         for warning in canonical_constraint_set.warnings:
