@@ -59,6 +59,8 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         years = sorted(position.year for position in path.yearly_positions)
         if len(years) != len(set(years)):
             issues.append("Year-by-year projection contains duplicate calendar years.")
+        if years and years != list(range(years[0], years[-1] + 1)):
+            issues.append("Year-by-year projection is missing one or more calendar years.")
         for position in path.yearly_positions:
             required_values = ("opening_balance", "contributions", "investment_growth", "financing_drawdowns", "repayments", "goal_payments", "closing_balance", "shortfall", "surplus")
             if any(getattr(position, key) is None for key in required_values):
@@ -144,7 +146,7 @@ def _path_summary(path: FundingPathAssessment, evidence: dict[str, Any]) -> dict
         "financing_amount": financing_amount,
         "financing_repayment_total": round(repayment_total, 2),
         "financing_fees_and_costs": round(financing_fees, 2),
-        "financing_total_cost": round(max(0.0, repayment_total - financing_amount) + financing_fees, 2) if path.financing else 0.0,
+        "financing_total_cost": path.financing.total_financing_cost if path.financing else 0.0,
         "emi": path.financing.emi if path.financing else None,
         "remaining_corpus": last_year.closing_balance if last_year else None,
         "yearly_shortfalls": [
