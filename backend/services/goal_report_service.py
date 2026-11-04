@@ -551,7 +551,7 @@ class GoalReportService:
                 "feasibility_status", "feasibility_reason", "available_monthly_surplus",
                 "monthly_contribution_surplus_gap", "required_monthly_contribution",
                 "funding_gap", "funding_status", "funding_return_assumption",
-                "funding_strategies",
+                "funding_options",
             )
         }
 
@@ -589,7 +589,7 @@ class GoalReportService:
             },
             "goal_calculation": goal_calculation,
             "feasibility": funding,
-            "funding_solutions": funding.get("funding_strategies") or [],
+            "funding_solutions": funding.get("funding_options") or [],
             # Compatibility aliases retained for consumers of the earlier
             # complete Goal Report contract.
             "goal_funding": funding,
@@ -862,11 +862,11 @@ class GoalReportService:
             story.append(self._table(rows, [200, 323]))
 
         # 4. Funding Solutions
-        funding_strategies = report.get("funding_solutions") or report["feasibility"].get("funding_strategies") or []
+        funding_options = report.get("funding_solutions") or report["feasibility"].get("funding_options") or []
         self._section(story, "4. Goal Funding Solutions Comparison", styles)
-        if funding_strategies:
+        if funding_options:
             rows = [["Solution", "Status", "Lumpsum", "Monthly", "Starting", "Step-up", "Remaining Gap"]]
-            for item in funding_strategies:
+            for item in funding_options:
                 rows.append([
                     Paragraph(str(item.get("strategy_name") or item.get("strategy_id") or self.MISSING), normal),
                     self._label(item.get("status")),
