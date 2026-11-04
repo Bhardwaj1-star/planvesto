@@ -64,8 +64,6 @@ class FinancialPlanService:
             "allocated_monthly_contribution": calc.get("required_monthly_contribution") or 0.0,
             "monthly_shortfall": 0.0,
             "funding_status": calc.get("funding_status"),
-            "strategy_id": report.get("selected_strategy_id") or rec.get("recommended_strategy_id"),
-            "strategy_name": report.get("strategy", {}).get("name"),
             "feasibility_status": rec.get("feasibility_status"),
             "reasoning": rec.get("complete_reasoning"),
             "reasons": rec.get("short_reasons", []),
@@ -189,10 +187,6 @@ class FinancialPlanService:
                     "target_amount": float(r.get("future_target") or r.get("today_cost") or 0.0),
                     "today_cost": r.get("today_cost"),
                     "target_date": r.get("target_date"),
-                    "strategy_version_id": r.get("strategy_version_id"),
-                    "strategy_id": r.get("strategy_id"),
-                    "strategy_name": r.get("strategy_name") or "Recommended Strategy",
-                    "recommended_strategy_name": r.get("strategy_name") or "Recommended Strategy",
                     "monthly_required": float(r.get("required_monthly_contribution") or 0.0),
                     "monthly_allocation": float(r.get("allocated_monthly_contribution") or 0.0),
                     "monthly_shortfall": float(r.get("monthly_shortfall") or 0.0),
@@ -201,17 +195,12 @@ class FinancialPlanService:
                     "funding_status": r.get("funding_status"),
                     "feasibility_status": r.get("feasibility_status"),
                     "available_monthly_surplus": r.get("available_monthly_surplus"),
-                    "funding_strategies": r.get("funding_strategies", []),
+                    "funding_options": r.get("funding_options", []),
                     "is_feasible": r.get("feasibility_status") == "pass",
                     "reasons": r.get("reasons", []),
                     "notes": r.get("notes", []),
                 }
                 for r in rows
-            ],
-            "strategy_versions": [
-                r["strategy_version_id"]
-                for r in rows
-                if r.get("strategy_version_id")
             ],
             "actions": [],
             "action_plan": {
