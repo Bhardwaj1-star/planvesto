@@ -78,7 +78,7 @@ class GoalFundingService:
             finance_evidence["issues"].append("Proposed EMI exceeds current Available Monthly Surplus; repayment capacity is not established.")
             finance_evidence["status"] = "insufficient_evidence"
 
-        comparison = compare_funding_paths(self_evidence, finance_evidence)
+        comparison = compare_funding_paths(\n            request.self_money, request.self_money_financing, self_evidence, finance_evidence\n        )
         for label, path in (
             ("Self Money", request.self_money),
             ("Self Money + Financing", request.self_money_financing),
