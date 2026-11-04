@@ -47,7 +47,10 @@ class GoalFundingService:
                 if not decision.risk_suitability_assessment:
                     raise HTTPException(status_code=422, detail=f"Risk suitability assessment is required for asset {decision.asset_id}.")
 
-        entry_route = "steps_1_to_3_then_step_4" if mapped_ids else "step_4_direct"\n        for path in (request.self_money, request.self_money_financing):\n            if path.self_money_requirement is None and not path.step_3_requirement_changed:\n                path.self_money_requirement = goal.funding_gap
+        entry_route = "steps_1_to_3_then_step_4" if mapped_ids else "step_4_direct"
+        for path in (request.self_money, request.self_money_financing):
+            if path.self_money_requirement is None and not path.step_3_requirement_changed:
+                path.self_money_requirement = goal.funding_gap
         handoff = {
             "defined_goal_id": goal.defined_goal_id,
             "defined_goal_version": goal.version,
