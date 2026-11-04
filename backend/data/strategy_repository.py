@@ -1,4 +1,4 @@
-"""Legacy read repository for historical StrategyRun and StrategyVersion records; new assessments use GoalFundingRepository."""
+"""Legacy StrategyRun/StrategyVersion persistence retained for existing historical reports and Action Plan lineage only; not used by Goal Funding."""
 from typing import Any
 from data.supabase import get_supabase
 from models.strategy import InvestorPriorities, Scenario, StrategyDefinition, StrategyRankingItem, StrategyRecommendation, StrategyRun, StrategyArchitecture
