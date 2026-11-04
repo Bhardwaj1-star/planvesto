@@ -88,7 +88,7 @@ def build_goal_funding_options(
             "required_monthly_contribution": round_money(required_sip),
             "starting_monthly_contribution": round_money(required_sip),
             "annual_step_up": None,
-            "remaining_gap": round_money(max(0.0, gap - sip_future)) if sip_fits else round_money(gap),
+            "remaining_gap": round_money(residual),
             "reason": "Required SIP fits the uncommitted Available Monthly Surplus." if sip_fits else "Required SIP exceeds the uncommitted Available Monthly Surplus.",
         },
         {
