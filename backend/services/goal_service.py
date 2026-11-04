@@ -291,21 +291,6 @@ class GoalService:
         def_id = self.repository.save_defined_goal_snapshot(defined_goal)
         defined_goal.defined_goal_id = def_id
 
-        if is_material and new_version > 1:
-            try:
-                from services.strategy_service import StrategyService
-                StrategyService().on_defined_goal_updated(
-                    planning_unit_id=request.planning_unit_id,
-                    goal_id=goal_id,
-                    new_defined_goal=defined_goal,
-                )
-                defined_goal.version_metadata["strategy_recalculation"] = "succeeded"
-                self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
-            except Exception as exc:
-                logger.error("Automatic strategy recalculation failed for goal %s (version %d): %s", goal_id, new_version, exc, exc_info=True)
-                defined_goal.version_metadata["strategy_recalculation"] = "failed"
-                defined_goal.version_metadata["strategy_recalculation_error"] = str(exc)
-                self.repository.update_defined_goal_metadata(def_id, defined_goal.version_metadata)
         return defined_goal
 
     def get_latest_defined_goal(self, planning_unit_id: str, goal_id: str) -> DefinedGoal:
