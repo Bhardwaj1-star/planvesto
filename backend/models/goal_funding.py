@@ -151,6 +151,18 @@ class FundingPathAssessment(BaseModel):
     step_3_requirement_changed: bool = False
 
     @model_validator(mode="after")
+    def validate_path(self):
+        asset_ids = [item.asset_id for item in self.asset_decisions]
+        if len(asset_ids) != len(set(asset_ids)):
+            raise ValueError("Each asset can have only one decision per funding path")
+        sip_ids = [item.sip_id for item in self.goal_linked_sips]
+        if len(sip_ids) != len(set(sip_ids)):
+            raise ValueError("Goal-linked SIPs must be unique within a funding path")
+        if self.path == FundingPath.SELF_MONEY and self.financing is not None:
+            raise ValueError("Self Money path cannot contain financing terms")
+        return self
+
+    @model_validator(mode="after")
     def financing_only_on_financing_path(self):
         if self.path == FundingPath.SELF_MONEY and self.financing is not None:
             raise ValueError("Self Money path cannot contain financing terms")
