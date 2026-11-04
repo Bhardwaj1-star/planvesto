@@ -84,6 +84,8 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         issues.append("Daily dated cash-flow calculation method/day-count convention is not yet approved in Chapter 05; projection cannot be marked authoritative.")
     if path.investment_plan is None:
         issues.append("Investment planning evidence is missing.")
+    elif not path.investment_plan.techniques_assessed or not path.investment_plan.products_assessed:
+        issues.append("Relevant investment techniques and product options have not both been explicitly assessed; confirm options or explicitly record none suitable.")
     elif not path.investment_plan.proposed_allocation or not path.investment_plan.assumptions or not path.investment_plan.risks or not path.investment_plan.costs or not path.investment_plan.trade_offs:
         issues.append("Investment allocation, assumptions, risks, costs and trade-offs must be explicitly assessed; use an explicit none/zero statement where applicable.")
     if not path.goal_payments:
