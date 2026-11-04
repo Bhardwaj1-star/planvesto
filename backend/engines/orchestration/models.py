@@ -42,16 +42,13 @@ class GoalResolution(BaseModel):
     shortfall: float = 0.0
     funding_status: FundingStatusType = "fully_funded"
     feasibility_status: FeasibilityStatusType = "pass"
-    recommended_strategy_id: str | None = None
-    recommended_strategy_name: str | None = None
-    strategy_version_id: str | None = None
     today_cost: float | None = None
     future_target: float | None = None
     funding_gap: float | None = None
     projected_mapped_asset_value: float | None = None
     funding_return_assumption: float | None = None
     available_monthly_surplus: float | None = None
-    funding_strategies: list[dict[str, Any]] = Field(default_factory=list)
+    funding_options: list[dict[str, Any]] = Field(default_factory=list)
     override_applied: bool = False
     override_reason: str | None = None
     reasons: list[str] = Field(default_factory=list)
