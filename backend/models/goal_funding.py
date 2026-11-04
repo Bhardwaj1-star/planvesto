@@ -162,12 +162,6 @@ class FundingPathAssessment(BaseModel):
             raise ValueError("Self Money path cannot contain financing terms")
         return self
 
-    @model_validator(mode="after")
-    def financing_only_on_financing_path(self):
-        if self.path == FundingPath.SELF_MONEY and self.financing is not None:
-            raise ValueError("Self Money path cannot contain financing terms")
-        return self
-
 
 class GoalFundingAssessmentRequest(BaseModel):
     planning_unit_id: str = Field(min_length=1, max_length=100)
