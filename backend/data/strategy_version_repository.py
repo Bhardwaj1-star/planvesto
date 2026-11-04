@@ -1,4 +1,4 @@
-"""Legacy StrategyVersion read repository retained for existing Action Plan/history records only."""
+"""Legacy StrategyVersion persistence retained for existing historical Action Plan lineage only; not used by Goal Funding."""
 from typing import Any
 
 from models.strategy_version import StrategyVersion
