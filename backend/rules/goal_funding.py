@@ -141,6 +141,7 @@ def _path_summary(path: FundingPathAssessment, evidence: dict[str, Any]) -> dict
         "evidence": evidence,
         "self_money_requirement": path.self_money_requirement,
         "own_money_contributions": round(contributions, 2),
+        "goal_linked_sips": [item.model_dump(mode="json") for item in path.goal_linked_sips],
         "approved_asset_amounts": round(sum(
             decision.assessed_amount or 0 for decision in path.asset_decisions
             if decision.disposition.value == "keep" and decision.investor_approved
