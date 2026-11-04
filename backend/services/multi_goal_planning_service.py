@@ -74,7 +74,7 @@ class MultiGoalPlanningService:
                     "defined_goal_id": defined_goal.defined_goal_id,
                     "defined_goal_version": defined_goal.version,
                     "feasibility_status": defined_goal.feasibility_status,
-                    "funding_options": defined_goal.funding_options,
+                    "funding_options": defined_goal.funding_options,\n                    "projected_mapped_asset_value": defined_goal.projected_mapped_asset_value,\n                    "funding_return_assumption": defined_goal.funding_return_assumption,\n                    "available_monthly_surplus": defined_goal.available_monthly_surplus,\n                    "feasibility_status": {"feasible": "pass", "constrained": "conditional", "infeasible": "infeasible", "unknown": "conditional"}.get(defined_goal.feasibility_status, "conditional"),\n                    "notes": [defined_goal.feasibility_reason] if defined_goal.feasibility_reason else [],
                 },
             ))
 
