@@ -6,7 +6,7 @@ from data.goal_repository import GoalRepository
 from data.financial_state_repository import FinancialStateSnapshotRepository
 from data.supabase import get_supabase
 from engines.goal.engine import GoalEngine
-from engines.goal.funding_strategies import build_goal_funding_options
+from engines.goal.funding_options import build_goal_funding_options
 from models.defined_goal import DefinedGoal, DefinedGoalVersionSummary
 from models.orchestration import (
     ModuleAvailability,
