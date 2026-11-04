@@ -201,7 +201,7 @@ class GoalService:
                 missing_data=self._missing_surplus_inputs(state),
             )
 
-        surplus = max(0.0, float(surplus))
+        surplus = float(surplus)
         required = max(0.0, float(defined_goal.required_monthly_contribution))
         funding_options = build_goal_funding_options(
             funding_gap=defined_goal.funding_gap,
