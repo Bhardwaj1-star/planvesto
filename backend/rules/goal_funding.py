@@ -40,6 +40,8 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
             issues.append(f"Risk suitability assessment is missing for asset {decision.asset_id}.")
         if not decision.competing_goal_notes:
             issues.append(f"Competing-goal commitment assessment is missing for asset {decision.asset_id}.")
+        if not decision.restrictions_assessed:
+            issues.append(f"Restrictions have not been explicitly assessed for asset {decision.asset_id}.")
 
     if not path.goal_linked_sips_assessed:
         issues.append("Existing goal-linked SIPs have not been assessed; confirm the list or explicitly confirm none.")
