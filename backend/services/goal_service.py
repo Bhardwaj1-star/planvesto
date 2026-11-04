@@ -211,31 +211,41 @@ class GoalService:
         )
         defined_goal.funding_options = funding_options
         contribution_gap = round(required - surplus, 2)
+        required_surplus_increase_pct = (
+            round((contribution_gap / surplus) * 100.0, 2) if surplus > 0 and contribution_gap > 0 else None
+        )
         defined_goal.available_monthly_surplus = surplus
         defined_goal.monthly_contribution_surplus_gap = contribution_gap
 
+        # Fund Feasibility is one test across supported methods, not a verdict
+        # that the entire goal is impossible when SIP affordability fails.
         if defined_goal.funding_gap <= 0:
             status = "feasible"
-            reason = "The mapped assets already cover the target-date requirement."
-        elif required <= surplus:
+            reason = "Eligible mapped assets already cover the target-date requirement."
+        elif required <= max(0.0, surplus):
             status = "feasible"
-            reason = "The required monthly contribution fits within the current investable surplus."
-        elif surplus > 0:
-            status = "constrained"
-            reason = "The goal requires a higher monthly contribution than the current investable surplus."
+            reason = "The required additional monthly contribution fits within the uncommitted Available Monthly Surplus."
         else:
-            status = "infeasible"
-            reason = "There is currently no investable monthly surplus available for the funding gap."
+            status = "constrained"
+            reason = (
+                "The required monthly contribution exceeds the uncommitted Available Monthly Surplus. "
+                "Assess investor-approved goal changes or supported funding-capacity alternatives."
+            )
 
         defined_goal.feasibility_status = status
         defined_goal.feasibility_reason = reason
         defined_goal.version_metadata["goal_feasibility"] = {
+            "test": "fund_feasibility",
             "status": status,
             "available_monthly_surplus": surplus,
             "required_monthly_contribution": required,
             "monthly_contribution_surplus_gap": contribution_gap,
+            "required_surplus_increase_amount": max(0.0, contribution_gap),
+            "required_surplus_increase_pct": required_surplus_increase_pct,
+            "surplus_basis": "Financial State investable_surplus_monthly; negative values are preserved.",
             "reason": reason,
             "funding_options": funding_options,
+            "investor_decision_required_for_changes": True,
         }
         return self._attach_workflow_readiness(defined_goal, available=True)
 
