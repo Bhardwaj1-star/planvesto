@@ -1,4 +1,3 @@
-from datetime import date
 from fastapi import HTTPException
 from data.goal_repository import GoalRepository
 from data.goal_funding_repository import GoalFundingRepository
@@ -40,7 +39,6 @@ class GoalFundingService:
         monthly_debt_payments = self._metric_value(financial_state, "emi_burden_monthly")
 
         mapped_ids = {asset.asset_id for asset in goal.mapped_assets}
-        goal_funding_date = date(goal.target_year, goal.target_month, 1)
         mapped_assets = {asset.asset_id: asset for asset in goal.mapped_assets}
         for path in (request.self_money, request.self_money_financing):
             for decision in path.asset_decisions:
@@ -49,8 +47,8 @@ class GoalFundingService:
                     raise HTTPException(status_code=422, detail=f"Assessed amount for asset {decision.asset_id} exceeds the amount mapped to this goal.")
                 if mapped_asset and (decision.disposition.value == "reallocate" or (decision.assessed_amount is not None and decision.assessed_amount < mapped_asset.allocated_amount - 0.01)):
                     path.step_3_requirement_changed = True
-                if decision.asset_id in mapped_ids and decision.available_on and decision.available_on > goal_funding_date:
-                    raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available by the goal funding date.")
+                if decision.asset_id in mapped_ids and decision.available_on and (decision.available_on.year, decision.available_on.month) > (goal.target_year, goal.target_month):
+                    raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available in the goal funding month.")
                 if not decision.risk_suitability_assessment:
                     raise HTTPException(status_code=422, detail=f"Risk suitability assessment is required for asset {decision.asset_id}.")
 
@@ -73,6 +71,7 @@ class GoalFundingService:
             "funding_status": goal.funding_status,
             "feasibility_status": goal.feasibility_status,
             "required_monthly_contribution": goal.required_monthly_contribution,
+            "funding_options": goal.funding_options,
             "funding_return_assumption": goal.funding_return_assumption,
             "mapped_assets": [item.model_dump(mode="json") for item in goal.mapped_assets],
             "available_monthly_surplus": available_monthly_surplus,
