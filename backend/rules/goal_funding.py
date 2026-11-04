@@ -17,15 +17,32 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
                 f"Financing evidence is missing: {name}."
                 for name in path.financing.missing_terms()
             )
+            for index, row in enumerate(path.financing.repayment_schedule, start=1):
+                if not row.get("payment_date") or row.get("amount") is None:
+                    issues.append(f"Financing repayment schedule row {index} requires an actual payment date and amount.")
+
+    supplied_asset_ids = {decision.asset_id for decision in path.asset_decisions}
+    for missing_asset_id in sorted(mapped_asset_ids - supplied_asset_ids):
+        issues.append(f"Mapped asset {missing_asset_id} has not been assessed in this funding path.")
 
     for decision in path.asset_decisions:
         if decision.asset_id not in mapped_asset_ids and not path.unmapped_asset_assessment_permitted:
             issues.append(f"Asset {decision.asset_id} is not mapped to this goal and has not been permitted for assessment.")
-        if decision.disposition == "reallocate" and not decision.investor_approved:
-            issues.append(f"Asset {decision.asset_id} reallocation is proposed but not investor-approved.")
+        if not decision.investor_approved:
+            issues.append(f"Asset decision for {decision.asset_id} is not investor-approved and cannot be counted.")
         if decision.assessed_amount is None:
             issues.append(f"Assessed value is missing for asset {decision.asset_id}.")
+        if decision.available_on is None:
+            issues.append(f"Availability date is missing for asset {decision.asset_id}.")
+        if not decision.liquidity_notes:
+            issues.append(f"Liquidity assessment is missing for asset {decision.asset_id}.")
+        if not decision.risk_suitability_assessment:
+            issues.append(f"Risk suitability assessment is missing for asset {decision.asset_id}.")
+        if not decision.competing_goal_notes:
+            issues.append(f"Competing-goal commitment assessment is missing for asset {decision.asset_id}.")
 
+    if not path.goal_linked_sips_assessed:
+        issues.append("Existing goal-linked SIPs have not been assessed; confirm the list or explicitly confirm none.")
     for sip in path.goal_linked_sips:
         if not sip.confirmed_for_goal:
             issues.append(f"Goal-linked SIP {sip.sip_id} is not confirmed for this goal.")
@@ -34,8 +51,14 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
 
     if path.step_3_requirement_changed:
         issues.append("Approved asset decisions changed the self-money requirement; return to Chapter 10 to recalculate Funding Gap and Required SIP/Lump Sum before projection.")
+    if path.path == FundingPath.SELF_MONEY and any(event.event_type.value in {"financing", "repayment"} for event in path.projection_events):
+        issues.append("Self Money path cannot include financing drawdowns or repayments.")
     if not path.yearly_positions:
         issues.append("Year-by-year funding projection evidence is missing.")
+    else:
+        years = sorted(position.year for position in path.yearly_positions)
+        if len(years) != len(set(years)):
+            issues.append("Year-by-year projection contains duplicate calendar years.")
     if not path.projection_events:
         issues.append("Dated contribution, growth, financing/repayment and goal-payment events are missing.")
     if not path.calculation_evidence.get("source_snapshot_id"):
@@ -48,6 +71,9 @@ def assess_path_evidence(path: FundingPathAssessment, mapped_asset_ids: set[str]
         issues.append("Investment planning evidence is missing.")
     if not path.goal_payments:
         issues.append("Goal payment and withdrawal matching evidence is missing.")
+    for payment in path.goal_payments:
+        if payment.net_proceeds is None or payment.costs_and_taxes is None or payment.remaining_asset_value is None or not payment.expected_source or not payment.liquidity_notes or not payment.cross_goal_impact:
+            issues.append(f"Payment source, net proceeds, costs/taxes, remaining asset value, liquidity and cross-goal impact are incomplete for payment on {payment.payment_date}.")
     if not path.monitoring_notes:
         issues.append("Monitoring evidence is missing.")
     if not path.contingency_options:
@@ -94,6 +120,7 @@ def _path_summary(path: FundingPathAssessment, evidence: dict[str, Any]) -> dict
     last_year = max(path.yearly_positions, key=lambda row: row.year) if path.yearly_positions else None
     return {
         "evidence": evidence,
+        "self_money_requirement": path.self_money_requirement,
         "own_money_contributions": round(contributions, 2),
         "approved_asset_amounts": round(sum(
             decision.assessed_amount or 0 for decision in path.asset_decisions
