@@ -1,3 +1,4 @@
+"""Legacy read models retained only for historical StrategyRun snapshots; not used by the two-path Goal Funding workflow."""
 from dataclasses import dataclass, field
 from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
