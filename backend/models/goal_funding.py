@@ -64,6 +64,8 @@ class FinancingEvidence(BaseModel):
             "annual_interest_rate": self.annual_interest_rate,
             "tenure_months": self.tenure_months,
             "emi": self.emi,
+            "processing_fees": self.processing_fees,
+            "other_costs": self.other_costs,
             "total_financing_cost": self.total_financing_cost,
             "repayment_schedule": self.repayment_schedule or None,
             "evidence_reference": self.evidence_reference,
