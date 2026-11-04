@@ -1,6 +1,9 @@
+from datetime import date
 from fastapi import HTTPException
 from data.goal_repository import GoalRepository
 from data.goal_funding_repository import GoalFundingRepository
+from data.financial_state_repository import FinancialStateSnapshotRepository
+from services.financial_state_service import FinancialStateService
 from models.goal_funding import GoalFundingAssessment, GoalFundingAssessmentRequest
 from rules.goal_funding import assess_path_evidence, compare_funding_paths
 
@@ -9,6 +12,16 @@ class GoalFundingService:
     def __init__(self):
         self.goals = GoalRepository()
         self.repository = GoalFundingRepository()
+        self.financial_state_service = FinancialStateService(
+            snapshot_repository=FinancialStateSnapshotRepository()
+        )
+
+    @staticmethod
+    def _metric_value(state, key):
+        value = state.get(key) if isinstance(state, dict) else None
+        if isinstance(value, dict):
+            return value.get("value")
+        return getattr(value, "value", value)
 
     def assess(self, request: GoalFundingAssessmentRequest) -> GoalFundingAssessment:
         goal = self.goals.get_defined_goal_by_version(
@@ -19,7 +32,21 @@ class GoalFundingService:
         if not goal.defined_goal_id:
             raise HTTPException(status_code=409, detail="Defined Goal handoff is missing its identity")
 
+        financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
+        if hasattr(financial_state, "model_dump"):
+            financial_state = financial_state.model_dump(mode="json")
+        available_monthly_surplus = self._metric_value(financial_state, "investable_surplus_monthly")
+        monthly_debt_payments = self._metric_value(financial_state, "emi_burden_monthly")
+
         mapped_ids = {asset.asset_id for asset in goal.mapped_assets}
+        goal_funding_date = date(goal.target_year, goal.target_month, 1)
+        for path in (request.self_money, request.self_money_financing):
+            for decision in path.asset_decisions:
+                if decision.asset_id in mapped_ids and decision.available_on and decision.available_on > goal_funding_date:
+                    raise HTTPException(status_code=422, detail=f"Asset {decision.asset_id} is not available by the goal funding date.")
+                if not decision.risk_suitability_assessment:
+                    raise HTTPException(status_code=422, detail=f"Risk suitability assessment is required for asset {decision.asset_id}.")
+
         entry_route = "steps_1_to_3_then_step_4" if mapped_ids else "step_4_direct"
         handoff = {
             "defined_goal_id": goal.defined_goal_id,
@@ -36,14 +63,22 @@ class GoalFundingService:
             "required_monthly_contribution": goal.required_monthly_contribution,
             "funding_return_assumption": goal.funding_return_assumption,
             "mapped_assets": [item.model_dump(mode="json") for item in goal.mapped_assets],
+            "available_monthly_surplus": available_monthly_surplus,
+            "monthly_debt_payments": monthly_debt_payments,
             "version_metadata": goal.version_metadata,
         }
+
         self_evidence = assess_path_evidence(request.self_money, mapped_ids)
         finance_evidence = assess_path_evidence(request.self_money_financing, mapped_ids)
-        comparison = compare_funding_paths(self_evidence, finance_evidence)
+        financing = request.self_money_financing.financing
+        if financing and available_monthly_surplus is None:
+            finance_evidence["issues"].append("Current Available Monthly Surplus is unavailable; financing repayment capacity cannot be assessed.")
+            finance_evidence["status"] = "insufficient_evidence"
+        elif financing and financing.emi is not None and available_monthly_surplus is not None and financing.emi > max(0.0, float(available_monthly_surplus)):
+            finance_evidence["issues"].append("Proposed EMI exceeds current Available Monthly Surplus; repayment capacity is not established.")
+            finance_evidence["status"] = "insufficient_evidence"
 
-        # Step 3 is deliberately a hand-back to Goal Planner. Strategy does not
-        # calculate a replacement Required SIP or Required Lump Sum.
+        comparison = compare_funding_paths(self_evidence, finance_evidence)
         for label, path in (
             ("Self Money", request.self_money),
             ("Self Money + Financing", request.self_money_financing),
