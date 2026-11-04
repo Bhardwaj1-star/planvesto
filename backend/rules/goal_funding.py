@@ -96,7 +96,8 @@ def _path_summary(path: FundingPathAssessment, evidence: dict[str, Any]) -> dict
         ), 2),
         "financing_amount": financing_amount,
         "financing_repayment_total": round(repayment_total, 2),
-        "financing_fees_and_costs": round(financing_fees, 2),\n        "financing_total_cost": round(max(0.0, repayment_total - financing_amount) + financing_fees, 2) if path.financing else 0.0,
+        "financing_fees_and_costs": round(financing_fees, 2),
+        "financing_total_cost": round(max(0.0, repayment_total - financing_amount) + financing_fees, 2) if path.financing else 0.0,
         "emi": path.financing.emi if path.financing else None,
         "remaining_corpus": last_year.closing_balance if last_year else None,
         "yearly_shortfalls": [
