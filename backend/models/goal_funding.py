@@ -52,6 +52,7 @@ class FinancingEvidence(BaseModel):
     emi: float | None = Field(default=None, ge=0)
     processing_fees: float | None = Field(default=None, ge=0)
     other_costs: float | None = Field(default=None, ge=0)
+    total_financing_cost: float | None = Field(default=None, ge=0, description="Total evidenced financing cost over the full repayment term, including applicable fees and charges.")
     repayment_schedule: list[dict[str, Any]] = Field(default_factory=list)
     evidence_reference: str | None = None
 
@@ -63,6 +64,7 @@ class FinancingEvidence(BaseModel):
             "annual_interest_rate": self.annual_interest_rate,
             "tenure_months": self.tenure_months,
             "emi": self.emi,
+            "total_financing_cost": self.total_financing_cost,
             "repayment_schedule": self.repayment_schedule or None,
             "evidence_reference": self.evidence_reference,
         }
