@@ -152,6 +152,9 @@ def _path_summary(path: FundingPathAssessment, evidence: dict[str, Any]) -> dict
             for row in path.yearly_positions if row.shortfall and row.shortfall > 0
         ],
         "goal_payments": [item.model_dump(mode="json") for item in path.goal_payments],
+        "investment_plan": path.investment_plan.model_dump(mode="json") if path.investment_plan else None,
+        "assumptions": path.assumptions,
+        "constraints": path.constraints,
         "liquidity_constraints": [item.liquidity_notes for item in path.asset_decisions if item.liquidity_notes],
         "risks": list(path.investment_plan.risks) if path.investment_plan else [],
         "trade_offs": list(path.investment_plan.trade_offs) if path.investment_plan else [],
