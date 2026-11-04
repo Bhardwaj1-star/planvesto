@@ -32,7 +32,8 @@ class GoalFundingService:
         if not goal.defined_goal_id:
             raise HTTPException(status_code=409, detail="Defined Goal handoff is missing its identity")
 
-        financial_state = self.financial_state_service.current(request.planning_unit_id, "family")
+        financial_snapshot = self.financial_state_service.get_current_snapshot(request.planning_unit_id, "family")
+        financial_state = financial_snapshot.get("financial_state") or {}
         if hasattr(financial_state, "model_dump"):
             financial_state = financial_state.model_dump(mode="json")
         available_monthly_surplus = self._metric_value(financial_state, "investable_surplus_monthly")
@@ -75,7 +76,7 @@ class GoalFundingService:
             "funding_return_assumption": goal.funding_return_assumption,
             "mapped_assets": [item.model_dump(mode="json") for item in goal.mapped_assets],
             "available_monthly_surplus": available_monthly_surplus,
-            "financial_state_snapshot_id": financial_state.get("snapshot_id") if isinstance(financial_state, dict) else None,
+            "financial_state_snapshot_id": financial_snapshot.get("snapshot_id"),
             "monthly_debt_payments": monthly_debt_payments,
             "version_metadata": goal.version_metadata,
         }
