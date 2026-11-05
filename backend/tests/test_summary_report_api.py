@@ -1,16 +1,16 @@
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from main import app
-from models.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
+from schemas.reports.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
 
 
 client = TestClient(app)
 
 
 def test_summary_report_api_endpoints():
-    with patch("api.summary_report.authenticate_user", return_value="user-1"), \
-         patch("api.summary_report.verify_planning_unit_ownership", return_value=True), \
-         patch("api.summary_report.SummaryReportService.generate") as mock_generate:
+    with patch("api.reports.summary_report.authenticate_user", return_value="user-1"), \
+         patch("api.reports.summary_report.verify_planning_unit_ownership", return_value=True), \
+         patch("api.reports.summary_report.SummaryReportService.generate") as mock_generate:
 
         fake_report = SummaryReport(
             financial_snapshot={"annual_income": 1200000.0, "net_worth": 5000000.0},
