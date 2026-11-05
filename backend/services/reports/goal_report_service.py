@@ -9,13 +9,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib import colors
 
-from data.goal_repository import GoalRepository
-from data.strategy_repository import StrategyRepository
-from data.strategy_version_repository import StrategyVersionRepository
-from data.financial_state_repository import FinancialStateSnapshotRepository
-from services.financial_state_service import FinancialStateService
-from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
-from report_engine.renderer import CommonPdfRenderer
+from data.goal_planner.goal_repository import GoalRepository
+from data.strategy_builder.strategy_repository import StrategyRepository
+from data.strategy_builder.strategy_version_repository import StrategyVersionRepository
+from data.financial_state.financial_state_repository import FinancialStateSnapshotRepository
+from services.financial_state.financial_state_service import FinancialStateService
+from rules.shared.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
+from reporting.common_pdf_renderer import CommonPdfRenderer
 
 
 

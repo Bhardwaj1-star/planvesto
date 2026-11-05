@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Header
 from fastapi.responses import Response
 
-from api.auth import authenticate_user, verify_planning_unit_ownership
-from services.basket_report_service import BasketReportService
+from api.shared.auth import authenticate_user, verify_planning_unit_ownership
+from services.reports.basket_report_service import BasketReportService
 
 router = APIRouter(prefix="/api/basket-report", tags=["Goal Basket Reports"])
 

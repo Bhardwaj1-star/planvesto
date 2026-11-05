@@ -9,7 +9,7 @@ from api.action_plan.action_plan import router as action_plan_router
 from api.moneywheel.moneywheel import router as moneywheel_router
 from api.goal_planner.orchestration import router as orchestration_router
 from api.goal_planner.goal_basket import router as goal_basket_router
-from api.goal_planner.basket_report import router as basket_report_router
+from api.reports.basket_report import router as basket_report_router
 from api.diary.diary import router as diary_router
 from api.investor_assessment.profile import router as profile_router
 from api.financial_health_protection.insurance import router as insurance_router

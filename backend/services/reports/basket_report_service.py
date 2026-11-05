@@ -9,12 +9,12 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from data.goal_repository import GoalRepository
-from data.strategy_repository import StrategyRepository
-from services.goal_report_service import GoalReportService
-from rules.multi_goal import get_priority_rank
-from rules.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
-from report_engine.renderer import CommonPdfRenderer
+from data.goal_planner.goal_repository import GoalRepository
+from data.strategy_builder.strategy_repository import StrategyRepository
+from services.reports.goal_report_service import GoalReportService
+from rules.goal_planner.multi_goal import get_priority_rank
+from rules.shared.assumptions import DEFAULT_FUNDING_RETURN_ASSUMPTION, normalize_annual_return
+from reporting.common_pdf_renderer import CommonPdfRenderer
 
 
 class BasketReportService:
