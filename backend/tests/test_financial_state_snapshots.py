@@ -302,7 +302,7 @@ def test_profile_uses_current_financial_state_and_excludes_internal_authority_me
 
 
 def test_four_frequencies_normalization():
-    from engines.calculation.engine import monthly_amount, annual_amount
+    from services.shared.normalisation.amounts import monthly_amount, annual_amount
 
     # Monthly
     assert monthly_amount(12000, "Monthly") == 12000.0

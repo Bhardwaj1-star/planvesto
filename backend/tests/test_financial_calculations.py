@@ -26,7 +26,8 @@ from engines.calculation.canonical import (
     calculate_savings_rate,
     fact_net_worth,
 )
-from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
+from engines.calculation.engine import percentage, round_money
+from services.shared.normalisation.amounts import annual_amount, monthly_amount
 from engines.financial_state.engine import FinancialStateEngine
 from rules.financial_state import (
     cash_flow_ratio,

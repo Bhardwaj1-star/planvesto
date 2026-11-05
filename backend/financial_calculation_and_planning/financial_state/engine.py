@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from engines.calculation.engine import annual_amount, monthly_amount, percentage, round_money
+from engines.calculation.engine import percentage, round_money
+from services.shared.normalisation.amounts import normalise_recurring_amount
 from engines.calculation.canonical import calculate_net_worth
 from models.financial_state import FinancialState, Metric
 from rules.financial_state import MISSING_INPUT
@@ -70,12 +71,12 @@ class FinancialStateEngine:
         available = bool(selected)
         for r in selected:
             amount = float(r.get("amount") or 0)
-            m = monthly_amount(amount, str(r.get("frequency") or ""))
-            a = annual_amount(amount, str(r.get("frequency") or ""))
-            if m is None or a is None:
+            normalised = normalise_recurring_amount(amount, r.get("frequency"))
+            if normalised is None:
                 available = False
                 continue
-            monthly += m; annual += a
+            monthly += normalised.monthly_amount
+            annual += normalised.annual_amount
             breakdown[str(r.get("income_type") or "Other")] += m
         return _Component(monthly, annual, available, None if available else MISSING_INPUT,
                           [{"type": k, "monthly": round_money(v), "annual": round_money(v * 12)} for k, v in breakdown.items()])
@@ -89,10 +90,11 @@ class FinancialStateEngine:
         selected = rows if scope == "family" else [r for r in rows if r.get("expense_id") in factors]
         monthly = 0.0; essential_monthly = 0.0; breakdown = defaultdict(float); available = bool(selected)
         for r in selected:
-            m = monthly_amount(float(r.get("amount") or 0), str(r.get("frequency") or ""))
-            if m is None:
-                available = False; continue
-            m *= factors.get(r.get("expense_id"), 1.0)
+            normalised = normalise_recurring_amount(float(r.get("amount") or 0), r.get("frequency"))
+            if normalised is None:
+                available = False
+                continue
+            m = normalised.monthly_amount * factors.get(r.get("expense_id"), 1.0)
             monthly += m
             if is_essential_expense(r.get("expense_type")):
                 essential_monthly += m
@@ -147,9 +149,11 @@ class FinancialStateEngine:
             payment=r.get("emi_amount")
             if payment is None: emi_available=False
             else:
-                pm=monthly_amount(float(payment), str(r.get("frequency") or ""))
-                if pm is None: emi_available=False
-                else: emi += pm*share
+                normalised_payment = normalise_recurring_amount(float(payment), r.get("frequency"))
+                if normalised_payment is None:
+                    emi_available = False
+                else:
+                    emi += normalised_payment.monthly_amount * share
             breakdown.append({"liability_id":lid,"name":r.get("liability_name"),"outstanding_amount":round_money(owned),"responsibility_applied":round_money(share*100),"classification":None})
         allocation=[{"liability_id":x["liability_id"],"name":x["name"],"percentage":percentage(x["outstanding_amount"],total)} for x in breakdown] if total else []
         return _LiabilityComponent(total,breakdown,allocation,emi if emi_available else None,emi_available)
@@ -169,19 +173,20 @@ class FinancialStateEngine:
             sa = float(r.get("sum_assured") or 0)
             cv = float(r.get("current_value") or 0)
             raw_premium = float(r.get("premium") or 0)
-            freq = str(r.get("premium_frequency") or "Monthly")
-
-            m_prem = monthly_amount(raw_premium, freq)
-            a_prem = annual_amount(raw_premium, freq)
-            if m_prem is None:
-                m_prem = round_money(raw_premium)
-            if a_prem is None:
-                a_prem = round_money(raw_premium * 12)
+            freq = r.get("premium_frequency")
+            normalised_premium = normalise_recurring_amount(raw_premium, freq)
+            m_prem = normalised_premium.monthly_amount if normalised_premium else None
+            a_prem = normalised_premium.annual_amount if normalised_premium else None
+            if normalised_premium is None:
+                # Missing/unsupported frequency is a data-quality issue, not a
+                # reason to assume that the premium is monthly or annual.
+                available = False
 
             total_sa += sa
             total_cv += cv
-            total_m_prem += m_prem
-            total_a_prem += a_prem
+            if m_prem is not None and a_prem is not None:
+                total_m_prem += m_prem
+                total_a_prem += a_prem
 
             breakdown.append({
                 "policy_id": r.get("policy_id"),
@@ -190,8 +195,8 @@ class FinancialStateEngine:
                 "policy_type": r.get("policy_type"),
                 "premium": round_money(raw_premium),
                 "premium_frequency": freq,
-                "premium_monthly": round_money(m_prem),
-                "premium_annual": round_money(a_prem),
+                "premium_monthly": round_money(m_prem) if m_prem is not None else None,
+                "premium_annual": round_money(a_prem) if a_prem is not None else None,
                 "sum_assured": round_money(sa),
                 "current_value": round_money(cv),
                 "maturity_date": r.get("maturity_date"),
