@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from services.reports.basket_report_service import BasketReportService
+from services.basket_report_service import BasketReportService
 
 
 def test_basket_report_service_build_report_and_generate_pdf():

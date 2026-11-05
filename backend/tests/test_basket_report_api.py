@@ -7,9 +7,9 @@ client = TestClient(app)
 
 
 def test_basket_report_api_endpoints():
-    with patch("api.reports.basket_report.authenticate_user", return_value="user-1"), \
-         patch("api.reports.basket_report.verify_planning_unit_ownership", return_value=True), \
-         patch("api.reports.basket_report.BasketReportService") as mock_service_class:
+    with patch("api.basket_report.authenticate_user", return_value="user-1"), \
+         patch("api.basket_report.verify_planning_unit_ownership", return_value=True), \
+         patch("api.basket_report.BasketReportService") as mock_service_class:
 
         mock_instance = MagicMock()
         mock_instance.build_report.return_value = {

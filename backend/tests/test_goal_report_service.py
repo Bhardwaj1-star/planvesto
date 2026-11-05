@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from models.strategy_builder.strategy import (
+from models.strategy import (
     InvestorPriorities,
     Scenario,
     StrategyArchitecture,
@@ -8,15 +8,15 @@ from models.strategy_builder.strategy import (
     StrategyRecommendation,
     StrategyRun,
 )
-from services.reports.goal_report_service import GoalReportService
-from models.strategy_builder.strategy_version import StrategyVersion
+from services.goal_report_service import GoalReportService
+from models.strategy_version import StrategyVersion
 import pytest
 
 
 @pytest.fixture(autouse=True)
 def _financial_state_without_external_data(monkeypatch):
     monkeypatch.setattr(
-        "services.reports.goal_report_service.FinancialStateService.current",
+        "services.goal_report_service.FinancialStateService.current",
         lambda *args, **kwargs: None,
     )
 
