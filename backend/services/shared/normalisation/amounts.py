@@ -40,7 +40,7 @@ class NormalisedRecurringAmount:
     """Derived recurring values with the original input retained for traceability."""
 
     original_amount: float
-    original_frequency: str
+    original_frequency: str | None
     canonical_frequency: str
     monthly_amount: float
     annual_amount: float

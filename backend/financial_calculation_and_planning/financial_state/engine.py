@@ -77,7 +77,7 @@ class FinancialStateEngine:
                 continue
             monthly += normalised.monthly_amount
             annual += normalised.annual_amount
-            breakdown[str(r.get("income_type") or "Other")] += m
+            breakdown[str(r.get("income_type") or "Other")] += normalised.monthly_amount
         return _Component(monthly, annual, available, None if available else MISSING_INPUT,
                           [{"type": k, "monthly": round_money(v), "annual": round_money(v * 12)} for k, v in breakdown.items()])
 

@@ -385,3 +385,30 @@ def test_insurance_fact_and_breakdown_normalization():
     assert b2["current_value"] == 350000.0
     assert b2["premium_annual"] == 100000.0
 
+
+
+def test_insurance_premium_with_unknown_frequency_is_not_assumed_monthly():
+    engine = FinancialStateEngine()
+    state = engine.build(
+        planning_unit_id="pu-test",
+        investors=[{"investor_id": "inv-1"}],
+        income_rows=[],
+        expense_rows=[],
+        asset_rows=[],
+        liability_rows=[],
+        asset_owner_rows=[],
+        liability_responsibility_rows=[],
+        expense_participant_rows=[],
+        insurance_rows=[{
+            "policy_id": "pol-unknown",
+            "premium": 12000,
+            "premium_frequency": "Weekly",
+            "sum_assured": 1000000,
+        }],
+        scope="family",
+    )
+
+    assert state.total_insurance_monthly_premium.available is False
+    assert state.total_insurance_annual_premium.available is False
+    assert state.insurance_breakdown[0]["premium_monthly"] is None
+    assert state.insurance_breakdown[0]["premium_annual"] is None
