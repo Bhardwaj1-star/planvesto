@@ -2,20 +2,20 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
-from data.goal_repository import GoalRepository
-from data.financial_state_repository import FinancialStateSnapshotRepository
-from data.moneywheel_repository import MoneywheelRepository
-from services.financial_state_service import FinancialStateService
-from services.moneywheel_service import MoneywheelService
-from engines.risk_profiler.engine import RiskProfilerEngine
-from models.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
+from data.goal_planner.goal_repository import GoalRepository
+from data.financial_state.financial_state_repository import FinancialStateSnapshotRepository
+from data.moneywheel.moneywheel_repository import MoneywheelRepository
+from services.financial_state.financial_state_service import FinancialStateService
+from services.moneywheel.moneywheel_service import MoneywheelService
+from financial_calculation_and_planning.risk_profiler.engine import RiskProfilerEngine
+from schemas.reports.summary_report import SummaryReport, GoalSummary, Observation, ActionItem
 
 logger = logging.getLogger(__name__)
 
 
-class SummaryReportEngine:
+class SummaryReportBuilder:
     """Aggregates canonical outputs from the core engines into a SummaryReport.
-    The engine is deliberately lightweight – it does not re‑calculate any
+    The builder is deliberately lightweight – it does not re‑calculate any
     financial fact, it only consumes the canonical outputs.
     """
 

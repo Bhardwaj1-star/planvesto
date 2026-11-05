@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Header, Response
 from fastapi.responses import JSONResponse
-from services.summary_report_service import SummaryReportService
-from api.auth import authenticate_user, verify_planning_unit_ownership
+from services.reports.summary_report_service import SummaryReportService
+from api.shared.auth import authenticate_user, verify_planning_unit_ownership
 
 router = APIRouter(prefix="/api/summary-report", tags=["Summary Financial Planning Report"])
 
@@ -34,7 +34,7 @@ def get_summary_report_pdf(
     verify_planning_unit_ownership(planning_unit_id, user_id)
     # Use the real PDF renderer
     report = SummaryReportService.generate(planning_unit_id)
-    from services.summary_report_renderer import SummaryReportRenderer
+    from services.reports.summary_report_renderer import SummaryReportRenderer
     pdf_bytes = SummaryReportRenderer().render(report)
     return Response(
         content=pdf_bytes,

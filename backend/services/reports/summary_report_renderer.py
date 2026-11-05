@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 from reportlab.platypus import Paragraph, Spacer
-from models.summary_report import SummaryReport
-from report_engine.renderer import CommonPdfRenderer
+from schemas.reports.summary_report import SummaryReport
+from reporting.common_pdf_renderer import CommonPdfRenderer
 
 
 class SummaryReportRenderer:

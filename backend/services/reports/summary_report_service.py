@@ -1,6 +1,6 @@
 import logging
-from engines.summary_report.engine import SummaryReportEngine
-from models.summary_report import SummaryReport
+from services.reports.summary_report_builder import SummaryReportBuilder
+from schemas.reports.summary_report import SummaryReport
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,6 @@ class SummaryReportService:
     @staticmethod
     def generate(planning_unit_id: str) -> SummaryReport:
         logger.info("Generating summary report for planning unit %s", planning_unit_id)
-        engine = SummaryReportEngine(planning_unit_id)
+        engine = SummaryReportBuilder(planning_unit_id)
         report = engine.build_report()
         return report
