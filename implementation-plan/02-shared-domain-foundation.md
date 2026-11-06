@@ -407,7 +407,7 @@ Chapter 04 Financial State facts, provenance, ownership/access, history और d
 
 ## 11. Step 2 acceptance checklist
 
-- [ ] Chapter 03, 04, 05 और 06 के relevant contracts पढ़े और source references दर्ज किए गए।
+- [ ] Chapter 03, 04, 05 और 06 के relevant contracts इस plan में embedded हैं और implementation के लिए स्पष्ट हैं।
 - [ ] Existing canonical IDs, categories, measurements, formulas और constraints का code inventory तैयार है।
 - [ ] Confirmed canonical vocabulary सही target domain area में रखी गई है।
 - [ ] केवल source-defined और sufficiently specified calculations migrate की गई हैं।
