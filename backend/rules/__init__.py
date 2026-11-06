@@ -15,7 +15,6 @@ from rules import goals
 from rules import moneywheel
 from rules import multi_goal
 from rules import protection
-from rules import strategy_decision
 
 __all__ = [
     "action_plan",
@@ -29,5 +28,4 @@ __all__ = [
     "moneywheel",
     "multi_goal",
     "protection",
-    "strategy_decision",
 ]

@@ -1,12 +1,9 @@
-from supabase import Client, create_client
+"""Supabase client bridge preserving legacy get_supabase() signature."""
 
-from config.settings import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
+from supabase import Client
+from app.infrastructure.providers.supabase.client import get_supabase_client
 
-_client: Client | None = None
+# Maintain legacy get_supabase accessor
+get_supabase = get_supabase_client
 
-
-def get_supabase() -> Client:
-    global _client
-    if _client is None:
-        _client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    return _client
+__all__ = ["get_supabase", "Client"]
