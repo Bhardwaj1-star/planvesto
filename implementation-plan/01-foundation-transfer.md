@@ -1,5 +1,17 @@
 # Step 1 — बुनियादी ढाँचा, Security, API और Database Connection
 
+## Implementation Scope — अभी केवल Backend
+
+**इस implementation plan में अभी केवल Backend का development और modification करना है। Frontend की कोई coding, refactoring या file modification इस चरण का हिस्सा नहीं है।**
+
+फिर भी Backend बनाते समय मौजूदा Frontend को compatibility reference की तरह जाँचना जरूरी है:
+- Frontend के मौजूदा API endpoints, HTTP methods, request/response fields, authentication/session flow और error expectations को inspect और document करें।
+- नए Backend के API contracts को मौजूदा Frontend की अपेक्षाओं से compare/test करें, ताकि आगे integration के समय breaking changes न आएँ।
+- जहाँ पुराने और नए API contracts में अंतर हो, उसे दर्ज करें और Backend में उचित compatibility strategy तय करें; Frontend में अभी बदलाव न करें।
+- इस चरण का acceptance यह है कि Backend की compatibility verify हो और integration के लिए स्पष्ट contract उपलब्ध हो—Frontend को नए Backend से वास्तव में migrate करना बाद के अलग Frontend implementation चरण में होगा।
+
+---
+
 ## 0. सबसे पहले — पूरा Target Directory Tree
 
 **Coding Agent, कोई code बदलने से पहले इस tree को समझें।** यही नए backend का approved target structure है। पुराने folders को देखकर अपनी तरफ से नया structure न बनाएँ और न ही पुराने folders को सीधे नए नाम से rename करें।
@@ -96,7 +108,7 @@ backend/
 - `app/core/` — settings, startup और पूरे backend की साझा सुविधाएँ।
 - `data/`, `migrations/`, `tests/`, `scripts/` — reference/test data, database changes, जाँच और maintenance scripts।
 
-**काम का रास्ता:** Frontend → API → Application → Domain. जरूरत पड़ने पर Application, Ports के जरिए Infrastructure से database/provider का काम करवाएगा। Infrastructure, Ports को implement करेगा।
+**काम का रास्ता:** मौजूदा Frontend → Backend API → Application → Domain. जरूरत पड़ने पर Application, Ports के जरिए Infrastructure से database/provider का काम करवाएगा। Infrastructure, Ports को implement करेगा। इस चरण में केवल Backend बदलेगा; Frontend मौजूदा स्थिति में रहेगा और उसके contracts compatibility जाँच के लिए reference होंगे।
 
 **Dependency के जरूरी नियम:**
 - Domain में FastAPI, Supabase SDK या database client का import नहीं होना चाहिए।
@@ -216,15 +228,15 @@ Database schema, tables, columns, Row Level Security (RLS), policies और प�
 
 किसी feature का exact service, engine या repository file नाम इस table में नहीं दिया गया है, क्योंकि Agent को वास्तविक imports और code देखकर पुष्टि करनी है। अनुमान लगाकर file move या rewrite न करें।
 
-## 5. Frontend से जुड़ी चीज़ें अभी कैसे सुरक्षित रहेंगी
+## 5. मौजूदा Frontend के साथ Backend Compatibility
 
-Repository में `frontend/` अलग मौजूद है। उसमें API calls, Supabase usage, auth/session handling और feature pages को देखें।
+यह section केवल Backend को सही contract के साथ बनाने के लिए है। **Frontend repository की किसी file में इस Step के दौरान बदलाव नहीं करना है।**
 
-- Frontend के मौजूदा API paths और request/response format की सूची बनाएँ।
-- पता करें कि frontend सीधे Supabase से data पढ़ता/लिखता है या backend API से।
-- इस Step में frontend का काम करने का तरीका अचानक न बदलें।
-- पुराने endpoints को तब तक न हटाएँ जब तक नया endpoint उसी feature के साथ test होकर सही साबित न हो।
-- आगे हर feature migrate होने पर frontend को एक-एक feature करके नए API से जोड़ें।
+- मौजूदा Frontend को read-only reference की तरह inspect करें: API calls, endpoints, HTTP methods, request/response formats, auth/session handling और error handling।
+- पहचानें कि कौन-से flows Backend API इस्तेमाल करते हैं और कौन-से सीधे Supabase से जुड़े हैं। इस dependency को document करें; अभी frontend architecture बदलने की कोशिश न करें।
+- नए Backend के endpoints और schemas को मौजूदा Frontend की अपेक्षाओं के विरुद्ध contract tests या उपयुक्त integration tests से verify करें।
+- यदि नया Backend किसी पुराने contract से अलग है, तो अंतर और उसका प्रभाव दर्ज करें। जहाँ संभव और उचित हो, Backend में backward-compatible behavior/adapter रखें।
+- मौजूदा Frontend को नए Backend पर switch करना, उसके API calls बदलना या UI/auth flow refactor करना इस Step में नहीं होगा। यह काम Backend तैयार और स्वीकृत होने के बाद अलग Frontend integration चरण में होगा।
 
 ## 6. Coding Agent के लिए काम करने का सही क्रम
 
@@ -234,7 +246,7 @@ Repository में `frontend/` अलग मौजूद है। उसम�
 4. पुराने code से shared Core, Security, API setup और Database connection को नए target structure में व्यवस्थित करें।
 5. नए modules के imports और app startup को काम करने लायक बनाएँ।
 6. Health check, configuration loading, auth dependency, permission/ownership check और database connectivity के tests लिखें।
-7. मौजूदा API contracts और frontend integration को compare करें।
+7. मौजूदा API contracts को Frontend की वर्तमान अपेक्षाओं से compare करें और Backend की compatibility verify करें; Frontend files न बदलें।
 8. जहाँ जरूरी हो compatibility adapter रखें; एक ही behavior की दो अलग implementations न बनाएँ।
 9. Changes के बाद tests चलाएँ और क्या बदला/क्या बाकी है, लिखें।
 
@@ -257,7 +269,8 @@ Repository में `frontend/` अलग मौजूद है। उसम�
 - [ ] User ownership/permission check का test पास होता है।
 - [ ] Database connection सफल है और connection failure सही तरीके से handle होता है।
 - [ ] API routers register करने का एक समान तरीका तैयार है।
-- [ ] पुराने endpoints और frontend contracts की inventory उपलब्ध है।
+- [ ] पुराने endpoints और मौजूदा Frontend contracts की inventory उपलब्ध है।
+- [ ] Backend के API contracts मौजूदा Frontend expectations के विरुद्ध verify किए गए हैं; Frontend में कोई बदलाव नहीं हुआ है।
 - [ ] मौजूदा tests और नए foundation tests के results दर्ज हैं।
 - [ ] कोई feature logic, endpoint या पुराना data बिना वजह delete/overwrite नहीं हुआ।
 
@@ -268,7 +281,8 @@ Repository में `frontend/` अलग मौजूद है। उसम�
 2. पुराने backend की कौन-सी files से code/behavior लिया गया।
 3. Authentication, API और database connection कैसे काम कर रहे हैं।
 4. कौन-कौन से tests चलाए और उनका result क्या रहा।
-5. कौन-से पुराने endpoints अभी compatibility के लिए जस के तस रखे गए हैं।
+5. कौन-से पुराने endpoints compatibility के लिए जस के तस रखे गए हैं और मौजूदा Frontend contracts के साथ compatibility कैसे verify की गई।
+6. पुष्टि करें कि इस Step में Frontend की किसी file/code में बदलाव नहीं किया गया।
 6. कौन-से मुद्दे अगले Step से पहले तय करने होंगे।
 
-**अंतिम नियम:** पहले नींव मजबूत करें और पुराने सिस्टम का behavior सुरक्षित रखें। हर feature को बाद के चरण में एक-एक करके migrate, test और frontend से connect किया जाएगा।
+**अंतिम नियम:** पहले नींव मजबूत करें और पुराने सिस्टम का behavior सुरक्षित रखें। हर feature को बाद के चरण में एक-एक करके Backend में migrate और test किया जाएगा। Frontend को नए Backend से जोड़ने/उसके API calls बदलने का काम अलग Frontend integration चरण में होगा।
