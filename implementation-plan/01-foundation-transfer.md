@@ -1,5 +1,7 @@
 # Step 1 — बुनियादी ढाँचा, Security, API और Database Connection
 
+> **Master architecture reference:** इस Step सहित पूरे backend redesign के लिए [00 — Backend Foundation & Architecture (Single Source of Truth)](./00-backend-foundation-and-architecture.md) मुख्य target directory tree, folder/file responsibilities, ownership और architecture boundaries का authoritative reference है। नीचे Step 1 का scope केवल foundation implementation तक सीमित है; master blueprint में दी गई feature-level file details को संबंधित feature steps में लागू किया जाएगा।
+
 ## Implementation Scope — अभी केवल Backend
 
 **इस implementation plan में अभी केवल Backend का development और modification करना है। Frontend की कोई coding, refactoring या file modification इस चरण का हिस्सा नहीं है।**
