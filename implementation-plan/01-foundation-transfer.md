@@ -1,5 +1,116 @@
 # Step 1 — बुनियादी ढाँचा, Security, API और Database Connection
 
+## 0. सबसे पहले — पूरा Target Directory Tree
+
+**Coding Agent, कोई code बदलने से पहले इस tree को समझें।** यही नए backend का approved target structure है। पुराने folders को देखकर अपनी तरफ से नया structure न बनाएँ और न ही पुराने folders को सीधे नए नाम से rename करें।
+
+```text
+backend/
+├── app/
+│   ├── api/
+│   │   ├── routers/
+│   │   │   ├── investor_profile/
+│   │   │   ├── moneywheel/
+│   │   │   ├── goal_planner/
+│   │   │   ├── strategy_builder/
+│   │   │   ├── participate_with_your_finances/
+│   │   │   ├── multi_goal_planning/       # Reserved — अभी implementation नहीं
+│   │   │   ├── reports/
+│   │   │   ├── history/
+│   │   │   └── action_plan/
+│   │   └── schemas/
+│   ├── application/
+│   │   ├── features/
+│   │   │   ├── investor_profile/
+│   │   │   ├── moneywheel/
+│   │   │   ├── goal_planner/
+│   │   │   ├── strategy_builder/
+│   │   │   ├── participate_with_your_finances/
+│   │   │   ├── multi_goal_planning/       # Reserved — अभी implementation नहीं
+│   │   │   ├── reports/
+│   │   │   ├── history/
+│   │   │   └── action_plan/
+│   │   ├── workflows/
+│   │   │   ├── investor_situation_assessment/
+│   │   │   ├── budgeting_cash_flow_affordability/
+│   │   │   ├── planning_lifecycle/
+│   │   │   ├── report_preparation/
+│   │   │   └── plan_acceptance/
+│   │   ├── ports/
+│   │   │   └── repositories/
+│   │   └── shared/
+│   ├── domain/
+│   │   ├── canonical/
+│   │   │   ├── goal_taxonomy.py
+│   │   │   ├── financial_categories.py
+│   │   │   └── measurements.py
+│   │   ├── features/
+│   │   │   ├── investor_profile/
+│   │   │   ├── moneywheel/
+│   │   │   ├── goal_planner/
+│   │   │   ├── strategy_builder/
+│   │   │   ├── participate_with_your_finances/
+│   │   │   ├── multi_goal_planning/       # Proposed — approval के बाद
+│   │   │   ├── reports/
+│   │   │   ├── history/
+│   │   │   └── action_plan/
+│   │   └── shared/
+│   │       ├── calculations/
+│   │       ├── constraints/
+│   │       ├── evidence/
+│   │       ├── readiness/
+│   │       ├── versioning/
+│   │       └── value_objects.py
+│   ├── infrastructure/
+│   │   ├── persistence/
+│   │   │   ├── mappers/
+│   │   │   └── repositories/
+│   │   ├── providers/
+│   │   │   └── supabase/
+│   │   ├── reporting/
+│   │   └── observability/
+│   ├── security/
+│   └── core/
+├── data/
+│   ├── reference/
+│   └── fixtures/
+├── migrations/
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── contract/
+│   ├── end_to_end/
+│   ├── security/
+│   ├── regression/
+│   └── fixtures/
+└── scripts/
+```
+
+### इस tree को कैसे समझना है
+
+- `app/api/` — frontend से आने वाली requests और responses।
+- `app/application/` — कौन-सा काम कब और किस क्रम में चलेगा।
+- `app/domain/` — असली financial rules, calculations और feature के फैसले।
+- `app/infrastructure/` — database, Supabase और report बनाने जैसी बाहरी तकनीकी चीज़ें।
+- `app/security/` — login, user identity और data access की सुरक्षा।
+- `app/core/` — settings, startup और पूरे backend की साझा सुविधाएँ।
+- `data/`, `migrations/`, `tests/`, `scripts/` — reference/test data, database changes, जाँच और maintenance scripts।
+
+**काम का रास्ता:** Frontend → API → Application → Domain. जरूरत पड़ने पर Application, Ports के जरिए Infrastructure से database/provider का काम करवाएगा। Infrastructure, Ports को implement करेगा।
+
+**Dependency के जरूरी नियम:**
+- Domain में FastAPI, Supabase SDK या database client का import नहीं होना चाहिए।
+- API में financial calculations या database queries नहीं लिखनी हैं।
+- Application सीधे Supabase SDK या concrete database repository पर निर्भर नहीं होगा; वह Ports इस्तेमाल करेगा।
+- Infrastructure database/provider से जुड़ेगा, लेकिन financial rules का मालिक नहीं बनेगा।
+- Multi-Goal Planning की जगह tree में reserve रहेगी; इसकी detailed design approval से पहले कोई logic न बनाएँ।
+
+### Step 1 में tree का कितना हिस्सा बनाना है?
+
+इस चरण में पहले पूरे tree को reference मानें, लेकिन केवल foundation के लिए जरूरी folders/files तैयार करें: `app/api/`, `app/core/`, `app/security/`, `app/infrastructure/persistence/`, `app/infrastructure/providers/supabase/`, `data/`, `migrations/`, `tests/` और `scripts/`। बाकी feature/workflow folders को तभी बनाएँ जब उनका अगला implementation step शुरू हो। खाली folders बनाने के लिए feature logic का अनुमान न लगाएँ।
+
+---
+
 > **यह दस्तावेज़ Coding Agent के लिए काम करने का निर्देश है।** इसे पढ़कर पहले मौजूदा सिस्टम को समझें, फिर नए ढाँचे की नींव तैयार करें। इस चरण में किसी भी फीचर का पूरा बिज़नेस लॉजिक दोबारा न लिखें।
 
 ## 1. इस चरण का आसान मतलब
