@@ -476,7 +476,7 @@ This layer executes product use cases and coordinates workflows across features.
 <quote color="blue_bg">
 <p />
 
-<b>app/application/</b><br /><b>├── features/</b><br /><b>│   ├── investor\_profile/</b><br /><b>│   ├── moneywheel/</b><br /><b>│   ├── goal\_planner/</b><br /><b>│   ├── strategy\_builder/</b><br /><b>│   ├── participate\_with\_your\_finances/</b><br /><b>│   ├── multi\_goal\_planning/</b> <b>(reserved boundary)</b><br /><b>│   ├── reports/</b><br /><b>│   ├── history/</b><br /><b>│   └── action\_plan/</b><br /><b>├── workflows/</b><br /><b>│   ├── investor\_situation\_assessment/</b> <b>(Chapter 07)</b><br /><b>│   ├── budgeting\_cash\_flow\_affordability/</b> <b>(Chapter 08)</b><br /><b>│   ├── planning\_lifecycle/</b> <b>(Goal Planner → Strategy Builder)</b><br /><b>│   ├── report\_preparation/</b> <b>(authoritative feature outputs → report)</b><br /><b>│   └── plan\_acceptance/</b> <b>(Chapter 13; explicit investor acceptance)</b><br /><b>├── ports/</b><br /><b>│   ├── repositories/</b><br /><b>│   ├── identity\_</b>[<b>provider.py</b>](http://provider.py)<br /><b>│   └── unit\_of\_</b>[<b>work.py</b>](http://work.py)<br /><b>└── shared/</b><br /><b>    ├── </b>[<b>result.py</b>](http://result.py)<br /><b>    └── </b>[<b>idempotency.py</b>](http://idempotency.py)\\
+<b>app/application/</b><br /><b>├── features/</b><br /><b>│   ├── investor\_profile/</b><br /><b>│   ├── moneywheel/</b><br /><b>│   ├── goal\_planner/</b><br /><b>│   ├── strategy\_builder/</b><br /><b>│   ├── participate\_with\_your\_finances/</b><br /><b>│   ├── multi\_goal\_planning/</b> <b>(reserved boundary)</b><br /><b>│   ├── reports/</b><br /><b>│   ├── history/</b><br /><b>│   └── action\_plan/</b><br /><b>├── workflows/</b><br /><b>│   ├── investor\_situation\_assessment/</b> <b>(approved product specification)</b><br /><b>│   ├── budgeting\_cash\_flow\_affordability/</b> <b>(approved product specification)</b><br /><b>│   ├── planning\_lifecycle/</b> <b>(Goal Planner → Strategy Builder)</b><br /><b>│   ├── report\_preparation/</b> <b>(authoritative feature outputs → report)</b><br /><b>│   └── plan\_acceptance/</b> <b>(approved product specification; explicit investor acceptance)</b><br /><b>├── ports/</b><br /><b>│   ├── repositories/</b><br /><b>│   ├── identity\_</b>[<b>provider.py</b>](http://provider.py)<br /><b>│   └── unit\_of\_</b>[<b>work.py</b>](http://work.py)<br /><b>└── shared/</b><br /><b>    ├── </b>[<b>result.py</b>](http://result.py)<br /><b>    └── </b>[<b>idempotency.py</b>](http://idempotency.py)\\
 </quote>
 
 #### 📋 2.2.2 File & Directory Ownership
@@ -586,7 +586,7 @@ Does not rewrite historical results or become the owner of feature data.
 features/action\_plan/
 </td>
 <td color="blue_bg">
-Action Plan use cases: retrieve and manage the Action Plan after the Chapter 13 acceptance workflow authorizes creation or update.
+Action Plan use cases: retrieve and manage the Action Plan after the approved product specification acceptance workflow authorizes creation or update.
 </td>
 <td color="blue_bg">
 Does not treat a draft, recommendation or selected strategy as investor acceptance.
@@ -597,7 +597,7 @@ Does not treat a draft, recommendation or selected strategy as investor acceptan
 workflows/investor\_situation\_assessment/
 </td>
 <td color="green_bg">
-Chapter 07 investor/situation assessment sequence and the required cross-feature coordination for that workflow.
+approved product specification investor/situation assessment sequence and the required cross-feature coordination for that workflow.
 </td>
 <td color="green_bg">
 Coordinates domain capabilities; does not own their interpretation rules.
@@ -608,7 +608,7 @@ Coordinates domain capabilities; does not own their interpretation rules.
 workflows/budgeting\_cash\_flow\_affordability/
 </td>
 <td color="blue_bg">
-Chapter 08 budgeting, cash-flow and affordability workflow sequence.
+approved product specification budgeting, cash-flow and affordability workflow sequence.
 </td>
 <td color="blue_bg">
 Coordinates the approved workflow; calculation logic remains with its approved domain owner.
@@ -630,7 +630,7 @@ Does not move Goal Planner or Strategy Builder domain logic into the workflow; f
 workflows/plan\_[acceptance.py](http://acceptance.py)
 </td>
 <td color="blue_bg">
-Chapter 13 explicit investor acceptance flow and the transaction that creates or updates the Accepted Plan / Action Plan.
+approved product specification explicit investor acceptance flow and the transaction that creates or updates the Accepted Plan / Action Plan.
 </td>
 <td color="blue_bg">
 A proposed or selected strategy is not acceptance; creation/update requires explicit investor acceptance.
@@ -712,11 +712,11 @@ Use a workflow only when coordination is genuinely cross-feature or process-leve
 
 <b>Approved coordination paths</b>
 
-1. <b>Investor / situation assessment (Chapter 07):</b> coordinate the required application use cases and supporting domain capabilities for the approved assessment sequence; keep interpretation and assessment rules in their owning domain modules.
-2. <b>Budgeting, cash flow & affordability (Chapter 08):</b> coordinate the budgeting workflow and validation of period-matched income, expense and savings/investment evidence. Consume Chapter 05's canonical Available Monthly Surplus calculation; do not create a separate surplus formula. Pass the supported cash-flow evidence to Goal Planner, while Chapter 06 owns affordability constraints and Chapter 10 applies the affordability comparison to each goal-funding path.
+1. <b>Investor / situation assessment (approved product specification):</b> coordinate the required application use cases and supporting domain capabilities for the approved assessment sequence; keep interpretation and assessment rules in their owning domain modules.
+2. <b>Budgeting, cash flow & affordability (approved product specification):</b> coordinate the budgeting workflow and validation of period-matched income, expense and savings/investment evidence. Consume approved product specification's canonical Available Monthly Surplus calculation; do not create a separate surplus formula. Pass the supported cash-flow evidence to Goal Planner, while approved product specification owns affordability constraints and approved product specification applies the affordability comparison to each goal-funding path.
 3. <b>Planning lifecycle:</b> pass the approved Goal Planner result to the Strategy Builder application use case. Strategy Builder then invokes its own domain capability. Neither feature domain calls the other directly.
 4. <b>Report preparation:</b> the Reports application use case gathers authoritative outputs from their owning features for presentation. It must not recalculate or alter those outputs.
-5. <b>Plan acceptance (Chapter 13):</b> pass the investor's explicit acceptance decision and selected strategy context through the acceptance workflow; create or update the Accepted Plan / Action Plan only after acceptance is confirmed.
+5. <b>Plan acceptance (approved product specification):</b> pass the investor's explicit acceptance decision and selected strategy context through the acceptance workflow; create or update the Accepted Plan / Action Plan only after acceptance is confirmed.
 
 <b>Ownership rule:</b> feature application modules own feature-specific use cases and input/output mapping. Workflows own only cross-feature sequence and transaction coordination. Domain modules own business rules and calculations. Ports define the interfaces used to load and persist data.
 
@@ -746,7 +746,7 @@ Exact data / definitions owned by the file
 <b>goal\_</b>[<b>taxonomy.py</b>](http://taxonomy.py)
 </td>
 <td color="blue_bg">
-Exactly the ten Chapter 03 canonical goal IDs and their approved names, definitions and contextual guidance. Child Education is contextual detail, not a separate goal ID. Goal instances, priorities, requirements and feasibility belong to Goal Planner / the relevant feature workflow.
+Exactly the ten approved product specification canonical goal IDs and their approved names, definitions and contextual guidance. Child Education is contextual detail, not a separate goal ID. Goal instances, priorities, requirements and feasibility belong to Goal Planner / the relevant feature workflow.
 </td>
 </tr>
 <tr color="green_bg">
@@ -754,7 +754,7 @@ Exactly the ten Chapter 03 canonical goal IDs and their approved names, definiti
 <b>financial\_</b>[<b>categories.py</b>](http://categories.py)
 </td>
 <td color="green_bg">
-Chapter 03 canonical Income, Expense, Asset and Liability category IDs, names, definitions and classification guidance. The approved insurance policy-type IDs are included in this file as part of the financial-category vocabulary; do not create a separate <b>insurance\_</b>[<b>taxonomy.py</b>](http://taxonomy.py). Category IDs alone do not establish liquidity, goal availability, tax treatment or formula eligibility.
+approved product specification canonical Income, Expense, Asset and Liability category IDs, names, definitions and classification guidance. The approved insurance policy-type IDs are included in this file as part of the financial-category vocabulary; do not create a separate <b>insurance\_</b>[<b>taxonomy.py</b>](http://taxonomy.py). Category IDs alone do not establish liquidity, goal availability, tax treatment or formula eligibility.
 </td>
 </tr>
 <tr color="blue_bg">
@@ -762,7 +762,7 @@ Chapter 03 canonical Income, Expense, Asset and Liability category IDs, names, d
 [<b>measurements.py</b>](http://measurements.py)
 </td>
 <td color="blue_bg">
-Chapter 05 canonical measurement IDs, names, definitions, input references, units, periods, output contracts and assumptions. This file contains measurement metadata only; formula implementations live in <b>domain/shared/calculations/</b>.
+approved product specification canonical measurement IDs, names, definitions, input references, units, periods, output contracts and assumptions. This file contains measurement metadata only; formula implementations live in <b>domain/shared/calculations/</b>.
 </td>
 </tr>
 </table>
@@ -772,9 +772,9 @@ Chapter 05 canonical measurement IDs, names, definitions, input references, unit
 - Investor authentication and access belong to <b>app/security/</b>; identity-provider contracts belong to <b>app/application/ports/</b>. No generic investor [<b>identity.py</b>](http://identity.py) is defined in canonical.
 - Investor Profile and actual Financial State records belong to <b>domain/features/investor\_profile/</b>.
 - Goal Planner, Strategy Builder and Multi-Goal Planning behavior belong to their respective <b>domain/features/</b> modules.
-- Constraint definitions, applicability and evaluation belong to <b>domain/shared/constraints/</b>, governed by Chapter 06.
+- Constraint definitions, applicability and evaluation belong to <b>domain/shared/constraints/</b>, governed by approved product specification.
 - Scenario and decision-comparison behavior belongs to <b>domain/features/participate\_with\_your\_finances/</b>.
-- Accepted Plan and Action Plan lifecycle belongs to the Chapter 13 workflow and <b>domain/features/action\_plan/</b>.
+- Accepted Plan and Action Plan lifecycle belongs to the approved product specification workflow and <b>domain/features/action\_plan/</b>.
 - Reports and History belong to <b>domain/features/reports/</b> and <b>domain/features/history/</b>.
 - Evaluation result contracts stay with the owning feature or shared evaluation capability; they are not a universal canonical file by default.
 - 00.7 governs logical data domains, persistence, physical schema, version/history mechanisms and migrations.
@@ -826,7 +826,7 @@ Financial State
 Normalizes Financial State values into the approved domain representation before validation and downstream use; keeps equivalent representations consistent where the approved contract defines how to interpret them.
 </td>
 <td color="blue_bg">
-Does not invent aliases, conversion rates, default values, missing-data fallbacks or business thresholds. Transport parsing belongs at the API/application boundary; database/schema normalization remains governed by 00.7. This is a data-normalization capability, not a Chapter 06 constraint rule.
+Does not invent aliases, conversion rates, default values, missing-data fallbacks or business thresholds. Transport parsing belongs at the API/application boundary; database/schema normalization remains governed by 00.7. This is a data-normalization capability, not a approved product specification constraint rule.
 </td>
 </tr>
 <tr color="green_bg">
@@ -840,7 +840,7 @@ Financial State
 Domain validation of normalized investor-supplied or evidenced financial facts against the approved Financial State contract.
 </td>
 <td color="green_bg">
-Does not define a second data schema or persistence model; Chapter 04 and 00.7 remain authoritative for data contracts.
+Does not define a second data schema or persistence model; approved product specification and 00.7 remain authoritative for data contracts.
 </td>
 </tr>
 <tr color="blue_bg">
@@ -943,7 +943,7 @@ Does not override hard constraints or authorize a transaction.
 </tr>
 </table>
 
-<b>Dependencies and history ownership:</b> Investor Profile uses Chapter 03 canonical category/goal vocabulary and the Chapter 04 Financial State contract, together with approved evidence and assessment inputs. It owns investor profile and financial facts at the domain level; authentication belongs to security, canonical definitions remain in <b>domain/canonical/</b>, and physical storage remains governed by 00.7. When investor data is persisted or materially changed, its record identity, prior/current value context, provenance and applicable version references must remain traceable through History; History does not redefine the Financial State contract.
+<b>Dependencies and history ownership:</b> Investor Profile uses approved product specification canonical category/goal vocabulary and the approved product specification Financial State contract, together with approved evidence and assessment inputs. It owns investor profile and financial facts at the domain level; authentication belongs to security, canonical definitions remain in <b>domain/canonical/</b>, and physical storage remains governed by 00.7. When investor data is persisted or materially changed, its record identity, prior/current value context, provenance and applicable version references must remain traceable through History; History does not redefine the Financial State contract.
 
 #### 🛡️ B. Moneywheel
 
@@ -976,7 +976,7 @@ Moneywheel
 <b>moneywheel/</b>[<b>assessment.py</b>](http://assessment.py)
 </td>
 <td color="blue_bg">
-Chapter 09 domain-level assessment orchestration: select relevant validated evidence and approved measurements, then coordinate the applicable resilience and protection assessments.
+approved product specification domain-level assessment orchestration: select relevant validated evidence and approved measurements, then coordinate the applicable resilience and protection assessments.
 </td>
 <td color="blue_bg">
 Does not duplicate formulas, create another Financial State source, or produce a combined health score/pass-fail result.
@@ -1007,7 +1007,7 @@ Moneywheel
 Material adverse-event exposure, confirmed policy evidence, confirmed versus possible protection gaps, and premium affordability trade-offs.
 </td>
 <td color="blue_bg">
-Does not infer policy validity/adequacy from sum assured or a ratio alone; insurance calculation policy and input scope remain subject to their canonical owners and Chapter 06 decision boundary.
+Does not infer policy validity/adequacy from sum assured or a ratio alone; insurance calculation policy and input scope remain subject to their canonical owners and approved product specification decision boundary.
 </td>
 </tr>
 <tr color="green_bg">
@@ -1018,7 +1018,7 @@ Moneywheel
 <b>moneywheel/</b>[<b>findings.py</b>](http://findings.py)
 </td>
 <td color="green_bg">
-Structured assessment findings using the Chapter 09 output elements: Finding, Evidence (including date and actual/forecast/scenario status), Impact, Uncertainty, and Investor Consideration.
+Structured assessment findings using the approved product specification output elements: Finding, Evidence (including date and actual/forecast/scenario status), Impact, Uncertainty, and Investor Consideration.
 </td>
 <td color="green_bg">
 Does not add universal severity labels, unsupported conclusions, or a combined score.
@@ -1040,9 +1040,9 @@ Does not render UI/PDF, make unsupported recommendations, or change investor rec
 </tr>
 </table>
 
-<b>Insurance calculation caution:</b> Chapter 09 records an existing repository formula and mixed-policy implementation, but explicitly flags the input-scope treatment for verification. Do not treat that legacy implementation as a newly approved canonical formula or adequacy standard. Chapter 05 owns measurement/calculation methods; Chapter 06 owns the insurance decision boundary; policy evidence remains sourced from Financial State.
+<b>Insurance calculation caution:</b> approved product specification records an existing repository formula and mixed-policy implementation, but explicitly flags the input-scope treatment for verification. Do not treat that legacy implementation as a newly approved canonical formula or adequacy standard. approved product specification owns measurement/calculation methods; approved product specification owns the insurance decision boundary; policy evidence remains sourced from Financial State.
 
-<b>Dependencies and history ownership:</b> Moneywheel consumes validated Investor Profile / Financial State evidence, canonical measurements, shared calculations, evidence and applicable constraints. It owns Chapter 09 assessment, resilience/protection interpretation and findings. If an assessment result is saved as an investor record, its original evidence, assumptions and calculation/version context must be traceable; History must not recompute it under later rules.
+<b>Dependencies and history ownership:</b> Moneywheel consumes validated Investor Profile / Financial State evidence, canonical measurements, shared calculations, evidence and applicable constraints. It owns approved product specification assessment, resilience/protection interpretation and findings. If an assessment result is saved as an investor record, its original evidence, assumptions and calculation/version context must be traceable; History must not recompute it under later rules.
 
 #### 🎯 C. Goal Planner
 
@@ -1075,7 +1075,7 @@ Goal Planner
 <b>goal\_planner/</b>[<b>requirement.py</b>](http://requirement.py)
 </td>
 <td color="blue_bg">
-Chapter 10 Goal Requirement domain contract: target amount/requirement context derived from the canonical goal and approved inputs.
+approved product specification Goal Requirement domain contract: target amount/requirement context derived from the canonical goal and approved inputs.
 </td>
 <td color="blue_bg">
 Goal instances are feature-owned; canonical goal identity remains in <b>domain/canonical/goal\_</b>[<b>taxonomy.py</b>](http://taxonomy.py); formulas remain in shared calculations.
@@ -1089,7 +1089,7 @@ Goal Planner
 <b>goal\_planner/</b>[<b>feasibility.py</b>](http://feasibility.py)
 </td>
 <td color="green_bg">
-Chapter 10 Goal Feasibility domain contract and supported feasibility outcome classification using resources, contribution capacity and applicable constraints.
+approved product specification Goal Feasibility domain contract and supported feasibility outcome classification using resources, contribution capacity and applicable constraints.
 </td>
 <td color="green_bg">
 Feasibility is one test; funding methods are options, not separate tests. Do not add unapproved methods or rules.
@@ -1097,7 +1097,7 @@ Feasibility is one test; funding methods are options, not separate tests. Do not
 </tr>
 </table>
 
-<b>Dependencies and history ownership:</b> Goal Planner consumes canonical goal identity, Investor Profile / Financial State inputs, shared Chapter 05 calculations, cash-flow/affordability capabilities, constraints and evidence. It owns Goal Requirement and individual Goal Feasibility outputs. Each saved planning run must retain its approved input context, requirement/feasibility outputs, assumptions, evidence and relevant calculation/version references so the historical result can be understood as originally produced; History does not rerun the planner using current formulas.
+<b>Dependencies and history ownership:</b> Goal Planner consumes canonical goal identity, Investor Profile / Financial State inputs, shared approved product specification calculations, cash-flow/affordability capabilities, constraints and evidence. It owns Goal Requirement and individual Goal Feasibility outputs. Each saved planning run must retain its approved input context, requirement/feasibility outputs, assumptions, evidence and relevant calculation/version references so the historical result can be understood as originally produced; History does not rerun the planner using current formulas.
 
 #### 🧠 D. Strategy Builder
 
@@ -1163,7 +1163,7 @@ Strategy Builder
 Year-by-year funding projection contracts for dated contributions, asset growth, financing/repayments and goal payments.
 </td>
 <td color="blue_bg">
-Uses Chapter 05/shared calculation outputs and approved daily/date-order conventions; no duplicated financial formulas or guaranteed-return claims.
+Uses approved product specification/shared calculation outputs and approved daily/date-order conventions; no duplicated financial formulas or guaranteed-return claims.
 </td>
 </tr>
 <tr color="green_bg">
@@ -1216,10 +1216,10 @@ Strategy Builder
 <b>strategy\_builder/</b>[<b>monitoring.py</b>](http://monitoring.py)
 </td>
 <td color="blue_bg">
-Monitoring of the goal-funding projection/assumptions, funding-gap identification and contingency-option assessment under Chapter 11.
+Monitoring of the goal-funding projection/assumptions, funding-gap identification and contingency-option assessment under approved product specification.
 </td>
 <td color="blue_bg">
-Does not own Accepted Plan adoption, Action Plan lifecycle or execution tracking; those remain Chapter 13.
+Does not own Accepted Plan adoption, Action Plan lifecycle or execution tracking; those remain approved product specification.
 </td>
 </tr>
 <tr color="green_bg">
@@ -1419,7 +1419,7 @@ Multi-Goal Planning
 Assembles the coordinated multi-goal result: combined feasibility outcome, goal-wise funding positions, shared-resource overlaps, proposed amount/timeline/priority/allocation adjustments, cross-goal impacts, shortfalls and trade-offs.
 </td>
 <td color="green_bg">
-Does not create an Accepted Plan, authorize transactions or render reports; explicit acceptance remains governed by Chapter 13 and report rendering by the reporting layer.
+Does not create an Accepted Plan, authorize transactions or render reports; explicit acceptance remains governed by approved product specification and report rendering by the reporting layer.
 </td>
 </tr>
 </table>
@@ -1512,7 +1512,7 @@ Does not duplicate the owning feature's business logic or redefine its records; 
 
 #### ✅ I. Accepted Plan & Action Plan
 
-The Accepted Plan and Action Plan are separate concepts in the system architecture. Chapter 13 owns explicit adoption and both lifecycles; the application workflow coordinates acceptance. The physical/domain contract for Accepted Plan remains open in Chapter 13, so no speculative Accepted Plan domain files are added here.
+The Accepted Plan and Action Plan are separate concepts in the system architecture. approved product specification owns explicit adoption and both lifecycles; the application workflow coordinates acceptance. The physical/domain contract for Accepted Plan remains open in approved product specification, so no speculative Accepted Plan domain files are added here.
 
 <quote color="green_bg">
 <p />
@@ -1554,7 +1554,7 @@ Accepted Plan / Action Plan
 Application workflow that coordinates the explicit investor acceptance gate and invokes the approved Accepted Plan lifecycle contract when finalized.
 </td>
 <td color="blue_bg">
-Does not invent acceptance choices, event semantics or persistence fields; Chapter 13's acceptance contract remains open.
+Does not invent acceptance choices, event semantics or persistence fields; approved product specification's acceptance contract remains open.
 </td>
 </tr>
 <tr color="green_bg">
@@ -1579,15 +1579,15 @@ Action Plan
 <b>action\_plan/</b>[<b>lifecycle.py</b>](http://lifecycle.py)
 </td>
 <td color="blue_bg">
-Action lifecycle boundary and approved transitions only when Chapter 13 finalizes them.
+Action lifecycle boundary and approved transitions only when approved product specification finalizes them.
 </td>
 <td color="blue_bg">
-Chapter 13's unresolved status and lifecycle contract gaps remain open; do not treat legacy status observations as approved vocabulary.
+approved product specification's unresolved status and lifecycle contract gaps remain open; do not treat legacy status observations as approved vocabulary.
 </td>
 </tr>
 </table>
 
-<b>Dependencies and history ownership:</b> The acceptance workflow consumes the explicit investor decision and the approved planning outputs/version context being adopted. Chapter 13 owns acceptance semantics; the application workflow coordinates adoption, while Action Plan domain files own action definitions and lifecycle boundaries. Once Chapter 13 finalizes the acceptance contract, the acceptance decision and resulting Accepted Plan/Action Plan version relationship must be traceable in History. A scenario, recommendation or report is not acceptance.
+<b>Dependencies and history ownership:</b> The acceptance workflow consumes the explicit investor decision and the approved planning outputs/version context being adopted. approved product specification owns acceptance semantics; the application workflow coordinates adoption, while Action Plan domain files own action definitions and lifecycle boundaries. Once approved product specification finalizes the acceptance contract, the acceptance decision and resulting Accepted Plan/Action Plan version relationship must be traceable in History. A scenario, recommendation or report is not acceptance.
 
 ### 🔧 2.5 <b>app/domain/shared/</b> — Reusable Domain Capabilities
 
@@ -1662,7 +1662,7 @@ Database version tables.
 calculations/financial\_[position.py](http://position.py)
 </td>
 <td color="blue_bg">
-Chapter 05 financial-position measurement family.
+approved product specification financial-position measurement family.
 </td>
 <td color="blue_bg">
 One-file-per-metric decomposition.
@@ -1673,7 +1673,7 @@ One-file-per-metric decomposition.
 calculations/financial\_[health.py](http://health.py)
 </td>
 <td color="green_bg">
-Chapter 05 financial-health measurement family.
+approved product specification financial-health measurement family.
 </td>
 <td color="green_bg">
 Moneywheel presentation.
@@ -1693,7 +1693,7 @@ Unapproved return assumptions/methods.
 constraints/[catalog.py](http://catalog.py)
 </td>
 <td color="green_bg">
-Single Chapter 06 rule catalogue representation.
+Single approved product specification rule catalogue representation.
 </td>
 <td color="green_bg">
 Parallel feature rule catalogues.
@@ -1813,7 +1813,7 @@ Infrastructure implements the technical details required by application ports an
 <quote color="orange_bg">
 <b>Physical schema warning</b>
 
-Do not create guessed ORM models, table names, columns, indexes or migration tooling from this directory map. Chapter 00.7 remains authoritative for physical schema and persistence decisions.
+Do not create guessed ORM models, table names, columns, indexes or migration tooling from this directory map. approved product specification.7 remains authoritative for physical schema and persistence decisions.
 </quote>
 
 ### 🔐 2.7 <b>app/security/</b> & <b>app/core/</b> — Access Control & Runtime Foundation
@@ -1834,7 +1834,7 @@ Security owns backend identity verification and access-control enforcement. Core
 | --- | --- | --- |
 | security/[authentication.py](http://authentication.py) | Backend validation of the authenticated identity presented for a request. | Never trust frontend-supplied identity claims as proof; no product profile logic. |
 | security/[authorization.py](http://authorization.py) | Investor/record ownership checks and permission enforcement before protected operations. | Does not replace repository-level owner scoping or invent product eligibility rules. |
-| security/[policies.py](http://policies.py) | Reusable composition of access-control policies and permission checks. | Access control only; not financial suitability, risk scoring or Chapter 06 constraints. |
+| security/[policies.py](http://policies.py) | Reusable composition of access-control policies and permission checks. | Access control only; not financial suitability, risk scoring or approved product specification constraints. |
 | core/[settings.py](http://settings.py) | Typed runtime configuration loaded from approved environment/configuration sources. | No committed secrets or investor-specific data. |
 | core/[exceptions.py](http://exceptions.py) | Application-wide technical exception types and stable error categorization. | Domain meaning remains in domain errors; HTTP mapping remains in API handlers. |
 | core/[logging.py](http://logging.py) | Safe structured logging and diagnostic conventions. | No secrets, credentials, tokens or unnecessary investor financial details. |
@@ -2080,15 +2080,15 @@ This index connects each approved product feature to its canonical vocabulary, o
 
 | Product feature | Canonical contracts / shared inputs | Feature domain | Application entry | API entry |
 | --- | --- | --- | --- | --- |
-| Investor Profile | Chapter 03 financial categories and goal vocabulary; Chapter 04 Financial State contract. | domain/features/investor\_profile/ (four sibling subfeatures) | application/features/investor\_profile/ | api/routers/investor\_profile/ |
-| Moneywheel | Chapter 05 measurement metadata; Financial State facts; owning feature evaluation contracts. | domain/features/moneywheel/ | application/features/moneywheel/ | api/routers/moneywheel/ |
+| Investor Profile | approved product specification financial categories and goal vocabulary; approved product specification Financial State contract. | domain/features/investor\_profile/ (four sibling subfeatures) | application/features/investor\_profile/ | api/routers/investor\_profile/ |
+| Moneywheel | approved product specification measurement metadata; Financial State facts; owning feature evaluation contracts. | domain/features/moneywheel/ | application/features/moneywheel/ | api/routers/moneywheel/ |
 | Goal Planner | Goal taxonomy, measurement metadata and Financial State inputs. | domain/features/goal\_planner/ | application/features/goal\_planner/ | api/routers/goal\_planner/ |
-| Strategy Builder | Measurement metadata and Chapter 06 constraint contracts. | domain/features/strategy\_builder/ | application/features/strategy\_builder/ | api/routers/strategy\_builder/ |
+| Strategy Builder | Measurement metadata and approved product specification constraint contracts. | domain/features/strategy\_builder/ | application/features/strategy\_builder/ | api/routers/strategy\_builder/ |
 | Participate with Your Finances | Scenario and investor-decision contracts, plus relevant evaluation outputs. | domain/features/participate\_with\_your\_finances/ | application/features/participate\_with\_your\_finances/ | api/routers/participate\_with\_your\_finances/ |
 | Multi-Goal Planning | Approved Multi-Goal Planning boundary only; detailed contracts remain deferred. | domain/features/multi\_goal\_planning/ (reserved boundary) | application/features/multi\_goal\_planning/ (reserved) | api/routers/multi\_goal\_planning/ (reserved) |
 | Reports | Authoritative outputs from Goal Planner and Strategy Builder; Multi-Goal Planning outputs only after its proposed domain design is approved. | domain/features/reports/ | application/features/reports/ | api/routers/reports/ |
 | History | Owning feature records and version references; no duplicate feature contracts. | domain/features/history/ | application/features/history/ | api/routers/history/ |
-| Accepted Plan / Action Plan | Chapter 13 acceptance decision and approved plan/action contracts; unresolved Accepted Plan details remain open. | domain/features/action\_plan/ (Action Plan); Accepted Plan contract remains governed by Chapter 13. | workflows/plan\_acceptance/ and application/features/action\_plan/ | api/routers/action\_plan/ |
+| Accepted Plan / Action Plan | approved product specification acceptance decision and approved plan/action contracts; unresolved Accepted Plan details remain open. | domain/features/action\_plan/ (Action Plan); Accepted Plan contract remains governed by approved product specification. | workflows/plan\_acceptance/ and application/features/action\_plan/ | api/routers/action\_plan/ |
 
 #### 🔒 2.9.2 Ownership & Interpretation Rules
 
@@ -2107,7 +2107,7 @@ These are proposed ownership boundaries, not claims that files already exist. Cr
 2. <b>security/</b> and API dependencies authenticate the actor and authorize access to the requested investor-owned record.
 3. The router calls one <b>application/features/</b> use case or an approved <b>application/workflows/</b> coordinator.
 4. The application use case loads records through <b>application/ports/repositories/</b>; infrastructure supplies the PostgreSQL/Supabase implementation.
-5. Domain feature logic and shared domain capabilities execute the business behavior: canonical calculations, evidence/readiness, Chapter 06 constraints, feature assessments and lifecycle rules.
+5. Domain feature logic and shared domain capabilities execute the business behavior: canonical calculations, evidence/readiness, approved product specification constraints, feature assessments and lifecycle rules.
 6. Application coordinates persistence through the unit-of-work boundary. Infrastructure writes records and version references to PostgreSQL.
 7. The API maps the result to a response schema. Reports may pass an already-authoritative report payload to the PDF renderer.
 8. Tests verify the individual domain rule, integration boundaries, end-to-end journey, security and regression behavior.
@@ -2260,7 +2260,7 @@ Map each existing service by use-case ownership. Do not preserve a catch-all ser
 <b>app/domain/shared/calculations/</b>
 </td>
 <td color="blue_bg">
-Consolidate canonical formulas here, grouped by Chapter 05 measurement families.
+Consolidate canonical formulas here, grouped by approved product specification measurement families.
 </td>
 </tr>
 <tr color="green_bg">
@@ -2271,7 +2271,7 @@ Consolidate canonical formulas here, grouped by Chapter 05 measurement families.
 <b>app/domain/shared/constraints/</b>
 </td>
 <td color="green_bg">
-One authoritative Chapter 06 rule/constraint catalogue and evaluator; remove duplicate definitions only after parity tests.
+One authoritative approved product specification rule/constraint catalogue and evaluator; remove duplicate definitions only after parity tests.
 </td>
 </tr>
 <tr color="blue_bg">
@@ -2326,7 +2326,7 @@ Goal requirement and Goal Feasibility remain in the Goal Planner feature.
 Strategy Builder domain modules, after file-by-file ownership review
 </td>
 <td color="blue_bg">
-Do not rename or merge blindly; map each function to Chapter 11 funding-path, asset assessment, projection, financing or comparison behavior. Preserve behavior with regression tests.
+Do not rename or merge blindly; map each function to approved product specification funding-path, asset assessment, projection, financing or comparison behavior. Preserve behavior with regression tests.
 </td>
 </tr>
 <tr color="green_bg">
@@ -2348,7 +2348,7 @@ Keep planning-lifecycle coordination in application; domain modules remain indep
 <b>app/domain/features/action\_plan/</b> and application Action Plan use cases
 </td>
 <td color="blue_bg">
-Preserve Chapter 13 acceptance boundary and action-status semantics.
+Preserve approved product specification acceptance boundary and action-status semantics.
 </td>
 </tr>
 <tr color="green_bg">
@@ -2438,7 +2438,7 @@ Backend implementation location
 Goal IDs and financial category IDs, including insurance policy types
 </td>
 <td color="blue_bg">
-Chapter 03
+approved product specification
 </td>
 <td color="blue_bg">
 <b>domain/canonical/goal\_</b>[<b>taxonomy.py</b>](http://taxonomy.py), <b>financial\_</b>[<b>categories.py</b>](http://categories.py)
@@ -2449,7 +2449,7 @@ Chapter 03
 Financial State facts, evidence, readiness and history
 </td>
 <td color="green_bg">
-Chapter 04
+approved product specification
 </td>
 <td color="green_bg">
 Investor Profile Financial State domain, persistence adapters
@@ -2460,7 +2460,7 @@ Investor Profile Financial State domain, persistence adapters
 Measurement definitions, formulas, units, periods and assumptions
 </td>
 <td color="blue_bg">
-Chapter 05
+approved product specification
 </td>
 <td color="blue_bg">
 <b>domain/canonical/</b>[<b>measurements.py</b>](http://measurements.py), <b>domain/shared/calculations/</b>
@@ -2471,7 +2471,7 @@ Chapter 05
 Constraints, thresholds, applicability and decision effects
 </td>
 <td color="green_bg">
-Chapter 06
+approved product specification
 </td>
 <td color="green_bg">
 <b>domain/shared/constraints/</b>
@@ -2482,7 +2482,7 @@ Chapter 06
 Investor/situation interpretation
 </td>
 <td color="blue_bg">
-Chapter 07
+approved product specification
 </td>
 <td color="blue_bg">
 <b>application/workflows/investor\_situation\_</b>[<b>assessment.py</b>](http://assessment.py) and supporting domain contracts
@@ -2493,10 +2493,10 @@ Chapter 07
 Budgeting, cash flow and affordability workflow
 </td>
 <td color="green_bg">
-Chapter 08
+approved product specification
 </td>
 <td color="green_bg">
-<b>application/workflows/budgeting\_cash\_flow\_</b>[<b>affordability.py</b>](http://affordability.py), Chapter 05-owned calculation family in <b>domain/shared/calculations/</b>
+<b>application/workflows/budgeting\_cash\_flow\_</b>[<b>affordability.py</b>](http://affordability.py), approved product specification-owned calculation family in <b>domain/shared/calculations/</b>
 </td>
 </tr>
 <tr color="blue_bg">
@@ -2504,7 +2504,7 @@ Chapter 08
 Financial health, resilience and protection
 </td>
 <td color="blue_bg">
-Chapter 09
+approved product specification
 </td>
 <td color="blue_bg">
 <b>domain/features/moneywheel/</b>
@@ -2515,7 +2515,7 @@ Chapter 09
 Goal requirement and Goal Feasibility
 </td>
 <td color="green_bg">
-Chapter 10
+approved product specification
 </td>
 <td color="green_bg">
 <b>domain/features/goal\_planner/</b>
@@ -2526,7 +2526,7 @@ Chapter 10
 Funding paths, strategy applicability/viability and comparison
 </td>
 <td color="blue_bg">
-Chapter 11
+approved product specification
 </td>
 <td color="blue_bg">
 <b>domain/features/strategy\_builder/</b>
@@ -2537,7 +2537,7 @@ Chapter 11
 Sensitivity, scenario and decision comparison
 </td>
 <td color="green_bg">
-Chapter 12
+approved product specification
 </td>
 <td color="green_bg">
 <b>domain/features/participate\_with\_your\_finances/</b>
@@ -2548,7 +2548,7 @@ Chapter 12
 Explicit acceptance, Accepted Plan and Action Plan
 </td>
 <td color="blue_bg">
-Chapter 13
+approved product specification
 </td>
 <td color="blue_bg">
 <b>application/workflows/plan\_</b>[<b>acceptance.py</b>](http://acceptance.py), <b>domain/features/action\_plan/</b>
@@ -2621,12 +2621,12 @@ The directory map is a target blueprint—not evidence that code already exists.
 
 - The Canonical Data Model is a first-class domain component. Its files describe shared business concepts and contracts; they are not a guessed PostgreSQL schema.
 - The physical PostgreSQL tables, columns, indexes, retention/deletion behavior and migration tool must follow the finalized 00.7 decisions. This blueprint intentionally does not fabricate them.
-- Chapter 05 formulas are grouped by measurement family. Net Worth, Available Monthly Surplus and other metrics are implementations within those group files, not separate one-formula files.
-- Chapter 06 is the single authority for rule identity, applicability, thresholds, effects and missing-evidence behavior. Do not keep parallel rule catalogues in feature folders.
+- approved product specification formulas are grouped by measurement family. Net Worth, Available Monthly Surplus and other metrics are implementations within those group files, not separate one-formula files.
+- approved product specification is the single authority for rule identity, applicability, thresholds, effects and missing-evidence behavior. Do not keep parallel rule catalogues in feature folders.
 - Multi-Goal Planning has four approved capability boundaries, but detailed design is deferred. Its README is a boundary marker, not permission to invent allocation algorithms.
 - Strategy Builder consumes Goal Planner outputs. Goal Feasibility is not a separate engine or fifth strategy.
 - Reports render authoritative feature outputs; they do not recalculate them. History preserves context and versions; it does not rewrite historical outcomes.
-- A scenario, recommendation, selected strategy or report is not plan acceptance. Only the explicit Chapter 13 acceptance workflow can create/update an Accepted Plan.
+- A scenario, recommendation, selected strategy or report is not plan acceptance. Only the explicit approved product specification acceptance workflow can create/update an Accepted Plan.
 - This is the target file-level blueprint. Before moving existing code, each current file must be mapped to an owner, behavior parity must be checked, and the relevant 00.10 tests must pass. The target layout is not a claim that these files already exist or that implementation is verified.
 
 <page url="https://app.notion.com/p/41057e71b7b881139bc2eb448ff838bb">
