@@ -226,6 +226,25 @@ Database schema, tables, columns, Row Level Security (RLS), policies और प�
 | Reports और History | `backend/api/basket_report.py`, `summary_report.py`, `diary.py`, `backend/report_engine/` और संबंधित data files | Report generation, history/diary retrieval, PDF/output और schemas को संबंधित report/history feature में रखना |
 | Dashboard और अन्य साझा flows | `backend/api/dashboard.py`, `orchestration.py` और frontend में इस्तेमाल होने वाले calls | यह तय करना कि कौन-सा हिस्सा dashboard feature है और कौन-सा multi-feature workflow; एक ही logic की duplicate copy न बनाना |
 
+### Goal Planner — feature boundary और आगे का domain split
+
+Goal Planner के लिए ऊपर दी गई सामान्य पंक्ति को इस स्पष्ट boundary के साथ पढ़ें। यह विवरण अगले Goal Planner migration step के लिए target responsibility बताता है; **Step 1 में केवल inventory बनानी है, इन files को अभी बनाना या feature logic migrate करना नहीं है।**
+
+आगे `app/domain/features/goal_planner/` में केवल ये दो feature-level files target होंगी:
+
+```text
+goal_planner/
+├── requirement.py
+└── feasibility.py
+```
+
+- **`requirement.py` — Goal Requirement Planning:** goal की future requirement और उससे जुड़े outputs का एकीकृत business-rule/orchestration स्थान। इसमें future goal amount, eligible goal-mapped assets का projected value, Funding Gap और लागू होने पर Required Return / Required Monthly Contribution (RMC) का flow शामिल होगा। Canonical financial formulas की ownership Chapter 05/shared calculation layer की रहेगी; यहाँ formulas की duplicate implementation नहीं बनानी है।
+- **`feasibility.py` — एक Fund Feasibility test:** Available Monthly Surplus की परिभाषा/गणना का उपयोग, Required SIP के विरुद्ध affordability check, Case 1, Case 2A और Case 2B के rules तथा उनके supported funding scenarios इसी एक file में grouped रहेंगे। Case 2A कोई अलग feasibility test या अलग module नहीं है। SIP, Lump Sum, Step-Up SIP और Lump Sum + SIP अलग method folders/files नहीं हैं; जहाँ Chapter 10 अनुमति देता है, वे Fund Feasibility के भीतर funding scenarios/options हैं।
+- **Goal Planner का scope:** goal requirement निकालना और यह जाँचना कि documented constraints के अंतर्गत funding feasible है या नहीं। यह detailed asset-level liquidity, availability, risk/suitability assessment या अंतिम funding strategy तय नहीं करेगा।
+- **Strategy Builder की boundary:** Goal Planner के outputs को लेकर funding strategy और asset-level assessment Strategy Builder (Chapter 11) में होगा। Goal Planner Strategy Builder के निर्णयों को अपने अंदर duplicate या pre-empt नहीं करेगा। Self Money भी Strategy Builder के scope में है, Goal Planner में नहीं।
+- **दोनों files का स्वरूप:** ये business rules और calculation orchestration को समूहित करेंगी; हर छोटे calculation/case के लिए अलग file न बनाएँ। जहाँ Chapter 05 या shared domain calculation पहले से canonical owner है, उसे reuse करें।
+
+पुराने code की inventory बनाते समय Goal Planner के प्रत्येक endpoint/service/engine/repository को इन दो responsibilities में map करें: requirement planning, fund feasibility, या persistence/API boundary। यदि कोई पुराना function इन सीमाओं में साफ़ न बैठे, तो उसे जबरन move न करें—उसका नाम, callers और ambiguity inventory में दर्ज करें ताकि migration से पहले निर्णय हो सके।
 किसी feature का exact service, engine या repository file नाम इस table में नहीं दिया गया है, क्योंकि Agent को वास्तविक imports और code देखकर पुष्टि करनी है। अनुमान लगाकर file move या rewrite न करें।
 
 ## 5. मौजूदा Frontend के साथ Backend Compatibility
