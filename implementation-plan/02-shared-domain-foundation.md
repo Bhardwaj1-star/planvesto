@@ -8,9 +8,9 @@ Step 1 में backend की foundation तैयार होने के �
 
 ## 1. इस implementation plan का specification status
 
-इस plan में Chapter 03, 05 और 06 के Step 2-संबंधित contracts, IDs, formulas, calculation methods, assumptions, constraints और decision effects सीधे शामिल हैं। Coding agent को इन विवरणों को लागू करने के लिए Notion access की आवश्यकता नहीं होनी चाहिए।
+इस plan में approved product specification, 05 और 06 के Step 2-संबंधित contracts, IDs, formulas, calculation methods, assumptions, constraints और decision effects सीधे शामिल हैं। Coding agent को इन विवरणों को लागू करने के लिए Notion access की आवश्यकता नहीं होनी चाहिए।
 
-यह specification documentation-level contract है—यह existing code parity, runtime behavior, test coverage या हर दर्ज method की approval का प्रमाण नहीं है। हर item का status नीचे स्पष्ट किया गया है; unresolved/provisional items को अनुमान से approved या executable policy में न बदलें। Chapter 04 के Financial State facts, provenance, ownership/access, history और data-readiness contracts अपनी owning boundary में ही रहेंगे।
+यह specification documentation-level contract है—यह existing code parity, runtime behavior, test coverage या हर दर्ज method की approval का प्रमाण नहीं है। हर item का status नीचे स्पष्ट किया गया है; unresolved/provisional items को अनुमान से approved या executable policy में न बदलें। approved product specification के Financial State facts, provenance, ownership/access, history और data-readiness contracts अपनी owning boundary में ही रहेंगे।
 
 ## 2. इस चरण का target area
 
@@ -30,9 +30,9 @@ backend/app/domain/
 
 यह target architecture का relevant हिस्सा है, complete directory tree नहीं। किसी file को तभी बनाएँ जब उसके लिए वास्तविक approved contract और उपयोग मौजूद हो। केवल खाली structure या अनुमानित abstractions न बनाएँ।
 
-## 3. Chapter 03 से सीधे लेने वाली canonical definitions और tables
+## 3. approved product specification से सीधे लेने वाली canonical definitions और tables
 
-**Coding agent के लिए निर्देश:** नीचे की tables Chapter 03 से इस plan में उतारी गई हैं ताकि Notion access की जरूरत न हो। इन्हें canonical specification मानें। IDs/definitions को rename, extend या reinterpret न करें। Chapter 03 में runtime ID/enum parity और persisted-record compatibility unverified हैं। पहले पुराने code/database में actual values और usage inspect करें; mismatch को report करें, बिना approval silent migration न करें।
+**Coding agent के लिए निर्देश:** नीचे की tables approved product specification से इस plan में उतारी गई हैं ताकि Notion access की जरूरत न हो। इन्हें canonical specification मानें। IDs/definitions को rename, extend या reinterpret न करें। approved product specification में runtime ID/enum parity और persisted-record compatibility unverified हैं। पहले पुराने code/database में actual values और usage inspect करें; mismatch को report करें, बिना approval silent migration न करें।
 
 ### 3.1 Goal taxonomy — `goal_taxonomy.py`
 
@@ -127,7 +127,7 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 
 ### 3.3 Insurance policy reference
 
-ये Chapter 03 के policy inventory IDs हैं; insurance policy अपने-आप asset नहीं है।
+ये approved product specification के policy inventory IDs हैं; insurance policy अपने-आप asset नहीं है।
 
 | Canonical ID | Policy type | Capture fields / checks |
 |---|---|---|
@@ -143,16 +143,16 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 
 हर policy में जहाँ लागू हो policyholder/proposer, insured person/asset, nominee, start/end/renewal dates, premium/frequency, cover/limit, status, riders, exclusions, claim/contact details और latest document source/date capture करें। Sensitive identifiers आवश्यकता पर ही रखें और protect करें। Premium `expense_insurance` है। Policy default से asset नहीं; cash/surrender/fund value हो तो अलग record करें।
 
-### 3.4 Chapter 03 rules — implementation contract
+### 3.4 approved product specification rules — implementation contract
 
 | Rule | Coding agent को क्या करना है |
 |---|---|
 | Stable identity | Canonical IDs को display names, custom labels और contextual details से अलग रखें। |
 | Goal priority | Priority को goal identity/feasibility/resource allocation से अलग रखें; category से priority infer न करें। |
 | Category boundary | Category ID केवल financial information का प्रकार बताती है; liquidity, access, tax treatment, ratio eligibility, suitability या goal availability नहीं। |
-| Data ownership | Chapter 03 catalogue financial facts/provenance नहीं रखता। Financial State, provenance, ownership/access, history और readiness Chapter 04 के हैं। |
-| Formula ownership | Measurements/formulas Chapter 05 के हैं; category module में formulas duplicate न करें। |
-| Constraint ownership | Constraints, thresholds और decision gates Chapter 06 के हैं; category definitions में decision logic न डालें। |
+| Data ownership | approved product specification catalogue financial facts/provenance नहीं रखता। Financial State, provenance, ownership/access, history और readiness approved product specification के हैं। |
+| Formula ownership | Measurements/formulas approved product specification के हैं; category module में formulas duplicate न करें। |
+| Constraint ownership | Constraints, thresholds और decision gates approved product specification के हैं; category definitions में decision logic न डालें। |
 | Flows vs stocks | Income/expenses period flows; assets/liabilities as-of-date balances। बिना defined method combine न करें। |
 | Amount basis | Gross/net income, business revenue/profit, debt balance/payment, asset value/cost अलग label करें। |
 | No double-counting | Same amount दो बार नहीं; investment income/asset, insurance premium/policy value, debt balance/payment अलग। |
@@ -161,7 +161,7 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 | Units and dates | Income/expense period; asset/liability valuation/balance date। Missing material unit/currency/ownership/amount basis/date पर guess नहीं। |
 | Governance | Taxonomy/category/ID/alias change के लिए explicit approval, impact review और backward-compatibility plan। |
 
-### 3.5 Chapter 03 acceptance criteria
+### 3.5 approved product specification acceptance criteria
 
 | Requirement | Acceptance criteria |
 |---|---|
@@ -172,7 +172,7 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 | C03-R05 No derived verdict from label | Category-only input liquidity, availability, tax, eligibility या suitability verdict नहीं देता |
 | C03-R06 Flow/stock separation | Period flows और dated balances mix नहीं; gross/net और revenue/profit स्पष्ट |
 | C03-R07 No double-counting | Debt balance/payment, investment/income, premium/policy value duplicate नहीं |
-| C03-R08 Ownership boundaries | Chapter 04 facts; Chapter 05 formulas; Chapter 06 constraints; Chapter 10 goals/feasibility; Chapter 11 strategy |
+| C03-R08 Ownership boundaries | approved product specification facts; approved product specification formulas; approved product specification constraints; approved product specification goals/feasibility; approved product specification strategy |
 | C03-R09 Missing data | Material detail missing हो तो clarification/limitation; fabricated values नहीं |
 | C03-R10 Governed changes | Approval और compatibility/migration plan बिना taxonomy change नहीं |
 
@@ -180,9 +180,9 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 
 ---
 
-## 4. Canonical measurements और calculations — Chapter 05
+## 4. Canonical measurements और calculations — approved product specification
 
-Chapter 05 canonical measurements, formulas, calculation methods, units, periods और assumptions का owner है। नीचे की specification उसी chapter के registers का Step 2 implementation extract है। Formula references संबंधित Measurement IDs हैं—अलग Formula IDs invent न करें।
+approved product specification canonical measurements, formulas, calculation methods, units, periods और assumptions का owner है। नीचे की specification उसी chapter के registers का Step 2 implementation extract है। Formula references संबंधित Measurement IDs हैं—अलग Formula IDs invent न करें।
 
 ### 4.1 Measurement Register — canonical IDs और contracts
 
@@ -251,7 +251,7 @@ Chapter 05 canonical measurements, formulas, calculation methods, units, periods
 
 ### 4.4 Assumption Register — handling contract
 
-- Goal-specific inflation is context-specific; use the applicable goal inflation input (Chapter 05 gives education inflation 10–12% only as an example where applicable, not a universal default).
+- Goal-specific inflation is context-specific; use the applicable goal inflation input (approved product specification gives education inflation 10–12% only as an example where applicable, not a universal default).
 - Expected return is determined from proposed investment mix and time horizon using an appropriate approved return basis; enter the scenario's actual rate and disclose its basis.
 - Goal-funding return is specific to the funding scenario; document the basis and do not use an asset display label to infer return.
 - Retirement return and longevity require an applicable supplied/approved rate and life-expectancy horizon; no universal default.
@@ -267,7 +267,7 @@ Chapter 05 canonical measurements, formulas, calculation methods, units, periods
 2. Available Monthly Surplus uses actual net monthly income less actual monthly expenses less actual monthly savings/investments for the same calendar month. Include household expenses and full applicable EMI once; include ongoing SIPs once; exclude own-account transfers and irregular one-off receipts from recurring income. Credit-card purchases count in purchase month, not bill settlement; refunds adjust original expense. Missing required records → Provisional, not zero.
 3. Weighted Debt Rate uses current positive outstanding principal, not original sanctioned amount. Active debt is legally outstanding and not fully repaid/settled/cancelled/closed, with principal > 0 on valuation date; overdue debt remains active. Include genuine contractual 0%; missing/non-comparable rate is not 0% and makes result Provisional. No eligible principal/valid denominator → Unavailable. Fees/penalties/prepayment charges separately disclosed.
 4. Ratio scale must remain consistent across consumers. Example: if 40% is represented as 40, do not reinterpret as 0.40 or apply percentage conversion twice.
-5. Asset/portfolio inclusion does not establish liquidity, accessibility, earmarking or goal eligibility. Use Chapter 04 evidence and applicable approved mapping.
+5. Asset/portfolio inclusion does not establish liquidity, accessibility, earmarking or goal eligibility. Use approved product specification evidence and applicable approved mapping.
 6. Positive cash-flow surplus alone does not prove investable capacity; consider verified commitments, irregular costs, liquidity needs, constraints and competing goal claims.
 7. Monthly Spending Variance is spending-budget variance only; positive=over budget, negative=under budget, zero=equal. Missing actual/budget is unavailable/provisional, never zero by assumption; no tolerance judgement is implied.
 8. If a method, input contract or assumption is unresolved, do not display an authoritative confirmed result.
@@ -276,29 +276,29 @@ Chapter 05 canonical measurements, formulas, calculation methods, units, periods
 
 | Item | Owner | Consumer boundary |
 |---|---|---|
-| Goal/category identity | Chapter 03 | Chapter 05 consumes categories; does not redefine them |
-| Financial records, provenance, ownership/access, restrictions, history/readiness | Chapter 04 | Chapter 05 uses evidence; does not replace Financial State |
-| Measurements, formulas, assumptions, calculation methods | Chapter 05 | Chapters 08, 10, 11 and 12 consume canonical definitions without duplicates |
-| Constraints, thresholds, decision effects | Chapter 06 | Chapter 05 provides measures; it does not invent thresholds |
-| Cash-flow/affordability evidence | Chapter 08 | Uses Chapter 05 surplus/formulas while preserving source evidence |
-| Goal target/funding/feasibility workflow | Chapter 10 | Applies Ch03 identity, Ch04 evidence, Ch05 calculations, Ch06 constraints |
-| Strategy evaluation | Chapter 11 | Consumes canonical measures and constraints; no duplicate rule/formula |
-| Scenario analysis | Chapter 12 | Scenario inputs are hypothetical and must not mutate actual state |
-| Acceptance/action lifecycle | Chapter 13 | A calculation is not recommendation acceptance or transaction authorization |
+| Goal/category identity | approved product specification | approved product specification consumes categories; does not redefine them |
+| Financial records, provenance, ownership/access, restrictions, history/readiness | approved product specification | approved product specification uses evidence; does not replace Financial State |
+| Measurements, formulas, assumptions, calculation methods | approved product specification | approved product specifications, 10, 11 and 12 consume canonical definitions without duplicates |
+| Constraints, thresholds, decision effects | approved product specification | approved product specification provides measures; it does not invent thresholds |
+| Cash-flow/affordability evidence | approved product specification | Uses approved product specification surplus/formulas while preserving source evidence |
+| Goal target/funding/feasibility workflow | approved product specification | Applies Ch03 identity, Ch04 evidence, Ch05 calculations, Ch06 constraints |
+| Strategy evaluation | approved product specification | Consumes canonical measures and constraints; no duplicate rule/formula |
+| Scenario analysis | approved product specification | Scenario inputs are hypothetical and must not mutate actual state |
+| Acceptance/action lifecycle | approved product specification | A calculation is not recommendation acceptance or transaction authorization |
 
-## 5. Constraints और decision gates — Chapter 06
+## 5. Constraints और decision gates — approved product specification
 
-Chapter 06 constraint policy और decision effects का owner है। यह formulas, cash-flow evidence, goal workflow या plan acceptance का owner नहीं है। नीचे documented rules हैं; runtime enforcement unverified है।
+approved product specification constraint policy और decision effects का owner है। यह formulas, cash-flow evidence, goal workflow या plan acceptance का owner नहीं है। नीचे documented rules हैं; runtime enforcement unverified है।
 
 ### 5.1 Canonical constraint register
 
 | Rule ID / measure | Trigger and required evidence | Required decision effect | Threshold / status |
 |---|---|---|---|
-| `CTR-DTI-001` | Gross monthly income और recurring monthly debt-payment/EMI evidence; Chapter 05 DTI | Available Monthly Surplus assessment को inform करे; DTI अकेले goal, investment या strategy block नहीं करता | कोई threshold approved नहीं; runtime unverified |
-| `CTR-LIQ-001` | Specific candidate goal/strategy/action asset पर निर्भर हो; Chapter 04 ownership, access, restrictions, timing, commitments और context evidence | Unavailable asset exclude करें और impact/uncertainty बताएं; ownership/portfolio inclusion availability नहीं; asset sell/earmark/reassign न करें | कोई numeric threshold या universal eligibility mapping approved नहीं |
+| `CTR-DTI-001` | Gross monthly income और recurring monthly debt-payment/EMI evidence; approved product specification DTI | Available Monthly Surplus assessment को inform करे; DTI अकेले goal, investment या strategy block नहीं करता | कोई threshold approved नहीं; runtime unverified |
+| `CTR-LIQ-001` | Specific candidate goal/strategy/action asset पर निर्भर हो; approved product specification ownership, access, restrictions, timing, commitments और context evidence | Unavailable asset exclude करें और impact/uncertainty बताएं; ownership/portfolio inclusion availability नहीं; asset sell/earmark/reassign न करें | कोई numeric threshold या universal eligibility mapping approved नहीं |
 | `CTR-HIR-001` | Individual outstanding loan/liability rate strictly >14% p.a. और investment consideration चल रही हो; liability, rate, balance/status, terms, payoff quote, fees, cash-flow effect, funding source, expected return और strategy estimated return | Repayment interest saved, prepayment costs, alternative expected return और strategy return का comparable trade-off assessment + disclosure अनिवार्य; investor अंतिम निर्णय लेता है; investment/Goal Planner/Strategy Builder auto-block नहीं | Exactly 14% trigger नहीं; >14% threshold approved; runtime enforcement unverified |
-| `metric_liquid_asset_ratio` | Chapter 05 measure; approved asset eligibility mapping और Chapter 04 access evidence | केवल relevant assessment को inform करे; ratio अकेले warning/pass-fail/infeasibility नहीं | कोई threshold नहीं; यह measure है, Chapter 06 rule ID नहीं |
-| Individual-goal Required Return | Goal amount/date, funding path, eligible funding और approved Chapter 05 formula/assumptions | Affordability के साथ scenario assessment; forecast/guarantee या automatic block नहीं | कोई threshold नहीं; 15% approved hard limit/warning नहीं |
+| `metric_liquid_asset_ratio` | approved product specification measure; approved asset eligibility mapping और approved product specification access evidence | केवल relevant assessment को inform करे; ratio अकेले warning/pass-fail/infeasibility नहीं | कोई threshold नहीं; यह measure है, approved product specification rule ID नहीं |
+| Individual-goal Required Return | Goal amount/date, funding path, eligible funding और approved approved product specification formula/assumptions | Affordability के साथ scenario assessment; forecast/guarantee या automatic block नहीं | कोई threshold नहीं; 15% approved hard limit/warning नहीं |
 | `CTR-AFF-001` | Candidate contribution/lump sum; Ch05 Required SIP/amount and surplus; Ch08 cash-flow evidence; Ch04 asset/access evidence; irregular costs, liquidity, competing goals | Additional Required SIP (existing goal SIP के बाद) ≤ same-period Available Monthly Surplus होने पर SIP comparison pass. Gap हो तो canonical monthly shortfall दिखाएं; इससे goal impossible सिद्ध नहीं होता. Step-up हर scheduled period पर जाँचे. Lump sum केवल accessible, eligible, timely, uncommitted asset. Combined path एक dated projection में; double count नहीं. Multi-goal conflicts surface करें, auto-allocate नहीं | कोई universal buffer, surplus % या numeric threshold approved नहीं; runtime unverified |
 | `CTR-RATIO-001` | Ratio measurement/calculation/rule/consumer के बीच pass हो | Owning measurement का unit और numeric scale जस का तस रखें; double percentage conversion रोकें | कोई threshold/standalone pass-fail नहीं; runtime unverified |
 | `CTR-INS-001` | Insurance Coverage Ratio/required-cover evaluation; existing sum assured, approved required-cover method/inputs, reliable policy data | Method, scope और policy approved/validated न हों तो adequacy/decision infer न करें; Excellent/Healthy/Attention/Critical bands या automatic recommendation नहीं | Coverage bands/threshold approved नहीं; policy open; runtime unverified |
@@ -317,44 +317,44 @@ Chapter 06 constraint policy और decision effects का owner है। य�
 
 Illustrative case values या दूसरे scope की policy से threshold copy न करें। नया threshold तभी जोड़ा जा सकता है जब owner, unit, exact boundary, evidence, effect, approval status और consumers documented हों।
 
-### 5.3 Funding-path application contract for Chapter 10
+### 5.3 Funding-path application contract for approved product specification
 
 1. SIP/step-up SIP: हर scheduled period का additional Required SIP, उसी period के Available Monthly Surplus से compare करें; Ch08 evidence उपयोग करें।
 2. Lump sum: `CTR-LIQ-001` के तहत asset-specific availability verify करें; unavailable/committed resources exclude कर funding gap बताएं।
 3. Combined lump sum + SIP: एक consistent dated projection में दोनों को assess करें; liquidity और surplus checks दोनों लागू हों; double counting रोकें।
 4. Multiple goals: same asset या surplus पर competing claims detect करके affected goals/consequences दिखाएं; priority या allocation स्वतः न चुनें। Allocation algorithm और priority persistence unresolved हैं।
-5. Required Return: केवल approved Chapter 05 method/inputs; non-hard assessment, forecast या gate नहीं।
+5. Required Return: केवल approved approved product specification method/inputs; non-hard assessment, forecast या gate नहीं।
 6. Missing/unresolved method/evidence: affected test undetermined / insufficient evidence; missing evidence से goal infeasible घोषित न करें।
 7. एक comparison pass होने से goal automatically feasible, recommendation, Accepted Plan या transaction नहीं बनता।
 
 ### 5.4 Cross-chapter ownership
 
-| Domain | Owner | Chapter 06 boundary |
+| Domain | Owner | approved product specification boundary |
 |---|---|---|
-| Financial facts, ownership/access, restrictions, liability evidence | Chapter 04 | Evidence consume करता है; source data redefine नहीं |
-| Measures, formulas, return assumptions, contribution/lump-sum methods | Chapter 05 | Canonical outputs consume; formula recreate नहीं |
-| Investor context/priorities | Chapter 07 | Investor decision rights preserve; automatic priority choice नहीं |
-| Available Monthly Surplus | Chapter 05; source cash flow Chapter 08 | Affordability effect apply; source evidence Chapter 08 से |
-| Protection/insurance interpretation | Chapter 09 and approved calculation owner | केवल documented boundary; unapproved labels/gates नहीं |
-| SIP/step-up/lump sum/combined/multi-goal feasibility | Chapter 10 | Constraint effects देता है; workflow/outcome Chapter 10 का |
-| Strategy evaluation | Chapter 11 | Applicable constraints consume; duplicate rules/thresholds नहीं |
-| What-If/scenario comparison | Chapter 12 | Relevant candidate scenarios पर apply; actual state mutate नहीं |
-| Accepted Plan / Action Plan | Chapter 13 | Plan accept या transaction authorize नहीं |
+| Financial facts, ownership/access, restrictions, liability evidence | approved product specification | Evidence consume करता है; source data redefine नहीं |
+| Measures, formulas, return assumptions, contribution/lump-sum methods | approved product specification | Canonical outputs consume; formula recreate नहीं |
+| Investor context/priorities | approved product specification | Investor decision rights preserve; automatic priority choice नहीं |
+| Available Monthly Surplus | approved product specification; source cash flow approved product specification | Affordability effect apply; source evidence approved product specification से |
+| Protection/insurance interpretation | approved product specification and approved calculation owner | केवल documented boundary; unapproved labels/gates नहीं |
+| SIP/step-up/lump sum/combined/multi-goal feasibility | approved product specification | Constraint effects देता है; workflow/outcome approved product specification का |
+| Strategy evaluation | approved product specification | Applicable constraints consume; duplicate rules/thresholds नहीं |
+| What-If/scenario comparison | approved product specification | Relevant candidate scenarios पर apply; actual state mutate नहीं |
+| Accepted Plan / Action Plan | approved product specification | Plan accept या transaction authorize नहीं |
 
-### 5.5 Chapter 06 governance and unresolved items
+### 5.5 approved product specification governance and unresolved items
 
-- Rule IDs exactly preserve करें: `CTR-DTI-001`, `CTR-LIQ-001`, `CTR-HIR-001`, `CTR-AFF-001`, `CTR-RATIO-001`, `CTR-INS-001`, `CTR-GATE-001`. `metric_liquid_asset_ratio` Chapter 05 measurement ID है, constraint ID नहीं।
+- Rule IDs exactly preserve करें: `CTR-DTI-001`, `CTR-LIQ-001`, `CTR-HIR-001`, `CTR-AFF-001`, `CTR-RATIO-001`, `CTR-INS-001`, `CTR-GATE-001`. `metric_liquid_asset_ratio` approved product specification measurement ID है, constraint ID नहीं।
 - Documented, proposed, approved और implementation-verified statuses अलग रखें; documentation alone runtime verification नहीं।
 - Insurance coverage method/policy और asset-eligibility mapping अपने canonical owners से approved न हों तो unresolved रखें।
 - Multi-goal allocation algorithm और priority persistence unresolved; automatic allocation नहीं।
 - `CTR-GATE-001` की product-wide wording Foundation 00.2 से reconcile होनी बाकी है; इस plan में conflict silently resolve न करें।
 - Rule change canonical owner में पहले करें, फिर downstream references/tests review करें।
 
-## 6. Financial State और evidence boundary — Chapter 04
+## 6. Financial State और evidence boundary — approved product specification
 
-Chapter 04 Financial State facts, provenance, ownership/access, history और data readiness का owner है। Step 2 में इसका अर्थ केवल इतना है:
+approved product specification Financial State facts, provenance, ownership/access, history और data readiness का owner है। Step 2 में इसका अर्थ केवल इतना है:
 
-- Chapter 05 calculations को Chapter 04 के defined inputs/evidence/readiness contracts के अनुसार consume करना चाहिए।
+- approved product specification calculations को approved product specification के defined inputs/evidence/readiness contracts के अनुसार consume करना चाहिए।
 - Canonical measurement या category definition को investor की stored financial fact, its provenance या readiness record का replacement न बनाएँ।
 - Missing या incomplete evidence को fabricated zero/default से replace न करें।
 - Financial State की पूरी feature implementation या persistence migration इस चरण में न करें; वह संबंधित अगले चरणों में आएगी।
@@ -368,7 +368,7 @@ Chapter 04 Financial State facts, provenance, ownership/access, history और d
 - वास्तविक file path और public function/constant/ID;
 - callers और dependent features;
 - inputs, outputs, units और periods;
-- संबंधित Chapter 03/05/06 contract;
+- संबंधित approved product specification/05/06 contract;
 - current behavior और source contract के बीच अंतर;
 - उपलब्ध tests और missing regression coverage;
 - migration का प्रस्तावित canonical/shared owner।
@@ -388,9 +388,9 @@ Chapter 04 Financial State facts, provenance, ownership/access, history और d
 
 - Existing tests चलाकर baseline दर्ज करें।
 - Canonical IDs/categories/taxonomy के लिए source-aligned tests जोड़ें।
-- प्रत्येक migrated calculation के लिए Chapter 05 के approved examples/expected values पर unit tests लिखें; fixtures synthetic हों।
+- प्रत्येक migrated calculation के लिए approved product specification के approved examples/expected values पर unit tests लिखें; fixtures synthetic हों।
 - Units, periods, denominator validation, missing inputs, provisional/unavailable outcomes और double-counting safeguards को संबंधित source rules के अनुसार test करें।
-- Constraints के लिए applicability, threshold और decision-effect tests केवल वहीं लिखें जहाँ Chapter 06 में rule defined है।
+- Constraints के लिए applicability, threshold और decision-effect tests केवल वहीं लिखें जहाँ approved product specification में rule defined है।
 - Regression tests से migrated code के पुराने behavior और approved contract का अंतर स्पष्ट करें।
 - Unapproved examples या provisional values को test fixtures में authoritative policy न बनाएँ।
 
@@ -400,18 +400,18 @@ Chapter 04 Financial State facts, provenance, ownership/access, history और d
 - Investor Profile / Financial State की पूरी feature या database persistence migration नहीं।
 - Database schema, tables, columns या RLS policies में बदलाव नहीं।
 - API endpoints या Frontend में बदलाव नहीं।
-- Chapter 03/05/06 के unresolved decisions को अनुमान से बंद नहीं करना।
-- Chapter 05 formulas या Chapter 06 constraints की duplicate feature-level copies नहीं बनानी।
-- Chapter 10 Goal Planner और Chapter 11 Strategy Builder की ownership boundaries नहीं बदलनी।
+- approved product specification/05/06 के unresolved decisions को अनुमान से बंद नहीं करना।
+- approved product specification formulas या approved product specification constraints की duplicate feature-level copies नहीं बनानी।
+- approved product specification Goal Planner और approved product specification Strategy Builder की ownership boundaries नहीं बदलनी।
 - Multi-Goal Planning या किसी unapproved workflow का logic नहीं बनाना।
 
 ## 11. Step 2 acceptance checklist
 
-- [ ] Chapter 03, 04, 05 और 06 के relevant contracts इस plan में embedded हैं और implementation के लिए स्पष्ट हैं।
+- [ ] approved product specification, 04, 05 और 06 के relevant contracts इस plan में embedded हैं और implementation के लिए स्पष्ट हैं।
 - [ ] Existing canonical IDs, categories, measurements, formulas और constraints का code inventory तैयार है।
 - [ ] Confirmed canonical vocabulary सही target domain area में रखी गई है।
 - [ ] केवल source-defined और sufficiently specified calculations migrate की गई हैं।
-- [ ] Shared constraints केवल Chapter 06 के defined rules के अनुसार रखे गए हैं।
+- [ ] Shared constraints केवल approved product specification के defined rules के अनुसार रखे गए हैं।
 - [ ] Domain imports और dependency boundaries verify किए गए हैं।
 - [ ] Unit और regression tests चलाए गए; results दर्ज हैं।
 - [ ] Unresolved/provisional items और runtime parity gaps स्पष्ट रूप से दर्ज हैं।
