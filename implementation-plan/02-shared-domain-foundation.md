@@ -37,18 +37,155 @@ backend/app/domain/
 
 यह target architecture का relevant हिस्सा है, complete directory tree नहीं। किसी file को तभी बनाएँ जब उसके लिए वास्तविक approved contract और उपयोग मौजूद हो। केवल खाली structure या अनुमानित abstractions न बनाएँ।
 
-## 3. Canonical vocabulary — Chapter 03
+## 3. Chapter 03 से सीधे लेने वाली canonical definitions और tables
 
-Chapter 03 के अनुसार:
+**Coding agent के लिए निर्देश:** नीचे की tables Chapter 03 से इस plan में उतारी गई हैं ताकि Notion access की जरूरत न हो। इन्हें canonical specification मानें। IDs/definitions को rename, extend या reinterpret न करें। Chapter 03 में runtime ID/enum parity और persisted-record compatibility unverified हैं। पहले पुराने code/database में actual values और usage inspect करें; mismatch को report करें, बिना approval silent migration न करें।
 
-- Approved goal taxonomy और financial category identities को canonical IDs सहित एक authoritative definition में रखें।
-- Stable IDs को display names, custom labels और contextual details से अलग रखें।
-- Goal identity, priority, timing, amount, beneficiary, funding path और feasibility को एक ही concept न मानें।
-- Category label से liquidity, accessibility, goal eligibility, suitability, tax treatment या recommendation infer न करें।
-- Flow और stock, income और expense, asset और liability, debt balance और debt payment को अलग रखें।
-- Canonical IDs/definitions बदलने से पहले explicit approval और compatibility impact review आवश्यक है।
+### 3.1 Goal taxonomy — `goal_taxonomy.py`
 
-मौजूदा code में IDs, enums, aliases और persisted values की जाँच करें। किसी mismatch को चुपचाप ठीक करने, नया ID जोड़ने या पुराने ID का अर्थ बदलने के बजाय documented gap के रूप में दर्ज करें।
+Exactly ये 10 goal types रखें:
+
+| Canonical ID | Display name | Goal definition | Contextual details |
+|---|---|---|---|
+| `goal_retirement` | Retirement | Retirement के बाद financial needs और living expenses की planning | Retirement timing, post-retirement expenses और income needs |
+| `goal_marriage` | Marriage | Marriage/wedding expenses की planning | किसके लिए, event date, cost details |
+| `goal_vehicle` | Vehicle | Vehicle purchase funding | Vehicle type, new/used preference, purchase details |
+| `goal_dream_home` | Dream Home | Home/residential property acquire करने की funding | Location, property details, purchase context |
+| `goal_education` | Education | Investor या designated beneficiary के education expenses | Beneficiary और education details; Child Education अलग ID/type/alias नहीं |
+| `goal_vacation` | Vacation | Holiday/leisure trip costs | Trip type, destination, frequency |
+| `goal_debt_freedom` | Debt Freedom | Outstanding liabilities repay करके debt freedom | चुनी गई liability का reference |
+| `goal_wealth_creation` | Wealth Creation | Assets/investment corpus से long-term wealth accumulation | Target corpus, horizon, funding details |
+| `goal_fire_passive_income` | FIRE / Passive Income / Financial Freedom | Employment dependence घटाने/हटाने के लिए पर्याप्त assets/income बनाना | Target independence age, desired income, work-dependence preference |
+| `goal_others` | Others | ऐसा personal financial goal जो अन्य approved type में fit न हो | Investor custom name/description; canonical type `goal_others` ही |
+
+Goal priority, timing, amount, beneficiary, funding path, strategy और feasibility goal identity से अलग हैं। Priority investor की relative preference है; category से priority infer न करें और priority hard constraint override नहीं कर सकती। Custom goal label से नया canonical goal type न बनाएँ।
+
+### 3.2 Financial categories — `financial_categories.py`
+
+ये चार top-level planning groups हैं; यह accounting ledger, transaction register या complete Chart of Accounts नहीं है। Extra account IDs/subaccounts/accounting rules न बनाएँ।
+
+#### Income
+
+| Canonical ID | Category | Definition / classification guidance |
+|---|---|---|
+| `income_salary` | Salary | Employment compensation; employer/pay frequency; gross salary और take-home अलग |
+| `income_business` | Business | Business operation income; revenue और profit अलग label |
+| `income_professional_freelance` | Professional/Freelance | Independent professional/freelance fees; receipts और work-costs के बाद income अलग |
+| `income_rental` | Rental | Property/asset rent; rent received और related costs के बाद income अलग |
+| `income_interest` | Interest | Deposits/savings/debt instruments पर interest; underlying holding अलग asset |
+| `income_dividend` | Dividend | Investment distributions; underlying investment अलग asset |
+| `income_pension` | Pension | Pension receipts; expected और actually received अलग |
+| `income_other` | Other | अन्यथा unclassified income; descriptive source दें, केवल fallback |
+
+Income frequency: Monthly या Annual; period स्पष्ट होना चाहिए।
+
+#### Expenses
+
+| Canonical ID | Category | Definition / classification guidance |
+|---|---|---|
+| `expense_housing` | Housing | Rent, maintenance, society charges; same cost दो बार नहीं |
+| `expense_food_groceries` | Food & Groceries | Household groceries/food; dining-out convention consistent रखें |
+| `expense_utilities` | Utilities | Electricity, water, gas, phone, internet |
+| `expense_transportation` | Transportation | Fuel, public transport, cab, commute, vehicle upkeep; holiday travel नहीं |
+| `expense_education` | Education | Education spending; Education Loan balance से अलग |
+| `expense_healthcare` | Healthcare | Treatment, medicines, appointments; insurance premium अलग |
+| `expense_insurance` | Insurance | Policy premiums; claims expenses नहीं |
+| `expense_debt_payments` | Debt Payments | Loan/liability cash payments; total payment एक बार, balance अलग; principal/interest split केवल ज्ञात हो तो |
+| `expense_family_support` | Family Support | Family support खर्च/transfer; recipient, purpose, recurring/one-off |
+| `expense_travel` | Travel | Trip/accommodation खर्च; routine commute Transportation है |
+| `expense_entertainment` | Entertainment | Leisure/entertainment spending |
+| `expense_shopping` | Shopping | Personal/household goods; specific category fit हो तो वही |
+| `expense_other` | Other | अन्यथा unclassified spending; descriptive purpose, केवल fallback |
+
+Expense frequency: Monthly या Annual; period स्पष्ट होना चाहिए। Savings/investments Expenses से अलग हैं। Full EMI एक ही बार expense है। Own-account transfers Income/Expenses नहीं। Credit-card purchase purchase month में expense है; bill settlement पर दोबारा नहीं। Refund original expense adjust करता है, नया income नहीं।
+
+#### Assets
+
+| Canonical ID | Category | Definition / classification guidance |
+|---|---|---|
+| `asset_bank_cash` | Bank / Cash | Cash/bank balances; account, ownership, balance date, restrictions; तुरंत accessible assume न करें |
+| `asset_fixed_deposits` | Fixed Deposits | Fixed-term deposits; institution, maturity, terms, early access |
+| `asset_mutual_funds` | Mutual Funds | Fund holdings; scheme, value/date; current value और invested cost अलग |
+| `asset_stocks_equity` | Stocks / Equity | Direct shares; holding, quantity, market value/date; value और cost अलग |
+| `asset_bonds_debt` | Bonds / Debt | Owned debt securities; issuer, instrument, maturity, value; investor का asset है |
+| `asset_epf_ppf` | EPF / PPF | Scheme balances; account, date, withdrawal conditions |
+| `asset_nps` | NPS | NPS holdings; account, date, withdrawal conditions |
+| `asset_gold` | Gold | Physical/financial gold; form, quantity, purity, valuation date; immediate cash नहीं मानें |
+| `asset_real_estate` | Real Estate | Owned property; type/location, ownership share, value/date; immediate liquidity assume न करें |
+| `asset_business_ownership` | Business Ownership | Business ownership interest; share, valuation basis/date; revenue ownership value नहीं |
+| `asset_vehicle` | Vehicle | Owned vehicle; type, ownership share, estimated value/date; related loan अलग |
+| `asset_other` | Other | अन्यथा unclassified asset; type/value/date, केवल fallback |
+
+Asset value के साथ relevant valuation/estimate date रखें।
+
+#### Liabilities
+
+| Canonical ID | Category | Definition / classification guidance |
+|---|---|---|
+| `liability_home_loan` | Home Loan | Home/property secured debt; borrower, balance, rate, payment; balance/EMI/property value अलग |
+| `liability_car_loan` | Car Loan | Vehicle finance debt; borrower, balance, payment; vehicle value अलग |
+| `liability_personal_loan` | Personal Loan | Personal borrowing; lender, borrower, balance, rate, repayment period |
+| `liability_education_loan` | Education Loan | Education borrowing; beneficiary, lender, balance, terms; beneficiary अलग category नहीं |
+| `liability_business_loan` | Business Loan | Business borrowing; liable party, purpose, balance, terms; evidence बिना personal liability न मानें |
+| `liability_credit_card` | Credit Card | Card outstanding; account, statement period, amount, due date; balance/minimum due/statement/limit अलग |
+| `liability_other` | Other | अन्यथा unclassified liability; type, borrower, balance/payment terms, केवल fallback |
+
+Liability payment frequency जहाँ लागू हो Monthly, Quarterly या Annual हो सकती है। Outstanding balance और regular payment अलग रखें।
+
+### 3.3 Insurance policy reference
+
+ये Chapter 03 के policy inventory IDs हैं; insurance policy अपने-आप asset नहीं है।
+
+| Canonical ID | Policy type | Capture fields / checks |
+|---|---|---|
+| `insurance_term_life` | Term Life | Insurer/reference, policyholder, life assured, nominee, dates, premium/frequency, paying term, sum assured, status; death benefit, riders, exclusions, employer/individual cover |
+| `insurance_whole_life_endowment` | Whole Life / Endowment / Money-Back | Insurer/reference, policyholder, life assured, nominee, dates, premium/frequency, paying term, status; death/maturity benefits, guaranteed vs non-guaranteed, bonuses, surrender value, paid-up status, riders |
+| `insurance_ulip` | ULIP | Insurer/reference, policyholder, life assured, nominee, start, premium, policy/paying term, status; sum assured, fund value/date, allocation, charges, lock-in, maturity, death benefit, switch restrictions |
+| `insurance_health` | Health — Individual / Family Floater | Insurer/reference, proposer, insured members/DOB, policy period, premium, sum insured, status; floater/individual, room-rent, co-pay, waiting/pre-existing terms, sub-limits, restoration, NCB, network, exclusions |
+| `insurance_critical_illness_accident_disability` | Critical Illness / Personal Accident / Disability | Insurer/reference, insured, period, premium, cover, status; covered events, benefit type, disability terms, exclusions, waiting/survival periods, riders |
+| `insurance_motor` | Motor — Vehicle | Insurer/reference, policyholder, vehicle identity, period, premium, status; third-party/own-damage, IDV, add-ons, deductibles, NCB, exclusions |
+| `insurance_home_property` | Home / Property | Insurer/reference, policyholder, property, period, premium, sum insured, status; building/contents, risks, valuation basis, deductibles, exclusions, lender interest |
+| `insurance_travel` | Travel | Insurer/reference, travellers, destination, trip dates, premium, status; medical/emergency, evacuation, cancellation, baggage/delay, activity restrictions, exclusions |
+| `insurance_other_business_liability` | Other / Business / Liability | Insurer/reference, insured entity, period, premium, limit, status; risk, covered parties/assets, indemnity, deductible, exclusions, claims-made/occurrence, endorsements |
+
+हर policy में जहाँ लागू हो policyholder/proposer, insured person/asset, nominee, start/end/renewal dates, premium/frequency, cover/limit, status, riders, exclusions, claim/contact details और latest document source/date capture करें। Sensitive identifiers आवश्यकता पर ही रखें और protect करें। Premium `expense_insurance` है। Policy default से asset नहीं; cash/surrender/fund value हो तो अलग record करें।
+
+### 3.4 Chapter 03 rules — implementation contract
+
+| Rule | Coding agent को क्या करना है |
+|---|---|
+| Stable identity | Canonical IDs को display names, custom labels और contextual details से अलग रखें। |
+| Goal priority | Priority को goal identity/feasibility/resource allocation से अलग रखें; category से priority infer न करें। |
+| Category boundary | Category ID केवल financial information का प्रकार बताती है; liquidity, access, tax treatment, ratio eligibility, suitability या goal availability नहीं। |
+| Data ownership | Chapter 03 catalogue financial facts/provenance नहीं रखता। Financial State, provenance, ownership/access, history और readiness Chapter 04 के हैं। |
+| Formula ownership | Measurements/formulas Chapter 05 के हैं; category module में formulas duplicate न करें। |
+| Constraint ownership | Constraints, thresholds और decision gates Chapter 06 के हैं; category definitions में decision logic न डालें। |
+| Flows vs stocks | Income/expenses period flows; assets/liabilities as-of-date balances। बिना defined method combine न करें। |
+| Amount basis | Gross/net income, business revenue/profit, debt balance/payment, asset value/cost अलग label करें। |
+| No double-counting | Same amount दो बार नहीं; investment income/asset, insurance premium/policy value, debt balance/payment अलग। |
+| Transfers | Own-account transfers external income/expense नहीं। Household transfer treatment owning chapter से लें; universal rule invent न करें। |
+| Other fallback | `*_other` केवल तब जब कोई listed category fit न हो; descriptive context दें। |
+| Units and dates | Income/expense period; asset/liability valuation/balance date। Missing material unit/currency/ownership/amount basis/date पर guess नहीं। |
+| Governance | Taxonomy/category/ID/alias change के लिए explicit approval, impact review और backward-compatibility plan। |
+
+### 3.5 Chapter 03 acceptance criteria
+
+| Requirement | Acceptance criteria |
+|---|---|
+| C03-R01 Goal catalogue | Exactly 10 approved goal IDs; unapproved extra type नहीं |
+| C03-R02 Stable identity | Display/custom label change से canonical ID नहीं बदलता |
+| C03-R03 Priority separation | Priority change goal type नहीं बदलता, resources auto-allocate नहीं करता, hard constraint override नहीं करता |
+| C03-R04 Category classification | Approved IDs से consistent classification; Other केवल fallback |
+| C03-R05 No derived verdict from label | Category-only input liquidity, availability, tax, eligibility या suitability verdict नहीं देता |
+| C03-R06 Flow/stock separation | Period flows और dated balances mix नहीं; gross/net और revenue/profit स्पष्ट |
+| C03-R07 No double-counting | Debt balance/payment, investment/income, premium/policy value duplicate नहीं |
+| C03-R08 Ownership boundaries | Chapter 04 facts; Chapter 05 formulas; Chapter 06 constraints; Chapter 10 goals/feasibility; Chapter 11 strategy |
+| C03-R09 Missing data | Material detail missing हो तो clarification/limitation; fabricated values नहीं |
+| C03-R10 Governed changes | Approval और compatibility/migration plan बिना taxonomy change नहीं |
+
+**Verification status:** ये documentation-level contracts हैं। Runtime IDs/enums, aliases, persisted data और migration compatibility को tests और repository evidence के बिना verified न बताएं।
+
+---
 
 ## 4. Canonical measurements और calculations — Chapter 05
 
