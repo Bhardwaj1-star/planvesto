@@ -6,18 +6,11 @@ Step 1 में backend की foundation तैयार होने के �
 
 यह चरण feature migration नहीं है। Investor Profile, Moneywheel, Goal Planner, Strategy Builder या किसी अन्य feature का पूरा logic इस चरण में migrate नहीं करना है।
 
-## 1. Authoritative references
+## 1. इस implementation plan का specification status
 
-काम शुरू करने से पहले इन स्रोतों को पढ़ें और इनके recorded status/open decisions का पालन करें:
+इस plan में Chapter 03, 05 और 06 के Step 2-संबंधित contracts, IDs, formulas, calculation methods, assumptions, constraints और decision effects सीधे शामिल हैं। Coding agent को इन विवरणों को लागू करने के लिए Notion access की आवश्यकता नहीं होनी चाहिए।
 
-- [Backend Folder Structure — Target Architecture](https://app.notion.com/p/40f57e71b7b88194a6cdeee083a2568c)
-- [Backend Redesign — Migration Plan](https://app.notion.com/p/41057e71b7b881139bc2eb448ff838bb)
-- [Chapter 03 — Canonical Identity, Categories & Goal Taxonomy](https://app.notion.com/p/3fc57e71b7b8817783aaeb3abbb4d9bf)
-- [Chapter 05 — Canonical Measurements, Formulas & Assumptions](https://app.notion.com/p/3fc57e71b7b8818baa08d87180038633)
-- [Chapter 06 — Constraints, Thresholds & Decision Gates](https://app.notion.com/p/3fc57e71b7b881ccb7e4d84d6ba02c20)
-- [Chapter 04 — Financial State & Data Readiness](https://app.notion.com/p/3fc57e71b7b88123b516f3e745dc38b7)
-
-इन chapters में दर्ज content को runtime implementation का प्रमाण न मानें। जहाँ status, approval या method unresolved है, उसे unresolved ही रखें।
+यह specification documentation-level contract है—यह existing code parity, runtime behavior, test coverage या हर दर्ज method की approval का प्रमाण नहीं है। हर item का status नीचे स्पष्ट किया गया है; unresolved/provisional items को अनुमान से approved या executable policy में न बदलें। Chapter 04 के Financial State facts, provenance, ownership/access, history और data-readiness contracts अपनी owning boundary में ही रहेंगे।
 
 ## 2. इस चरण का target area
 
@@ -189,28 +182,173 @@ Liability payment frequency जहाँ लागू हो Monthly, Quarterly 
 
 ## 4. Canonical measurements और calculations — Chapter 05
 
-Chapter 05 measurements, formulas, calculation methods, units, periods और assumptions का canonical owner है।
+Chapter 05 canonical measurements, formulas, calculation methods, units, periods और assumptions का owner है। नीचे की specification उसी chapter के registers का Step 2 implementation extract है। Formula references संबंधित Measurement IDs हैं—अलग Formula IDs invent न करें।
 
-इस चरण में:
+### 4.1 Measurement Register — canonical IDs और contracts
 
-1. Chapter 05 के Measurement Register, Formula Register, Assumption Register, Calculation Rules Register और Validation Rules Register को implementation reference की तरह उपयोग करें।
-2. Formula references को उनके canonical Measurement IDs से जोड़ें; अपनी तरफ से competing Formula IDs या duplicate definitions न बनाएँ।
-3. Calculation code को measurement families के अनुसार `domain/shared/calculations/` में व्यवस्थित करें।
-4. हर measurement के inputs, output, unit, period, as-of basis, assumptions, limitations और missing-data behavior को source contract से मिलाएँ।
-5. Chapter 05 में unresolved या provisional methods को approved formula/default में convert न करें।
-6. Existing implementation को source chapters से compare करें; parity verified होने का दावा केवल tests/evidence के आधार पर करें।
+| Group | Measurement ID | Measure | Inputs / basis | Unit / output | मुख्य limitation |
+|---|---|---|---|---|---|
+| Basic financial position | `metric_net_worth` | Net Worth | Total Assets; Total Liabilities; same valuation basis/date | Currency | Assets/liabilities की consistent valuation और valid inputs जरूरी |
+| Monthly cash flow | `metric_monthly_surplus` | Available Monthly Surplus | Actual Net Monthly Income − Actual Monthly Expenses − Actual Monthly Savings and Investments; same calendar month | Currency/month | Negative result shortfall है; incomplete records पर Provisional; EMI और SIP exactly once |
+| Monthly cash flow | `metric_savings_rate` | Savings Ratio | Actual Monthly Savings and Investments ÷ Actual Net Monthly Income | %; same calendar month | Net income positive होना चाहिए; own-account transfers exclude |
+| Monthly cash flow | `metric_monthly_variance` | Monthly Spending Variance | Actual spending − budget limit; same category/month | Currency/month | Spending-budget variance only; missing data zero नहीं; zero budget valid |
+| Financial health/debt | `metric_debt_to_income_ratio` | Debt-to-Income Ratio | Monthly Debt Payments; Gross Monthly Income | % | Payment burden है, liabilities/assets नहीं; gross income positive |
+| Financial health/debt | `metric_leverage_ratio` | Leverage Ratio | Total Liabilities; Total Assets | % | Valid positive denominator / denominator validation |
+| Asset composition | `metric_liquid_asset_ratio` | Liquid Asset Ratio | Liquid Assets; Total Assets | % | Approved eligibility mapping चाहिए; category/display label से liquidity infer नहीं |
+| Asset composition | `metric_financial_asset_ratio` | Financial Asset Ratio | Financial Assets; Total Assets | % | Approved consistent financial-asset mapping चाहिए |
+| Asset composition | `metric_portfolio_concentration` | Portfolio Concentration | Largest Single Asset Value; Total Asset Value | % | Total asset value > 0; percentage-scaled convention |
+| Debt cost | `metric_weighted_debt_rate` | Weighted Debt Rate | Current outstanding principal and current comparable annual rate for each eligible debt; as-of date | % per year | Original sanctioned amount नहीं; missing rate पर Provisional, missing को 0% न मानें |
+| Debt comparison | `metric_investment_debt_spread` | Investment–Debt Spread | Annualised overall portfolio return − Weighted Debt Rate | Percentage points | Same portfolio scope/date/method; portfolio return method approved न हो तो authoritative नहीं |
+| Goal funding | `metric_future_goal_target` | Future Goal Target | Today's Goal Cost; applicable Inflation Rate; Duration in Years | Currency | Applicable approved inflation assumption और valid duration |
+| Goal funding | `metric_projected_asset_value` | Projected Asset Value | Current Allocated Amount; periodic return; number of periods | Currency | Return/frequency/duration/allocation basis disclosed and approved |
+| Goal funding | `metric_goal_funding_gap` | Goal Funding Gap | Future Goal Target; projected value of eligible funding assigned to goal | Currency | Accessibility, restrictions, timing, competing commitments और double-counting अलग से validate |
+| Goal funding | `metric_goal_funding_ratio` | Goal Funding Ratio | Current eligible funding explicitly allocated to goal; current goal cost | % | Current/today's-cost basis; mapped asset automatically earmarked/available नहीं; standalone feasibility verdict नहीं |
+| Goal funding | `metric_future_funding_ratio` | Future Funding Ratio | Projected Goal Funding; Future Goal Target | % | Approved return/period/duration/allocation assumptions; ratio confirmed feasibility नहीं |
+| Goal funding | `metric_required_monthly_contribution` | Required Monthly Contribution / Required SIP | Remaining future-value gap after eligible existing funding projection; whole monthly periods; approved effective annual return | Currency/month | Standard contribution timing month-end; current funding twice subtract न करें; affordability अलग check |
+| Goal affordability | `metric_monthly_sip_surplus_gap` | Monthly SIP / Surplus Gap | Additional Required SIP after existing goal-linked SIP; same-scenario Available Monthly Surplus | Currency/month | Gross SIP compare न करें अगर existing goal SIP accounted है |
+| Goal affordability | `metric_required_surplus_increase` | Required Surplus Increase | Monthly SIP / Surplus Gap; Available Monthly Surplus | % | केवल positive surplus पर percentage; zero/negative पर amount दें, percentage N/A |
+| Goal return | `metric_risk_required_return` | Risk Required Return — individual goal | Future Goal Target; Current Goal Funding; Duration in Years | % per year | Scenario-implied return, forecast/recommendation नहीं; portfolio required return से अलग; individual returns average न करें |
 
-एक measurement के लिए अलग-अलग tiny files न बनाएँ। Architecture blueprint के अनुसार calculations को measurement families के आधार पर group करें; grouping का नाम और सीमा source contract तथा वास्तविक code inspection से तय करें।
+### 4.2 Formula Register — canonical calculation methods
+
+| Measurement ID | Formula / calculation |
+|---|---|
+| `metric_net_worth` | Total Assets − Total Liabilities |
+| `metric_monthly_surplus` | Actual Net Monthly Income − Actual Monthly Expenses − Actual Monthly Savings and Investments |
+| `metric_savings_rate` | Actual Monthly Savings and Investments ÷ Actual Net Monthly Income × 100 |
+| `metric_monthly_variance` | Actual Monthly Spending − Budgeted Monthly Spending Limit |
+| `metric_debt_to_income_ratio` | Monthly Debt Payments ÷ Gross Monthly Income × 100 |
+| `metric_leverage_ratio` | Total Liabilities ÷ Total Assets × 100 |
+| `metric_liquid_asset_ratio` | Liquid Assets ÷ Total Assets × 100 |
+| `metric_financial_asset_ratio` | Financial Assets ÷ Total Assets × 100 |
+| `metric_portfolio_concentration` | Largest Single Asset Value ÷ Total Asset Value × 100 |
+| `metric_weighted_debt_rate` | Σ(Current Outstanding Principalᵢ × Annual Interest Rateᵢ) ÷ Σ(Current Outstanding Principalᵢ), eligible positive-balance debt only |
+| `metric_investment_debt_spread` | Annualised return from overall asset portfolio − Weighted Debt Rate |
+| `metric_future_goal_target` | Today's Goal Cost × (1 + applicable Inflation Rate) ^ Duration in Years |
+| `metric_projected_asset_value` | Current Allocated Amount × (1 + periodic return) ^ number of periods, only with approved inputs |
+| `metric_goal_funding_gap` | Future Goal Target − Projected Value of eligible assets mapped to that goal |
+| `metric_goal_funding_ratio` | Current Eligible Goal Funding ÷ Current Goal Cost × 100 |
+| `metric_future_funding_ratio` | Projected Goal Funding ÷ Future Goal Target × 100 |
+| `metric_required_monthly_contribution` | Future Goal Target minus projected future value of eligible existing funding = remaining future-value gap; solve constant month-end contribution using approved effective annual return and whole monthly periods. Do not subtract current funding twice. |
+| `metric_monthly_sip_surplus_gap` | max(0, Additional Required SIP − Available Monthly Surplus), same scenario/period |
+| `metric_required_surplus_increase` | If surplus > 0: Monthly SIP / Surplus Gap ÷ Available Monthly Surplus × 100; otherwise percentage unavailable/N/A and retain currency gap |
+| `metric_risk_required_return` | Annualised return implied by current eligible goal funding, future goal target and time remaining; use approved input/period conventions; not a forecast |
+
+### 4.3 Additional calculation methods and calculation rules
+
+| Canonical ID | Type | Required method / rule |
+|---|---|---|
+| `method_portfolio_required_return` | Calculation method | Roll forward one portfolio balance through dated portfolio values, eligible goal withdrawals/dates, planned contributions/dates, commitments and horizon; solve one annualised return that funds all withdrawals and leaves the specified terminal residual/reserve. Never average individual-goal returns or assume zero terminal reserve. Missing dated inputs/reserve → unavailable/provisional; no solution → infeasible. |
+| `method_required_lump_sum` | Calculation method | For one annual effective rate r and n years: max(0, (Future Goal Target − Future Value of eligible existing funding at goal date) ÷ (1+r)^n). For irregular dated cash flows use complete dated projection. Future target already includes inflation; do not inflate again. |
+| `method_combined_lump_sum_monthly_contribution` | Calculation method | Project existing funding and lump sum to goal date, then add future value of month-end contributions. For constant month-end SIP: G=max(0,target−FV(existing funding)−FV(lump sum)); rm=(1+ra)^(1/12)−1; SIP=G×rm/((1+rm)^n−1), or G/n when rm=0. Reverse-solve lump sum for a supported affordable SIP. Multiple dated goal tranches require full dated cash-flow solver; do not collapse to one date. |
+| `method_step_up_contribution` | Calculation method | Use explicit dated contribution schedule or explicit step-up rate/frequency and contribution dates. Future-value each dated contribution; solve starting contribution only where schedule is a fixed pattern. Never apply constant SIP formula to changing schedule. |
+| `rule_portfolio_return_no_averaging` | Calculation rule | Portfolio-Level Return Required comes from portfolio dated cash flows; it is not average of individual-goal Risk Required Returns. |
+| `rule_portfolio_asset_availability` | Calculation rule | Asset eligible for goal only when allocation, accessibility, restrictions, timing and competing commitments support that use. Portfolio inclusion alone is insufficient. |
+| `rule_goal_target_basis` | Calculation rule | Identify today's cost vs future-date target. Inflate today's cost once; never re-inflate future-valued target. |
+| `rule_surplus_measure_separation` | Calculation rule | Surplus deducts actual monthly expenses and actual monthly savings/investments from actual net monthly income; disclose annual/irregular planning adjustments separately and do not deduct twice. |
+| `rule_no_double_counting` | Calculation rule | Count each asset, contribution, income and expense once; do not reuse resources across incompatible purposes. |
+| `rule_result_validation` | Validation rule | Before use, confirm required inputs, assumptions and formula/question match; do not present calculation as forecast, recommendation or decision gate. |
+
+### 4.4 Assumption Register — handling contract
+
+- Goal-specific inflation is context-specific; use the applicable goal inflation input (Chapter 05 gives education inflation 10–12% only as an example where applicable, not a universal default).
+- Expected return is determined from proposed investment mix and time horizon using an appropriate approved return basis; enter the scenario's actual rate and disclose its basis.
+- Goal-funding return is specific to the funding scenario; document the basis and do not use an asset display label to infer return.
+- Retirement return and longevity require an applicable supplied/approved rate and life-expectancy horizon; no universal default.
+- Retirement unexpected-expense buffer must be specified by planner/investor as a currency amount or percentage; no hidden default.
+- Contribution timing: use actual contribution dates when available; otherwise disclose the standard estimate date. Required Monthly Contribution's internal standard convention is month-end.
+- Compounding: use product convention when known; otherwise disclose a consistent standard convention.
+- Material assumptions must record source type, value, scope, as-of date, version and approval/review status.
+- Sensitivity values are scenario inputs, not forecasts, guarantees or recommendations.
+
+### 4.5 Calculation and validation safeguards
+
+1. Identify inputs, scope, units, period, as-of date, timing convention and missing-data behavior before calculating; do not mix incompatible periods/bases.
+2. Available Monthly Surplus uses actual net monthly income less actual monthly expenses less actual monthly savings/investments for the same calendar month. Include household expenses and full applicable EMI once; include ongoing SIPs once; exclude own-account transfers and irregular one-off receipts from recurring income. Credit-card purchases count in purchase month, not bill settlement; refunds adjust original expense. Missing required records → Provisional, not zero.
+3. Weighted Debt Rate uses current positive outstanding principal, not original sanctioned amount. Active debt is legally outstanding and not fully repaid/settled/cancelled/closed, with principal > 0 on valuation date; overdue debt remains active. Include genuine contractual 0%; missing/non-comparable rate is not 0% and makes result Provisional. No eligible principal/valid denominator → Unavailable. Fees/penalties/prepayment charges separately disclosed.
+4. Ratio scale must remain consistent across consumers. Example: if 40% is represented as 40, do not reinterpret as 0.40 or apply percentage conversion twice.
+5. Asset/portfolio inclusion does not establish liquidity, accessibility, earmarking or goal eligibility. Use Chapter 04 evidence and applicable approved mapping.
+6. Positive cash-flow surplus alone does not prove investable capacity; consider verified commitments, irregular costs, liquidity needs, constraints and competing goal claims.
+7. Monthly Spending Variance is spending-budget variance only; positive=over budget, negative=under budget, zero=equal. Missing actual/budget is unavailable/provisional, never zero by assumption; no tolerance judgement is implied.
+8. If a method, input contract or assumption is unresolved, do not display an authoritative confirmed result.
+
+### 4.6 Ownership and downstream dependency
+
+| Item | Owner | Consumer boundary |
+|---|---|---|
+| Goal/category identity | Chapter 03 | Chapter 05 consumes categories; does not redefine them |
+| Financial records, provenance, ownership/access, restrictions, history/readiness | Chapter 04 | Chapter 05 uses evidence; does not replace Financial State |
+| Measurements, formulas, assumptions, calculation methods | Chapter 05 | Chapters 08, 10, 11 and 12 consume canonical definitions without duplicates |
+| Constraints, thresholds, decision effects | Chapter 06 | Chapter 05 provides measures; it does not invent thresholds |
+| Cash-flow/affordability evidence | Chapter 08 | Uses Chapter 05 surplus/formulas while preserving source evidence |
+| Goal target/funding/feasibility workflow | Chapter 10 | Applies Ch03 identity, Ch04 evidence, Ch05 calculations, Ch06 constraints |
+| Strategy evaluation | Chapter 11 | Consumes canonical measures and constraints; no duplicate rule/formula |
+| Scenario analysis | Chapter 12 | Scenario inputs are hypothetical and must not mutate actual state |
+| Acceptance/action lifecycle | Chapter 13 | A calculation is not recommendation acceptance or transaction authorization |
 
 ## 5. Constraints और decision gates — Chapter 06
 
-Chapter 06 constraints, thresholds, applicability और decision effects का authoritative owner है।
+Chapter 06 constraint policy और decision effects का owner है। यह formulas, cash-flow evidence, goal workflow या plan acceptance का owner नहीं है। नीचे documented rules हैं; runtime enforcement unverified है।
 
-- Approved constraint definitions को `domain/shared/constraints/` में रखें।
-- Constraint identity, applicability conditions, required evidence, threshold, effect और missing-evidence behavior को Chapter 06 से traceable रखें।
-- Chapter 06 में जो threshold, rule या applicability unresolved है, उसे code में अनुमान से तय न करें।
-- Feature-specific decisions को shared constraint catalogue में तभी रखें जब Chapter 06 उनका shared owner हो।
-- किसी constraint को formula या category definition के भीतर duplicate न करें।
+### 5.1 Canonical constraint register
+
+| Rule ID / measure | Trigger and required evidence | Required decision effect | Threshold / status |
+|---|---|---|---|
+| `CTR-DTI-001` | Gross monthly income और recurring monthly debt-payment/EMI evidence; Chapter 05 DTI | Available Monthly Surplus assessment को inform करे; DTI अकेले goal, investment या strategy block नहीं करता | कोई threshold approved नहीं; runtime unverified |
+| `CTR-LIQ-001` | Specific candidate goal/strategy/action asset पर निर्भर हो; Chapter 04 ownership, access, restrictions, timing, commitments और context evidence | Unavailable asset exclude करें और impact/uncertainty बताएं; ownership/portfolio inclusion availability नहीं; asset sell/earmark/reassign न करें | कोई numeric threshold या universal eligibility mapping approved नहीं |
+| `CTR-HIR-001` | Individual outstanding loan/liability rate strictly >14% p.a. और investment consideration चल रही हो; liability, rate, balance/status, terms, payoff quote, fees, cash-flow effect, funding source, expected return और strategy estimated return | Repayment interest saved, prepayment costs, alternative expected return और strategy return का comparable trade-off assessment + disclosure अनिवार्य; investor अंतिम निर्णय लेता है; investment/Goal Planner/Strategy Builder auto-block नहीं | Exactly 14% trigger नहीं; >14% threshold approved; runtime enforcement unverified |
+| `metric_liquid_asset_ratio` | Chapter 05 measure; approved asset eligibility mapping और Chapter 04 access evidence | केवल relevant assessment को inform करे; ratio अकेले warning/pass-fail/infeasibility नहीं | कोई threshold नहीं; यह measure है, Chapter 06 rule ID नहीं |
+| Individual-goal Required Return | Goal amount/date, funding path, eligible funding और approved Chapter 05 formula/assumptions | Affordability के साथ scenario assessment; forecast/guarantee या automatic block नहीं | कोई threshold नहीं; 15% approved hard limit/warning नहीं |
+| `CTR-AFF-001` | Candidate contribution/lump sum; Ch05 Required SIP/amount and surplus; Ch08 cash-flow evidence; Ch04 asset/access evidence; irregular costs, liquidity, competing goals | Additional Required SIP (existing goal SIP के बाद) ≤ same-period Available Monthly Surplus होने पर SIP comparison pass. Gap हो तो canonical monthly shortfall दिखाएं; इससे goal impossible सिद्ध नहीं होता. Step-up हर scheduled period पर जाँचे. Lump sum केवल accessible, eligible, timely, uncommitted asset. Combined path एक dated projection में; double count नहीं. Multi-goal conflicts surface करें, auto-allocate नहीं | कोई universal buffer, surplus % या numeric threshold approved नहीं; runtime unverified |
+| `CTR-RATIO-001` | Ratio measurement/calculation/rule/consumer के बीच pass हो | Owning measurement का unit और numeric scale जस का तस रखें; double percentage conversion रोकें | कोई threshold/standalone pass-fail नहीं; runtime unverified |
+| `CTR-INS-001` | Insurance Coverage Ratio/required-cover evaluation; existing sum assured, approved required-cover method/inputs, reliable policy data | Method, scope और policy approved/validated न हों तो adequacy/decision infer न करें; Excellent/Healthy/Attention/Critical bands या automatic recommendation नहीं | Coverage bands/threshold approved नहीं; policy open; runtime unverified |
+| `CTR-GATE-001` | Explicitly approved hard constraint अपने defined scope में apply हो | केवल उसी rule का explicitly approved effect लागू; warning/disclosure/restriction में से कोई भी केवल rule-specific approval से. Record rule/version, trigger, evidence, explanation, investor decision and reassessment trigger where applicable | “Hard constraint” शब्द अपने-आप blocking effect authorize नहीं करता; Foundation 00.2 wording reconciliation open; runtime unverified |
+
+### 5.2 Approved threshold register
+
+| Rule | Exact boundary | Effect |
+|---|---|---|
+| `CTR-HIR-001` | Individual liability interest rate strictly greater than 14% p.a.; exactly 14% excluded | Mandatory trade-off assessment/disclosure; automatic investment block नहीं |
+| `CTR-DTI-001` | None | Informational only; no automatic pass/fail/block |
+| `metric_liquid_asset_ratio` | None | No ratio-only warning, pass/fail or block |
+| Individual-goal Required Return | None; 15% threshold नहीं | Non-hard assessment only |
+| `CTR-AFF-001` | No universal buffer or surplus percentage | Compare candidate path to period-matched surplus/eligible resources; show gaps |
+| `CTR-INS-001` | No approved coverage bands | No adequacy labels or automatic gate |
+
+Illustrative case values या दूसरे scope की policy से threshold copy न करें। नया threshold तभी जोड़ा जा सकता है जब owner, unit, exact boundary, evidence, effect, approval status और consumers documented हों।
+
+### 5.3 Funding-path application contract for Chapter 10
+
+1. SIP/step-up SIP: हर scheduled period का additional Required SIP, उसी period के Available Monthly Surplus से compare करें; Ch08 evidence उपयोग करें।
+2. Lump sum: `CTR-LIQ-001` के तहत asset-specific availability verify करें; unavailable/committed resources exclude कर funding gap बताएं।
+3. Combined lump sum + SIP: एक consistent dated projection में दोनों को assess करें; liquidity और surplus checks दोनों लागू हों; double counting रोकें।
+4. Multiple goals: same asset या surplus पर competing claims detect करके affected goals/consequences दिखाएं; priority या allocation स्वतः न चुनें। Allocation algorithm और priority persistence unresolved हैं।
+5. Required Return: केवल approved Chapter 05 method/inputs; non-hard assessment, forecast या gate नहीं।
+6. Missing/unresolved method/evidence: affected test undetermined / insufficient evidence; missing evidence से goal infeasible घोषित न करें।
+7. एक comparison pass होने से goal automatically feasible, recommendation, Accepted Plan या transaction नहीं बनता।
+
+### 5.4 Cross-chapter ownership
+
+| Domain | Owner | Chapter 06 boundary |
+|---|---|---|
+| Financial facts, ownership/access, restrictions, liability evidence | Chapter 04 | Evidence consume करता है; source data redefine नहीं |
+| Measures, formulas, return assumptions, contribution/lump-sum methods | Chapter 05 | Canonical outputs consume; formula recreate नहीं |
+| Investor context/priorities | Chapter 07 | Investor decision rights preserve; automatic priority choice नहीं |
+| Available Monthly Surplus | Chapter 05; source cash flow Chapter 08 | Affordability effect apply; source evidence Chapter 08 से |
+| Protection/insurance interpretation | Chapter 09 and approved calculation owner | केवल documented boundary; unapproved labels/gates नहीं |
+| SIP/step-up/lump sum/combined/multi-goal feasibility | Chapter 10 | Constraint effects देता है; workflow/outcome Chapter 10 का |
+| Strategy evaluation | Chapter 11 | Applicable constraints consume; duplicate rules/thresholds नहीं |
+| What-If/scenario comparison | Chapter 12 | Relevant candidate scenarios पर apply; actual state mutate नहीं |
+| Accepted Plan / Action Plan | Chapter 13 | Plan accept या transaction authorize नहीं |
+
+### 5.5 Chapter 06 governance and unresolved items
+
+- Rule IDs exactly preserve करें: `CTR-DTI-001`, `CTR-LIQ-001`, `CTR-HIR-001`, `CTR-AFF-001`, `CTR-RATIO-001`, `CTR-INS-001`, `CTR-GATE-001`. `metric_liquid_asset_ratio` Chapter 05 measurement ID है, constraint ID नहीं।
+- Documented, proposed, approved और implementation-verified statuses अलग रखें; documentation alone runtime verification नहीं।
+- Insurance coverage method/policy और asset-eligibility mapping अपने canonical owners से approved न हों तो unresolved रखें।
+- Multi-goal allocation algorithm और priority persistence unresolved; automatic allocation नहीं।
+- `CTR-GATE-001` की product-wide wording Foundation 00.2 से reconcile होनी बाकी है; इस plan में conflict silently resolve न करें।
+- Rule change canonical owner में पहले करें, फिर downstream references/tests review करें।
 
 ## 6. Financial State और evidence boundary — Chapter 04
 
