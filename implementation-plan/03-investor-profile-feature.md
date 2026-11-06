@@ -1,5 +1,15 @@
 # Step 3 — Investor Profile Feature Transfer
 
+## Mandatory clarification gate — no assumptions or invented implementation
+
+- इस implementation plan और इससे जुड़े किसी भी project document में external source chapter numbers/names या chapter-based navigation references नहीं रखे जाएँगे। आवश्यक product rules, definitions, formulas, data contracts और constraints यहीं सीधे लिखे जाएँगे।
+- इस दस्तावेज़ में कोई field, schema, API, enum, threshold, formula, scoring model, workflow, default, validation, permission या business rule स्पष्ट रूप से निर्धारित नहीं है, तो AI agent उसे स्वयं से नहीं बनाएगा।
+- ऐसी हर कमी या अस्पष्टता को **Open Question / Decision Required** के रूप में दर्ज करें। Implementation रोकें और आगे बढ़ने से पहले product owner से स्पष्ट उत्तर लें।
+- केवल स्पष्ट रूप से स्वीकृत और इस दस्तावेज़ में दर्ज व्यवहार ही implement करें। उदाहरण, अनुमान, पुराने code का व्यवहार या architecture tree अपने-आप में approval नहीं हैं।
+- कोई विरोधाभास मिले तो चुपचाप चुनाव न करें; दोनों statements दिखाकर clarification माँगें। मौजूदा frontend/API compatibility और पुराने backend behavior को बिना प्रमाण बदलें नहीं।
+- जहाँ जानकारी उपलब्ध नहीं है, वहाँ साफ़ लिखें **Not specified — clarification required**; placeholder के नाम पर invented behavior न जोड़ें।
+
+
 ## Step 3 का उद्देश्य
 
 Step 1 में backend foundation और Step 2 में shared canonical domain rules/calculations की तैयारी के बाद, पहला product feature **Investor Profile** नए modular-monolith architecture में लाना है। यह feature आगे Moneywheel, Goal Planner और बाकी planning features को investor context तथा validated financial inputs उपलब्ध कराएगा।
@@ -25,7 +35,7 @@ Investor Profile एक top-level product feature है। इसके चा�
 - Ownership, household relationship, ownership share, access/control, restrictions, provenance, record dates और version/traceability को preserve करें।
 - किसी asset का portfolio/Financial State में होना अपने-आप उसे available, liquid या किसी goal के लिए eligible सिद्ध नहीं करता।
 - Missing या conflicting facts को अनुमान से भरकर definitive assessment न दें। Data-readiness/clarification outcome स्पष्ट रखें।
-- Chapter 03 की canonical IDs/categories और Step 2 में embedded Chapter 05/06 contracts को reuse करें; feature के भीतर duplicate IDs, formulas या thresholds न बनाएँ।
+- approved product specification की canonical IDs/categories और Step 2 में embedded approved product specification/06 contracts को reuse करें; feature के भीतर duplicate IDs, formulas या thresholds न बनाएँ।
 
 ## 3. Decision-specific assessment contract
 
@@ -37,7 +47,7 @@ Investor Profile से जुड़े assessment में:
 - हर material input के लिए evidence status, relevance, limitations और sufficiency पर विचार करें।
 - Missing, stale, invalid या conflicting information का प्रभाव बताएं और आवश्यक clarification/evidence की जरूरत surface करें।
 - Shared resources/liabilities के लिए ownership, practical access/control, payment responsibility, consent, existing commitments और uncertainty को अलग-अलग जाँचें।
-- Ownership या portfolio inclusion को availability का प्रमाण न मानें। Asset availability/constraints के लिए Chapter 06 और संबंधित Financial State evidence लागू होगा।
+- Ownership या portfolio inclusion को availability का प्रमाण न मानें। Asset availability/constraints के लिए approved product specification और संबंधित Financial State evidence लागू होगा।
 - Investor की preference को acceptance न मानें; reported preference, recommendation और explicit investor decision अलग अवस्थाएँ हैं।
 - Investor priorities या competing goals का फैसला Investor Profile स्वयं न करे। Conflicts को surface करे; allocation/priority decision संबंधित owning feature और investor decision boundary में रहेगा।
 
@@ -86,10 +96,10 @@ File names, table names, columns या नए schema fields अनुमान 
 
 ## 6. Cross-feature hand-offs
 
-- **Moneywheel** को validated Financial State inputs मिलेंगे; canonical measurements और ratios Step 2 के Chapter 05 definitions से calculate होंगे। Investor Profile Moneywheel की calculations या health assessment own नहीं करता।
+- **Moneywheel** को validated Financial State inputs मिलेंगे; canonical measurements और ratios Step 2 के approved product specification definitions से calculate होंगे। Investor Profile Moneywheel की calculations या health assessment own नहीं करता।
 - **Goal Planner** को goal-relevant investor context, actual financial facts और readiness/limitations मिलेंगे। Goal feasibility या funding calculations Investor Profile में नहीं बनेंगे।
 - **Strategy Builder** को investor context और source evidence मिल सकते हैं; asset-level liquidity, suitability और funding-path decisions Strategy Builder के ownership में रहेंगे।
-- Budgeting/Cash Flow/Affordability का operating workflow Chapter 08 के ownership में है; Investor Profile इसे अपने अंदर duplicate नहीं करेगा।
+- Budgeting/Cash Flow/Affordability का operating workflow approved product specification के ownership में है; Investor Profile इसे अपने अंदर duplicate नहीं करेगा।
 
 ## 7. Out of scope
 
@@ -117,19 +127,19 @@ Step 3 तभी complete माना जाएगा जब:
 
 ## 9. Specification status और source coverage
 
-यह step Investor Profile की feature boundary और Chapter 07 के decision-specific assessment principles को implementation instructions में बदलता है। Chapter 04 के Financial State facts/evidence/data-readiness contract और Risk Profile, Behavioural Profile तथा Investor Preferences & Needs के विस्तृत owner specifications को implementation से पहले उनके canonical source chapters से पूरा verify करके इस document में आवश्यक detail सहित embed करना होगा। केवल इस document के आधार पर unverified schema fields या unresolved rules implement न करें।
+यह step Investor Profile की feature boundary और approved product specification के decision-specific assessment principles को implementation instructions में बदलता है। approved product specification के Financial State facts/evidence/data-readiness contract और Risk Profile, Behavioural Profile तथा Investor Preferences & Needs के विस्तृत owner specifications को implementation से पहले उनके canonical source chapters से पूरा verify करके इस document में आवश्यक detail सहित embed करना होगा। केवल इस document के आधार पर unverified schema fields या unresolved rules implement न करें।
 
-Developer Ready Operating Manual में दर्ज product ownership, canonical data separation, system flow और cross-cutting engineering requirements इस step के architectural guardrails हैं। Chapter 03/05/06 के Step 2 contracts को दोबारा define नहीं करना है।
+Developer Ready Operating Manual में दर्ज product ownership, canonical data separation, system flow और cross-cutting engineering requirements इस step के architectural guardrails हैं। approved product specification/05/06 के Step 2 contracts को दोबारा define नहीं करना है।
 
 **यह दस्तावेज़ implementation scope है, implementation completion का प्रमाण नहीं।** इस commit से कोई backend code, frontend code, database schema या पुरानी branch modify नहीं होती।
 
-## 9. Financial State — embedded Chapter 04 implementation contract
+## 9. Financial State — embedded approved product specification implementation contract
 
 ### 9.1 Purpose and ownership
 
 Financial State is a dated, evidence-aware record of actual financial facts and estimates. It owns financial-state records, provenance, decision-specific readiness checks, corrections and material-change handling. It does not independently determine financial health, goal feasibility or strategy suitability.
 
-Use Chapter 03 canonical identities/categories. Chapter 05 owns measurement formulas and input scope; Chapter 06 owns constraints and decision gates; Chapter 08 owns budgeting/cash-flow application; Chapter 09 owns financial-health interpretation; Chapter 10 owns goal feasibility. Generic persistence, history/versioning and deletion mechanisms belong to the approved data architecture; processing mechanics belong to system logic. Financial State must not create competing formula, threshold or domain-policy definitions.
+Use approved product specification canonical identities/categories. approved product specification owns measurement formulas and input scope; approved product specification owns constraints and decision gates; approved product specification owns budgeting/cash-flow application; approved product specification owns financial-health interpretation; approved product specification owns goal feasibility. Generic persistence, history/versioning and deletion mechanisms belong to the approved data architecture; processing mechanics belong to system logic. Financial State must not create competing formula, threshold or domain-policy definitions.
 
 ### 9.2 Core record groups
 
@@ -211,7 +221,7 @@ The Investor Behaviour Content database categorises content under Risk & Return 
 
 ## 12. Investor Preferences & Needs — currently available contract
 
-Investor Preferences & Needs captures investor-stated preferences, priorities, objectives and planning needs. The available operating blueprint establishes it as a distinct Investor Profile component. Chapter 07 assessment principles require capturing the investor's question, decision, timing, scope, priorities/concerns, relevant events and material dependencies, proportionate to the decision.
+Investor Preferences & Needs captures investor-stated preferences, priorities, objectives and planning needs. The available operating blueprint establishes it as a distinct Investor Profile component. approved product specification assessment principles require capturing the investor's question, decision, timing, scope, priorities/concerns, relevant events and material dependencies, proportionate to the decision.
 
 - A stated preference is evidence of what the investor said, not proof of acceptance or authorization.
 - Preserve the investor's own wording/context where material; distinguish stated preference from system interpretation or recommendation.
@@ -225,7 +235,7 @@ Investor Preferences & Needs captures investor-stated preferences, priorities, o
 
 For a decision-specific Investor Profile assessment, establish the question/decision and why it matters; timing; people/household/finances/resources in scope; investor-stated priorities/concerns; confirmed, unconfirmed and hypothetical events; and material dependencies. Include extra context only if it could materially change the decision.
 
-For shared resources/liabilities, clarify ownership/share, practical access/control/restrictions, payment responsibility, consent/agreement, existing commitments and uncertainty. Ownership/portfolio inclusion alone never proves availability. Use Chapter 04 for source records and Chapter 06 for approved availability/constraint effects; do not allocate resources here.
+For shared resources/liabilities, clarify ownership/share, practical access/control/restrictions, payment responsibility, consent/agreement, existing commitments and uncertainty. Ownership/portfolio inclusion alone never proves availability. Use approved product specification for source records and approved product specification for approved availability/constraint effects; do not allocate resources here.
 
 Use one decision-focused assessment output, containing only material information:
 - decision context and scope;
@@ -237,10 +247,10 @@ Use one decision-focused assessment output, containing only material information
 
 ## 14. Source maturity, unresolved items and implementation guardrails
 
-- Chapter 04 is a working specification; runtime behaviour, physical schema, save/reload, authorization, deletion propagation and downstream consumers are unverified.
-- Chapter 07 is a working draft; runtime implementation and test evidence are unverified.
+- approved product specification is a working specification; runtime behaviour, physical schema, save/reload, authorization, deletion propagation and downstream consumers are unverified.
+- approved product specification is a working draft; runtime implementation and test evidence are unverified.
 - Risk Profiling and Behavioural Identity material located in the workspace is Idea/Outline-level, not a final approved scoring or assessment specification.
-- Investor Preferences & Needs has a top-level ownership definition and Chapter 07 assessment principles, but no complete dedicated field/taxonomy contract was located.
+- Investor Preferences & Needs has a top-level ownership definition and approved product specification assessment principles, but no complete dedicated field/taxonomy contract was located.
 - Do not invent mandatory fields, evidence-freshness periods, readiness scores, risk scoring, behavioural diagnoses, preference scales, database schema or runtime enums.
 - Record unresolved items explicitly and implement only the contracts sufficiently specified and approved.
 
