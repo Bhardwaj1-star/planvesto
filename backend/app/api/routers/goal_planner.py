@@ -10,6 +10,9 @@ import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from app.api.dependencies import get_current_user_id
+from app.api.schemas.financial_state import FinancialStateRequest
+from app.domain.shared.value_objects import CalendarMonth
+from app.api.routers.financial_state import _build_financial_state_snapshot
 from app.api.schemas.goal_planner import (
     GoalCalculateRequest,
     GoalCreateRequest,
@@ -54,8 +57,17 @@ def _metric_amount(state: Dict[str, Any], key: str) -> Optional[Decimal]:
         return None
 
 
-def _financial_feasibility_context(planning_unit_id: str, goal_id: Optional[str] = None) -> Dict[str, Any]:
-    """Read backend-owned Financial State; never trust a client-supplied surplus."""
+def _financial_feasibility_context(planning_unit_id: str, goal_id: Optional[str] = None, user_id: str = "") -> Dict[str, Any]:
+    """Rebuild canonical Financial State from persisted onboarding facts before evaluation."""
+    today = date.today()
+    request = FinancialStateRequest(planning_unit_id=planning_unit_id, scope="family")
+    _, rebuilt_state, _, _, _ = _build_financial_state_snapshot(
+        request, user_id, today, CalendarMonth(year=today.year, month=today.month)
+    )
+    _profile_repo.save_financial_state_snapshot(
+        planning_unit_id=planning_unit_id, scope="family", investor_id=None,
+        snapshot=rebuilt_state,
+    )
     saved = _profile_repo.get_latest_financial_state_snapshot(planning_unit_id, scope="family")
     state = (saved or {}).get("financial_state") or {}
     if not isinstance(state, dict) or not state:
@@ -94,9 +106,9 @@ def _financial_feasibility_context(planning_unit_id: str, goal_id: Optional[str]
     }
 
 
-def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str) -> Dict[str, Any]:
+def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, user_id: str = "") -> Dict[str, Any]:
     """Refresh affordability against the latest Financial State without changing goal inputs."""
-    context = _financial_feasibility_context(planning_unit_id, str(defined.get("goal_id", "")))
+    context = _financial_feasibility_context(planning_unit_id, str(defined.get("goal_id", "")), user_id)
     surplus = context["available_monthly_surplus"]
     metadata = defined.get("version_metadata") or {}
     required = Decimal(str(
@@ -325,7 +337,7 @@ def _build_defined_response(
             for m in request.asset_mappings
         ],
     )
-    return DefinedGoalResponse(**_apply_current_feasibility(response.model_dump(), request.planning_unit_id))
+    return DefinedGoalResponse(**_apply_current_feasibility(response.model_dump(), request.planning_unit_id, user_id))
 
 
 @router.get("", response_model=List[GoalSummaryResponse])
@@ -362,7 +374,7 @@ def get_latest_defined_goal(
     """Retrieve the latest defined goal state for a specific goal."""
     defined = _goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
     if defined:
-        return _apply_current_feasibility(defined, planning_unit_id)
+        return _apply_current_feasibility(defined, planning_unit_id, user_id)
 
     # If no defined record yet, fetch basic goal and evaluate default feasibility
     goal_raw = _goal_repo.get_goal(planning_unit_id, goal_id)
@@ -421,7 +433,7 @@ def get_latest_defined_goal(
         "inflation_rate": 6.0,
         "mapped_assets": [],
     }
-    return _apply_current_feasibility(fallback, planning_unit_id)
+    return _apply_current_feasibility(fallback, planning_unit_id, user_id)
 
 
 @router.get("/{goal_id}/defined/versions")
