@@ -25,7 +25,8 @@ from app.domain.features.goal_planner.requirement import (
 from app.domain.features.goal_planner.feasibility import (
     evaluate_fund_feasibility,
 )
-from app.domain.features.investor_profile.financial_state import AssetRecord
+from app.domain.canonical.financial_categories import CanonicalAssetCategoryId
+from app.domain.features.financial_state.models import AssetRecord
 from app.infrastructure.persistence.repositories.goal_planner import (
     GoalPlannerRepository,
 )
@@ -36,26 +37,48 @@ _goal_repo = GoalPlannerRepository()
 
 def _build_goal_instance(req: GoalCalculateRequest, goal_id: str, investor_id: str) -> GoalInstance:
     # Resolve canonical goal ID safely
+    raw_type = (req.canonical_id or req.goal_type or "others").lower().strip()
+    if not raw_type.startswith("goal_"):
+        candidate = f"goal_{raw_type}"
+    else:
+        candidate = raw_type
+
     cid = CanonicalGoalId.OTHERS
     for c in CanonicalGoalId:
-        if c.value == req.canonical_id:
+        if c.value == candidate or c.value == raw_type:
             cid = c
             break
 
-    target_date = date(req.target_year, req.target_month, 1)
+    target_date = date(req.target_year, max(1, min(12, req.target_month)), 1)
     as_of = date.today()
+
+    # Inflation rate normalization
+    if req.inflation_rate_pct is not None:
+        inflation_pct = req.inflation_rate_pct
+    elif req.inflation_rate is not None:
+        if req.inflation_rate <= Decimal("1.0"):
+            inflation_pct = req.inflation_rate * Decimal("100.0")
+        else:
+            inflation_pct = req.inflation_rate
+    else:
+        inflation_pct = Decimal("6.0")
 
     mapped_assets: List[AssetRecord] = []
     for m in req.asset_mappings:
+        val = m.current_value
+        pct = m.allocation_percentage if m.allocation_percentage is not None else (m.allocation_value or Decimal("100.0"))
         mapped_assets.append(
             AssetRecord(
                 id=m.asset_id,
-                name=m.asset_name,
-                category=None,
-                current_value=Money.from_amount(m.current_value),
+                category=CanonicalAssetCategoryId.MUTUAL_FUNDS,
+                name=m.asset_name or "Asset",
+                value=Money.from_amount(val),
                 as_of_date=as_of,
-                ownership_percentage=Rate.from_percentage(m.allocation_percentage),
-                expected_annual_return=Rate.from_percentage(m.expected_annual_return_pct),
+                ownership_share=Rate.from_percentage(pct),
+                is_accessible=True,
+                access_restrictions=[],
+                is_committed=False,
+                committed_goal_id=None,
             )
         )
 
@@ -66,10 +89,83 @@ def _build_goal_instance(req: GoalCalculateRequest, goal_id: str, investor_id: s
         name=req.goal_name,
         target_date=target_date,
         current_cost=Money.from_amount(req.today_cost),
-        applicable_inflation_rate=Rate.from_percentage(req.inflation_rate_pct),
+        applicable_inflation_rate=Rate.from_percentage(inflation_pct),
         expected_annual_return=Rate.from_percentage(req.expected_return_pct),
         created_at=as_of,
         mapped_assets=mapped_assets,
+    )
+
+
+def _build_defined_response(
+    request: GoalCalculateRequest,
+    goal: GoalInstance,
+    goal_id: str,
+    user_id: str,
+) -> DefinedGoalResponse:
+    as_of = date.today()
+    surplus = Money.from_amount(request.available_monthly_surplus)
+    feasibility = evaluate_fund_feasibility(goal, as_of, surplus)
+
+    diff_days = (goal.target_date - as_of).days
+    duration_years = max(Decimal("1.0"), Decimal(str(round(max(0, diff_days) / 365.25, 1))))
+
+    funding_gap = feasibility.remaining_funding_gap.amount
+    projected_assets = feasibility.projected_existing_funding.amount
+    future_target = feasibility.future_goal_target.amount
+    if funding_gap <= Decimal("0.0"):
+        funding_status = "Overfunded"
+    elif projected_assets >= future_target:
+        funding_status = "On Track"
+    else:
+        funding_status = "Shortfall"
+
+    feasibility_status = "feasible" if feasibility.is_feasible_under_current_conditions else "constrained"
+    req_sip = feasibility.required_monthly_sip.amount if feasibility.required_monthly_sip else Decimal("0.0")
+
+    clean_goal_type = request.goal_type or (goal.canonical_id.value.replace("goal_", "") if goal.canonical_id else "others")
+
+    return DefinedGoalResponse(
+        goal_id=goal_id,
+        defined_goal_id=f"def_{goal_id}",
+        planning_unit_id=request.planning_unit_id,
+        goal_name=request.goal_name,
+        goal_type=clean_goal_type,
+        version=1,
+        is_latest=True,
+        today_cost=request.today_cost,
+        future_target=future_target,
+        funding_gap=funding_gap,
+        projected_mapped_asset_value=projected_assets,
+        required_monthly_sip=req_sip,
+        required_monthly_contribution=req_sip,
+        available_monthly_surplus=feasibility.available_monthly_surplus.amount,
+        surplus_gap=feasibility.surplus_gap.amount if feasibility.surplus_gap else Decimal("0.0"),
+        required_surplus_increase_pct=feasibility.required_surplus_increase_pct.percentage if feasibility.required_surplus_increase_pct else None,
+        is_feasible_under_current_conditions=feasibility.is_feasible_under_current_conditions,
+        feasibility_status=feasibility_status,
+        funding_status=funding_status,
+        duration_years=duration_years,
+        target_month=request.target_month,
+        target_year=request.target_year,
+        inflation_rate=goal.applicable_inflation_rate.percentage,
+        flexibility=request.flexibility,
+        status=request.status,
+        priority=request.priority if isinstance(request.priority, str) else "Important",
+        explanation=feasibility.explanation,
+        mapped_assets=[
+            {
+                "asset_id": m.asset_id,
+                "asset_name": m.asset_name or "Asset",
+                "allocation_type": m.allocation_type or "percentage",
+                "allocation_value": float(m.allocation_value or 100),
+                "allocated_amount": float(m.current_value),
+                "allocated_percentage": float(m.allocation_percentage or 100),
+                "expected_return": float(m.expected_annual_return_pct or 10),
+                "return_frequency": m.return_frequency or "annual",
+                "projected_value": 0.0,
+            }
+            for m in request.asset_mappings
+        ],
     )
 
 
@@ -200,27 +296,9 @@ def calculate_goal_preview(
     user_id: str = Depends(get_current_user_id),
 ):
     """Calculates goal requirement and fund feasibility preview using Chapter 10 domain logic."""
-    temp_id = f"goal_{uuid.uuid4().hex[:8]}"
+    temp_id = request.goal_id or f"goal_{uuid.uuid4().hex[:8]}"
     goal = _build_goal_instance(request, temp_id, user_id)
-    as_of = date.today()
-
-    surplus = Money.from_amount(request.available_monthly_surplus)
-    feasibility = evaluate_fund_feasibility(goal, as_of, surplus)
-
-    return DefinedGoalResponse(
-        goal_id=temp_id,
-        goal_name=request.goal_name,
-        today_cost=request.today_cost,
-        future_target=feasibility.future_goal_target.amount,
-        funding_gap=feasibility.remaining_funding_gap.amount,
-        projected_mapped_asset_value=feasibility.projected_existing_funding.amount,
-        required_monthly_sip=feasibility.required_monthly_sip.amount if feasibility.required_monthly_sip else Decimal(0),
-        available_monthly_surplus=feasibility.available_monthly_surplus.amount,
-        surplus_gap=feasibility.surplus_gap.amount if feasibility.surplus_gap else Decimal(0),
-        required_surplus_increase_pct=feasibility.required_surplus_increase_pct.percentage if feasibility.required_surplus_increase_pct else None,
-        is_feasible_under_current_conditions=feasibility.is_feasible_under_current_conditions,
-        explanation=feasibility.explanation,
-    )
+    return _build_defined_response(request, goal, temp_id, user_id)
 
 
 @router.post("", response_model=DefinedGoalResponse)
@@ -232,10 +310,7 @@ def save_goal(
     """Saves and defines a goal using Chapter 10 domain evaluation."""
     goal_id = request.goal_id or f"goal_{uuid.uuid4().hex[:8]}"
     goal = _build_goal_instance(request, goal_id, user_id)
-    as_of = date.today()
-
-    surplus = Money.from_amount(request.available_monthly_surplus)
-    feasibility = evaluate_fund_feasibility(goal, as_of, surplus)
+    resp = _build_defined_response(request, goal, goal_id, user_id)
 
     # Persist goal record
     _goal_repo.ensure_goal_record(
@@ -249,17 +324,10 @@ def save_goal(
         flexibility=request.flexibility,
     )
 
-    return DefinedGoalResponse(
-        goal_id=goal_id,
-        goal_name=request.goal_name,
-        today_cost=request.today_cost,
-        future_target=feasibility.future_goal_target.amount,
-        funding_gap=feasibility.remaining_funding_gap.amount,
-        projected_mapped_asset_value=feasibility.projected_existing_funding.amount,
-        required_monthly_sip=feasibility.required_monthly_sip.amount if feasibility.required_monthly_sip else Decimal(0),
-        available_monthly_surplus=feasibility.available_monthly_surplus.amount,
-        surplus_gap=feasibility.surplus_gap.amount if feasibility.surplus_gap else Decimal(0),
-        required_surplus_increase_pct=feasibility.required_surplus_increase_pct.percentage if feasibility.required_surplus_increase_pct else None,
-        is_feasible_under_current_conditions=feasibility.is_feasible_under_current_conditions,
-        explanation=feasibility.explanation,
+    # Persist defined goal record
+    _goal_repo.save_defined_goal(
+        planning_unit_id=request.planning_unit_id,
+        defined_goal_payload=resp.model_dump(),
     )
+
+    return resp
