@@ -76,7 +76,6 @@ class DefinedGoalResponse(BaseModel):
     feasibility_reason: Optional[str] = None
     feasibility_source: Optional[str] = None
     existing_goal_sip_monthly: Decimal = Decimal("0.0")
-    funding_strategies: List[Dict[str, Any]] = Field(default_factory=list)
     is_feasible_under_current_conditions: bool = True
     feasibility_status: str = "feasible"
     funding_status: str = "Shortfall"

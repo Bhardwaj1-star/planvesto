@@ -88,22 +88,11 @@ def test_goal_feasibility_uses_canonical_surplus_and_does_not_overstate_overall_
     # Case 1 passes when surplus covers the additional required SIP and no blocking constraint exists.
     assert result["feasibility_status"] == "feasible"
     assert result["is_feasible_under_current_conditions"] is True
-    assert [item["strategy_id"] for item in result["funding_strategies"]] == [
-        "sip", "lump_sum", "combined_lump_sum_sip"
-    ]
-    # All three strategies expose independently calculated values; asset eligibility
-    # remains a separate Chapter 11 verification gate, not a reason to omit math.
-    lump_sum = result["funding_strategies"][1]
-    combined = result["funding_strategies"][2]
-    assert lump_sum["status"] == "feasible"
-    assert lump_sum["required_lumpsum"] is not None
-    assert lump_sum["required_lumpsum"] >= 0
-    assert lump_sum["required_monthly_contribution"] == 0
-    assert combined["status"] == "feasible"
-    assert combined["required_lumpsum"] is not None
-    assert combined["required_lumpsum"] >= 0
-    assert combined["required_monthly_contribution"] == 50000
-    assert lump_sum["required_lumpsum"] != combined["required_lumpsum"]
+    assert result["fund_feasibility_case"] == "case_1_affordable"
+    assert result["feasibility_status"] == "feasible"
+    assert result["is_feasible_under_current_conditions"] is True
+    assert result["surplus_gap"] == 0
+    assert "funding_strategies" not in result
 
 
 def test_goal_feasibility_is_unknown_when_canonical_surplus_is_unavailable(monkeypatch):
@@ -126,4 +115,4 @@ def test_goal_feasibility_is_unknown_when_canonical_surplus_is_unavailable(monke
     result = goal_planner_router._apply_current_feasibility(defined, "pu-1", "user-1")
     assert result["feasibility_status"] == "unknown"
     assert result["is_feasible_under_current_conditions"] is False
-    assert result["funding_strategies"] == []
+    assert "funding_strategies" not in result

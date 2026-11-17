@@ -62,7 +62,7 @@ export default function GoalFeasibility({ goal }: GoalFeasibilityProps) {
       </Link>
     )}
     <Link href={workspaceRoute} className="mt-3 inline-flex items-center gap-1 text-xs font-black underline underline-offset-2">
-      {status === "unknown" ? "Complete information & check feasibility →" : "View funding analysis →"}
+      {status === "unknown" ? "Complete information & check feasibility →" : status === "feasible" ? "Check Feasibility Process →" : "Choose Feasibility Approach →"}
     </Link>
   </div>;
 }

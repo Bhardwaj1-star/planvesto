@@ -59,7 +59,7 @@ test("feasible goals do not show a prerequisite action", () => {
   }));
 
   assert.match(markup, />Feasible</);
-  assert.match(markup, /View funding analysis/);
+  assert.match(markup, /Check Feasibility Process/);
   assert.doesNotMatch(markup, /Complete Financial State/);
 });
 

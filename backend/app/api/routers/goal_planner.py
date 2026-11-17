@@ -134,127 +134,35 @@ def _goal_instance_from_defined(defined: Dict[str, Any], user_id: str, existing_
 
 
 def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, user_id: str = "") -> Dict[str, Any]:
-    """Refresh one canonical Fund Feasibility assessment; do not duplicate its calculations in the API."""
+    """Refresh the single Chapter 10 Fund Feasibility test and expose case-based results."""
     context = _financial_feasibility_context(planning_unit_id, str(defined.get("goal_id", "")), user_id)
     surplus = context["available_monthly_surplus"]
     existing_sip = context["existing_goal_sip"]
     goal = _goal_instance_from_defined(defined, user_id, existing_sip)
-
     defined["available_monthly_surplus"] = surplus
     defined["existing_goal_sip_monthly"] = existing_sip
     defined["feasibility_source"] = context["source"]
-
     if surplus is None:
-        defined.update({
-            "feasibility_status": "unknown",
-            "fund_feasibility_case": None,
-            "surplus_gap": None,
-            "required_surplus_increase_pct": None,
-            "is_feasible_under_current_conditions": False,
-            "feasibility_reason": "Verified, period-matched Available Monthly Surplus is unavailable. Complete the required Financial State evidence before assessing affordability.",
-            "funding_strategies": [],
-        })
+        defined.update({"feasibility_status":"unknown","fund_feasibility_case":None,"surplus_gap":None,"required_surplus_increase_pct":None,"is_feasible_under_current_conditions":False,"feasibility_reason":"Verified, period-matched Available Monthly Surplus is unavailable. Complete the required Financial State evidence before assessing affordability."})
         return defined
-
-    result = evaluate_fund_feasibility(
-        goal=goal,
-        evaluation_date=date.today(),
-        available_monthly_surplus=Money.from_amount(surplus),
-    )
+    result = evaluate_fund_feasibility(goal=goal,evaluation_date=date.today(),available_monthly_surplus=Money.from_amount(surplus))
     required = result.required_monthly_sip.amount if result.required_monthly_sip else Decimal("0")
-    additional_required = max(Decimal("0"), required - existing_sip)
-    gap = result.surplus_gap.amount if result.surplus_gap else Decimal("0")
-    increase = result.required_surplus_increase_pct.percentage if result.required_surplus_increase_pct else None
-    sip_affordable = gap <= 0
-
-    # SIP affordability is only one gate. Chapter 11 asset assessment and applicable
-    # constraints / competing-goal checks are not yet evidenced by this API contract.
-    if not sip_affordable:
-        status = "constrained" if surplus > 0 else "infeasible"
-        reason = "The current SIP path does not pass the affordability test. Review the return-expectation gate, then Case 2A or Case 2B; this is a capacity gap, not proof that the goal is impossible."
-        case = "case_2_capacity_shortfall"
+    additional_required = max(Decimal("0"),required-existing_sip)
+    gap = result.surplus_gap.amount if result.surplus_gap is not None else max(Decimal("0"),additional_required-surplus)
+    increase = result.required_surplus_increase_pct.percentage if result.required_surplus_increase_pct is not None and surplus>0 else None
+    if gap>0:
+        status,case="constrained","case_2_capacity_shortfall"
+        reason="Current funding capacity is below the amount required for this goal. This is a constraint to work through, not proof that the goal is impossible. Explore Case 2A or Case 2B; proposed changes require investor approval."
     else:
-        blocking_constraints = [item for item in result.constraint_evaluations if not item.is_satisfied]
-        if blocking_constraints:
-            status = "constrained"
-            reason = "Required SIP is covered by Available Monthly Surplus, but an applicable funding constraint remains unresolved."
+        case="case_1_affordable"
+        unresolved=[item for item in result.constraint_evaluations if not item.is_satisfied]
+        if unresolved:
+            status="constrained"
+            reason="Available monthly capacity covers the calculated requirement, but one or more funding constraints still need assessment."
         else:
-            status = "feasible"
-            reason = "Available Monthly Surplus covers the additional Required SIP. Case 1 Fund Feasibility passes for this goal, subject to the recorded inputs and assumptions."
-        case = "case_1_affordable"
-
-    remaining_future_gap = result.remaining_funding_gap.amount
-    months = result.months_horizon
-    annual_rate = float(goal.expected_annual_return.as_decimal_ratio)
-    monthly_rate = float(goal.expected_annual_return.to_monthly_compounded_rate())
-    annual_growth = Decimal(str((1 + annual_rate) ** (months / 12))) if months > 0 else Decimal("0")
-    annuity_factor = (
-        Decimal(str(((1 + monthly_rate) ** months - 1) / monthly_rate))
-        if months > 0 and abs(monthly_rate) > 1e-12
-        else Decimal(months)
-    )
-    sip_future_value = additional_required * annuity_factor
-    available_capacity = max(Decimal("0"), surplus)
-    available_capacity_future_value = available_capacity * annuity_factor
-    required_lump_sum_today = remaining_future_gap / annual_growth if annual_growth > 0 else None
-    combined_lump_sum_today = (
-        max(Decimal("0"), remaining_future_gap - available_capacity_future_value) / annual_growth
-        if annual_growth > 0 else None
-    )
-
-    defined.update({
-        "required_monthly_sip": required,
-        "required_monthly_contribution": required,
-        "additional_required_monthly_sip": additional_required,
-        "fund_feasibility_case": case,
-        "feasibility_status": status,
-        "is_feasible_under_current_conditions": status == "feasible",
-        "surplus_gap": gap,
-        "required_surplus_increase_pct": increase,
-        "feasibility_reason": reason,
-        "explanation": result.explanation,
-        "funding_strategies": [
-            {
-                "strategy_id": "sip", "strategy_type": "sip", "strategy_name": "SIP",
-                "description": "Required additional month-end SIP, compared with verified uncommitted monthly surplus.",
-                "status": "affordability_passed" if sip_affordable else status,
-                "required_lumpsum": None,
-                "required_monthly_contribution": float(additional_required),
-                "starting_monthly_contribution": float(additional_required),
-                "annual_step_up": None,
-                "remaining_gap": float(max(Decimal("0"), remaining_future_gap - sip_future_value)),
-                "reason": reason,
-                "constraints": ["Affordability is not proof that the goal is already funded."],
-                "trade_offs": ["Existing goal-linked SIP is deducted once; available surplus is not reused across goals."],
-            },
-            {
-                "strategy_id": "lump_sum", "strategy_type": "lump_sum", "strategy_name": "Lump Sum",
-                "description": "Theoretical additional lump sum required today, discounted from the future funding gap.",
-                "status": "requires_upfront_capital" if gap > 0 else "feasible",
-                "required_lumpsum": float(required_lump_sum_today) if required_lump_sum_today is not None else None,
-                "required_monthly_contribution": Decimal("0"),
-                "starting_monthly_contribution": Decimal("0"),
-                "annual_step_up": None,
-                "remaining_gap": 0.0,
-                "reason": "Calculated from the remaining future-value gap using the approved effective annual return. Whether this lump sum is available remains unverified until Chapter 11 asset eligibility is confirmed.",
-                "constraints": ["Do not treat mapped assets as eligible without availability, liquidity, restriction and suitability assessment."],
-                "trade_offs": ["This is the required amount, not confirmation that the investor owns available funds."],
-            },
-            {
-                "strategy_id": "combined_lump_sum_sip", "strategy_type": "combined_lump_sum_sip", "strategy_name": "Combined Lump Sum + SIP",
-                "description": "Minimum theoretical upfront amount when the verified positive monthly surplus is contributed at each month-end.",
-                "status": "requires_upfront_capital" if gap > 0 else "feasible",
-                "required_lumpsum": float(combined_lump_sum_today) if combined_lump_sum_today is not None else None,
-                "required_monthly_contribution": float(max(Decimal("0"), surplus)),
-                "starting_monthly_contribution": float(max(Decimal("0"), surplus)),
-                "annual_step_up": None,
-                "remaining_gap": 0.0,
-                "reason": "Calculated using the verified positive Available Monthly Surplus and month-end contribution convention. The upfront amount is theoretical; availability and suitability still require investor-confirmed eligible funds.",
-                "constraints": ["No step-up or irregular contribution schedule is assumed."],
-                "trade_offs": ["Do not count the same cash or asset toward another goal."],
-            },
-        ],
-    })
+            status="feasible"
+            reason="Available monthly capacity covers the calculated requirement. The Fund Feasibility affordability test passes for the recorded goal and assumptions; this does not mean the goal has already been funded."
+    defined.update({"required_monthly_sip":required,"required_monthly_contribution":required,"additional_required_monthly_sip":additional_required,"fund_feasibility_case":case,"feasibility_status":status,"is_feasible_under_current_conditions":status=="feasible","surplus_gap":gap,"required_surplus_increase_pct":increase,"feasibility_reason":reason,"explanation":result.explanation})
     return defined
 
 def _build_goal_instance(req: GoalCalculateRequest, goal_id: str, investor_id: str) -> GoalInstance:
