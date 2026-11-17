@@ -85,9 +85,9 @@ def test_goal_feasibility_uses_canonical_surplus_and_does_not_overstate_overall_
 
     assert result["feasibility_source"] == "financial_state.investable_surplus_monthly"
     assert result["fund_feasibility_case"] == "case_1_affordable"
-    # SIP affordability is a passed gate, not proof of complete goal feasibility.
-    assert result["feasibility_status"] == "constrained"
-    assert result["is_feasible_under_current_conditions"] is False
+    # Case 1 passes when surplus covers the additional required SIP and no blocking constraint exists.
+    assert result["feasibility_status"] == "feasible"
+    assert result["is_feasible_under_current_conditions"] is True
     assert [item["strategy_id"] for item in result["funding_strategies"]] == [
         "sip", "lump_sum", "combined_lump_sum_sip"
     ]

@@ -94,10 +94,10 @@ export default function GoalFeasibilityWorkspace() {
   useEffect(() => {
     void refreshWorkspace();
   }, [goalId]);
-  async function evaluateCase2A() {
+  async function evaluateCase2A(costInput = revisedCost, dateInput = revisedTargetDate) {
     if (!goal) return;
-    const [year, month] = revisedTargetDate.split("-").map(Number);
-    if (!Number.isFinite(Number(revisedCost)) || Number(revisedCost) <= 0 || !year || !month) {
+    const [year, month] = dateInput.split("-").map(Number);
+    if (!Number.isFinite(Number(costInput)) || Number(costInput) <= 0 || !year || !month) {
       setScenarioError("Enter a valid revised goal amount and target month.");
       return;
     }
@@ -112,7 +112,7 @@ export default function GoalFeasibilityWorkspace() {
           goal_id: goal.goal_id,
           goal_name: goal.goal_name,
           goal_type: goal.goal_type,
-          today_cost: Number(revisedCost),
+          today_cost: Number(costInput),
           target_month: month,
           target_year: year,
           inflation_rate_pct: goal.inflation_rate,
@@ -213,17 +213,26 @@ export default function GoalFeasibilityWorkspace() {
           Existing goal SIP is deducted from the required SIP before comparing the additional contribution with Available Monthly Surplus. This is an affordability test, not confirmation that the goal has already been funded.
         </p>
         {goal.fund_feasibility_case === "case_2_capacity_shortfall" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <h3 className="font-extrabold text-amber-950">Case 2A — Change Goal Amount and/or Tenure</h3>
+          <h3 className="font-extrabold text-amber-950">Case 2A — Change Goal Amount or Extend Timeline</h3>
           <p className="mt-1 text-sm text-amber-900">Change the target amount and/or target month to preview the revised Future Goal Target, Funding Gap and Required SIP. Nothing is saved until the investor chooses to update the goal.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-bold text-slate-700">Revised goal amount (today's cost)
-              <input type="number" min="1" step="1" value={revisedCost} onChange={(event) => setRevisedCost(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-bold text-slate-700">Revised target month
-              <input type="month" value={revisedTargetDate} onChange={(event) => setRevisedTargetDate(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" />
-            </label>
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-amber-200 bg-white p-3">
+              <h4 className="font-bold text-slate-900">Option A — Reduce Goal Amount</h4>
+              <p className="mt-1 text-xs text-slate-600">Keep the current target date; change only today's goal cost.</p>
+              <label className="mt-3 block text-xs font-bold text-slate-700">Revised goal amount (today's cost)
+                <input type="number" min="1" step="1" value={revisedCost} onChange={(event) => setRevisedCost(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" />
+              </label>
+              <button type="button" disabled={case2ALoading} onClick={() => void evaluateCase2A(revisedCost, `${goal.target_year}-${String(goal.target_month).padStart(2, "0")}`)} className="mt-3 rounded-lg bg-amber-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Recalculate reduced target</button>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-white p-3">
+              <h4 className="font-bold text-slate-900">Option B — Extend Timeline</h4>
+              <p className="mt-1 text-xs text-slate-600">Keep today's goal cost unchanged; change only the target date.</p>
+              <label className="mt-3 block text-xs font-bold text-slate-700">Revised target month
+                <input type="month" value={revisedTargetDate} onChange={(event) => setRevisedTargetDate(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 px-3 py-2 text-sm" />
+              </label>
+              <button type="button" disabled={case2ALoading} onClick={() => void evaluateCase2A(String(goal.today_cost), revisedTargetDate)} className="mt-3 rounded-lg bg-amber-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Recalculate extended timeline</button>
+            </div>
           </div>
-          <button type="button" disabled={case2ALoading} onClick={() => void evaluateCase2A()} className="mt-3 rounded-lg bg-amber-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{case2ALoading ? "Recalculating..." : "Recalculate Case 2A"}</button>
           {scenarioError && <p role="alert" className="mt-2 text-sm font-semibold text-rose-700">{scenarioError}</p>}
           {case2APreview && <div className="mt-4 rounded-lg border border-amber-200 bg-white p-3">
             <p className="text-xs font-black uppercase tracking-wider text-slate-500">Unsaved scenario result · {case2APreview.feasibility_status ?? "unknown"}</p>
@@ -243,8 +252,8 @@ export default function GoalFeasibilityWorkspace() {
           </div>
           <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-slate-700">
             <li>Review reliable income increases and expense reductions through Budgeting / Cash Flow; changes require investor approval.</li>
-            <li>Assess Step-Up SIP using an investor-selected annual step-up rate; do not assume a default increase.</li>
-            <li>Assess Lump Sum + SIP only after selecting an available, liquid, suitable and uncommitted asset.</li>
+            <li>Step-Up SIP is shown only when an investor-approved dated contribution schedule is supplied; no assumed step-up rate is used.</li>
+            <li>Lump Sum / Lump Sum + SIP remain unassessed until an eligible, liquid, suitable, uncommitted funding amount and approved dated method are available.</li>
             <li>Review debt / EMI restructuring only where a verified reduction in monthly EMI is available, including fees and total borrowing cost.</li>
           </ul>
           <p className="mt-3 text-xs font-semibold text-slate-500">No borrowing, asset sale, withdrawal, redirection of another goal's investments or plan change is performed by this assessment.</p>

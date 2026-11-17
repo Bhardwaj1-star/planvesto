@@ -174,8 +174,13 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
         reason = "The current SIP path does not pass the affordability test. Review the return-expectation gate, then Case 2A or Case 2B; this is a capacity gap, not proof that the goal is impossible."
         case = "case_2_capacity_shortfall"
     else:
-        status = "constrained"
-        reason = "The SIP-affordability test passes for this scenario. Overall goal feasibility remains unconfirmed until eligible funding, applicable constraints and competing-goal checks are verified."
+        blocking_constraints = [item for item in result.constraint_evaluations if not item.is_satisfied]
+        if blocking_constraints:
+            status = "constrained"
+            reason = "Required SIP is covered by Available Monthly Surplus, but an applicable funding constraint remains unresolved."
+        else:
+            status = "feasible"
+            reason = "Available Monthly Surplus covers the additional Required SIP. Case 1 Fund Feasibility passes for this goal, subject to the recorded inputs and assumptions."
         case = "case_1_affordable"
 
     defined.update({
@@ -184,7 +189,7 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
         "additional_required_monthly_sip": additional_required,
         "fund_feasibility_case": case,
         "feasibility_status": status,
-        "is_feasible_under_current_conditions": False,
+        "is_feasible_under_current_conditions": status == "feasible",
         "surplus_gap": gap,
         "required_surplus_increase_pct": increase,
         "feasibility_reason": reason,
