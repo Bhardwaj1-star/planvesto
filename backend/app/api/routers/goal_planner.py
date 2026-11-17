@@ -183,6 +183,25 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
             reason = "Available Monthly Surplus covers the additional Required SIP. Case 1 Fund Feasibility passes for this goal, subject to the recorded inputs and assumptions."
         case = "case_1_affordable"
 
+    remaining_future_gap = result.remaining_funding_gap.amount
+    months = result.months_horizon
+    annual_rate = float(goal.expected_annual_return.as_decimal_ratio)
+    monthly_rate = float(goal.expected_annual_return.to_monthly_compounded_rate())
+    annual_growth = Decimal(str((1 + annual_rate) ** (months / 12))) if months > 0 else Decimal("0")
+    annuity_factor = (
+        Decimal(str(((1 + monthly_rate) ** months - 1) / monthly_rate))
+        if months > 0 and abs(monthly_rate) > 1e-12
+        else Decimal(months)
+    )
+    sip_future_value = additional_required * annuity_factor
+    available_capacity = max(Decimal("0"), surplus)
+    available_capacity_future_value = available_capacity * annuity_factor
+    required_lump_sum_today = remaining_future_gap / annual_growth if annual_growth > 0 else None
+    combined_lump_sum_today = (
+        max(Decimal("0"), remaining_future_gap - available_capacity_future_value) / annual_growth
+        if annual_growth > 0 else None
+    )
+
     defined.update({
         "required_monthly_sip": required,
         "required_monthly_contribution": required,
@@ -203,7 +222,7 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
                 "required_monthly_contribution": float(additional_required),
                 "starting_monthly_contribution": float(additional_required),
                 "annual_step_up": None,
-                "remaining_gap": float(max(Decimal("0"), gap - (additional_required * Decimal(str((((1 + float(goal.expected_annual_return.to_monthly_compounded_rate())) ** result.months_horizon - 1) / float(goal.expected_annual_return.to_monthly_compounded_rate())) if result.months_horizon > 0 and abs(float(goal.expected_annual_return.to_monthly_compounded_rate())) > 1e-12 else result.months_horizon)))),
+                "remaining_gap": float(max(Decimal("0"), remaining_future_gap - sip_future_value)),
                 "reason": reason,
                 "constraints": ["Affordability is not proof that the goal is already funded."],
                 "trade_offs": ["Existing goal-linked SIP is deducted once; available surplus is not reused across goals."],
@@ -212,7 +231,7 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
                 "strategy_id": "lump_sum", "strategy_type": "lump_sum", "strategy_name": "Lump Sum",
                 "description": "Theoretical additional lump sum required today, discounted from the future funding gap.",
                 "status": "requires_upfront_capital" if gap > 0 else "feasible",
-                "required_lumpsum": float(gap / Decimal(str((1 + float(goal.expected_annual_return.as_decimal_ratio)) ** float(result.months_horizon / 12)))) if result.months_horizon > 0 else None,
+                "required_lumpsum": float(required_lump_sum_today) if required_lump_sum_today is not None else None,
                 "required_monthly_contribution": Decimal("0"),
                 "starting_monthly_contribution": Decimal("0"),
                 "annual_step_up": None,
@@ -225,7 +244,7 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
                 "strategy_id": "combined_lump_sum_sip", "strategy_type": "combined_lump_sum_sip", "strategy_name": "Combined Lump Sum + SIP",
                 "description": "Minimum theoretical upfront amount when the verified positive monthly surplus is contributed at each month-end.",
                 "status": "requires_upfront_capital" if gap > 0 else "feasible",
-                "required_lumpsum": float(max(Decimal("0"), (gap - (max(Decimal("0"), surplus) * Decimal(str((((1 + float(goal.expected_annual_return.to_monthly_compounded_rate())) ** result.months_horizon - 1) / float(goal.expected_annual_return.to_monthly_compounded_rate())) if result.months_horizon > 0 and abs(float(goal.expected_annual_return.to_monthly_compounded_rate())) > 1e-12 else result.months_horizon)))) / Decimal(str((1 + float(goal.expected_annual_return.as_decimal_ratio)) ** float(result.months_horizon / 12))))) if result.months_horizon > 0 else None,
+                "required_lumpsum": float(combined_lump_sum_today) if combined_lump_sum_today is not None else None,
                 "required_monthly_contribution": float(max(Decimal("0"), surplus)),
                 "starting_monthly_contribution": float(max(Decimal("0"), surplus)),
                 "annual_step_up": None,
@@ -234,6 +253,7 @@ def _apply_current_feasibility(defined: Dict[str, Any], planning_unit_id: str, u
                 "constraints": ["No step-up or irregular contribution schedule is assumed."],
                 "trade_offs": ["Do not count the same cash or asset toward another goal."],
             },
+        ],
     })
     return defined
 
