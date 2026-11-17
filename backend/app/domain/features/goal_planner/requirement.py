@@ -33,7 +33,7 @@ from app.domain.shared.calculations.goal_funding import (
     calculate_goal_funding_gap,
     calculate_risk_required_return,
 )
-from app.domain.features.financial_state.models import AssetRecord
+from app.domain.features.investor_profile.financial_state.models import AssetRecord
 
 
 @dataclass

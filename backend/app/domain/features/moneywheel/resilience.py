@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import List
 
 from app.domain.shared.value_objects import CalendarMonth
-from app.domain.features.financial_state.models import FinancialStateSnapshot
+from app.domain.features.investor_profile.financial_state.models import FinancialStateSnapshot
 from app.domain.features.moneywheel.findings import (
     ResilienceDimension,
     AssessmentFinding,

@@ -17,7 +17,7 @@ from app.domain.shared.value_objects import (
     CalendarMonth,
     FlowFrequency,
 )
-from app.domain.features.financial_state.models import (
+from app.domain.features.investor_profile.financial_state.models import (
     IncomeRecord,
     ExpenseRecord,
     AssetRecord,

@@ -7,7 +7,7 @@ from decimal import Decimal
 from app.domain.canonical.goal_taxonomy import CanonicalGoalId
 from app.domain.canonical.financial_categories import CanonicalAssetCategoryId
 from app.domain.shared.value_objects import Money, Rate
-from app.domain.features.financial_state.models import AssetRecord
+from app.domain.features.investor_profile.financial_state.models import AssetRecord
 from app.domain.features.goal_planner import (
     GoalInstance,
     GoalFundingMethod,

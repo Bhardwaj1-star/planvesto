@@ -20,7 +20,7 @@ from app.domain.canonical.financial_categories import (
     CanonicalIncomeCategoryId, CanonicalExpenseCategoryId,
     CanonicalAssetCategoryId, CanonicalLiabilityCategoryId,
 )
-from app.domain.features.financial_state.models import (
+from app.domain.features.investor_profile.financial_state.models import (
     FinancialStateSnapshot, IncomeRecord, ExpenseRecord, AssetRecord, LiabilityRecord,
 )
 from app.infrastructure.persistence.repositories.investor_profile import (

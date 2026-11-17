@@ -26,7 +26,7 @@ from app.domain.features.goal_planner.feasibility import (
     evaluate_fund_feasibility,
 )
 from app.domain.canonical.financial_categories import CanonicalAssetCategoryId
-from app.domain.features.financial_state.models import AssetRecord
+from app.domain.features.investor_profile.financial_state.models import AssetRecord
 from app.infrastructure.persistence.repositories.goal_planner import (
     GoalPlannerRepository,
 )

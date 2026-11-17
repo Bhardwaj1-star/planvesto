@@ -32,6 +32,8 @@ class EvidenceStatus(str, Enum):
 class FlowFrequency(str, Enum):
     MONTHLY = "monthly"
     ANNUAL = "annual"
+    QUARTERLY = "quarterly"
+    SEMI_ANNUAL = "semi_annual"
     ONE_OFF = "one_off"
 
 

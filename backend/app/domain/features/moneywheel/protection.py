@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple
 
 from app.domain.canonical.financial_categories import CanonicalInsurancePolicyTypeId
 from app.domain.shared.value_objects import Money, Rate
-from app.domain.features.financial_state.models import InsuranceRecord
+from app.domain.features.investor_profile.financial_state.models import InsuranceRecord
 
 
 def calculate_required_life_cover(

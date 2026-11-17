@@ -66,12 +66,19 @@ def _map_liability_category(cat: str) -> CanonicalLiabilityCategoryId:
 def map_row_to_income_record(row: Dict[str, Any], default_period: CalendarMonth) -> IncomeRecord:
     amount = Money(amount=Decimal(str(row.get("amount", 0))))
     category = _map_income_category(row.get("category", "other"))
-    frequency = FlowFrequency.MONTHLY
-    freq_str = str(row.get("frequency", "monthly")).lower()
-    if freq_str == "annual":
-        frequency = FlowFrequency.ANNUAL
-    elif freq_str == "one_time":
-        frequency = FlowFrequency.ONE_TIME
+    frequency_text = str(row.get("frequency", "monthly")).strip().lower().replace("-", "_")
+    frequency = {
+        "annual": FlowFrequency.ANNUAL,
+        "annually": FlowFrequency.ANNUAL,
+        "yearly": FlowFrequency.ANNUAL,
+        "quarterly": FlowFrequency.QUARTERLY,
+        "quarter": FlowFrequency.QUARTERLY,
+        "semi_annual": FlowFrequency.SEMI_ANNUAL,
+        "semiannual": FlowFrequency.SEMI_ANNUAL,
+        "half_yearly": FlowFrequency.SEMI_ANNUAL,
+        "one_time": FlowFrequency.ONE_OFF,
+        "one_off": FlowFrequency.ONE_OFF,
+    }.get(frequency_text, FlowFrequency.MONTHLY)
 
     return IncomeRecord(
         id=str(row.get("income_id", row.get("id", ""))),
@@ -87,12 +94,21 @@ def map_row_to_income_record(row: Dict[str, Any], default_period: CalendarMonth)
 
 
 def map_row_to_expense_record(row: Dict[str, Any], default_period: CalendarMonth) -> ExpenseRecord:
-    amount = Money(amount=Decimal(str(row.get("amount", 0))))
+    amount = Decimal(str(row.get("amount", 0)))
+    frequency_text = str(row.get("frequency", "monthly")).strip().lower().replace("-", "_")
+    if frequency_text in ("annual", "annually", "yearly"):
+        amount /= Decimal("12")
+    elif frequency_text in ("quarterly", "quarter"):
+        amount /= Decimal("3")
+    elif frequency_text in ("semi_annual", "semiannual", "half_yearly"):
+        amount /= Decimal("6")
+    elif frequency_text in ("one_time", "one_off", "oneoff", "once"):
+        amount = Decimal("0")
     category = _map_expense_category(row.get("category", "other"))
     return ExpenseRecord(
         id=str(row.get("expense_id", row.get("id", ""))),
         category=category,
-        amount=amount,
+        amount=Money(amount=amount),
         period=default_period,
         is_emi=bool(row.get("is_emi", False)),
         is_own_account_transfer=bool(row.get("is_own_account_transfer", False)),
@@ -116,11 +132,13 @@ def map_row_to_asset_record(row: Dict[str, Any]) -> AssetRecord:
         id=str(row.get("asset_id", row.get("id", ""))),
         name=str(row.get("asset_name", row.get("name", "Asset"))),
         category=category,
-        current_value=current_val,
+        value=current_val,
         as_of_date=as_of,
-        ownership_percentage=ownership_pct,
+        ownership_share=ownership_pct,
         is_accessible=bool(row.get("is_accessible", True)),
-        committed_to_existing_goal=bool(row.get("committed_to_existing_goal", False)),
+        is_committed=bool(row.get("committed_to_existing_goal", row.get("is_committed", False))),
+        access_restrictions=list(row.get("access_restrictions") or []),
+        lock_in_until=date.fromisoformat(str(row["lock_in_until"])) if row.get("lock_in_until") else None,
         expected_annual_return=exp_return,
         status=EvidenceStatus(row.get("status", "investor_reported")),
         source=str(row.get("source", "investor_declared")),
@@ -173,12 +191,27 @@ def map_financial_facts_to_snapshot(
         map_row_to_liability_record(row)
         for row in facts.get("liabilities", facts.get("liability", []))
     ]
+    monthly_savings_investments = []
+    for row in facts.get("assets", facts.get("asset", [])):
+        contribution = Decimal(str(row.get("monthly_contribution_amount", row.get("monthly_contribution", 0)) or 0))
+        frequency_text = str(row.get("monthly_contribution_frequency", "monthly")).strip().lower().replace("-", "_")
+        if frequency_text in ("annual", "annually", "yearly"):
+            contribution /= Decimal("12")
+        elif frequency_text in ("quarterly", "quarter"):
+            contribution /= Decimal("3")
+        elif frequency_text in ("semi_annual", "semiannual", "half_yearly"):
+            contribution /= Decimal("6")
+        elif frequency_text in ("one_time", "one_off", "oneoff", "once"):
+            contribution = Decimal("0")
+        if contribution > 0:
+            monthly_savings_investments.append(Money(amount=contribution))
 
     return FinancialStateSnapshot(
         investor_id=investor_id,
         as_of_date=as_of_date,
         incomes=incomes,
         expenses=expenses,
+        monthly_savings_investments=monthly_savings_investments,
         assets=assets,
         liabilities=liabilities,
         insurances=[],
@@ -218,6 +251,7 @@ def snapshot_to_persistence_dict(snapshot: FinancialStateSnapshot) -> Dict[str, 
             }
             for e in snapshot.expenses
         ],
+        "monthly_savings_investments": [str(item.amount) for item in snapshot.monthly_savings_investments],
         "assets": [
             {
                 "id": a.id,

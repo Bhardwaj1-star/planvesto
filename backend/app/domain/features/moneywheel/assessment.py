@@ -29,7 +29,7 @@ from app.domain.shared.calculations import (
     calculate_portfolio_concentration,
     calculate_weighted_debt_rate,
 )
-from app.domain.features.financial_state.models import FinancialStateSnapshot
+from app.domain.features.investor_profile.financial_state.models import FinancialStateSnapshot
 from app.domain.features.moneywheel.findings import AssessmentFinding
 from app.domain.features.moneywheel.protection import (
     calculate_required_life_cover,

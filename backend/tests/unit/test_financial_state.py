@@ -16,7 +16,7 @@ from app.domain.shared.value_objects import (
     CalendarMonth,
     FlowFrequency,
 )
-from app.domain.features.financial_state.models import (
+from app.domain.features.investor_profile.financial_state.models import (
     IncomeRecord,
     ExpenseRecord,
     AssetRecord,
@@ -123,3 +123,51 @@ def test_financial_state_snapshot_aggregations():
     assert snapshot.get_actual_monthly_expenses(nov_2026).amount == Decimal("65000.00")
     assert snapshot.get_actual_monthly_savings_investments().amount == Decimal("15000.00")
     assert snapshot.calculate_available_monthly_surplus(nov_2026).amount == Decimal("40000.00")
+
+
+
+def test_legacy_financial_state_import_is_same_canonical_model():
+    from app.domain.features.financial_state.models import (
+        AssetRecord as LegacyAssetRecord,
+        FinancialStateSnapshot as LegacySnapshot,
+    )
+    from app.domain.features.investor_profile.financial_state.models import (
+        AssetRecord as CanonicalAssetRecord,
+        FinancialStateSnapshot as CanonicalSnapshot,
+    )
+
+    assert LegacyAssetRecord is CanonicalAssetRecord
+    assert LegacySnapshot is CanonicalSnapshot
+
+
+def test_income_frequency_normalization_and_monthly_surplus():
+    from app.domain.features.investor_profile.financial_state.normalization import normalize_income_to_monthly
+
+    period = CalendarMonth(year=2026, month=11)
+    annual_income = IncomeRecord(
+        id="annual-income",
+        category=CanonicalIncomeCategoryId.SALARY,
+        amount=Money.from_amount("1200000"),
+        is_net=True,
+        frequency=FlowFrequency.ANNUAL,
+        period=period,
+    )
+    quarterly_income = IncomeRecord(
+        id="quarterly-income",
+        category=CanonicalIncomeCategoryId.BUSINESS,
+        amount=Money.from_amount("300000"),
+        is_net=True,
+        frequency=FlowFrequency.QUARTERLY,
+        period=period,
+    )
+
+    assert normalize_income_to_monthly(annual_income).amount == Decimal("100000.00")
+    assert normalize_income_to_monthly(quarterly_income).amount == Decimal("100000.00")
+    snapshot = FinancialStateSnapshot(
+        investor_id="normalization-test",
+        as_of_date=date(2026, 11, 16),
+        incomes=[annual_income, quarterly_income],
+        monthly_savings_investments=[Money.from_amount("20000")],
+    )
+    assert snapshot.get_actual_net_monthly_income(period).amount == Decimal("200000.00")
+    assert snapshot.calculate_available_monthly_surplus(period).amount == Decimal("180000.00")
