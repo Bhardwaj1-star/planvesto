@@ -116,7 +116,7 @@ class InvestorProfileRepository(IInvestorProfileRepository):
         return self._memory_snapshots.get(key)
 
     def get_latest_financial_state_snapshot(
-        self, planning_unit_id: str, scope: str = "household"
+        self, planning_unit_id: str, scope: str = "family"
     ) -> Optional[Dict[str, Any]]:
         if self.client is not None:
             try:

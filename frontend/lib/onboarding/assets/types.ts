@@ -21,6 +21,8 @@ export type Asset = {
   currentValue: string;
   purchaseValue: string;
   purchaseDate: string;
+  monthlyContributionAmount?: string;
+  monthlyContributionFrequency?: "Monthly" | "Annual";
 };
 
 export type AssetField = keyof Omit<Asset, "id">;
@@ -32,4 +34,6 @@ export const emptyAsset: Omit<Asset, "id"> = {
   currentValue: "",
   purchaseValue: "",
   purchaseDate: "",
+  monthlyContributionAmount: "",
+  monthlyContributionFrequency: "Monthly",
 };

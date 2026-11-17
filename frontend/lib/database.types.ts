@@ -100,6 +100,8 @@ export type Database = {
           asset_name: string
           created_at: string
           current_value: number
+          monthly_contribution_amount: number
+          monthly_contribution_frequency: string
           planning_unit_id: string
           purchase_date: string | null
           purchase_value: number | null
@@ -110,6 +112,8 @@ export type Database = {
           asset_name: string
           created_at?: string
           current_value: number
+          monthly_contribution_amount?: number
+          monthly_contribution_frequency?: string
           planning_unit_id: string
           purchase_date?: string | null
           purchase_value?: number | null
@@ -120,6 +124,8 @@ export type Database = {
           asset_name?: string
           created_at?: string
           current_value?: number
+          monthly_contribution_amount?: number
+          monthly_contribution_frequency?: string
           planning_unit_id?: string
           purchase_date?: string | null
           purchase_value?: number | null

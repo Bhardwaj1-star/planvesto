@@ -4,6 +4,7 @@ export function validateAsset(asset: Asset): AssetErrors {
   const errors: AssetErrors = {};
   const currentValue = Number(asset.currentValue);
   const purchaseValue = Number(asset.purchaseValue);
+  const monthlyContribution = Number(asset.monthlyContributionAmount);
 
   if (!asset.assetType) errors.assetType = "Select an asset type.";
   if (!asset.description.trim()) errors.description = "Enter a name or description.";
@@ -14,6 +15,9 @@ export function validateAsset(asset: Asset): AssetErrors {
   }
   if (asset.purchaseValue && (!Number.isFinite(purchaseValue) || purchaseValue <= 0)) {
     errors.purchaseValue = "Enter a valid purchase value greater than zero.";
+  }
+  if (asset.monthlyContributionAmount && (!Number.isFinite(monthlyContribution) || monthlyContribution < 0)) {
+    errors.monthlyContributionAmount = "Enter a valid non-negative contribution amount.";
   }
   if (asset.purchaseDate) {
     const today = new Date().toISOString().slice(0, 10);

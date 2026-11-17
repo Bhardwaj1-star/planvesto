@@ -9,6 +9,7 @@ import { getLatestDefinedGoal } from "../../../../../lib/api/goals";
 import type { DefinedGoal, FundingStrategyEvaluation } from "../../../../../lib/onboarding/goals/types";
 import { getPlanningUnitId } from "../../../../../lib/planning-unit";
 import { withReturnTo } from "../../../../../lib/workflow-navigation";
+import { apiRequest } from "../../../../../lib/api/client";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -66,6 +67,11 @@ export default function GoalFeasibilityWorkspace() {
   const [goal, setGoal] = useState<DefinedGoal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revisedCost, setRevisedCost] = useState("");
+  const [revisedTargetDate, setRevisedTargetDate] = useState("");
+  const [case2APreview, setCase2APreview] = useState<DefinedGoal | null>(null);
+  const [case2ALoading, setCase2ALoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
 
   async function refreshWorkspace() {
     setLoading(true);
@@ -75,6 +81,9 @@ export default function GoalFeasibilityWorkspace() {
       await buildFinancialState(planningUnitId, "family");
       const latest = await getLatestDefinedGoal(planningUnitId, goalId);
       setGoal(latest);
+      setRevisedCost(String(latest.today_cost ?? ""));
+      setRevisedTargetDate(`${latest.target_year}-${String(latest.target_month).padStart(2, "0")}`);
+      setCase2APreview(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to refresh goal feasibility.");
     } finally {
@@ -85,6 +94,53 @@ export default function GoalFeasibilityWorkspace() {
   useEffect(() => {
     void refreshWorkspace();
   }, [goalId]);
+  async function evaluateCase2A() {
+    if (!goal) return;
+    const [year, month] = revisedTargetDate.split("-").map(Number);
+    if (!Number.isFinite(Number(revisedCost)) || Number(revisedCost) <= 0 || !year || !month) {
+      setScenarioError("Enter a valid revised goal amount and target month.");
+      return;
+    }
+    setCase2ALoading(true);
+    setScenarioError(null);
+    setCase2APreview(null);
+    try {
+      const preview = await apiRequest<DefinedGoal>("/api/goals/calculate", {
+        method: "POST",
+        body: JSON.stringify({
+          planning_unit_id: goal.planning_unit_id,
+          goal_id: goal.goal_id,
+          goal_name: goal.goal_name,
+          goal_type: goal.goal_type,
+          today_cost: Number(revisedCost),
+          target_month: month,
+          target_year: year,
+          inflation_rate_pct: goal.inflation_rate,
+          expected_return_pct: goal.funding_return_assumption ?? 10,
+          priority: goal.priority,
+          flexibility: goal.flexibility,
+          status: goal.status,
+          asset_mappings: (goal.mapped_assets ?? []).map((mapping) => ({
+            asset_id: mapping.asset_id,
+            asset_name: mapping.asset_name ?? "Asset",
+            current_value: Number(mapping.allocated_amount ?? 0),
+            allocation_type: mapping.allocation_type,
+            allocation_value: Number(mapping.allocation_value ?? mapping.allocated_percentage ?? 100),
+            allocation_percentage: Number(mapping.allocated_percentage ?? 100),
+            expected_annual_return_pct: Number(mapping.expected_return ?? 10),
+            return_frequency: mapping.return_frequency ?? "annual",
+          })),
+          dynamic_details: (goal.version_metadata?.dynamic_details as Record<string, unknown>) ?? {},
+        }),
+      });
+      setCase2APreview(preview);
+    } catch (cause) {
+      setScenarioError(cause instanceof Error ? cause.message : "Unable to evaluate the revised goal scenario.");
+    } finally {
+      setCase2ALoading(false);
+    }
+  }
+
 
   if (loading) return <main className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-sm font-semibold text-slate-600">Refreshing Financial State and goal feasibility...</p></main>;
 
@@ -147,6 +203,53 @@ export default function GoalFeasibilityWorkspace() {
             : <p className="mt-5 text-sm text-slate-600">No funding strategy evaluation was returned for this goal.</p>}
       </section>
 
+
+      {feasibility !== "unknown" && <section className="border-b border-slate-300 py-7">
+        <p className="text-xs font-bold uppercase tracking-wider text-teal-800">Chapter 10 · Fund Feasibility</p>
+        <h2 className="mt-1 text-xl font-extrabold text-slate-950">
+          {feasibility === "feasible" ? "Case 1 — Available Monthly Surplus covers the additional SIP" : "Case 2 — Funding capacity shortfall"}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Existing goal SIP is deducted from the required SIP before comparing the additional contribution with Available Monthly Surplus. This is an affordability test, not confirmation that the goal has already been funded.
+        </p>
+        {feasibility !== "feasible" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <h3 className="font-extrabold text-amber-950">Case 2A — Change Goal Amount and/or Tenure</h3>
+          <p className="mt-1 text-sm text-amber-900">Change the target amount and/or target month to preview the revised Future Goal Target, Funding Gap and Required SIP. Nothing is saved until the investor chooses to update the goal.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold text-slate-700">Revised goal amount (today's cost)
+              <input type="number" min="1" step="1" value={revisedCost} onChange={(event) => setRevisedCost(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-bold text-slate-700">Revised target month
+              <input type="month" value={revisedTargetDate} onChange={(event) => setRevisedTargetDate(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" />
+            </label>
+          </div>
+          <button type="button" disabled={case2ALoading} onClick={() => void evaluateCase2A()} className="mt-3 rounded-lg bg-amber-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{case2ALoading ? "Recalculating..." : "Recalculate Case 2A"}</button>
+          {scenarioError && <p role="alert" className="mt-2 text-sm font-semibold text-rose-700">{scenarioError}</p>}
+          {case2APreview && <div className="mt-4 rounded-lg border border-amber-200 bg-white p-3">
+            <p className="text-xs font-black uppercase tracking-wider text-slate-500">Unsaved scenario result · {case2APreview.feasibility_status ?? "unknown"}</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <Value label="Revised future target" value={amount(case2APreview.future_target)} />
+              <Value label="Revised funding gap" value={amount(case2APreview.funding_gap)} />
+              <Value label="Additional required SIP" value={amount(case2APreview.additional_required_monthly_sip ?? case2APreview.required_monthly_contribution)} />
+            </div>
+            <p className="mt-2 text-sm text-slate-700">{case2APreview.feasibility_reason ?? case2APreview.explanation}</p>
+          </div>}
+        </div>}
+        {feasibility !== "feasible" && <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+          <h3 className="font-extrabold text-slate-950">Case 2B — Keep Goal Amount and Target Date Fixed</h3>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <Value label="Surplus gap" value={amount(goal.surplus_gap)} />
+            <Value label="Required surplus increase" value={goal.available_monthly_surplus != null && goal.available_monthly_surplus <= 0 ? "Amount required; percentage not applicable" : goal.required_surplus_increase_pct == null ? "Not available" : `${goal.required_surplus_increase_pct.toFixed(1)}%`} />
+          </div>
+          <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-slate-700">
+            <li>Review reliable income increases and expense reductions through Budgeting / Cash Flow; changes require investor approval.</li>
+            <li>Assess Step-Up SIP using an investor-selected annual step-up rate; do not assume a default increase.</li>
+            <li>Assess Lump Sum + SIP only after selecting an available, liquid, suitable and uncommitted asset.</li>
+            <li>Review debt / EMI restructuring only where a verified reduction in monthly EMI is available, including fees and total borrowing cost.</li>
+          </ul>
+          <p className="mt-3 text-xs font-semibold text-slate-500">No borrowing, asset sale, withdrawal, redirection of another goal's investments or plan change is performed by this assessment.</p>
+        </div>}
+      </section>}
       <section className="py-7">
         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Investor decision</p>
         <h2 className="mt-1 text-lg font-extrabold text-slate-950">No funding strategy has been selected</h2>

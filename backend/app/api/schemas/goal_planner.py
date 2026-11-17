@@ -36,7 +36,6 @@ class GoalCalculateRequest(BaseModel):
     priority: Optional[Any] = "high"
     flexibility: str = "Flexible"
     status: str = "Active"
-    available_monthly_surplus: Decimal = Decimal("0.0")
     asset_mappings: List[AssetMappingInput] = Field(default_factory=list)
     dynamic_details: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
@@ -69,9 +68,15 @@ class DefinedGoalResponse(BaseModel):
     projected_mapped_asset_value: Decimal = Decimal("0.0")
     required_monthly_sip: Decimal = Decimal("0.0")
     required_monthly_contribution: Decimal = Decimal("0.0")
-    available_monthly_surplus: Decimal = Decimal("0.0")
-    surplus_gap: Decimal = Decimal("0.0")
+    available_monthly_surplus: Optional[Decimal] = None
+    additional_required_monthly_sip: Decimal = Decimal("0.0")
+    surplus_gap: Optional[Decimal] = None
     required_surplus_increase_pct: Optional[Decimal] = None
+    fund_feasibility_case: Optional[str] = None
+    feasibility_reason: Optional[str] = None
+    feasibility_source: Optional[str] = None
+    existing_goal_sip_monthly: Decimal = Decimal("0.0")
+    funding_strategies: List[Dict[str, Any]] = Field(default_factory=list)
     is_feasible_under_current_conditions: bool = True
     feasibility_status: str = "feasible"
     funding_status: str = "Shortfall"

@@ -26,7 +26,6 @@ def test_goal_calculate_preview_endpoint():
         "target_month": 11,
         "inflation_rate_pct": "8.0",
         "expected_return_pct": "12.0",
-        "available_monthly_surplus": "50000.00",
         "asset_mappings": [],
     }
 
@@ -36,7 +35,9 @@ def test_goal_calculate_preview_endpoint():
 
     assert data["goal_name"] == "Child Education"
     assert Decimal(str(data["future_target"])) > Decimal("2000000.00")
-    assert data["is_feasible_under_current_conditions"] is True
+    assert data["is_feasible_under_current_conditions"] is False
+    assert data["feasibility_status"] == "unknown"
+    assert data["available_monthly_surplus"] is None
     assert Decimal(str(data["required_monthly_sip"])) < Decimal("50000.00")
 
 
@@ -122,3 +123,42 @@ def test_action_plan_create_endpoint():
     assert data["plan_id"] == "plan-acc-01"
     assert data["action_type"] == "start_sip"
     assert data["status"] == "pending"
+
+
+def test_financial_state_build_calculates_surplus_and_persists_snapshot(monkeypatch):
+    import app.api.routers.financial_state as financial_state_router
+
+    saved = {}
+    monkeypatch.setattr(
+        financial_state_router._profile_repo,
+        "get_financial_facts",
+        lambda planning_unit_id: {
+            "income": [{"income_id": "income-1", "income_type": "Salary", "amount": 100000, "frequency": "Monthly"}],
+            "expenses": [{"expense_id": "expense-1", "expense_type": "Housing", "amount": 50000, "frequency": "Monthly"}],
+            "assets": [{
+                "asset_id": "asset-1", "asset_name": "Mutual Funds - SIP",
+                "current_value": 100000, "monthly_contribution_amount": 10000,
+                "monthly_contribution_frequency": "Monthly",
+            }],
+            "liabilities": [],
+        },
+    )
+    monkeypatch.setattr(financial_state_router, "_existing_goal_sips", lambda planning_unit_id, assets: {"goal-1": 10000})
+    monkeypatch.setattr(
+        financial_state_router._profile_repo,
+        "save_financial_state_snapshot",
+        lambda **kwargs: saved.update(kwargs) or "snapshot-1",
+    )
+
+    response = client.post("/api/financial-state/build", json={
+        "planning_unit_id": "pu-test-financial-state",
+        "scope": "family",
+        "target_year": 2026,
+        "target_month": 11,
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert Decimal(str(data["available_monthly_surplus"])) == Decimal("40000.00")
+    assert saved["snapshot"]["monthly_savings_investments"]["value"] == 10000.0
+    assert saved["snapshot"]["existing_goal_sips_by_goal"]["goal-1"] == 10000.0
+    assert saved["snapshot"]["investable_surplus_monthly"]["available"] is True

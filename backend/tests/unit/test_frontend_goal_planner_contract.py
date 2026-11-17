@@ -52,3 +52,40 @@ def test_frontend_exact_calculate_payload():
     assert data["goal_type"] == "retirement"
     assert data["funding_status"] in ("Shortfall", "On Track", "Overfunded")
     assert float(data["future_target"]) > 600000
+    assert data.get("feasibility_status") == "unknown"
+    assert data.get("available_monthly_surplus") is None
+
+
+def test_goal_feasibility_surplus_is_calculated_from_backend_financial_state(monkeypatch):
+    import app.api.routers.goal_planner as goal_planner_router
+
+    monkeypatch.setattr(
+        goal_planner_router._profile_repo,
+        "get_latest_financial_state_snapshot",
+        lambda planning_unit_id, scope="family": {
+            "financial_state": {
+                "income_monthly": {"value": 120000, "available": True},
+                "expenses_monthly": {"value": 65000, "available": True},
+                "monthly_savings_investments": {"value": 15000, "available": True},
+            }
+        },
+    )
+    payload = {
+        "planning_unit_id": "pu-12345",
+        "goal_name": "Education",
+        "goal_type": "education",
+        "today_cost": 600000,
+        "target_month": 1,
+        "target_year": 2032,
+        "inflation_rate": 0.06,
+        "expected_return_pct": 10,
+        "asset_mappings": [],
+        "available_monthly_surplus": 999999,
+    }
+
+    response = client.post("/api/goals/calculate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert float(data["available_monthly_surplus"]) == 40000
+    assert data["feasibility_source"] == "income_monthly - expenses_monthly - monthly_savings_investments"
+    assert data["feasibility_status"] == "feasible"

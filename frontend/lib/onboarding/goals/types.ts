@@ -217,7 +217,13 @@ export type DefinedGoal = {
   feasibility_status?: "feasible" | "constrained" | "infeasible" | "unknown";
   workflow_readiness?: WorkflowReadiness | null;
   feasibility_reason?: string | null;
+  explanation?: string;
+  fund_feasibility_case?: string | null;
   available_monthly_surplus?: number | null;
+  additional_required_monthly_sip?: number;
+  surplus_gap?: number | null;
+  required_surplus_increase_pct?: number | null;
+  existing_goal_sip_monthly?: number;
   monthly_contribution_surplus_gap?: number | null;
   required_monthly_contribution: number;
   funding_return_assumption?: number;

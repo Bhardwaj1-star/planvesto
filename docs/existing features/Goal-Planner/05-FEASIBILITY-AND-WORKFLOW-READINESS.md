@@ -54,3 +54,28 @@ When readiness already exists, `_ensure_workflow_readiness` returns the goal as-
 - `get_defined_goal_version` reads a specified historical version and calls `_ensure_workflow_readiness`, rather than unconditionally applying current feasibility to it (lines 317–321).
 
 This distinction matters: latest snapshot retrieval can refresh feasibility against current financial state, while historical version retrieval preserves the stored calculation and only ensures readiness is attached if needed.
+
+
+## 6. Current API and UI integration
+
+The current Goal Planner API resolves Available Monthly Surplus from the latest family Financial State snapshot; the browser does not submit or override this value. When monthly component metrics are present, the backend applies:
+
+`Available Monthly Surplus = Income Monthly − Expenses Monthly − Monthly Savings / Investments`
+
+Savings/investment values are read from Financial State fields where present, including monthly investment totals, existing SIP totals, goal-wise SIP totals, or the savings-investment rate. Goal-wise existing SIP is separately deducted from the goal's total required SIP to calculate the additional SIP needed for that goal. If Financial State has no usable surplus metric, feasibility remains `unknown` rather than treating missing data as zero.
+
+The latest defined-goal endpoint refreshes affordability against the current Financial State snapshot while preserving the saved goal amount, target date, and mapped-asset assumptions. Family scope is used for the snapshot lookup.
+
+The Goal Feasibility page exposes:
+- Case 1 when the additional SIP fits Available Monthly Surplus or eligible mapped assets already cover the future target.
+- Case 2A as an unsaved preview that recalculates the goal after changing today's goal cost and/or target month.
+- Case 2B with the surplus gap and required surplus increase, plus the supported routes to review income/expense changes, Step-Up SIP, Lump Sum + SIP, and verified EMI/debt changes.
+
+Step-up rates and lump-sum assets are not invented by the system. They remain investor-specified scenarios requiring affordability and asset suitability checks before a route can be marked feasible.
+
+
+### 6.1 Backend-owned surplus and recurring contributions
+
+Financial State build now normalizes income and expenses to monthly amounts, includes recurring monthly/annual investment contributions recorded against assets, calculates `Income − Expenses − Savings/Investments`, and persists the resulting immutable snapshot. Goal-wise SIP amounts are allocated from mapped assets using the mapping percentage (or mapped currency share), so the goal's additional SIP is calculated after deducting its existing mapped SIP. The browser submits contribution facts only; it never submits Available Monthly Surplus.
+
+Existing assets default to zero recurring contribution until the investor records their actual SIP / investment amount in the asset form. Apply migration `021_asset_monthly_contributions.sql` before deploying this change.
