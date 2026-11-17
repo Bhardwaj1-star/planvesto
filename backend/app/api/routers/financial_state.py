@@ -294,9 +294,10 @@ def build_financial_state(
 def get_latest_financial_state(
     planning_unit_id: str,
     user_id: str = Depends(get_current_user_id),
+    scope: str = Query(default="family"),
 ):
     """Retrieve the latest financial state for a planning unit."""
-    saved = _profile_repo.get_latest_financial_state_snapshot(planning_unit_id)
+    saved = _profile_repo.get_latest_financial_state_snapshot(planning_unit_id, scope=scope)
     if saved and "financial_state" in saved:
         return saved["financial_state"]
 

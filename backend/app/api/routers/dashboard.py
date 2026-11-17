@@ -43,9 +43,32 @@ def get_dashboard(
     """
     Returns aggregated dashboard metrics including financial state and active goals.
     """
-    # 1. Fetch financial state snapshot
-    saved = _profile_repo.get_latest_financial_state_snapshot(planning_unit_id)
-    metric_zero = {"value": 0.0, "available": True, "reason": None}
+    # 1. Rebuild the canonical snapshot from persisted onboarding facts.
+    # Dashboard must not depend on a user having manually opened Financial State first.
+    from datetime import date
+    from app.api.schemas.financial_state import FinancialStateRequest
+    from app.api.routers.financial_state import _build_financial_state_snapshot
+    from app.domain.shared.value_objects import CalendarMonth
+
+    today = date.today()
+    period = CalendarMonth(year=today.year, month=today.month)
+    request = FinancialStateRequest(
+        planning_unit_id=planning_unit_id,
+        scope=scope,
+        investor_id=investor_id,
+    )
+    _, rebuilt_state, _, _, _ = _build_financial_state_snapshot(
+        request, user_id, today, period
+    )
+    snapshot_id = _profile_repo.save_financial_state_snapshot(
+        planning_unit_id=planning_unit_id,
+        scope=scope,
+        investor_id=investor_id if scope == "individual" else None,
+        snapshot=rebuilt_state,
+    )
+    rebuilt_state["snapshot_id"] = snapshot_id
+    saved = {"financial_state": rebuilt_state}
+    metric_zero = {"value": 0.0, "available": False, "reason": "MISSING_INPUT"}
 
     if saved and "financial_state" in saved:
         fs_data = saved["financial_state"]
