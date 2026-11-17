@@ -91,8 +91,19 @@ def test_goal_feasibility_uses_canonical_surplus_and_does_not_overstate_overall_
     assert [item["strategy_id"] for item in result["funding_strategies"]] == [
         "sip", "lump_sum", "combined_lump_sum_sip"
     ]
-    assert result["funding_strategies"][1]["status"] == "method_unresolved"
-    assert result["funding_strategies"][2]["status"] == "method_unresolved"
+    # All three strategies expose independently calculated values; asset eligibility
+    # remains a separate Chapter 11 verification gate, not a reason to omit math.
+    lump_sum = result["funding_strategies"][1]
+    combined = result["funding_strategies"][2]
+    assert lump_sum["status"] == "feasible"
+    assert lump_sum["required_lumpsum"] is not None
+    assert lump_sum["required_lumpsum"] >= 0
+    assert lump_sum["required_monthly_contribution"] == 0
+    assert combined["status"] == "feasible"
+    assert combined["required_lumpsum"] is not None
+    assert combined["required_lumpsum"] >= 0
+    assert combined["required_monthly_contribution"] == 50000
+    assert lump_sum["required_lumpsum"] != combined["required_lumpsum"]
 
 
 def test_goal_feasibility_is_unknown_when_canonical_surplus_is_unavailable(monkeypatch):
