@@ -83,4 +83,5 @@ class DefinedGoalResponse(BaseModel):
     status: str = "Active"
     priority: Any = "Important"
     explanation: str = "Goal requirement calculated successfully"
+    version_metadata: Dict[str, Any] = Field(default_factory=dict)
     mapped_assets: List[Dict[str, Any]] = Field(default_factory=list)

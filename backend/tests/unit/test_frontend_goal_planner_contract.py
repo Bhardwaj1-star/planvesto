@@ -47,6 +47,8 @@ def test_frontend_exact_calculate_payload():
     assert "funding_gap" in data
     assert "funding_status" in data
     assert "required_monthly_contribution" in data
+    assert isinstance(data.get("mapped_assets"), list)
+    assert isinstance(data.get("version_metadata"), dict)
     assert data["goal_type"] == "retirement"
     assert data["funding_status"] in ("Shortfall", "On Track", "Overfunded")
     assert float(data["future_target"]) > 600000

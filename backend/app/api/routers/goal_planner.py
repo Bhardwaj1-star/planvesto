@@ -126,7 +126,7 @@ def _build_defined_response(
 
     return DefinedGoalResponse(
         goal_id=goal_id,
-        defined_goal_id=f"def_{goal_id}",
+        defined_goal_id=str(uuid.uuid4()),
         planning_unit_id=request.planning_unit_id,
         goal_name=request.goal_name,
         goal_type=clean_goal_type,
@@ -152,6 +152,7 @@ def _build_defined_response(
         status=request.status,
         priority=request.priority if isinstance(request.priority, str) else "Important",
         explanation=feasibility.explanation,
+        version_metadata={"dynamic_details": request.dynamic_details or {}},
         mapped_assets=[
             {
                 "asset_id": m.asset_id,
@@ -296,7 +297,7 @@ def calculate_goal_preview(
     user_id: str = Depends(get_current_user_id),
 ):
     """Calculates goal requirement and fund feasibility preview using Chapter 10 domain logic."""
-    temp_id = request.goal_id or f"goal_{uuid.uuid4().hex[:8]}"
+    temp_id = request.goal_id or str(uuid.uuid4())
     goal = _build_goal_instance(request, temp_id, user_id)
     return _build_defined_response(request, goal, temp_id, user_id)
 
@@ -308,7 +309,7 @@ def save_goal(
     user_id: str = Depends(get_current_user_id),
 ):
     """Saves and defines a goal using Chapter 10 domain evaluation."""
-    goal_id = request.goal_id or f"goal_{uuid.uuid4().hex[:8]}"
+    goal_id = request.goal_id or str(uuid.uuid4())
     goal = _build_goal_instance(request, goal_id, user_id)
     resp = _build_defined_response(request, goal, goal_id, user_id)
 
