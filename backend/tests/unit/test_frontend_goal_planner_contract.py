@@ -56,36 +56,63 @@ def test_frontend_exact_calculate_payload():
     assert data.get("available_monthly_surplus") is None
 
 
-def test_goal_feasibility_surplus_is_calculated_from_backend_financial_state(monkeypatch):
+def test_goal_feasibility_uses_canonical_surplus_and_does_not_overstate_overall_feasibility(monkeypatch):
+    import app.api.routers.goal_planner as goal_planner_router
+    from decimal import Decimal
+
+    monkeypatch.setattr(
+        goal_planner_router,
+        "_financial_feasibility_context",
+        lambda planning_unit_id, goal_id=None, user_id="": {
+            "available_monthly_surplus": Decimal("50000"),
+            "existing_goal_sip": Decimal("5000"),
+            "source": "financial_state.investable_surplus_monthly",
+        },
+    )
+    defined = {
+        "goal_id": "goal-1",
+        "goal_name": "Education",
+        "goal_type": "education",
+        "today_cost": Decimal("600000"),
+        "target_month": 1,
+        "target_year": 2032,
+        "inflation_rate": Decimal("6"),
+        "mapped_assets": [],
+        "version_metadata": {"funding_return_assumption_pct": "10"},
+    }
+
+    result = goal_planner_router._apply_current_feasibility(defined, "pu-1", "user-1")
+
+    assert result["feasibility_source"] == "financial_state.investable_surplus_monthly"
+    assert result["fund_feasibility_case"] == "case_1_affordable"
+    # SIP affordability is a passed gate, not proof of complete goal feasibility.
+    assert result["feasibility_status"] == "constrained"
+    assert result["is_feasible_under_current_conditions"] is False
+    assert [item["strategy_id"] for item in result["funding_strategies"]] == [
+        "sip", "lump_sum", "combined_lump_sum_sip"
+    ]
+    assert result["funding_strategies"][1]["status"] == "method_unresolved"
+    assert result["funding_strategies"][2]["status"] == "method_unresolved"
+
+
+def test_goal_feasibility_is_unknown_when_canonical_surplus_is_unavailable(monkeypatch):
     import app.api.routers.goal_planner as goal_planner_router
 
     monkeypatch.setattr(
-        goal_planner_router._profile_repo,
-        "get_latest_financial_state_snapshot",
-        lambda planning_unit_id, scope="family": {
-            "financial_state": {
-                "income_monthly": {"value": 120000, "available": True},
-                "expenses_monthly": {"value": 65000, "available": True},
-                "monthly_savings_investments": {"value": 15000, "available": True},
-            }
+        goal_planner_router,
+        "_financial_feasibility_context",
+        lambda planning_unit_id, goal_id=None, user_id="": {
+            "available_monthly_surplus": None,
+            "existing_goal_sip": 0,
+            "source": None,
         },
     )
-    payload = {
-        "planning_unit_id": "pu-12345",
-        "goal_name": "Education",
-        "goal_type": "education",
-        "today_cost": 600000,
-        "target_month": 1,
-        "target_year": 2032,
-        "inflation_rate": 0.06,
-        "expected_return_pct": 10,
-        "asset_mappings": [],
-        "available_monthly_surplus": 999999,
+    defined = {
+        "goal_id": "goal-2", "goal_name": "Retirement", "goal_type": "retirement",
+        "today_cost": 1000000, "target_month": 1, "target_year": 2035,
+        "inflation_rate": 6, "mapped_assets": [], "version_metadata": {},
     }
-
-    response = client.post("/api/goals/calculate", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert float(data["available_monthly_surplus"]) == 40000
-    assert data["feasibility_source"] == "income_monthly - expenses_monthly - monthly_savings_investments"
-    assert data["feasibility_status"] == "feasible"
+    result = goal_planner_router._apply_current_feasibility(defined, "pu-1", "user-1")
+    assert result["feasibility_status"] == "unknown"
+    assert result["is_feasible_under_current_conditions"] is False
+    assert result["funding_strategies"] == []

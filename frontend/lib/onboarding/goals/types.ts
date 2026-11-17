@@ -239,9 +239,9 @@ export type FundingStrategyEvaluation = {
   strategy_type: string;
   description: string;
   status: string;
-  required_lumpsum: number;
-  required_monthly_contribution: number;
-  starting_monthly_contribution: number;
+  required_lumpsum: number | null;
+  required_monthly_contribution: number | null;
+  starting_monthly_contribution: number | null;
   annual_step_up: number | null;
   remaining_gap: number;
   reason: string;

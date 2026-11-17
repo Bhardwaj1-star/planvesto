@@ -195,7 +195,7 @@ export default function GoalFeasibilityWorkspace() {
 
       <section className="border-b border-slate-300 py-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><p className="text-xs font-bold uppercase tracking-wider text-teal-800">Funding analysis</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">Funding Strategy Evaluation</h2></div>
+          <div><p className="text-xs font-bold uppercase tracking-wider text-teal-800">Funding analysis</p><h2 className="mt-1 text-xl font-extrabold text-slate-950">Fund Feasibility — Funding Methods</h2></div>
           {goal.available_monthly_surplus != null && <p className="text-sm font-semibold text-slate-600">Available monthly resources: {amount(goal.available_monthly_surplus)}</p>}
         </div>
         {feasibility === "unknown" ? <p className="mt-5 text-sm text-slate-600">Funding strategies will be evaluated after the missing Financial State information is complete.</p>
@@ -207,12 +207,12 @@ export default function GoalFeasibilityWorkspace() {
       {feasibility !== "unknown" && <section className="border-b border-slate-300 py-7">
         <p className="text-xs font-bold uppercase tracking-wider text-teal-800">Chapter 10 · Fund Feasibility</p>
         <h2 className="mt-1 text-xl font-extrabold text-slate-950">
-          {feasibility === "feasible" ? "Case 1 — Available Monthly Surplus covers the additional SIP" : "Case 2 — Funding capacity shortfall"}
+          {goal.fund_feasibility_case === "case_1_affordable" ? "Case 1 — SIP affordability test passed" : "Case 2 — Funding capacity shortfall"}
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Existing goal SIP is deducted from the required SIP before comparing the additional contribution with Available Monthly Surplus. This is an affordability test, not confirmation that the goal has already been funded.
         </p>
-        {feasibility !== "feasible" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        {goal.fund_feasibility_case === "case_2_capacity_shortfall" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="font-extrabold text-amber-950">Case 2A — Change Goal Amount and/or Tenure</h3>
           <p className="mt-1 text-sm text-amber-900">Change the target amount and/or target month to preview the revised Future Goal Target, Funding Gap and Required SIP. Nothing is saved until the investor chooses to update the goal.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -235,7 +235,7 @@ export default function GoalFeasibilityWorkspace() {
             <p className="mt-2 text-sm text-slate-700">{case2APreview.feasibility_reason ?? case2APreview.explanation}</p>
           </div>}
         </div>}
-        {feasibility !== "feasible" && <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+        {goal.fund_feasibility_case === "case_2_capacity_shortfall" && <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="font-extrabold text-slate-950">Case 2B — Keep Goal Amount and Target Date Fixed</h3>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <Value label="Surplus gap" value={amount(goal.surplus_gap)} />
