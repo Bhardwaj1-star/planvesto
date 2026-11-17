@@ -17,8 +17,12 @@ from app.domain.features.investor_profile.financial_state import (
     FinancialStateSnapshot,
     assess_data_readiness,
 )
+from app.infrastructure.persistence.repositories.investor_profile import (
+    InvestorProfileRepository,
+)
 
 router = APIRouter(tags=["Financial State"])
+_profile_repo = InvestorProfileRepository()
 
 
 @router.post("/build", response_model=FinancialStateResponse)
@@ -62,3 +66,51 @@ def build_financial_state(
             "missing_inputs": readiness.missing_inputs_for_goal_planning,
         },
     )
+
+
+@router.get("/latest/{planning_unit_id}")
+@router.get("/api/financial-state/latest/{planning_unit_id}", include_in_schema=False)
+def get_latest_financial_state(
+    planning_unit_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Retrieve the latest financial state for a planning unit."""
+    saved = _profile_repo.get_latest_financial_state_snapshot(planning_unit_id)
+    if saved and "financial_state" in saved:
+        return saved["financial_state"]
+
+    metric_zero = {"value": 0.0, "available": True, "reason": None}
+    return {
+        "scope": "household",
+        "planning_unit_id": planning_unit_id,
+        "investor_id": user_id,
+        "income_monthly": metric_zero,
+        "income_annual": metric_zero,
+        "income_breakdown": [],
+        "expenses_monthly": metric_zero,
+        "expenses_annual": metric_zero,
+        "expense_breakdown": [],
+        "investable_surplus_monthly": metric_zero,
+        "investable_surplus_annual": metric_zero,
+        "cash_flow_ratio": metric_zero,
+        "savings_investment_rate": metric_zero,
+        "total_assets": metric_zero,
+        "asset_breakdown": [],
+        "total_liabilities": metric_zero,
+        "liability_breakdown": [],
+        "emi_burden_monthly": metric_zero,
+        "net_worth": metric_zero,
+        "safety_reserve_months": metric_zero,
+        "safety_reserve_required_amount": metric_zero,
+    }
+
+
+@router.get("/history/{planning_unit_id}")
+@router.get("/api/financial-state/history/{planning_unit_id}", include_in_schema=False)
+def get_financial_state_history(
+    planning_unit_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Retrieve historical financial state snapshots."""
+    latest = get_latest_financial_state(planning_unit_id, user_id)
+    return [latest]

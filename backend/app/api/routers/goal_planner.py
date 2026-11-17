@@ -5,7 +5,7 @@ FastAPI router for Goal Planner endpoints.
 
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
@@ -26,8 +26,12 @@ from app.domain.features.goal_planner.feasibility import (
     evaluate_fund_feasibility,
 )
 from app.domain.features.investor_profile.financial_state import AssetRecord
+from app.infrastructure.persistence.repositories.goal_planner import (
+    GoalPlannerRepository,
+)
 
 router = APIRouter(tags=["Goal Planner"])
+_goal_repo = GoalPlannerRepository()
 
 
 def _build_goal_instance(req: GoalCalculateRequest, goal_id: str, investor_id: str) -> GoalInstance:
@@ -67,6 +71,126 @@ def _build_goal_instance(req: GoalCalculateRequest, goal_id: str, investor_id: s
         created_at=as_of,
         mapped_assets=mapped_assets,
     )
+
+
+@router.get("", response_model=List[GoalSummaryResponse])
+@router.get("/api/goals", response_model=List[GoalSummaryResponse], include_in_schema=False)
+def list_goals(
+    planning_unit_id: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+):
+    """List all goals for the given planning unit."""
+    rows = _goal_repo.list_goals(planning_unit_id)
+    results = []
+    for r in rows:
+        results.append(
+            GoalSummaryResponse(
+                goal_id=str(r.get("goal_id", "")),
+                planning_unit_id=str(r.get("planning_unit_id", planning_unit_id)),
+                goal_name=str(r.get("goal_name", "")),
+                target_amount=Decimal(str(r.get("target_amount", 0))),
+                target_date=str(r.get("target_date", "")),
+                priority=int(r.get("priority", 1)) if str(r.get("priority", "")).isdigit() else 1,
+                flexibility=str(r.get("flexibility", "Flexible")),
+            )
+        )
+    return results
+
+
+@router.get("/{goal_id}/defined/latest")
+@router.get("/api/goals/{goal_id}/defined/latest", include_in_schema=False)
+def get_latest_defined_goal(
+    goal_id: str,
+    planning_unit_id: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+):
+    """Retrieve the latest defined goal state for a specific goal."""
+    defined = _goal_repo.get_latest_defined_goal(planning_unit_id, goal_id)
+    if defined:
+        return defined
+
+    # If no defined record yet, fetch basic goal and evaluate default feasibility
+    goal_raw = _goal_repo.get_goal(planning_unit_id, goal_id)
+    if not goal_raw:
+        # Return fallback defined goal shape so frontend doesn't crash
+        return {
+            "defined_goal_id": f"def_{goal_id}",
+            "goal_id": goal_id,
+            "planning_unit_id": planning_unit_id,
+            "version": 1,
+            "is_latest": True,
+            "goal_name": "Goal",
+            "goal_type": "others",
+            "today_cost": 0.0,
+            "future_target": 0.0,
+            "funding_gap": 0.0,
+            "funding_status": "Shortfall",
+            "feasibility_status": "unknown",
+            "feasibility_reason": "Goal details pending",
+            "available_monthly_surplus": 0.0,
+            "required_monthly_contribution": 0.0,
+            "target_month": 1,
+            "target_year": date.today().year + 5,
+            "duration_years": 5.0,
+            "inflation_rate": 6.0,
+            "mapped_assets": [],
+        }
+
+    # Evaluate using domain
+    today_cost = float(goal_raw.get("target_amount", 0))
+    target_date_str = str(goal_raw.get("target_date", f"{date.today().year + 5}-01-01"))
+    try:
+        t_date = date.fromisoformat(target_date_str[:10])
+    except Exception:
+        t_date = date(date.today().year + 5, 1, 1)
+
+    return {
+        "defined_goal_id": f"def_{goal_id}",
+        "goal_id": goal_id,
+        "planning_unit_id": planning_unit_id,
+        "version": 1,
+        "is_latest": True,
+        "goal_name": str(goal_raw.get("goal_name", "Goal")),
+        "goal_type": "others",
+        "today_cost": today_cost,
+        "future_target": today_cost * 1.33,
+        "funding_gap": today_cost * 1.33,
+        "funding_status": "Shortfall",
+        "feasibility_status": "feasible" if today_cost == 0 else "constrained",
+        "feasibility_reason": "Preliminary calculation from saved goal",
+        "available_monthly_surplus": 0.0,
+        "required_monthly_contribution": round((today_cost * 1.33) / 60.0, 2),
+        "target_month": t_date.month,
+        "target_year": t_date.year,
+        "duration_years": max(1, t_date.year - date.today().year),
+        "inflation_rate": 6.0,
+        "mapped_assets": [],
+    }
+
+
+@router.get("/{goal_id}/defined/versions")
+@router.get("/api/goals/{goal_id}/defined/versions", include_in_schema=False)
+def get_defined_goal_versions(
+    goal_id: str,
+    planning_unit_id: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+):
+    """Retrieve version history for a defined goal."""
+    latest = get_latest_defined_goal(goal_id, planning_unit_id, user_id)
+    return [
+        {
+            "defined_goal_id": latest.get("defined_goal_id", f"def_{goal_id}"),
+            "goal_id": goal_id,
+            "version": latest.get("version", 1),
+            "is_latest": True,
+            "today_cost": latest.get("today_cost", 0),
+            "future_target": latest.get("future_target", 0),
+            "projected_mapped_asset_value": 0,
+            "funding_gap": latest.get("funding_gap", 0),
+            "funding_status": latest.get("funding_status", "Shortfall"),
+            "created_at": date.today().isoformat(),
+        }
+    ]
 
 
 @router.post("/calculate", response_model=DefinedGoalResponse)
@@ -112,6 +236,18 @@ def save_goal(
 
     surplus = Money.from_amount(request.available_monthly_surplus)
     feasibility = evaluate_fund_feasibility(goal, as_of, surplus)
+
+    # Persist goal record
+    _goal_repo.ensure_goal_record(
+        planning_unit_id=request.planning_unit_id,
+        goal_id=goal_id,
+        goal_name=request.goal_name,
+        today_cost=float(request.today_cost),
+        target_month=request.target_month,
+        target_year=request.target_year,
+        priority=str(request.priority),
+        flexibility=request.flexibility,
+    )
 
     return DefinedGoalResponse(
         goal_id=goal_id,

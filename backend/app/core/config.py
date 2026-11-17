@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     # CORS configuration
     CORS_ORIGINS: List[str] = [
+        "https://planvesto.vercel.app",
+        "https://planvesto.com",
+        "https://www.planvesto.com",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
