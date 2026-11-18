@@ -21,8 +21,8 @@ function formatINR(value: number | null | undefined): string {
 
 export default function YearlyProjectionTable({
   projections,
-  title = "Year-by-Year Funding Projection (§11.4 Step 4)",
-  description = "Granular trajectory of opening balances, contributions, compounding growth, disbursements, and payouts.",
+  title = "Year-by-Year Growth Trajectory",
+  description = "Annual breakdown of opening balances, contributions, compounding returns, and target payout.",
   showFinancingColumns = false,
 }: YearlyProjectionTableProps) {
   if (!projections || projections.length === 0) {
@@ -41,7 +41,7 @@ export default function YearlyProjectionTable({
         <div>
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
           {description && (
-            <p className="text-xs text-slate-500">{description}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{description}</p>
           )}
         </div>
         <span className="self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 sm:self-auto">
@@ -50,22 +50,26 @@ export default function YearlyProjectionTable({
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
-        <table className="min-w-[800px] w-full text-left text-xs">
+        <table className="min-w-[700px] w-full text-left text-xs">
           <thead className="sticky top-0 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3 text-center">Year</th>
-              <th className="py-3 px-3 text-center">Cal Year</th>
+              <th className="py-3 px-3 text-center">Calendar Year</th>
               <th className="py-3 px-3 text-right">Opening Balance</th>
-              <th className="py-3 px-3 text-right">Contributions</th>
-              <th className="py-3 px-3 text-right">Compounding Growth</th>
+              {!showFinancingColumns && (
+                <>
+                  <th className="py-3 px-3 text-right">Annual SIP</th>
+                  <th className="py-3 px-3 text-right text-emerald-700">Compounding Growth</th>
+                </>
+              )}
               {showFinancingColumns && (
                 <>
                   <th className="py-3 px-3 text-right text-amber-700">Loan Disbursed</th>
-                  <th className="py-3 px-3 text-right text-rose-700">EMI Repaid</th>
+                  <th className="py-3 px-3 text-right text-rose-700">Annual EMI Paid</th>
                 </>
               )}
-              <th className="py-3 px-3 text-right text-teal-800">Goal Withdrawal</th>
-              <th className="py-3 px-3 text-right">Closing Balance</th>
+              <th className="py-3 px-3 text-right text-teal-800">Goal Payout</th>
+              <th className="py-3 px-3 text-right">Closing Wealth</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -91,16 +95,20 @@ export default function YearlyProjectionTable({
                   <td className="py-3 px-3 text-right">
                     {formatINR(row.opening_balance)}
                   </td>
-                  <td className="py-3 px-3 text-right text-slate-800">
-                    {row.annual_contributions > 0
-                      ? formatINR(row.annual_contributions)
-                      : "—"}
-                  </td>
-                  <td className="py-3 px-3 text-right text-emerald-600 font-medium">
-                    {row.investment_growth > 0
-                      ? `+${formatINR(row.investment_growth)}`
-                      : "—"}
-                  </td>
+                  {!showFinancingColumns && (
+                    <>
+                      <td className="py-3 px-3 text-right text-slate-800">
+                        {row.annual_contributions > 0
+                          ? formatINR(row.annual_contributions)
+                          : "—"}
+                      </td>
+                      <td className="py-3 px-3 text-right text-emerald-600 font-medium">
+                        {row.investment_growth > 0
+                          ? `+${formatINR(row.investment_growth)}`
+                          : "—"}
+                      </td>
+                    </>
+                  )}
                   {showFinancingColumns && (
                     <>
                       <td className="py-3 px-3 text-right text-amber-700 font-medium">
@@ -117,7 +125,7 @@ export default function YearlyProjectionTable({
                   )}
                   <td className="py-3 px-3 text-right font-bold text-teal-700">
                     {row.goal_withdrawal > 0 ? (
-                      <span className="rounded-lg bg-teal-100/80 px-2 py-0.5">
+                      <span className="rounded-lg bg-teal-100/90 px-2.5 py-1 text-teal-900">
                         {formatINR(row.goal_withdrawal)}
                       </span>
                     ) : (
@@ -135,10 +143,10 @@ export default function YearlyProjectionTable({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-        <span>* Growth compounded at assumed rate using daily/mid-year convention (§11.5).</span>
+        <span>* Growth compounded systematically based on your investment plan.</span>
         <span className="flex items-center gap-1.5 font-medium text-teal-800">
           <span className="h-2 w-2 rounded-full bg-teal-500"></span>
-          Highlighted row indicates goal realization milestone
+          Highlighted row indicates goal completion milestone
         </span>
       </div>
     </section>
