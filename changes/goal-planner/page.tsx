@@ -36,6 +36,13 @@ Case 2B tests two funding structures. The goal amount and target date do not cha
 ## 5. Result and approval
 Display each outcome as a **proposal / preview only**. Do not modify the saved goal, assign or sell assets, commit a lump sum, or change contributions automatically. Any change requires the investor's explicit approval through the authorised workflow.
 
-## 6. Scope and dependencies
+## 6. Goal Planner UI flow
+- Remove the existing Goal Planner feasibility UI; it will be replaced by the proposed flow described here.
+- The Goal Planner UI should focus only on presenting the **Feasibility Test** and its outcome. Do not add strategy recommendations, budgeting controls or contribution-management actions to this screen.
+- After the feasibility result is shown, provide a clear **Select Affordability Test** action. The user can select the affordability test they want to carry forward.
+- Carry the selected affordability test and its relevant scenario context forward to the **Strategy Builder**. The Strategy Builder is the next stage for taking the selected test forward.
+- This UI flow defines selection and hand-off only; it does not itself approve or execute a financial action.
+
+## 7. Scope and dependencies
 This is a proposed functional specification under `changes/goal-planner/`; it is documentation only and is not connected to or deployed as the production Goal Planner. Chapter 10 defines the feasibility decision boundaries; Chapter 05 owns the canonical contribution, step-up and combined lump-sum calculation methods; Chapter 1's verified Financial State supplies available monthly surplus.
 */
