@@ -1,40 +1,41 @@
 /**
-# Goal Planner — Case 1 and Case 2A: Proposed Functional Theory
+# Goal Planner — Proposed Functional Theory
 
-## 1. Core rule
-Case 1's verified **Available Monthly Surplus** is the fixed monthly funding ceiling for Case 2A. Case 2A must not assume, increase, or independently recalculate this capacity. The same surplus value is used to test both options.
+## 1. Case 1 constraint
+Case 1's verified **Available Monthly Surplus** is the funding-capacity reference for Case 2A and Case 2B. Case 2A tests goal changes against this fixed surplus. Case 2B keeps the goal amount and target date fixed and tests alternative contribution structures. Do not treat budgeting actions as Goal Planner methods.
 
-## 2. Affordability test
-Calculate the goal's required monthly contribution using the existing goal assumptions and eligible mapped funding. Deduct the goal's existing linked SIP to obtain the **Additional Required Monthly SIP**.
+## 2. Case 2A — Adjust goal amount or timeline
+Test one goal condition at a time:
+- **Option A — Reduce goal amount:** keep the target month/year fixed; find the highest affordable today's goal amount.
+- **Option B — Extend timeline:** keep today's goal amount fixed; find the earliest affordable target month.
+- A scenario passes the SIP-affordability test when its additional required monthly SIP is within Case 1's verified Available Monthly Surplus.
 
-**A scenario is affordable when:**
-Additional Required Monthly SIP ≤ Case 1 Available Monthly Surplus.
+## 3. Case 2B — Keep goal amount and target date fixed
+Case 2B tests two funding structures. The goal amount and target date do not change.
 
-If verified surplus is missing or unavailable, Case 2A cannot be evaluated; the investor must complete Financial State first.
+### Option A — Step-Up SIP
+- Calculate a contribution schedule that can meet the fixed future goal target using the approved Chapter 05 **Step-up / Changing Contribution Schedule** method.
+- The annual Step-Up SIP rate has an initial maximum limit of **10%**.
+- If the required annual step-up rate is **10% or less**, retain the Step-Up SIP route and show the required starting SIP / contribution schedule and the monthly surplus capacity needed to support it. Compare the required starting contribution with verified available monthly surplus and show any surplus gap.
+- If the required annual step-up rate is **above 10%**, do not present that higher rate as the recommended Step-Up SIP solution. Cap the tested annual step-up at **10%** and move to Option B to calculate the approximate initial lump sum needed to cover the remaining goal funding gap.
 
-## 3. Case 2A — change one variable at a time
+### Option B — Initial Lump Sum + Step-Up SIP (10% cap)
+- Keep the goal amount and target date fixed.
+- Hold the annual Step-Up SIP rate at the maximum **10%** and combine the recurring contribution schedule with an initial lump sum.
+- Calculate the approximate initial lump sum required so that the combined projected value of eligible existing funding, the lump sum and the step-up contribution schedule can meet the future goal target.
+- Show the assumed initial lump sum, starting SIP, 10% annual step-up schedule, required monthly contribution capacity and any remaining funding gap.
+- Treat the lump sum as a required scenario amount, not proof that the investor owns or has available that amount. Confirm eligibility, liquidity, timing and competing commitments before treating any asset or cash as available.
 
-### Option A: Reduce goal amount
-- Keep the original target month and year unchanged.
-- Reduce today's goal amount and recalculate the future target and required contribution.
-- Find the highest goal amount that satisfies the affordability test.
-- Show the revised amount, future target, additional required SIP, fixed surplus and funding gap.
+## 4. Calculation and affordability rules
+- Use Chapter 05's dated cash-flow method for changing contribution schedules; do not use the constant-SIP formula for a Step-Up SIP.
+- For the combined lump-sum route, project the initial lump sum and each dated step-up contribution to the goal date using one consistent approved return and timing basis.
+- Use Case 1's verified Available Monthly Surplus as the monthly capacity reference. Do not increase or fabricate surplus inside Case 2B.
+- Count each existing asset, lump sum and contribution only once. Preserve goal assumptions and eligible funding rules.
+- If required inputs, an approved method or reliable evidence are missing, report the result as unresolved / insufficient evidence rather than inventing a value.
 
-### Option B: Extend goal timeline
-- Keep today's goal amount unchanged.
-- Extend the target month and recalculate the future target and required contribution.
-- Find the earliest target month that satisfies the affordability test.
-- Show the revised target month, future target, additional required SIP, fixed surplus and funding gap.
+## 5. Result and approval
+Display each outcome as a **proposal / preview only**. Do not modify the saved goal, assign or sell assets, commit a lump sum, or change contributions automatically. Any change requires the investor's explicit approval through the authorised workflow.
 
-## 4. Result and approval
-Show the calculated result as a **proposal / preview only**. Do not change the saved goal, mapped assets, contributions or financial data automatically. Apply a revised goal only after the investor explicitly approves it through the authorised save workflow.
-
-## 5. Guardrails
-- Use the backend's verified Financial State surplus as the source of truth; never accept a browser-entered surplus.
-- Preserve the existing inflation, return, mapped-asset and goal assumptions while testing each option.
-- Do not change amount and timeline in the same option.
-- If no affordable result is found, explain that the current surplus does not support the tested goal conditions; do not label the goal impossible.
-- A passing monthly affordability test does not mean the goal is already funded or that all other constraints have passed.
-
-**Scope:** This is a proposed functional specification kept under `changes/goal-planner/`. It is documentation only and is not connected to or deployed as the production Goal Planner.
+## 6. Scope and dependencies
+This is a proposed functional specification under `changes/goal-planner/`; it is documentation only and is not connected to or deployed as the production Goal Planner. Chapter 10 defines the feasibility decision boundaries; Chapter 05 owns the canonical contribution, step-up and combined lump-sum calculation methods; Chapter 1's verified Financial State supplies available monthly surplus.
 */
