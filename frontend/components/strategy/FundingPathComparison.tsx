@@ -40,7 +40,7 @@ export default function FundingPathComparison({
       <div className="flex flex-col justify-between gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-            Chapter 11 §11.7
+            Path Analysis
           </span>
           <h3 className="text-lg font-extrabold text-slate-900">
             Side-by-Side Funding Paths Comparison

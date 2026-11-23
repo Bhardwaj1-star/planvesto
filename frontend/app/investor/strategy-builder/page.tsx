@@ -7,6 +7,7 @@ import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
 import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
+import { supabase } from "../../../lib/supabase";
 import { apiRequest } from "../../../lib/api/client";
 import {
   buildStrategy,
@@ -261,41 +262,70 @@ export default function InvestorStrategyBuilderPage() {
   const selectedTargetKey = selectedBasketId ? `basket:${selectedBasketId}` : selectedGoalId;
   const selectedBasket = baskets.find((basket) => basket.id === selectedBasketId) ?? null;
 
-  // 1. Initial Load: Load user's goals
+  // 1. Initial Load: Load user's goals directly from Goal Planner database
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        let planningUnitId = getPlanningUnitId();
-        if (!planningUnitId) {
-          planningUnitId = "pu_default_investor";
-          if (typeof window !== "undefined") {
-            window.localStorage.setItem("planvesto-planning-unit-id", planningUnitId);
+        let puId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
+        if (!puId) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            const { data } = await supabase
+              .from("planning_units")
+              .select("planning_unit_id")
+              .eq("user_id", sessionData.session.user.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (data?.planning_unit_id) puId = String(data.planning_unit_id);
           }
+        }
+        if (!puId) puId = "pu_default_investor";
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("planvesto-planning-unit-id", puId);
         }
 
         let loadedGoals: Array<{ id: string; name: string }> = [];
 
-        try {
-          const data = await loadGoalPlannerData();
-          if (data?.goals?.length) {
-            const canonicalGoals = await Promise.all(
-              data.goals.map(async (goal) => {
-                try {
-                  const defined = await getLatestDefinedGoal(planningUnitId!, goal.id);
-                  return {
-                    id: defined.goal_id,
-                    name: defined.goal_name || defined.goal_type || goal.name || "My Goal",
-                  };
-                } catch {
-                  return { id: goal.id, name: goal.name || "Financial Goal" };
-                }
-              })
+        // Direct fetch from goals table (same source as Goal Planner)
+        const { data: goalRows } = await supabase
+          .from("goals")
+          .select("goal_id, goal_name, target_amount, target_date, flexibility")
+          .eq("planning_unit_id", puId)
+          .order("created_at");
+
+        if (goalRows && goalRows.length > 0) {
+          loadedGoals = goalRows.map((g) => ({
+            id: g.goal_id,
+            name: (g.goal_name && g.goal_name.trim()) || "Untitled Goal",
+          }));
+        } else {
+          // Fallback to API if supabase query returns empty
+          try {
+            const apiGoals = await apiRequest<Array<{ goal_id: string; goal_name?: string }>>(
+              `/api/goals?planning_unit_id=${puId}`
             );
-            loadedGoals = canonicalGoals.filter(Boolean);
+            if (apiGoals && apiGoals.length > 0) {
+              loadedGoals = apiGoals.map((g) => ({
+                id: g.goal_id,
+                name: (g.goal_name && g.goal_name.trim()) || "Untitled Goal",
+              }));
+            }
+          } catch {
+            // keep empty
           }
-        } catch {
-          // Gracefully fallback
+        }
+
+        if (!loadedGoals.length) {
+          try {
+            const data = await loadGoalPlannerData();
+            if (data?.goals?.length) {
+              loadedGoals = data.goals.map((g) => ({ id: g.id, name: g.name }));
+            }
+          } catch {
+            // Gracefully fallback
+          }
         }
 
         if (!loadedGoals.length) {
@@ -354,47 +384,6 @@ export default function InvestorStrategyBuilderPage() {
     let active = true;
     const puId = getPlanningUnitId() || "pu_default_investor";
 
-    const fallbackPreview: DefinedGoal = {
-      goal_id: selectedGoalId,
-      planning_unit_id: puId,
-      goal_name: goals.find((g) => g.id === selectedGoalId)?.name || "Retirement Independence Goal",
-      goal_type: "retirement",
-      today_cost: 1500000,
-      future_target: 2500000,
-      inflation_rate: 0.06,
-      required_monthly_contribution: 15000,
-      projected_mapped_asset_value: 200000,
-      funding_gap: 2300000,
-      funding_status: "On Track",
-      priority: "High",
-      flexibility: "Flexible",
-      status: "Active",
-      mapped_assets: [],
-      target_month: 12,
-      target_year: new Date().getFullYear() + 10,
-      duration_years: 10,
-      available_monthly_surplus: 35000,
-      version: 1,
-      is_latest: true,
-      created_at: new Date().toISOString(),
-    };
-
-    // Calculate immediate projection
-    const immediateAssessment = computeGoalFundingLocally(puId, selectedGoalId, {
-      target_amount: fallbackPreview.future_target,
-      horizon_years: fallbackPreview.duration_years || 10,
-      start_calendar_year: new Date().getFullYear(),
-      initial_allocated_assets: fallbackPreview.projected_mapped_asset_value || 0,
-      required_monthly_sip: fallbackPreview.required_monthly_contribution || 15000,
-      expected_annual_return_pct: 12.0,
-      available_monthly_surplus: Number(fallbackPreview.available_monthly_surplus) || 35000,
-    });
-
-    setGoalPreview(fallbackPreview);
-    setFundingAssessment(immediateAssessment);
-    setRun(createFallbackStrategyRun(selectedGoalId, puId, fallbackPreview.future_target));
-
-    // Reconcile with server asynchronously
     (async () => {
       try {
         let serverPreview: DefinedGoal | null = null;
@@ -406,7 +395,70 @@ export default function InvestorStrategyBuilderPage() {
           serverPreview = null;
         }
 
-        const effectivePreview = serverPreview || fallbackPreview;
+        let effectivePreview = serverPreview;
+
+        if (!effectivePreview) {
+          // If not yet in defined_goals, read the raw goal from goals table (Goal Planner)
+          const { data: rawGoal } = await supabase
+            .from("goals")
+            .select("*")
+            .eq("goal_id", selectedGoalId)
+            .maybeSingle();
+
+          const currentGoalName = goals.find((g) => g.id === selectedGoalId)?.name || rawGoal?.goal_name || "Financial Goal";
+          const rawTargetCost = Number(rawGoal?.target_amount) || 1500000;
+          const [year, month] = String(rawGoal?.target_date || "").split("-");
+          const targetYear = Number(year) || new Date().getFullYear() + 5;
+          const targetMonth = Number(month) || 12;
+          const durYears = Math.max(1, targetYear - new Date().getFullYear());
+          const infRate = 0.06;
+          const futureTarget = Math.round(rawTargetCost * Math.pow(1 + infRate, durYears));
+          const r = 0.12 / 12;
+          const n = durYears * 12;
+          const reqMonthlySip = Math.round((futureTarget * r) / (Math.pow(1 + r, n) - 1));
+
+          effectivePreview = {
+            goal_id: selectedGoalId,
+            planning_unit_id: puId,
+            goal_name: currentGoalName,
+            goal_type: "others",
+            today_cost: rawTargetCost,
+            future_target: futureTarget,
+            inflation_rate: infRate,
+            required_monthly_contribution: reqMonthlySip,
+            projected_mapped_asset_value: 0,
+            funding_gap: futureTarget,
+            funding_status: "On Track",
+            priority: (rawGoal?.priority as "High" | "Medium" | "Low") || "High",
+            flexibility: (rawGoal?.flexibility as "Fixed" | "Flexible") || "Flexible",
+            status: "Active",
+            mapped_assets: [],
+            target_month: targetMonth,
+            target_year: targetYear,
+            duration_years: durYears,
+            available_monthly_surplus: 35000,
+            version: 1,
+            is_latest: true,
+            created_at: rawGoal?.created_at || new Date().toISOString(),
+          };
+        }
+
+        if (!active) return;
+        setGoalPreview(effectivePreview);
+
+        // Immediate local calculation using real Chapter 10 handoff data
+        const immediateAssessment = computeGoalFundingLocally(puId, selectedGoalId, {
+          target_amount: effectivePreview.future_target,
+          horizon_years: effectivePreview.duration_years || 10,
+          start_calendar_year: new Date().getFullYear(),
+          initial_allocated_assets: effectivePreview.projected_mapped_asset_value || 0,
+          required_monthly_sip: effectivePreview.required_monthly_contribution || 15000,
+          expected_annual_return_pct: 12.0,
+          available_monthly_surplus: Number(effectivePreview.available_monthly_surplus) || 35000,
+        });
+
+        setFundingAssessment(immediateAssessment);
+        setRun(createFallbackStrategyRun(selectedGoalId, puId, effectivePreview.future_target));
 
         let serverRun: StrategyRun | null = null;
         try {
@@ -416,12 +468,11 @@ export default function InvestorStrategyBuilderPage() {
         }
 
         if (!active) return;
-        if (serverPreview) setGoalPreview(serverPreview);
         if (serverRun) setRun(serverRun);
 
         try {
           const serverAssessment = await assessGoalFunding(puId, selectedGoalId, {
-            target_amount: effectivePreview.future_target || 2500000,
+            target_amount: effectivePreview.future_target,
             horizon_years: effectivePreview.duration_years || 10,
             start_calendar_year: new Date().getFullYear(),
             initial_allocated_assets: effectivePreview.projected_mapped_asset_value || 0,
@@ -429,7 +480,7 @@ export default function InvestorStrategyBuilderPage() {
             expected_annual_return_pct: 12.0,
             available_monthly_surplus: Number(effectivePreview.available_monthly_surplus) || 35000,
             financing_option: {
-              down_payment: Math.round((effectivePreview.future_target || 2500000) * 0.2),
+              down_payment: Math.round(effectivePreview.future_target * 0.2),
               loan_annual_interest_rate_pct: 8.5,
               loan_tenure_months: (effectivePreview.duration_years || 10) * 12,
             },
@@ -448,7 +499,7 @@ export default function InvestorStrategyBuilderPage() {
         } catch {
           // Optional
         }
-      } catch {
+      } catch (err) {
         // Non-blocking
       }
     })();

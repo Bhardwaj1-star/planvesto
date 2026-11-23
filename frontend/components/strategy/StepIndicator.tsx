@@ -28,7 +28,7 @@ export default function StepIndicator({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">
-            Chapter 11 Decision Pipeline
+            Strategy Workflow
           </p>
           <h3 className="text-base font-extrabold text-slate-900">
             Goal Funding Strategy Steps
