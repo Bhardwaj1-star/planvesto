@@ -2,7 +2,8 @@
 # Goal Planner — Proposed Functional Theory
 
 ## 1. Centralized Verified Monthly Surplus
-The **Verified Monthly Surplus** is a centralized, canonical system-wide value. It is not specific to Case 1 or the Goal Planner. Wherever monthly surplus is used across the system, the same centralized verified value must be referenced.
+**Current system state:** Monthly Surplus is only partially canonicalized in the existing system. Financial State calculates and stores `investable_surplus_monthly`, and Goal Planner reads that Financial State value. However, the existing code does not yet establish consistent system-wide use of one canonical value in every module; some places still accept or derive `available_monthly_surplus` independently, and the Financial State frontend includes a local fallback calculation.
+**Required system-wide direction:** The **Verified Monthly Surplus** must become a centralized, canonical system-wide value. It is not specific to Case 1 or the Goal Planner. Wherever monthly surplus is used across the system, the same centralized verified value must be referenced. This requires system-wide standardization; changing only Goal Planner is not sufficient.
 Case 1 uses this value as its funding-capacity reference, and Case 2A and Case 2B also use it when testing affordability. Case 2A tests goal changes against this fixed surplus. Case 2B keeps the goal amount and target date fixed and tests alternative contribution structures. Do not treat budgeting actions as Goal Planner methods.
 
 ## 2. Case 2A — Adjust goal amount or timeline
@@ -46,5 +47,5 @@ Display each feasibility outcome as a **proposal / preview**. The investor can e
 - This UI flow defines selection and hand-off only; it does not itself sell assets, commit a lump sum, or change SIP contributions.
 
 ## 7. Scope and dependencies
-This is a proposed functional specification under `changes/goal-planner/`; it is documentation only and is not connected to or deployed as the production Goal Planner. Chapter 10 defines the feasibility decision boundaries; Chapter 05 owns the canonical contribution, step-up and combined lump-sum calculation methods. The centralized, canonical Verified Monthly Surplus is the system-wide monthly surplus reference.
+This is a proposed functional specification under `changes/goal-planner/`; it is documentation only and is not connected to or deployed as the production Goal Planner. Chapter 10 defines the feasibility decision boundaries; Chapter 05 owns the canonical contribution, step-up and combined lump-sum calculation methods. The centralized, canonical Verified Monthly Surplus is the required system-wide monthly surplus reference.
 */
