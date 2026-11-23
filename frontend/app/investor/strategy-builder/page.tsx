@@ -6,13 +6,11 @@ import Link from "next/link";
 import StrategyWorkflowNav from "../../../components/StrategyWorkflowNav";
 import InvestorHeader from "../../../components/InvestorHeader";
 import { InvestorButton, InvestorStatus } from "../../../components/InvestorUI";
-import { loadGoalPlannerData } from "../../../lib/onboarding/persistence";
 import { supabase } from "../../../lib/supabase";
 import { apiRequest } from "../../../lib/api/client";
 import {
   buildStrategy,
   getStrategyRunHistory,
-  getPlanningUnitId,
   type StrategyRun,
 } from "../../../lib/api/strategy";
 import { getLatestDefinedGoal } from "../../../lib/api/goals";
@@ -238,6 +236,7 @@ function createFallbackStrategyRun(goalId: string, puId: string, targetAmount = 
 
 export default function InvestorStrategyBuilderPage() {
   const router = useRouter();
+  const [planningUnitId, setPlanningUnitId] = useState<string>("");
   const [goals, setGoals] = useState<Array<{ id: string; name: string }>>([]);
   const [baskets, setBaskets] = useState<PlanningBasket[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState("");
@@ -267,73 +266,55 @@ export default function InvestorStrategyBuilderPage() {
     let active = true;
     (async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!sessionData?.session) {
+          throw new Error("You must be logged in to access Strategy Builder.");
+        }
+
+        // Match Goal Planner exactly: resolve the authenticated user's planning unit
         let puId = typeof window !== "undefined" ? window.localStorage.getItem("planvesto-planning-unit-id") : null;
-        if (!puId) {
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session?.user) {
-            const { data } = await supabase
-              .from("planning_units")
-              .select("planning_unit_id")
-              .eq("user_id", sessionData.session.user.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (data?.planning_unit_id) puId = String(data.planning_unit_id);
+        if (!puId || puId === "pu_default_investor") {
+          const { data: unitData } = await supabase
+            .from("planning_units")
+            .select("planning_unit_id")
+            .eq("user_id", sessionData.session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (unitData?.planning_unit_id) {
+            puId = String(unitData.planning_unit_id);
           }
         }
-        if (!puId) puId = "pu_default_investor";
+
+        if (!puId || puId === "pu_default_investor") {
+          throw new Error("No active planning unit found. Please complete personal information first.");
+        }
+
         if (typeof window !== "undefined") {
           window.localStorage.setItem("planvesto-planning-unit-id", puId);
         }
 
-        let loadedGoals: Array<{ id: string; name: string }> = [];
+        if (!active) return;
+        setPlanningUnitId(puId);
 
-        // Direct fetch from goals table (same source as Goal Planner)
-        const { data: goalRows } = await supabase
+        // Fetch ONLY this user's goals from goals table (identical to Goal Planner)
+        const { data: goalRows, error: goalError } = await supabase
           .from("goals")
           .select("goal_id, goal_name, target_amount, target_date, flexibility")
           .eq("planning_unit_id", puId)
           .order("created_at");
 
-        if (goalRows && goalRows.length > 0) {
-          loadedGoals = goalRows.map((g) => ({
-            id: g.goal_id,
-            name: (g.goal_name && g.goal_name.trim()) || "Untitled Goal",
-          }));
-        } else {
-          // Fallback to API if supabase query returns empty
-          try {
-            const apiGoals = await apiRequest<Array<{ goal_id: string; goal_name?: string }>>(
-              `/api/goals?planning_unit_id=${puId}`
-            );
-            if (apiGoals && apiGoals.length > 0) {
-              loadedGoals = apiGoals.map((g) => ({
-                id: g.goal_id,
-                name: (g.goal_name && g.goal_name.trim()) || "Untitled Goal",
-              }));
-            }
-          } catch {
-            // keep empty
-          }
-        }
+        if (goalError) throw goalError;
 
-        if (!loadedGoals.length) {
-          try {
-            const data = await loadGoalPlannerData();
-            if (data?.goals?.length) {
-              loadedGoals = data.goals.map((g) => ({ id: g.id, name: g.name }));
-            }
-          } catch {
-            // Gracefully fallback
-          }
-        }
-
-        if (!loadedGoals.length) {
-          loadedGoals = [
-            { id: "goal_retirement_sample", name: "Retirement Independence Goal" },
-            { id: "goal_education_sample", name: "Higher Education Fund" },
-          ];
-        }
+        const loadedGoals = (goalRows || []).map((g) => ({
+          id: g.goal_id,
+          name: (g.goal_name && g.goal_name.trim()) || "Untitled Goal",
+        }));
 
         if (!active) return;
         setGoals(loadedGoals);
@@ -373,7 +354,7 @@ export default function InvestorStrategyBuilderPage() {
 
   // 2. Goal Selection Effect: Compute funding projections immediately
   useEffect(() => {
-    if (!selectedGoalId) {
+    if (!selectedGoalId || !planningUnitId) {
       setGoalPreview(null);
       setRun(null);
       setHistory([]);
@@ -382,7 +363,7 @@ export default function InvestorStrategyBuilderPage() {
     }
 
     let active = true;
-    const puId = getPlanningUnitId() || "pu_default_investor";
+    const puId = planningUnitId;
 
     (async () => {
       try {
@@ -403,6 +384,7 @@ export default function InvestorStrategyBuilderPage() {
             .from("goals")
             .select("*")
             .eq("goal_id", selectedGoalId)
+            .eq("planning_unit_id", puId)
             .maybeSingle();
 
           const currentGoalName = goals.find((g) => g.id === selectedGoalId)?.name || rawGoal?.goal_name || "Financial Goal";
@@ -507,11 +489,11 @@ export default function InvestorStrategyBuilderPage() {
     return () => {
       active = false;
     };
-  }, [selectedGoalId]);
+  }, [selectedGoalId, planningUnitId]);
 
   const handleCustomFinancingAssess = async (option: FinancingOption) => {
-    const puId = getPlanningUnitId() || "pu_default_investor";
-    if (!selectedGoalId) return;
+    const puId = planningUnitId;
+    if (!selectedGoalId || !puId) return;
 
     setAssessingFunding(true);
     setError(null);
@@ -553,8 +535,8 @@ export default function InvestorStrategyBuilderPage() {
     setError(null);
     setSuccessMessage(null);
 
-    const puId = getPlanningUnitId() || "pu_default_investor";
-    if (!selectedGoalId) {
+    const puId = planningUnitId;
+    if (!selectedGoalId || !puId) {
       setError("Please select a goal first.");
       return;
     }
